@@ -3,38 +3,34 @@
 namespace App\Http\Middleware;
 
 use App\Models\Tenant;
+use App\Support\Tenancy;
 use Closure;
 use Illuminate\Http\Request;
-use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 class ResolveTenantFromPath
 {
-    /**
-     * Handle an incoming request.
-     *
-     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
-     */
-    public function handle(Request $request, Closure $next): Response
+    public function handle(Request $request, Closure $next)
     {
-        $tenantSlug = $request->segment(1);
+        $slug = $request->route('tenant'); // <-- first segment param
 
-        if (! $tenantSlug) {
-            return $next($request);
-        }
-
-        $tenant = Tenant::where('slug', $tenantSlug)->first();
+        $tenant = Tenant::query()->where('slug', $slug)->first();
 
         if (! $tenant) {
+            // For API, return JSON 404; for web, normal 404.
             if ($request->expectsJson()) {
-                return response()->json(['error' => 'Tenant not found'], 404);
+                abort(response()->json(['message' => 'Tenant not found'], 404));
             }
-
-            abort(404);
+            throw new NotFoundHttpException('Tenant not found.');
         }
 
-        $request->attributes->set('tenant', $tenant);
-        app()->instance('currentTenant', $tenant);
+        Tenancy::set($tenant);
 
-        return $next($request);
+        try {
+            return $next($request);
+        } finally {
+            // IMPORTANT: don't leak tenant across requests/tests
+            Tenancy::forget();
+        }
     }
 }

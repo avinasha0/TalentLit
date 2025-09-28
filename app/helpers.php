@@ -1,13 +1,16 @@
 <?php
 
-use App\Models\Tenant;
+use App\Support\Tenancy;
 
-if (! function_exists('currentTenant')) {
-    /**
-     * Get the current tenant from the request.
-     */
-    function currentTenant(): ?Tenant
+if (! function_exists('tenant')) {
+    function tenant()
     {
-        return app('currentTenant');
+        return Tenancy::get();
+    }
+}
+if (! function_exists('tenant_id')) {
+    function tenant_id()
+    {
+        return Tenancy::id();
     }
 }

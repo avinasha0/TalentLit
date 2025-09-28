@@ -1,0 +1,36 @@
+name: CI
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+
+jobs:
+  php:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          tools: composer
+          extensions: mbstring, xml, ctype, curl, dom, fileinfo, tokenizer, pdo_mysql
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-progress --no-interaction
+      - name: Prepare .env & key
+        run: |
+          cp .env.example .env || true
+          php artisan key:generate || true
+      - name: Use sqlite for tests
+        run: |
+          mkdir -p database
+          touch database/database.sqlite
+          php -r "file_put_contents('.env', preg_replace('/^DB_CONNECTION=.*/m','DB_CONNECTION=sqlite', file_get_contents('.env')));"
+          php -r "file_put_contents('.env', file_get_contents('.env').\"`nDB_DATABASE=\".getcwd().\"/database/database.sqlite`n\");"
+      - name: Run migrations
+        run: php artisan migrate --no-interaction
+      - name: Run tests
+        run: php artisan test
+      - name: PHPStan (non-blocking)
+        run: vendor/bin/phpstan analyse --no-progress || true
+      - name: Pint (non-blocking)
+        run: vendor/bin/pint --test || true

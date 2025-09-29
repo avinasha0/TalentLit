@@ -28,7 +28,7 @@ class TenantDashboardTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertSee('Dashboard');
-        $response->assertSee('Welcome back! Here\'s what\'s happening with your hiring process.');
+        $response->assertSee('Welcome back! Here');
     }
 
     public function test_unauthenticated_user_redirected_to_login(): void

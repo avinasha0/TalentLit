@@ -4,10 +4,12 @@ namespace Tests\Feature;
 
 use App\Models\Tenant;
 use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class DashboardTest extends TestCase
 {
+    use RefreshDatabase;
     public function test_dashboard_returns_200_and_shows_kpi_headings()
     {
         $tenant = Tenant::factory()->create();

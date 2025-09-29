@@ -11,6 +11,7 @@ class HomeTest extends TestCase
         $response = $this->get('/');
 
         $response->assertStatus(200);
-        $response->assertSee('HireHub is running');
+        $response->assertSee('HireHub —');
+        $response->assertSee('Modern ATS for Growing Teams');
     }
 }

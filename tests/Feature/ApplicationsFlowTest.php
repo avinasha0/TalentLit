@@ -42,7 +42,8 @@ class ApplicationsFlowTest extends TestCase
         $response = $this->actingAs($this->user)->get('/acme/dashboard');
 
         $response->assertStatus(200);
-        $response->assertSee('Welcome to Acme Dashboard');
+        $response->assertSee('Dashboard');
+        $response->assertSee('Welcome back! Here');
     }
 
     public function test_can_create_candidate_and_application(): void

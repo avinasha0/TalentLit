@@ -5,10 +5,12 @@ namespace Tests\Feature;
 use App\Models\Candidate;
 use App\Models\Tenant;
 use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class CandidatesTest extends TestCase
 {
+    use RefreshDatabase;
     public function test_candidates_index_returns_200()
     {
         $tenant = Tenant::factory()->create();
@@ -35,7 +37,7 @@ class CandidatesTest extends TestCase
     {
         $tenant = Tenant::factory()->create();
         $user = User::factory()->create();
-        $candidate = Candidate::factory()->create();
+        $candidate = Candidate::factory()->forTenant($tenant)->create();
 
         $response = $this->actingAs($user)->get("/{$tenant->slug}/candidates");
 

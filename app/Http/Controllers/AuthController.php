@@ -23,7 +23,17 @@ class AuthController extends Controller
         if (Auth::attempt($request->only('email', 'password'), $request->boolean('remember'))) {
             $request->session()->regenerate();
 
-            return redirect()->intended('/');
+            // Extract tenant from email domain or use default
+            $email = $request->email;
+            $tenant = 'acme'; // Default tenant
+            
+            if (str_contains($email, '@acme.com')) {
+                $tenant = 'acme';
+            } elseif (str_contains($email, '@demo.com')) {
+                $tenant = 'demo';
+            }
+
+            return redirect()->intended("/{$tenant}/dashboard");
         }
 
         throw ValidationException::withMessages([

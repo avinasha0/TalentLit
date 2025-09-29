@@ -1,215 +1,178 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ $candidate->full_name }} - {{ tenant()->name }}</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gray-50">
-    <div class="min-h-screen">
-        <!-- Header -->
-        <header class="bg-white shadow-sm border-b">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex justify-between items-center py-6">
-                    <div>
-                        <nav class="flex items-center space-x-2 text-sm text-gray-500 mb-2">
-                            <a href="{{ route('tenant.candidates.index', ['tenant' => tenant()->slug]) }}" class="hover:text-gray-700">Candidates</a>
-                            <span>></span>
-                            <span class="text-gray-900">{{ $candidate->full_name }}</span>
-                        </nav>
-                        <h1 class="text-3xl font-bold text-gray-900">{{ $candidate->full_name }}</h1>
+@php
+    $tenant = tenant();
+    $tenantSlug = $tenant->slug;
+    $breadcrumbs = [
+        ['label' => 'Dashboard', 'url' => route('tenant.dashboard', $tenantSlug)],
+        ['label' => 'Candidates', 'url' => route('tenant.candidates.index', $tenantSlug)],
+        ['label' => $candidate->full_name, 'url' => null]
+    ];
+@endphp
+
+<x-app-layout :tenant="$tenant">
+    <x-slot name="breadcrumbs">
+        <x-breadcrumbs :items="$breadcrumbs" />
+    </x-slot>
+
+    <div class="space-y-6">
+        <!-- Candidate Header -->
+        <div class="bg-white dark:bg-gray-800 shadow rounded-lg">
+            <div class="px-6 py-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0 h-16 w-16">
+                            <div class="h-16 w-16 rounded-full bg-primary-100 dark:bg-primary-900/20 flex items-center justify-center">
+                                <span class="text-2xl font-medium text-primary-600 dark:text-primary-400">
+                                    {{ substr($candidate->first_name, 0, 1) }}{{ substr($candidate->last_name, 0, 1) }}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="ml-6">
+                            <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
+                                {{ $candidate->full_name }}
+                            </h1>
+                            <p class="text-gray-600 dark:text-gray-400">{{ $candidate->primary_email }}</p>
+                            @if($candidate->primary_phone)
+                                <p class="text-gray-600 dark:text-gray-400">{{ $candidate->primary_phone }}</p>
+                            @endif
+                        </div>
                     </div>
-                    <div>
-                        <a href="{{ route('tenant.candidates.index', ['tenant' => tenant()->slug]) }}" 
-                           class="text-blue-600 hover:text-blue-800 font-medium">
-                            Back to Candidates
-                        </a>
+                    <div class="flex items-center space-x-3">
+                        @if($candidate->tags->count() > 0)
+                            <div class="flex flex-wrap gap-2">
+                                @foreach($candidate->tags as $tag)
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+                                        {{ $tag->name }}
+                                    </span>
+                                @endforeach
+                            </div>
+                        @endif
+                        <x-button variant="secondary">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                            </svg>
+                            Edit
+                        </x-button>
                     </div>
                 </div>
             </div>
-        </header>
+        </div>
 
-        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <!-- Candidate Details -->
-                <div class="lg:col-span-2">
-                    <!-- Overview Tab -->
-                    <div class="bg-white rounded-lg shadow-md overflow-hidden">
-                        <div class="px-6 py-8 border-b border-gray-200">
-                            <div class="flex items-center justify-between mb-4">
-                                <div class="flex items-center space-x-4">
-                                    <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
-                                        <span class="text-2xl font-bold text-blue-600">
-                                            {{ substr($candidate->first_name, 0, 1) }}{{ substr($candidate->last_name, 0, 1) }}
-                                        </span>
-                                    </div>
-                                    <div>
-                                        <h2 class="text-2xl font-bold text-gray-900">{{ $candidate->full_name }}</h2>
-                                        <p class="text-gray-600">{{ $candidate->primary_email }}</p>
-                                        @if($candidate->primary_phone)
-                                            <p class="text-sm text-gray-500">{{ $candidate->primary_phone }}</p>
-                                        @endif
-                                    </div>
-                                </div>
-                                @if($candidate->source)
-                                    <span class="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
-                                        {{ $candidate->source }}
-                                    </span>
-                                @endif
+        <!-- Tabs -->
+        <div class="bg-white dark:bg-gray-800 shadow rounded-lg">
+            <div class="border-b border-gray-200 dark:border-gray-700">
+                <nav class="-mb-px flex space-x-8 px-6" aria-label="Tabs">
+                    <button class="whitespace-nowrap py-4 px-1 border-b-2 border-primary-500 font-medium text-sm text-primary-600 dark:text-primary-400">
+                        Overview
+                    </button>
+                    <button class="whitespace-nowrap py-4 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300">
+                        Resumes
+                    </button>
+                    <button class="whitespace-nowrap py-4 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300">
+                        Applications
+                    </button>
+                </nav>
+            </div>
+
+            <div class="p-6">
+                <!-- Overview Tab Content -->
+                <div class="space-y-6">
+                    <!-- Contact Information -->
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Contact Information</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
+                                <p class="mt-1 text-sm text-gray-900 dark:text-white">{{ $candidate->primary_email }}</p>
                             </div>
-
-                            @if($candidate->tags->count() > 0)
-                                <div class="flex flex-wrap gap-2">
-                                    @foreach($candidate->tags as $tag)
-                                        <span class="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm">
-                                            {{ $tag->name }}
-                                        </span>
-                                    @endforeach
+                            @if($candidate->primary_phone)
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Phone</label>
+                                    <p class="mt-1 text-sm text-gray-900 dark:text-white">{{ $candidate->primary_phone }}</p>
                                 </div>
                             @endif
-                        </div>
-
-                        <!-- Contact Information -->
-                        <div class="px-6 py-8">
-                            <h3 class="text-lg font-semibold text-gray-900 mb-4">Contact Information</h3>
-                            <dl class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            @if($candidate->source)
                                 <div>
-                                    <dt class="text-sm font-medium text-gray-500">Email</dt>
-                                    <dd class="text-sm text-gray-900">{{ $candidate->primary_email }}</dd>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Source</label>
+                                    <p class="mt-1 text-sm text-gray-900 dark:text-white">{{ $candidate->source }}</p>
                                 </div>
-                                @if($candidate->primary_phone)
-                                    <div>
-                                        <dt class="text-sm font-medium text-gray-500">Phone</dt>
-                                        <dd class="text-sm text-gray-900">{{ $candidate->primary_phone }}</dd>
-                                    </div>
-                                @endif
-                                <div>
-                                    <dt class="text-sm font-medium text-gray-500">Source</dt>
-                                    <dd class="text-sm text-gray-900">{{ $candidate->source ?? 'Not specified' }}</dd>
-                                </div>
-                                <div>
-                                    <dt class="text-sm font-medium text-gray-500">Added</dt>
-                                    <dd class="text-sm text-gray-900">{{ $candidate->created_at->format('M j, Y \a\t g:i A') }}</dd>
-                                </div>
-                            </dl>
+                            @endif
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Created</label>
+                                <p class="mt-1 text-sm text-gray-900 dark:text-white">{{ $candidate->created_at->format('M j, Y') }}</p>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Applications -->
+                    <!-- Applications Summary -->
                     @if($candidate->applications->count() > 0)
-                        <div class="bg-white rounded-lg shadow-md overflow-hidden mt-6">
-                            <div class="px-6 py-8 border-b border-gray-200">
-                                <h3 class="text-lg font-semibold text-gray-900">Applications ({{ $candidate->applications->count() }})</h3>
-                            </div>
-                            <div class="divide-y divide-gray-200">
+                        <div>
+                            <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Applications ({{ $candidate->applications->count() }})</h3>
+                            <div class="space-y-3">
                                 @foreach($candidate->applications as $application)
-                                    <div class="px-6 py-4">
-                                        <div class="flex items-center justify-between">
-                                            <div>
-                                                <h4 class="text-lg font-medium text-gray-900">
-                                                    <a href="{{ route('tenant.jobs.show', ['tenant' => tenant()->slug, 'job' => $application->jobOpening->id]) }}" 
-                                                       class="hover:text-blue-600">
-                                                        {{ $application->jobOpening->title }}
-                                                    </a>
-                                                </h4>
-                                                <div class="mt-1 flex items-center space-x-4 text-sm text-gray-500">
-                                                    <span>{{ $application->jobOpening->department->name }}</span>
-                                                    <span>{{ $application->jobOpening->location->name }}</span>
-                                                    <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
-                                                        {{ ucfirst(str_replace('_', ' ', $application->jobOpening->employment_type)) }}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            <div class="text-right">
-                                                <div class="text-sm text-gray-500">
-                                                    Applied {{ $application->applied_at->format('M j, Y') }}
-                                                </div>
-                                                @if($application->currentStage)
-                                                    <div class="text-sm font-medium text-blue-600 mt-1">
-                                                        {{ $application->currentStage->name }}
-                                                    </div>
-                                                @endif
-                                                <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full mt-2
-                                                    @if($application->status === 'active') bg-green-100 text-green-800
-                                                    @elseif($application->status === 'withdrawn') bg-yellow-100 text-yellow-800
-                                                    @elseif($application->status === 'hired') bg-blue-100 text-blue-800
-                                                    @else bg-red-100 text-red-800
-                                                    @endif">
-                                                    {{ ucfirst($application->status) }}
-                                                </span>
-                                            </div>
+                                    <div class="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+                                        <div>
+                                            <h4 class="text-sm font-medium text-gray-900 dark:text-white">
+                                                {{ $application->jobOpening->title }}
+                                            </h4>
+                                            <p class="text-sm text-gray-500 dark:text-gray-400">
+                                                {{ $application->jobOpening->department->name ?? 'No Department' }} • 
+                                                Applied {{ $application->applied_at->format('M j, Y') }}
+                                            </p>
+                                        </div>
+                                        <div class="flex items-center space-x-2">
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                                @if($application->status === 'active') bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300
+                                                @elseif($application->status === 'hired') bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300
+                                                @elseif($application->status === 'rejected') bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300
+                                                @else bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300 @endif">
+                                                {{ ucfirst($application->status) }}
+                                            </span>
                                         </div>
                                     </div>
                                 @endforeach
                             </div>
                         </div>
                     @endif
-                </div>
-
-                <!-- Sidebar -->
-                <div class="space-y-6">
-                    <!-- Quick Stats -->
-                    <div class="bg-white rounded-lg shadow-md p-6">
-                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Quick Stats</h3>
-                        <dl class="space-y-3">
-                            <div class="flex justify-between">
-                                <span class="text-sm text-gray-500">Applications</span>
-                                <span class="text-sm font-medium text-gray-900">{{ $candidate->applications->count() }}</span>
-                            </div>
-                            <div class="flex justify-between">
-                                <span class="text-sm text-gray-500">Resumes</span>
-                                <span class="text-sm font-medium text-gray-900">{{ $candidate->resumes->count() }}</span>
-                            </div>
-                            <div class="flex justify-between">
-                                <span class="text-sm text-gray-500">Tags</span>
-                                <span class="text-sm font-medium text-gray-900">{{ $candidate->tags->count() }}</span>
-                            </div>
-                        </dl>
-                    </div>
 
                     <!-- Resumes -->
                     @if($candidate->resumes->count() > 0)
-                        <div class="bg-white rounded-lg shadow-md p-6">
-                            <h3 class="text-lg font-semibold text-gray-900 mb-4">Resumes</h3>
+                        <div>
+                            <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Resumes ({{ $candidate->resumes->count() }})</h3>
                             <div class="space-y-3">
                                 @foreach($candidate->resumes as $resume)
-                                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                        <div>
-                                            <div class="text-sm font-medium text-gray-900">{{ $resume->filename }}</div>
-                                            <div class="text-xs text-gray-500">
-                                                {{ number_format($resume->size / 1024, 1) }} KB • {{ $resume->mime }}
+                                    <div class="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+                                        <div class="flex items-center">
+                                            <svg class="w-8 h-8 text-gray-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                            </svg>
+                                            <div>
+                                                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ $resume->filename }}</p>
+                                                <p class="text-sm text-gray-500 dark:text-gray-400">
+                                                    Uploaded {{ $resume->created_at->format('M j, Y') }}
+                                                </p>
                                             </div>
                                         </div>
-                                        <a href="{{ Storage::disk($resume->disk)->url($resume->path) }}" 
-                                           target="_blank"
-                                           class="text-blue-600 hover:text-blue-800 text-sm">
-                                            View
-                                        </a>
+                                        <x-button variant="ghost" size="sm">
+                                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                            </svg>
+                                            Download
+                                        </x-button>
                                     </div>
                                 @endforeach
                             </div>
                         </div>
-                    @endif
-
-                    <!-- Actions -->
-                    <div class="bg-white rounded-lg shadow-md p-6">
-                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Actions</h3>
-                        <div class="space-y-3">
-                            <button class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors">
-                                Create Application
-                            </button>
-                            <button class="w-full bg-gray-100 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors">
-                                Add Note
-                            </button>
-                            <button class="w-full bg-gray-100 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors">
-                                Add Tag
-                            </button>
+                    @else
+                        <div class="text-center py-8">
+                            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">No resumes uploaded</h3>
+                            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">This candidate hasn't uploaded any resumes yet.</p>
                         </div>
-                    </div>
+                    @endif
                 </div>
             </div>
-        </main>
+        </div>
     </div>
-</body>
-</html>
+</x-app-layout>

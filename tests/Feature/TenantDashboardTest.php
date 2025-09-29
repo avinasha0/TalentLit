@@ -27,7 +27,8 @@ class TenantDashboardTest extends TestCase
         $response = $this->actingAs($user)->get('/acme/dashboard');
 
         $response->assertStatus(200);
-        $response->assertSee('Welcome to Acme Dashboard');
+        $response->assertSee('Dashboard');
+        $response->assertSee('Welcome back! Here\'s what\'s happening with your hiring process.');
     }
 
     public function test_unauthenticated_user_redirected_to_login(): void

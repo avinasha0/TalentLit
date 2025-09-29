@@ -1,96 +1,202 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ $tenant->name }} Dashboard - HireHub</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gray-100 min-h-screen">
-    <!-- Navigation -->
-    <nav class="bg-white shadow-lg">
-        <div class="max-w-7xl mx-auto px-4">
-            <div class="flex justify-between h-16">
-                <div class="flex items-center">
-                    <h1 class="text-xl font-bold text-gray-800">HireHub</h1>
-                    <span class="ml-2 text-sm text-gray-500">/ {{ $tenant->name }}</span>
-                </div>
-                <div class="flex items-center space-x-4">
-                    <span class="text-sm text-gray-700">Welcome, {{ $user->name }}</span>
-                    <form method="POST" action="{{ route('logout') }}" class="inline">
-                        @csrf
-                        <button type="submit" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium">
-                            Logout
-                        </button>
-                    </form>
-                </div>
-            </div>
+<x-app-layout :tenant="$tenant">
+    <x-slot name="breadcrumbs">
+        @php
+            $breadcrumbs = [
+                ['label' => 'Dashboard', 'url' => null]
+            ];
+        @endphp
+        <x-breadcrumbs :items="$breadcrumbs" />
+    </x-slot>
+
+    <div class="space-y-4">
+        <!-- Page header -->
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                Welcome back! Here's what's happening with your hiring process.
+            </p>
         </div>
-    </nav>
 
-    <!-- Main Content -->
-    <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div class="px-4 py-6 sm:px-0">
-            <div class="bg-white overflow-hidden shadow rounded-lg">
-                <div class="px-4 py-5 sm:p-6">
-                    <h2 class="text-2xl font-bold text-gray-900 mb-4">
-                        Welcome to {{ $tenant->name }} Dashboard
-                    </h2>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
-                        <!-- Tenant Info Card -->
-                        <div class="bg-blue-50 p-6 rounded-lg">
-                            <h3 class="text-lg font-medium text-blue-900">Tenant Information</h3>
-                            <div class="mt-2">
-                                <p class="text-sm text-blue-700"><strong>Name:</strong> {{ $tenant->name }}</p>
-                                <p class="text-sm text-blue-700"><strong>Slug:</strong> {{ $tenant->slug }}</p>
-                                <p class="text-sm text-blue-700"><strong>Created:</strong> {{ $tenant->created_at->format('M d, Y') }}</p>
-                            </div>
-                        </div>
 
-                        <!-- User Info Card -->
-                        <div class="bg-green-50 p-6 rounded-lg">
-                            <h3 class="text-lg font-medium text-green-900">User Information</h3>
-                            <div class="mt-2">
-                                <p class="text-sm text-green-700"><strong>Name:</strong> {{ $user->name }}</p>
-                                <p class="text-sm text-green-700"><strong>Email:</strong> {{ $user->email }}</p>
-                                <p class="text-sm text-green-700"><strong>Roles:</strong> 
-                                    @if($user->roles->count() > 0)
-                                        {{ $user->roles->pluck('name')->join(', ') }}
-                                    @else
-                                        No roles assigned
-                                    @endif
-                                </p>
-                            </div>
-                        </div>
-
-                        <!-- Quick Actions Card -->
-                        <div class="bg-purple-50 p-6 rounded-lg">
-                            <h3 class="text-lg font-medium text-purple-900">Quick Actions</h3>
-                            <div class="mt-2 space-y-2">
-                                <button class="w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded text-sm">
-                                    Manage Users
-                                </button>
-                                <button class="w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded text-sm">
-                                    View Reports
-                                </button>
-                                <button class="w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded text-sm">
-                                    Settings
-                                </button>
-                            </div>
+        <!-- KPI Cards -->
+        <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            <!-- Open Jobs -->
+            <x-card class="hover:shadow-md transition-shadow">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-8 h-8 bg-primary-100 dark:bg-primary-900/20 rounded-lg flex items-center justify-center">
+                            <svg class="w-5 h-5 text-primary-600 dark:text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2-2v2m8 0V6a2 2 0 012 2v6a2 2 0 01-2 2H6a2 2 0 01-2-2V8a2 2 0 012-2V6"></path>
+                            </svg>
                         </div>
                     </div>
-
-                    <!-- Success Message -->
-                    <div class="mt-6 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
-                        <p class="text-sm">
-                            <strong>Success!</strong> You are now logged in to the {{ $tenant->name }} tenant dashboard. 
-                            The path-based tenancy is working correctly.
-                        </p>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Open Jobs</dt>
+                            <dd class="text-lg font-medium text-gray-900 dark:text-white">{{ $openJobs }}</dd>
+                        </dl>
                     </div>
                 </div>
+            </x-card>
+
+            <!-- Active Candidates -->
+            <x-card class="hover:shadow-md transition-shadow">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-8 h-8 bg-green-100 dark:bg-green-900/20 rounded-lg flex items-center justify-center">
+                            <svg class="w-5 h-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Active Candidates</dt>
+                            <dd class="text-lg font-medium text-gray-900 dark:text-white">{{ $activeCandidates }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </x-card>
+
+            <!-- Interviews This Week -->
+            <x-card class="hover:shadow-md transition-shadow">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-8 h-8 bg-yellow-100 dark:bg-yellow-900/20 rounded-lg flex items-center justify-center">
+                            <svg class="w-5 h-5 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Interviews This Week</dt>
+                            <dd class="text-lg font-medium text-gray-900 dark:text-white">{{ $interviewsThisWeek }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </x-card>
+
+            <!-- Hires -->
+            <x-card class="hover:shadow-md transition-shadow">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-8 h-8 bg-purple-100 dark:bg-purple-900/20 rounded-lg flex items-center justify-center">
+                            <svg class="w-5 h-5 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Total Hires</dt>
+                            <dd class="text-lg font-medium text-gray-900 dark:text-white">{{ $hires }}</dd>
+                        </dl>
+                </div>
             </div>
+            </x-card>
+        </div>
+
+        <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <!-- Recent Jobs -->
+            <x-card>
+                <x-slot name="header">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">Recent Jobs</h3>
+                        <a href="{{ route('tenant.jobs.index', $tenant->slug) }}" class="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-500">
+                            View all
+                        </a>
+                    </div>
+                </x-slot>
+
+                @if($recentJobs->count() > 0)
+                    <div class="space-y-4">
+                        @foreach($recentJobs as $job)
+                            <div class="flex items-center justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0">
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-sm font-medium text-gray-900 dark:text-white truncate">
+                                        {{ $job['title'] }}
+                                    </p>
+                                    <p class="text-sm text-gray-500 dark:text-gray-400">
+                                        {{ $job['location'] }} • {{ $job['applicants_count'] }} applicants
+                                    </p>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                        {{ $job['status'] === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300' : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300' }}">
+                                        {{ ucfirst($job['status']) }}
+                                    </span>
+                                    <span class="text-xs text-gray-500 dark:text-gray-400">
+                                        {{ $job['last_updated'] }}
+                                    </span>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                @else
+                    <x-empty 
+                        icon="briefcase"
+                        title="No jobs yet"
+                        description="Create your first job posting to get started."
+                        :action="route('tenant.jobs.index', $tenant->slug)"
+                        actionText="Create Job"
+                    />
+                @endif
+            </x-card>
+
+            <!-- Quick Actions -->
+            <x-card>
+                <x-slot name="header">
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white">Quick Actions</h3>
+                </x-slot>
+
+                <div class="space-y-3">
+                    <a href="{{ route('tenant.jobs.index', $tenant->slug) }}" 
+                       class="flex items-center p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                        <div class="flex-shrink-0">
+                            <div class="w-8 h-8 bg-primary-100 dark:bg-primary-900/20 rounded-lg flex items-center justify-center">
+                                <svg class="w-4 h-4 text-primary-600 dark:text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-sm font-medium text-gray-900 dark:text-white">New Job</p>
+                            <p class="text-sm text-gray-500 dark:text-gray-400">Create a new job posting</p>
+                        </div>
+                    </a>
+
+                    <a href="{{ route('tenant.candidates.index', $tenant->slug) }}" 
+                       class="flex items-center p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                        <div class="flex-shrink-0">
+                            <div class="w-8 h-8 bg-green-100 dark:bg-green-900/20 rounded-lg flex items-center justify-center">
+                                <svg class="w-4 h-4 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"></path>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-sm font-medium text-gray-900 dark:text-white">Import Candidates</p>
+                            <p class="text-sm text-gray-500 dark:text-gray-400">Upload candidate data</p>
+                        </div>
+                    </a>
+
+                    <a href="#" 
+                       class="flex items-center p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                        <div class="flex-shrink-0">
+                            <div class="w-8 h-8 bg-yellow-100 dark:bg-yellow-900/20 rounded-lg flex items-center justify-center">
+                                <svg class="w-4 h-4 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-sm font-medium text-gray-900 dark:text-white">Create Email Template</p>
+                            <p class="text-sm text-gray-500 dark:text-gray-400">Design communication templates</p>
+                    </div>
+                    </a>
+                </div>
+            </x-card>
         </div>
     </div>
-</body>
-</html>
+</x-app-layout>

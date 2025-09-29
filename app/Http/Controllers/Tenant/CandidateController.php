@@ -74,7 +74,8 @@ class CandidateController extends Controller
             ]);
         }
 
-        return view('tenant.candidates.index', compact('candidates', 'sources', 'tags'));
+        $tenant = tenant();
+        return view('tenant.candidates.index', compact('candidates', 'sources', 'tags', 'tenant'));
     }
 
     public function show(string $tenant, Candidate $candidate)
@@ -87,6 +88,7 @@ class CandidateController extends Controller
             'applications.stageEvents',
         ]);
 
-        return view('tenant.candidates.show', compact('candidate'));
+        $tenant = tenant();
+        return view('tenant.candidates.show', compact('candidate', 'tenant'));
     }
 }

@@ -55,30 +55,57 @@ Route::prefix('{tenant}/careers')->middleware(['capture.tenant', 'tenant'])->gro
 
 // Internal Tenant Management Routes (require authentication)
 Route::middleware(['tenant', 'auth'])->group(function () {
-    Route::get('/{tenant}/dashboard', [DashboardController::class, 'index'])->name('tenant.dashboard');
-    Route::get('/{tenant}/dashboard.json', [DashboardController::class, 'json'])->name('tenant.dashboard.json');
+    // Dashboard - accessible by all authenticated users with view dashboard permission
+    Route::middleware('permission:view dashboard')->group(function () {
+        Route::get('/{tenant}/dashboard', [DashboardController::class, 'index'])->name('tenant.dashboard');
+        Route::get('/{tenant}/dashboard.json', [DashboardController::class, 'json'])->name('tenant.dashboard.json');
+    });
 
-            // Job Management Routes
-            Route::get('/{tenant}/jobs', [JobController::class, 'index'])->name('tenant.jobs.index');
-            Route::get('/{tenant}/jobs/create', [JobController::class, 'create'])->name('tenant.jobs.create');
-            Route::post('/{tenant}/jobs', [JobController::class, 'store'])->name('tenant.jobs.store');
-            Route::get('/{tenant}/jobs/{job}', [JobController::class, 'show'])->name('tenant.jobs.show');
-            Route::get('/{tenant}/jobs/{job}/edit', [JobController::class, 'edit'])->name('tenant.jobs.edit');
-            Route::put('/{tenant}/jobs/{job}', [JobController::class, 'update'])->name('tenant.jobs.update');
-            Route::patch('/{tenant}/jobs/{job}/publish', [JobController::class, 'publish'])->name('tenant.jobs.publish');
-            Route::patch('/{tenant}/jobs/{job}/close', [JobController::class, 'close'])->name('tenant.jobs.close');
-            Route::delete('/{tenant}/jobs/{job}', [JobController::class, 'destroy'])->name('tenant.jobs.destroy');
+    // Job Management Routes - Owner, Admin, Recruiter
+    Route::middleware('permission:view jobs')->group(function () {
+        Route::get('/{tenant}/jobs', [JobController::class, 'index'])->name('tenant.jobs.index');
+        Route::get('/{tenant}/jobs/{job}', [JobController::class, 'show'])->name('tenant.jobs.show');
+    });
 
-            // Job Stage Management Routes
-            Route::get('/{tenant}/jobs/{job}/stages', [JobStageController::class, 'index'])->name('tenant.jobs.stages.index');
-            Route::post('/{tenant}/jobs/{job}/stages', [JobStageController::class, 'store'])->name('tenant.jobs.stages.store');
-            Route::put('/{tenant}/jobs/{job}/stages/{stage}', [JobStageController::class, 'update'])->name('tenant.jobs.stages.update');
-            Route::delete('/{tenant}/jobs/{job}/stages/{stage}', [JobStageController::class, 'destroy'])->name('tenant.jobs.stages.destroy');
-            Route::patch('/{tenant}/jobs/{job}/stages/reorder', [JobStageController::class, 'reorder'])->name('tenant.jobs.stages.reorder');
+    Route::middleware('permission:create jobs')->group(function () {
+        Route::get('/{tenant}/jobs/create', [JobController::class, 'create'])->name('tenant.jobs.create');
+        Route::post('/{tenant}/jobs', [JobController::class, 'store'])->name('tenant.jobs.store');
+    });
 
-    // Candidate Management Routes
-    Route::get('/{tenant}/candidates', [CandidateController::class, 'index'])->name('tenant.candidates.index');
-    Route::get('/{tenant}/candidates/{candidate}', [CandidateController::class, 'show'])->name('tenant.candidates.show');
+    Route::middleware('permission:edit jobs')->group(function () {
+        Route::get('/{tenant}/jobs/{job}/edit', [JobController::class, 'edit'])->name('tenant.jobs.edit');
+        Route::put('/{tenant}/jobs/{job}', [JobController::class, 'update'])->name('tenant.jobs.update');
+    });
+
+    Route::middleware('permission:publish jobs')->group(function () {
+        Route::patch('/{tenant}/jobs/{job}/publish', [JobController::class, 'publish'])->name('tenant.jobs.publish');
+    });
+
+    Route::middleware('permission:close jobs')->group(function () {
+        Route::patch('/{tenant}/jobs/{job}/close', [JobController::class, 'close'])->name('tenant.jobs.close');
+    });
+
+    Route::middleware('permission:delete jobs')->group(function () {
+        Route::delete('/{tenant}/jobs/{job}', [JobController::class, 'destroy'])->name('tenant.jobs.destroy');
+    });
+
+    // Job Stage Management Routes - Owner, Admin, Recruiter
+    Route::middleware('permission:view stages')->group(function () {
+        Route::get('/{tenant}/jobs/{job}/stages', [JobStageController::class, 'index'])->name('tenant.jobs.stages.index');
+    });
+
+    Route::middleware('permission:manage stages')->group(function () {
+        Route::post('/{tenant}/jobs/{job}/stages', [JobStageController::class, 'store'])->name('tenant.jobs.stages.store');
+        Route::put('/{tenant}/jobs/{job}/stages/{stage}', [JobStageController::class, 'update'])->name('tenant.jobs.stages.update');
+        Route::delete('/{tenant}/jobs/{job}/stages/{stage}', [JobStageController::class, 'destroy'])->name('tenant.jobs.stages.destroy');
+        Route::patch('/{tenant}/jobs/{job}/stages/reorder', [JobStageController::class, 'reorder'])->name('tenant.jobs.stages.reorder');
+    });
+
+    // Candidate Management Routes - All authenticated users with view candidates permission
+    Route::middleware('permission:view candidates')->group(function () {
+        Route::get('/{tenant}/candidates', [CandidateController::class, 'index'])->name('tenant.candidates.index');
+        Route::get('/{tenant}/candidates/{candidate}', [CandidateController::class, 'show'])->name('tenant.candidates.show');
+    });
 
     // Account Routes
     Route::prefix('{tenant}/account')->group(function () {

@@ -13,10 +13,11 @@ use App\Models\User;
 use App\Support\Tenancy;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
+use Tests\Traits\AssignsRolesToUsers;
 
 class DashboardKpiTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, AssignsRolesToUsers;
 
     private Tenant $tenant;
     private User $user;
@@ -28,6 +29,9 @@ class DashboardKpiTest extends TestCase
         // Create tenant and user
         $this->tenant = Tenant::factory()->create(['slug' => 'acme']);
         $this->user = User::factory()->create();
+
+        // Assign Owner role to user
+        $this->assignRoleToUser($this->user, $this->tenant, 'Owner');
 
         // Set tenant context
         Tenancy::set($this->tenant);

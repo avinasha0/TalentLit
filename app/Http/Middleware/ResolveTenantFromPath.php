@@ -27,6 +27,9 @@ class ResolveTenantFromPath
 
         Tenancy::set($tenant);
         View::share('tenant', $tenant); // Make tenant available in all views
+        
+        // Set current tenant ID for permission context
+        app()->instance('currentTenantId', $tenant->id);
 
         try {
             return $next($request);

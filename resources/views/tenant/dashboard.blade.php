@@ -15,6 +15,21 @@
             <p class="mt-1 text-sm text-white">
                 Welcome back! Here's what's happening with your hiring process.
             </p>
+            
+            <!-- User Role Information -->
+            <div class="mt-3">
+                <div class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium
+                    @if(auth()->user()->hasRole('Owner')) bg-purple-100 text-purple-800
+                    @elseif(auth()->user()->hasRole('Admin')) bg-blue-100 text-blue-800
+                    @elseif(auth()->user()->hasRole('Recruiter')) bg-green-100 text-green-800
+                    @elseif(auth()->user()->hasRole('Hiring Manager')) bg-yellow-100 text-yellow-800
+                    @else bg-gray-100 text-gray-800 @endif">
+                    <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
+                    </svg>
+                    {{ auth()->user()->roles->first()->name ?? 'No Role' }}
+                </div>
+            </div>
         </div>
 
 
@@ -159,35 +174,39 @@
                 </x-slot>
 
                 <div class="space-y-3">
-                    <a href="{{ route('tenant.jobs.index', $tenant->slug) }}" 
-                       class="flex items-center p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
-                        <div class="flex-shrink-0">
-                            <div class="w-8 h-8 bg-primary-100 rounded-lg flex items-center justify-center">
-                                <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                                </svg>
+                    <x-auth.for permission="create jobs">
+                        <a href="{{ route('tenant.jobs.index', $tenant->slug) }}" 
+                           class="flex items-center p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
+                            <div class="flex-shrink-0">
+                                <div class="w-8 h-8 bg-primary-100 rounded-lg flex items-center justify-center">
+                                    <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                                    </svg>
+                                </div>
                             </div>
-                        </div>
-                        <div class="ml-3">
-                            <p class="text-sm font-medium text-black">New Job</p>
-                            <p class="text-sm text-black">Create a new job posting</p>
-                        </div>
-                    </a>
+                            <div class="ml-3">
+                                <p class="text-sm font-medium text-black">New Job</p>
+                                <p class="text-sm text-black">Create a new job posting</p>
+                            </div>
+                        </a>
+                    </x-auth.for>
 
-                    <a href="{{ route('tenant.candidates.index', $tenant->slug) }}" 
-                       class="flex items-center p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
-                        <div class="flex-shrink-0">
-                            <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                                <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"></path>
-                                </svg>
+                    <x-auth.for permission="import candidates">
+                        <a href="{{ route('tenant.candidates.index', $tenant->slug) }}" 
+                           class="flex items-center p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
+                            <div class="flex-shrink-0">
+                                <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                                    <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"></path>
+                                    </svg>
+                                </div>
                             </div>
-                        </div>
-                        <div class="ml-3">
-                            <p class="text-sm font-medium text-black">Import Candidates</p>
-                            <p class="text-sm text-black">Upload candidate data</p>
-                        </div>
-                    </a>
+                            <div class="ml-3">
+                                <p class="text-sm font-medium text-black">Import Candidates</p>
+                                <p class="text-sm text-black">Upload candidate data</p>
+                            </div>
+                        </a>
+                    </x-auth.for>
 
                     <a href="#" 
                        class="flex items-center p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">

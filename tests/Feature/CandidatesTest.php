@@ -11,15 +11,19 @@ use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
+use Tests\Traits\AssignsRolesToUsers;
 
 class CandidatesTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, AssignsRolesToUsers;
     
     public function test_candidates_index_returns_200()
     {
         $tenant = Tenant::factory()->create();
         $user = User::factory()->create();
+        
+        // Assign Owner role to user
+        $this->assignRoleToUser($user, $tenant, 'Owner');
 
         $response = $this->actingAs($user)->get("/{$tenant->slug}/candidates");
 
@@ -31,6 +35,9 @@ class CandidatesTest extends TestCase
     {
         $tenant = Tenant::factory()->create();
         $user = User::factory()->create();
+        
+        // Assign Owner role to user
+        $this->assignRoleToUser($user, $tenant, 'Owner');
 
         $response = $this->actingAs($user)->get("/{$tenant->slug}/candidates");
 
@@ -43,6 +50,9 @@ class CandidatesTest extends TestCase
         $tenant = Tenant::factory()->create();
         $user = User::factory()->create();
         $candidate = Candidate::factory()->forTenant($tenant)->create();
+        
+        // Assign Owner role to user
+        $this->assignRoleToUser($user, $tenant, 'Owner');
 
         $response = $this->actingAs($user)->get("/{$tenant->slug}/candidates");
 
@@ -55,6 +65,9 @@ class CandidatesTest extends TestCase
         $tenant = Tenant::factory()->create();
         $user = User::factory()->create();
         $candidate = Candidate::factory()->forTenant($tenant)->create();
+        
+        // Assign Owner role to user
+        $this->assignRoleToUser($user, $tenant, 'Owner');
 
         $response = $this->actingAs($user)->get("/{$tenant->slug}/candidates/{$candidate->id}");
 
@@ -67,6 +80,10 @@ class CandidatesTest extends TestCase
     {
         $tenant = Tenant::factory()->create();
         $user = User::factory()->create();
+        
+        // Assign Owner role to user
+        $this->assignRoleToUser($user, $tenant, 'Owner');
+        
         $candidate = Candidate::factory()->forTenant($tenant)->create([
             'first_name' => 'John',
             'last_name' => 'Doe',
@@ -88,6 +105,10 @@ class CandidatesTest extends TestCase
     {
         $tenant = Tenant::factory()->create();
         $user = User::factory()->create();
+        
+        // Assign Owner role to user
+        $this->assignRoleToUser($user, $tenant, 'Owner');
+        
         $candidate = Candidate::factory()->forTenant($tenant)->create();
         
         $tag1 = Tag::factory()->forTenant($tenant)->create(['name' => 'Senior Developer', 'color' => 'blue']);
@@ -109,6 +130,10 @@ class CandidatesTest extends TestCase
     {
         $tenant = Tenant::factory()->create();
         $user = User::factory()->create();
+        
+        // Assign Owner role to user
+        $this->assignRoleToUser($user, $tenant, 'Owner');
+        
         $candidate = Candidate::factory()->forTenant($tenant)->create();
         
         $resume = Resume::factory()->forTenant($tenant)->create([
@@ -180,6 +205,10 @@ class CandidatesTest extends TestCase
     {
         $tenant = Tenant::factory()->create();
         $user = User::factory()->create();
+        
+        // Assign Owner role to user
+        $this->assignRoleToUser($user, $tenant, 'Owner');
+        
         $candidate = Candidate::factory()->forTenant($tenant)->create();
 
         $response = $this->actingAs($user)->get("/{$tenant->slug}/candidates/{$candidate->id}");
@@ -193,6 +222,10 @@ class CandidatesTest extends TestCase
     {
         $tenant = Tenant::factory()->create();
         $user = User::factory()->create();
+        
+        // Assign Owner role to user
+        $this->assignRoleToUser($user, $tenant, 'Owner');
+        
         $candidate = Candidate::factory()->forTenant($tenant)->create();
 
         $response = $this->actingAs($user)->get("/{$tenant->slug}/candidates/{$candidate->id}");
@@ -207,6 +240,10 @@ class CandidatesTest extends TestCase
         $tenant1 = Tenant::factory()->create();
         $tenant2 = Tenant::factory()->create();
         $user = User::factory()->create();
+        
+        // Assign Owner role to user for tenant1 only
+        $this->assignRoleToUser($user, $tenant1, 'Owner');
+        
         $candidate = Candidate::factory()->forTenant($tenant1)->create();
 
         $response = $this->actingAs($user)->get("/{$tenant2->slug}/candidates/{$candidate->id}");

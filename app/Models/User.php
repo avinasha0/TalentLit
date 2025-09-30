@@ -46,4 +46,20 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+    /**
+     * The tenants that belong to the user.
+     */
+    public function tenants()
+    {
+        return $this->belongsToMany(Tenant::class, 'tenant_user');
+    }
+
+    /**
+     * Check if user belongs to a specific tenant
+     */
+    public function belongsToTenant($tenantId)
+    {
+        return $this->tenants()->where('tenant_id', $tenantId)->exists();
+    }
 }

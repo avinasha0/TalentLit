@@ -23,7 +23,19 @@
                 <x-dropdown align="right" width="48">
                     <x-slot name="trigger">
                         <button class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 bg-white hover:text-gray-700 focus:outline-none transition ease-in-out duration-150">
-                            <div>{{ Auth::user()->name }}</div>
+                            <div class="flex items-center space-x-2">
+                                <div>{{ Auth::user()->name }}</div>
+                                @if(Auth::user()->roles->count() > 0)
+                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium
+                                        @if(Auth::user()->hasRole('Owner')) bg-purple-100 text-purple-800
+                                        @elseif(Auth::user()->hasRole('Admin')) bg-blue-100 text-blue-800
+                                        @elseif(Auth::user()->hasRole('Recruiter')) bg-green-100 text-green-800
+                                        @elseif(Auth::user()->hasRole('Hiring Manager')) bg-yellow-100 text-yellow-800
+                                        @else bg-gray-100 text-gray-800 @endif">
+                                        {{ Auth::user()->roles->first()->name }}
+                                    </span>
+                                @endif
+                            </div>
 
                             <div class="ms-1">
                                 <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
@@ -34,6 +46,18 @@
                     </x-slot>
 
                     <x-slot name="content">
+                        <!-- User Role Information -->
+                        <div class="px-4 py-2 border-b border-gray-100">
+                            <div class="text-sm text-gray-500">Role</div>
+                            <div class="text-sm font-medium text-gray-900">
+                                @if(Auth::user()->roles->count() > 0)
+                                    {{ Auth::user()->roles->first()->name }}
+                                @else
+                                    No Role Assigned
+                                @endif
+                            </div>
+                        </div>
+
                         <x-dropdown-link :href="route('profile.edit')">
                             {{ __('Profile') }}
                         </x-dropdown-link>

@@ -18,4 +18,12 @@ class Tenant extends Model
     protected $keyType = 'string';
 
     public $incrementing = false;
+
+    /**
+     * The users that belong to the tenant.
+     */
+    public function users()
+    {
+        return $this->belongsToMany(User::class, 'tenant_user');
+    }
 }

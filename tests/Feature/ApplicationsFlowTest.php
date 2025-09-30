@@ -12,10 +12,11 @@ use App\Models\User;
 use App\Support\Tenancy;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
+use Tests\Traits\AssignsRolesToUsers;
 
 class ApplicationsFlowTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, AssignsRolesToUsers;
 
     protected function setUp(): void
     {
@@ -32,6 +33,9 @@ class ApplicationsFlowTest extends TestCase
             'email' => 'test@example.com',
             'password' => bcrypt('password'),
         ]);
+
+        // Assign Owner role to user for this tenant
+        $this->assignRoleToUser($this->user, $this->tenant, 'Owner');
 
         // Set current tenant for the application
         Tenancy::set($this->tenant);

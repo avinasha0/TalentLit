@@ -6,10 +6,11 @@ use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
+use Tests\Traits\AssignsRolesToUsers;
 
 class TenantDashboardTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, AssignsRolesToUsers;
 
     public function test_tenant_dashboard_returns_200_and_shows_tenant_name(): void
     {
@@ -23,6 +24,9 @@ class TenantDashboardTest extends TestCase
             'email' => 'test@example.com',
             'password' => bcrypt('password'),
         ]);
+        
+        // Assign Owner role to user
+        $this->assignRoleToUser($user, $tenant, 'Owner');
 
         $response = $this->actingAs($user)->get('/acme/dashboard');
 

@@ -12,7 +12,7 @@ class CandidatePolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->hasRole(['Owner', 'Recruiter', 'Hiring Manager']);
+        return $user->can('view candidates');
     }
 
     /**
@@ -20,7 +20,7 @@ class CandidatePolicy
      */
     public function view(User $user, Candidate $candidate): bool
     {
-        return $user->hasRole(['Owner', 'Recruiter', 'Hiring Manager']);
+        return $user->can('view candidates');
     }
 
     /**
@@ -28,7 +28,7 @@ class CandidatePolicy
      */
     public function create(User $user): bool
     {
-        return $user->hasRole(['Owner', 'Recruiter']);
+        return $user->can('create candidates');
     }
 
     /**
@@ -36,7 +36,7 @@ class CandidatePolicy
      */
     public function update(User $user, Candidate $candidate): bool
     {
-        return $user->hasRole(['Owner', 'Recruiter']);
+        return $user->can('edit candidates');
     }
 
     /**
@@ -44,7 +44,7 @@ class CandidatePolicy
      */
     public function delete(User $user, Candidate $candidate): bool
     {
-        return $user->hasRole(['Owner']);
+        return $user->can('delete candidates');
     }
 
     /**
@@ -52,7 +52,7 @@ class CandidatePolicy
      */
     public function restore(User $user, Candidate $candidate): bool
     {
-        return $user->hasRole(['Owner']);
+        return $user->can('delete candidates');
     }
 
     /**
@@ -60,6 +60,6 @@ class CandidatePolicy
      */
     public function forceDelete(User $user, Candidate $candidate): bool
     {
-        return $user->hasRole(['Owner']);
+        return $user->can('delete candidates');
     }
 }

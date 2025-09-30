@@ -12,7 +12,17 @@
     <link href="https://fonts.bunny.net/css?family=inter:300,400,500,600,700" rel="stylesheet" />
 
     <!-- Scripts -->
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    {{-- Only load Vite outside of testing --}}
+    @env(['local', 'development', 'production'])
+      @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @endenv
+    {{-- Minimal fallback CSS for tests --}}
+    @env('testing')
+      <style>
+        :root{--bg:#f8fafc;--fg:#111827}
+        body{background:var(--bg);color:var(--fg);font-family:ui-sans-serif,system-ui}
+      </style>
+    @endenv
 </head>
 <body class="h-full bg-gray-50 dark:bg-gray-900">
     <div class="min-h-full">

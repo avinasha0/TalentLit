@@ -4,7 +4,17 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>{{ $title ?? 'HireHub' }}</title>
-  @vite(['resources/css/app.css','resources/js/app.js'])
+  {{-- Only load Vite outside of testing --}}
+  @env(['local', 'development', 'production'])
+    @vite(['resources/css/app.css','resources/js/app.js'])
+  @endenv
+  {{-- Minimal fallback CSS for tests --}}
+  @env('testing')
+    <style>
+      :root{--bg:#f8fafc;--fg:#111827}
+      body{background:var(--bg);color:var(--fg);font-family:ui-sans-serif,system-ui}
+    </style>
+  @endenv
 </head>
 <body class="h-full bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100">
   <x-navbar />

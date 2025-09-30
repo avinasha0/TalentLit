@@ -43,6 +43,7 @@ Route::prefix('{tenant}/careers')->middleware(['tenant'])->group(function () {
 // Internal Tenant Management Routes
 Route::middleware(['tenant', 'auth'])->group(function () {
     Route::get('/{tenant}/dashboard', [DashboardController::class, 'index'])->name('tenant.dashboard');
+    Route::get('/{tenant}/dashboard.json', [DashboardController::class, 'json'])->name('tenant.dashboard.json');
 
     // Job Management Routes
     Route::get('/{tenant}/jobs', [JobController::class, 'index'])->name('tenant.jobs.index');

@@ -40,4 +40,13 @@ class Interview extends Model
     {
         return $this->hasMany(InterviewFeedback::class);
     }
+
+    // Query scopes
+    public function scopeThisWeek($query)
+    {
+        return $query->whereBetween('scheduled_at', [
+            now()->startOfWeek(),
+            now()->endOfWeek()
+        ]);
+    }
 }

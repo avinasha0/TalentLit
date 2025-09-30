@@ -16,20 +16,59 @@ class DashboardController extends Controller
         // Get the tenant model from the middleware
         $tenantModel = tenant();
         
-        // Simple test data
-        $openJobs = 5;
-        $activeCandidates = 12;
-        $interviewsThisWeek = 3;
-        $hires = 2;
-        $recentJobs = collect([]);
+        // KPI Metrics
+        $openJobsCount = JobOpening::where('tenant_id', $tenantModel->id)
+            ->where('status', 'published')
+            ->count();
+
+        $activeCandidatesCount = Candidate::where('tenant_id', $tenantModel->id)
+            ->where('created_at', '>=', now()->subDays(30))
+            ->count();
+
+        $interviewsThisWeek = Interview::whereHas('application', function ($query) use ($tenantModel) {
+                $query->where('tenant_id', $tenantModel->id);
+            })
+            ->thisWeek()
+            ->count();
+
+        $hiresThisMonth = Application::where('tenant_id', $tenantModel->id)
+            ->thisMonthHired()
+            ->count();
+
+        // Recent Applications
+        $recentApplications = Application::where('tenant_id', $tenantModel->id)
+            ->recent(10)
+            ->get();
 
         return view('tenant.dashboard', [
             'tenant' => $tenantModel,
-            'openJobs' => $openJobs,
-            'activeCandidates' => $activeCandidates, 
+            'openJobsCount' => $openJobsCount,
+            'activeCandidatesCount' => $activeCandidatesCount, 
             'interviewsThisWeek' => $interviewsThisWeek,
-            'hires' => $hires,
-            'recentJobs' => $recentJobs
+            'hiresThisMonth' => $hiresThisMonth,
+            'recentApplications' => $recentApplications
+        ]);
+    }
+
+    public function json(Request $request, string $tenant)
+    {
+        $tenantModel = tenant();
+        
+        return response()->json([
+            'open_jobs_count' => JobOpening::where('tenant_id', $tenantModel->id)
+                ->where('status', 'published')
+                ->count(),
+            'active_candidates_count' => Candidate::where('tenant_id', $tenantModel->id)
+                ->where('created_at', '>=', now()->subDays(30))
+                ->count(),
+            'interviews_this_week' => Interview::whereHas('application', function ($query) use ($tenantModel) {
+                    $query->where('tenant_id', $tenantModel->id);
+                })
+                ->thisWeek()
+                ->count(),
+            'hires_this_month' => Application::where('tenant_id', $tenantModel->id)
+                ->thisMonthHired()
+                ->count(),
         ]);
     }
 }

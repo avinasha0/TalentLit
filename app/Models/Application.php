@@ -61,4 +61,19 @@ class Application extends Model
     {
         return $this->hasMany(Activity::class);
     }
+
+    // Query scopes
+    public function scopeThisMonthHired($query)
+    {
+        return $query->where('status', 'hired')
+                    ->whereMonth('applied_at', now()->month)
+                    ->whereYear('applied_at', now()->year);
+    }
+
+    public function scopeRecent($query, $limit = 10)
+    {
+        return $query->with(['candidate', 'jobOpening'])
+                    ->orderBy('applied_at', 'desc')
+                    ->limit($limit);
+    }
 }

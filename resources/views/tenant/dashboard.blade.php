@@ -33,7 +33,7 @@
                     <div class="ml-5 w-0 flex-1">
                         <dl>
                             <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Open Jobs</dt>
-                            <dd class="text-lg font-medium text-gray-900 dark:text-white">{{ $openJobs }}</dd>
+                            <dd class="text-lg font-medium text-gray-900 dark:text-white">{{ $openJobsCount }}</dd>
                         </dl>
                     </div>
                 </div>
@@ -52,7 +52,7 @@
                     <div class="ml-5 w-0 flex-1">
                         <dl>
                             <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Active Candidates</dt>
-                            <dd class="text-lg font-medium text-gray-900 dark:text-white">{{ $activeCandidates }}</dd>
+                            <dd class="text-lg font-medium text-gray-900 dark:text-white">{{ $activeCandidatesCount }}</dd>
                         </dl>
                     </div>
                 </div>
@@ -89,8 +89,8 @@
                     </div>
                     <div class="ml-5 w-0 flex-1">
                         <dl>
-                            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Total Hires</dt>
-                            <dd class="text-lg font-medium text-gray-900 dark:text-white">{{ $hires }}</dd>
+                            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Hires This Month</dt>
+                            <dd class="text-lg font-medium text-gray-900 dark:text-white">{{ $hiresThisMonth }}</dd>
                         </dl>
                 </div>
             </div>
@@ -98,36 +98,44 @@
         </div>
 
         <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <!-- Recent Jobs -->
+            <!-- Recent Applications -->
             <x-card>
                 <x-slot name="header">
                     <div class="flex items-center justify-between">
-                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">Recent Jobs</h3>
-                        <a href="{{ route('tenant.jobs.index', $tenant->slug) }}" class="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-500">
+                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">Recent Applications</h3>
+                        <a href="{{ route('tenant.candidates.index', $tenant->slug) }}" class="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-500">
                             View all
                         </a>
                     </div>
                 </x-slot>
 
-                @if($recentJobs->count() > 0)
+                @if($recentApplications->count() > 0)
                     <div class="space-y-4">
-                        @foreach($recentJobs as $job)
+                        @foreach($recentApplications as $application)
                             <div class="flex items-center justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0">
                                 <div class="flex-1 min-w-0">
                                     <p class="text-sm font-medium text-gray-900 dark:text-white truncate">
-                                        {{ $job['title'] }}
+                                        {{ $application->candidate->full_name }}
                                     </p>
                                     <p class="text-sm text-gray-500 dark:text-gray-400">
-                                        {{ $job['location'] }} • {{ $job['applicants_count'] }} applicants
+                                        {{ $application->jobOpening->title }}
                                     </p>
                                 </div>
                                 <div class="flex items-center space-x-2">
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                                        {{ $job['status'] === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300' : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300' }}">
-                                        {{ ucfirst($job['status']) }}
+                                    @php
+                                        $statusColors = [
+                                            'active' => 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300',
+                                            'hired' => 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300',
+                                            'rejected' => 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300',
+                                            'withdrawn' => 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
+                                        ];
+                                        $statusColor = $statusColors[$application->status] ?? 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
+                                    @endphp
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $statusColor }}">
+                                        {{ ucfirst($application->status) }}
                                     </span>
                                     <span class="text-xs text-gray-500 dark:text-gray-400">
-                                        {{ $job['last_updated'] }}
+                                        {{ $application->applied_at->diffForHumans() }}
                                     </span>
                                 </div>
                             </div>
@@ -135,11 +143,11 @@
                     </div>
                 @else
                     <x-empty 
-                        icon="briefcase"
-                        title="No jobs yet"
-                        description="Create your first job posting to get started."
-                        :action="route('tenant.jobs.index', $tenant->slug)"
-                        actionText="Create Job"
+                        icon="user-group"
+                        title="No applications yet"
+                        description="Applications will appear here once candidates start applying."
+                        :action="route('tenant.candidates.index', $tenant->slug)"
+                        actionText="View Candidates"
                     />
                 @endif
             </x-card>

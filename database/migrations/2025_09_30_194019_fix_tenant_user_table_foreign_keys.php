@@ -11,6 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // Drop the existing table if it exists (with wrong structure)
+        Schema::dropIfExists('tenant_user');
+        
+        // Recreate with correct structure
         Schema::create('tenant_user', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
@@ -19,7 +23,7 @@ return new class extends Migration
             
             $table->unique(['user_id', 'tenant_id']);
             
-            // Add foreign key constraint for tenant_id after table creation
+            // Add foreign key constraint for tenant_id
             $table->foreign('tenant_id')->references('id')->on('tenants')->onDelete('cascade');
         });
     }

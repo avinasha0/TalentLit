@@ -1,10 +1,22 @@
 @php
     $tenant = tenant();
     $tenantSlug = $tenant->slug;
+    $isJobFiltered = request()->route('job') !== null;
+    $jobTitle = $isJobFiltered ? \App\Models\JobOpening::find(request()->route('job'))?->title : null;
+    
     $breadcrumbs = [
         ['label' => 'Dashboard', 'url' => route('tenant.dashboard', $tenantSlug)],
         ['label' => 'Candidates', 'url' => null]
     ];
+    
+    if ($isJobFiltered && $jobTitle) {
+        $breadcrumbs = [
+            ['label' => 'Dashboard', 'url' => route('tenant.dashboard', $tenantSlug)],
+            ['label' => 'Jobs', 'url' => route('tenant.jobs.index', $tenantSlug)],
+            ['label' => $jobTitle, 'url' => route('tenant.jobs.show', ['tenant' => $tenantSlug, 'job' => request()->route('job')])],
+            ['label' => 'Applications', 'url' => null]
+        ];
+    }
 @endphp
 
 <x-app-layout :tenant="$tenant">
@@ -16,9 +28,19 @@
         <!-- Page header -->
         <div class="flex items-center justify-between">
             <div>
-                <h1 class="text-2xl font-bold text-gray-900">Candidates</h1>
+                <h1 class="text-2xl font-bold text-gray-900">
+                    @if($isJobFiltered && $jobTitle)
+                        Applications for {{ $jobTitle }}
+                    @else
+                        Candidates
+                    @endif
+                </h1>
                 <p class="mt-1 text-sm text-gray-500">
-                    Manage candidate profiles and applications
+                    @if($isJobFiltered && $jobTitle)
+                        View and manage applications for this job posting
+                    @else
+                        Manage candidate profiles and applications
+                    @endif
                 </p>
             </div>
             <div>

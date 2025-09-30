@@ -15,10 +15,12 @@ class Application extends Model
     use HasFactory, HasUuids, SoftDeletes, TenantScoped;
 
     protected $fillable = [
+        'tenant_id',
         'job_opening_id',
         'candidate_id',
         'status',
         'current_stage_id',
+        'stage_position',
         'applied_at',
     ];
 
@@ -75,5 +77,11 @@ class Application extends Model
         return $query->with(['candidate', 'jobOpening'])
                     ->orderBy('applied_at', 'desc')
                     ->limit($limit);
+    }
+
+    public function scopeOrderedByStagePosition($query)
+    {
+        return $query->orderBy('stage_position', 'asc')
+                    ->orderBy('created_at', 'asc');
     }
 }

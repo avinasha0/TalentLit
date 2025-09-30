@@ -8,9 +8,16 @@ use Illuminate\Http\Request;
 
 class CandidateController extends Controller
 {
-    public function index(Request $request, string $tenant)
+    public function index(Request $request, string $tenant, $job = null)
     {
         $query = Candidate::with(['tags', 'applications.jobOpening']);
+        
+        // Filter by job if job parameter is provided
+        if ($job) {
+            $query->whereHas('applications', function ($q) use ($job) {
+                $q->where('job_opening_id', $job);
+            });
+        }
 
         // Apply filters
         if ($request->filled('search')) {

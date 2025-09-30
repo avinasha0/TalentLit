@@ -181,18 +181,22 @@
                 <!-- Actions -->
                 <x-card>
                     <h3 class="text-lg font-semibold text-black mb-4">Actions</h3>
-                    <div class="space-y-3">
+                    <div class="space-y-3 w-full">
                         <a href="{{ route('tenant.jobs.edit', ['tenant' => $tenant->slug, 'job' => $job->id]) }}" 
-                           class="w-full bg-blue-600 text-white text-center py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors">
+                           class="block w-full bg-blue-600 text-white text-center py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors hover:bg-blue-700">
                             Edit Job
                         </a>
                         <a href="{{ route('careers.show', ['tenant' => $tenant->slug, 'job' => $job->slug]) }}" 
                            target="_blank"
-                           class="w-full bg-gray-100 text-black text-center py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors">
+                           class="block w-full bg-blue-600 text-white text-center py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors hover:bg-blue-700">
                             View Public Job Page
                         </a>
-                        <a href="{{ route('tenant.candidates.index', ['tenant' => $tenant->slug, 'job' => $job->id]) }}" 
-                           class="w-full bg-gray-100 text-black text-center py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors">
+                        <a href="{{ route('tenant.jobs.pipeline', ['tenant' => $tenant->slug, 'job' => $job->id]) }}" 
+                           class="block w-full bg-blue-600 text-white text-center py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors hover:bg-blue-700">
+                            View Pipeline
+                        </a>
+                        <a href="{{ route('tenant.candidates.index.job', ['tenant' => $tenant->slug, 'job' => $job->id]) }}" 
+                           class="block w-full bg-blue-600 text-white text-center py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors hover:bg-blue-700">
                             View Applications
                         </a>
                         
@@ -200,7 +204,7 @@
                             <form method="POST" action="{{ route('tenant.jobs.publish', ['tenant' => $tenant->slug, 'job' => $job->id]) }}">
                                 @csrf
                                 @method('PATCH')
-                                <button type="submit" class="w-full bg-green-600 text-white text-center py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors">
+                                <button type="submit" class="block w-full bg-blue-600 text-white text-center py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors hover:bg-blue-700">
                                     Publish Job
                                 </button>
                             </form>
@@ -208,7 +212,7 @@
                             <form method="POST" action="{{ route('tenant.jobs.close', ['tenant' => $tenant->slug, 'job' => $job->id]) }}">
                                 @csrf
                                 @method('PATCH')
-                                <button type="submit" class="w-full bg-red-600 text-white text-center py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors">
+                                <button type="submit" class="block w-full bg-blue-600 text-white text-center py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors hover:bg-blue-700">
                                     Close Job
                                 </button>
                             </form>
@@ -218,7 +222,7 @@
                               onsubmit="return confirm('Are you sure you want to delete this job?')">
                             @csrf
                             @method('DELETE')
-                            <button type="submit" class="w-full bg-red-600 text-white text-center py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors">
+                            <button type="submit" class="block w-full bg-blue-600 text-white text-center py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors hover:bg-blue-700">
                                 Delete Job
                             </button>
                         </form>

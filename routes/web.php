@@ -7,6 +7,7 @@ use App\Http\Controllers\Tenant\CandidateController;
 use App\Http\Controllers\Tenant\DashboardController;
 use App\Http\Controllers\Tenant\JobController;
 use App\Http\Controllers\Tenant\JobStageController;
+use App\Http\Controllers\Tenant\PipelineController;
 use App\Models\Application;
 use App\Models\Candidate;
 use Illuminate\Http\Request;
@@ -101,9 +102,20 @@ Route::middleware(['tenant', 'auth'])->group(function () {
         Route::patch('/{tenant}/jobs/{job}/stages/reorder', [JobStageController::class, 'reorder'])->name('tenant.jobs.stages.reorder');
     });
 
+    // Pipeline Management Routes - Owner, Admin, Recruiter, Hiring Manager
+    Route::middleware('permission:view jobs')->group(function () {
+        Route::get('/{tenant}/jobs/{job}/pipeline', [PipelineController::class, 'index'])->name('tenant.jobs.pipeline');
+        Route::get('/{tenant}/jobs/{job}/pipeline.json', [PipelineController::class, 'json'])->name('tenant.jobs.pipeline.json');
+    });
+
+    Route::middleware('permission:edit jobs')->group(function () {
+        Route::post('/{tenant}/jobs/{job}/pipeline/move', [PipelineController::class, 'move'])->name('tenant.jobs.pipeline.move');
+    });
+
     // Candidate Management Routes - All authenticated users with view candidates permission
     Route::middleware('permission:view candidates')->group(function () {
         Route::get('/{tenant}/candidates', [CandidateController::class, 'index'])->name('tenant.candidates.index');
+        Route::get('/{tenant}/candidates/job/{job}', [CandidateController::class, 'index'])->name('tenant.candidates.index.job');
         Route::get('/{tenant}/candidates/{candidate}', [CandidateController::class, 'show'])->name('tenant.candidates.show');
     });
 

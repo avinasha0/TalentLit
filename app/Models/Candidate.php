@@ -15,6 +15,7 @@ class Candidate extends Model
     use HasFactory, HasUuids, SoftDeletes, TenantScoped;
 
     protected $fillable = [
+        'tenant_id',
         'first_name',
         'last_name',
         'primary_email',

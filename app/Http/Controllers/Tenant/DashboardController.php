@@ -25,14 +25,18 @@ class DashboardController extends Controller
             ->where('created_at', '>=', now()->subDays(30))
             ->count();
 
-        $interviewsThisWeek = Interview::whereHas('application', function ($query) use ($tenantModel) {
-                $query->where('tenant_id', $tenantModel->id);
+        // Count applications in "Interview" stage
+        $applicationsInInterviewStage = Application::where('tenant_id', $tenantModel->id)
+            ->whereHas('currentStage', function ($query) {
+                $query->where('name', 'like', '%Interview%');
             })
-            ->thisWeek()
             ->count();
 
+        // Count applications in "Hired" stage
         $hiresThisMonth = Application::where('tenant_id', $tenantModel->id)
-            ->thisMonthHired()
+            ->whereHas('currentStage', function ($query) {
+                $query->where('name', 'like', '%Hired%');
+            })
             ->count();
 
         // Recent Applications
@@ -44,7 +48,7 @@ class DashboardController extends Controller
             'tenant' => $tenantModel,
             'openJobsCount' => $openJobsCount,
             'activeCandidatesCount' => $activeCandidatesCount, 
-            'interviewsThisWeek' => $interviewsThisWeek,
+            'interviewsThisWeek' => $applicationsInInterviewStage,
             'hiresThisMonth' => $hiresThisMonth,
             'recentApplications' => $recentApplications
         ]);
@@ -61,13 +65,15 @@ class DashboardController extends Controller
             'active_candidates_count' => Candidate::where('tenant_id', $tenantModel->id)
                 ->where('created_at', '>=', now()->subDays(30))
                 ->count(),
-            'interviews_this_week' => Interview::whereHas('application', function ($query) use ($tenantModel) {
-                    $query->where('tenant_id', $tenantModel->id);
+            'interviews_this_week' => Application::where('tenant_id', $tenantModel->id)
+                ->whereHas('currentStage', function ($query) {
+                    $query->where('name', 'like', '%Interview%');
                 })
-                ->thisWeek()
                 ->count(),
             'hires_this_month' => Application::where('tenant_id', $tenantModel->id)
-                ->thisMonthHired()
+                ->whereHas('currentStage', function ($query) {
+                    $query->where('name', 'like', '%Hired%');
+                })
                 ->count(),
         ]);
     }

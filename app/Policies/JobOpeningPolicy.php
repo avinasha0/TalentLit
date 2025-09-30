@@ -54,4 +54,9 @@ class JobOpeningPolicy
     {
         return $user->hasAnyRole(['Owner', 'Admin', 'Recruiter']);
     }
+
+    public function moveApplications(User $user, JobOpening $jobOpening): bool
+    {
+        return $user->hasAnyRole(['Owner', 'Admin', 'Recruiter']);
+    }
 }

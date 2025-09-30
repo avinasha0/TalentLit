@@ -14,6 +14,7 @@ class JobStage extends Model
     use HasFactory, HasUuids, TenantScoped;
 
     protected $fillable = [
+        'tenant_id',
         'job_opening_id',
         'name',
         'sort_order',

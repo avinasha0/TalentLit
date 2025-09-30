@@ -85,7 +85,7 @@
                     </div>
                     <div class="ml-5 w-0 flex-1">
                         <dl>
-                            <dt class="text-sm font-medium text-black truncate">Interviews This Week</dt>
+                            <dt class="text-sm font-medium text-black truncate">In Interview Stage</dt>
                             <dd class="text-lg font-medium text-black">{{ $interviewsThisWeek }}</dd>
                         </dl>
                     </div>
@@ -104,7 +104,7 @@
                     </div>
                     <div class="ml-5 w-0 flex-1">
                         <dl>
-                            <dt class="text-sm font-medium text-black truncate">Hires This Month</dt>
+                            <dt class="text-sm font-medium text-black truncate">Hired</dt>
                             <dd class="text-lg font-medium text-black">{{ $hiresThisMonth }}</dd>
                         </dl>
                 </div>

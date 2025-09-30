@@ -47,16 +47,12 @@ class RegisteredUserController extends Controller
 
         Auth::login($user);
 
-        // Check if user already belongs to any tenant
-        $existingTenants = $user->tenants;
+        // New user - always redirect to onboarding
+        \Log::info('New user registration - redirecting to onboarding', [
+            'user_id' => $user->id,
+            'user_email' => $user->email
+        ]);
         
-        if ($existingTenants->count() > 0) {
-            // User already has tenants, redirect to the first one
-            $tenant = $existingTenants->first();
-            return redirect()->route('tenant.dashboard', $tenant->slug);
-        }
-        
-        // New user with no tenants - redirect to onboarding
         return redirect()->route('onboarding.organization');
     }
     

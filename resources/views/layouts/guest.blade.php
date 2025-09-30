@@ -16,9 +16,9 @@
             @vite(['resources/css/app.css', 'resources/js/app.js'])
         @endunless
     </head>
-    <body class="h-full bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+    <body class="h-full {{ $attributes->get('class', 'bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800') }}">
         <div class="min-h-full flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-            <div class="sm:mx-auto sm:w-full sm:max-w-md">
+            <div class="sm:mx-auto sm:w-full {{ $attributes->get('max-width', 'sm:max-w-md') }}">
                 <div class="flex justify-center">
                     <a href="/" class="flex items-center space-x-2">
                         <div class="w-10 h-10 bg-gradient-to-r from-primary-600 to-primary-700 rounded-lg flex items-center justify-center">
@@ -39,9 +39,13 @@
                 @endif
             </div>
 
-            <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+            <div class="mt-8 sm:mx-auto sm:w-full {{ $attributes->get('max-width', 'sm:max-w-md') }}">
                 <div class="bg-white dark:bg-gray-800 py-8 px-4 shadow-xl sm:rounded-lg sm:px-10 border border-gray-200 dark:border-gray-700">
-                    {{ $slot }}
+                    @isset($slot)
+                        {{ $slot }}
+                    @else
+                        @yield('content')
+                    @endisset
                 </div>
             </div>
         </div>

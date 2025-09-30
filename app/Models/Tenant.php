@@ -13,6 +13,16 @@ class Tenant extends Model
     protected $fillable = [
         'name',
         'slug',
+        'website',
+        'location',
+        'company_size',
+        'logo',
+        'primary_color',
+        'careers_enabled',
+        'careers_intro',
+        'consent_text',
+        'timezone',
+        'locale',
     ];
 
     protected $keyType = 'string';

@@ -59,28 +59,28 @@ class OrganizationController extends Controller
     private function createRolesForTenant(Tenant $tenant): void
     {
         // Create Owner role
-        $ownerRole = TenantRole::create([
+        $ownerRole = TenantRole::firstOrCreate([
             'name' => 'Owner',
             'guard_name' => 'web',
             'tenant_id' => $tenant->id,
         ]);
 
         // Create Admin role
-        $adminRole = TenantRole::create([
+        $adminRole = TenantRole::firstOrCreate([
             'name' => 'Admin',
             'guard_name' => 'web',
             'tenant_id' => $tenant->id,
         ]);
 
         // Create Recruiter role
-        $recruiterRole = TenantRole::create([
+        $recruiterRole = TenantRole::firstOrCreate([
             'name' => 'Recruiter',
             'guard_name' => 'web',
             'tenant_id' => $tenant->id,
         ]);
 
         // Create Hiring Manager role
-        $hiringManagerRole = TenantRole::create([
+        $hiringManagerRole = TenantRole::firstOrCreate([
             'name' => 'Hiring Manager',
             'guard_name' => 'web',
             'tenant_id' => $tenant->id,

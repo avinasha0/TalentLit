@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Onboarding;
 
 use App\Http\Controllers\Controller;
 use App\Models\Tenant;
-use App\Models\JobStage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -51,30 +50,8 @@ class SetupController extends Controller
             'locale' => $request->locale ?? 'en',
         ]);
 
-        // Create default job stages if they don't exist
-        $this->createDefaultJobStages($tenant);
-
         return redirect()->route('tenant.dashboard', $tenant->slug)
             ->with('success', 'Setup completed successfully! You can now start creating jobs and managing candidates.');
     }
 
-    private function createDefaultJobStages(Tenant $tenant): void
-    {
-        $defaultStages = [
-            ['name' => 'Applied', 'sort_order' => 1],
-            ['name' => 'Screen', 'sort_order' => 2],
-            ['name' => 'Interview', 'sort_order' => 3],
-            ['name' => 'Offer', 'sort_order' => 4],
-            ['name' => 'Hired', 'sort_order' => 5],
-        ];
-
-        foreach ($defaultStages as $stage) {
-            JobStage::firstOrCreate([
-                'tenant_id' => $tenant->id,
-                'name' => $stage['name'],
-            ], [
-                'sort_order' => $stage['sort_order'],
-            ]);
-        }
-    }
 }

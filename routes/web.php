@@ -159,19 +159,3 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/{tenant}/onboarding/setup', [App\Http\Controllers\Onboarding\SetupController::class, 'index'])->name('onboarding.setup');
     Route::post('/{tenant}/onboarding/setup', [App\Http\Controllers\Onboarding\SetupController::class, 'store'])->name('onboarding.setup.store');
 });
-
-// Add GET logout route for both testing and production
-Route::get('/logout', function() {
-    auth()->logout();
-    request()->session()->invalidate();
-    request()->session()->regenerateToken();
-    return redirect('/');
-})->name('logout.get');
-
-// Onboarding routes (global, not tenant-scoped)
-Route::middleware(['auth'])->group(function () {
-    Route::get('/onboarding/organization', [App\Http\Controllers\Onboarding\OrganizationController::class, 'create'])->name('onboarding.organization');
-    Route::post('/onboarding/organization', [App\Http\Controllers\Onboarding\OrganizationController::class, 'store'])->name('onboarding.organization.store');
-    Route::get('/{tenant}/onboarding/setup', [App\Http\Controllers\Onboarding\SetupController::class, 'index'])->name('onboarding.setup');
-    Route::post('/{tenant}/onboarding/setup', [App\Http\Controllers\Onboarding\SetupController::class, 'store'])->name('onboarding.setup.store');
-});

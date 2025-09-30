@@ -144,8 +144,13 @@ Route::prefix('api')->group(function () {
     });
 });
 
-// Add GET logout route for testing purposes
-Route::get('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout.get');
+// Add GET logout route for both testing and production
+Route::get('/logout', function() {
+    auth()->logout();
+    request()->session()->invalidate();
+    request()->session()->regenerateToken();
+    return redirect('/');
+})->name('logout.get');
 
 // Onboarding routes (global, not tenant-scoped)
 Route::middleware(['auth'])->group(function () {

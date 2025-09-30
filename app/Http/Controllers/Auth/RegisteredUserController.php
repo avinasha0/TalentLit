@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\Tenant;
+use App\Models\TenantRole;
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
@@ -48,20 +49,32 @@ class RegisteredUserController extends Controller
 
         // Get the last visited tenant from session
         $lastTenantSlug = session('last_tenant_slug');
+        $tenant = null;
         
-        // If we have a last tenant, redirect there
+        // If we have a last tenant, use that
         if ($lastTenantSlug) {
             $tenant = Tenant::where('slug', $lastTenantSlug)->first();
-            if ($tenant) {
-                return redirect()->route('tenant.dashboard', $tenant->slug);
-            }
         }
         
-        // Try to find a default tenant for the user
-        // For now, we'll use the first tenant available
-        $defaultTenant = Tenant::first();
-        if ($defaultTenant) {
-            return redirect()->route('tenant.dashboard', $defaultTenant->slug);
+        // If no last tenant, use the first available tenant
+        if (!$tenant) {
+            $tenant = Tenant::first();
+        }
+        
+        // If we have a tenant, add user to it and assign Owner role
+        if ($tenant) {
+            // Add user to tenant
+            if (!$user->belongsToTenant($tenant->id)) {
+                $user->tenants()->attach($tenant->id);
+            }
+            
+            // Assign Owner role to the user for this tenant
+            $ownerRole = TenantRole::where('tenant_id', $tenant->id)->where('name', 'Owner')->first();
+            if ($ownerRole) {
+                $user->assignRole($ownerRole);
+            }
+            
+            return redirect()->route('tenant.dashboard', $tenant->slug);
         }
         
         // In tests, Breeze expects redirect to global dashboard

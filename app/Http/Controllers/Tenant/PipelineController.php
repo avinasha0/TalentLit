@@ -3,14 +3,17 @@
 namespace App\Http\Controllers\Tenant;
 
 use App\Http\Controllers\Controller;
+use App\Mail\StageChanged;
 use App\Models\Application;
 use App\Models\ApplicationEvent;
 use App\Models\JobOpening;
 use App\Models\JobStage;
+use App\Services\NotificationService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
 
 class PipelineController extends Controller
@@ -217,6 +220,11 @@ class PipelineController extends Controller
             ], 500);
         }
 
+        // Send stage change notification if moving to different stage
+        if ($request->from_stage_id !== $request->to_stage_id) {
+            $this->sendStageChangeNotification($tenantModel, $job, $application, $request->to_stage_id, $request->note);
+        }
+
         // Get updated counts
         $stageCounts = $this->getStageCounts($job);
         \Log::info('=== PIPELINE MOVE SUCCESS ===', [
@@ -325,5 +333,28 @@ class PipelineController extends Controller
             ->groupBy('current_stage_id')
             ->pluck('count', 'current_stage_id')
             ->toArray();
+    }
+
+    private function sendStageChangeNotification($tenant, JobOpening $job, Application $application, $toStageId, $note = null): void
+    {
+        try {
+            if (config('mail.default') !== null && $application->candidate && $application->candidate->primary_email) {
+                $stage = JobStage::find($toStageId);
+                
+                if ($stage) {
+                    Mail::to($application->candidate->primary_email)
+                        ->queue(new StageChanged($tenant, $job, $application->candidate, $application, $stage, $note));
+                }
+            }
+        } catch (\Exception $e) {
+            // Log error but don't break the application flow
+            \Log::info('Failed to send stage change notification', [
+                'tenant_id' => $tenant->id,
+                'job_id' => $job->id,
+                'application_id' => $application->id,
+                'candidate_id' => $application->candidate_id,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 }

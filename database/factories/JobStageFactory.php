@@ -36,4 +36,12 @@ class JobStageFactory extends Factory
 
         return $this->state(fn () => ['tenant_id' => $tenantId]);
     }
+
+    /** Explicit state helper for job */
+    public function forJob($job): static
+    {
+        $jobId = is_string($job) ? $job : $job->id;
+
+        return $this->state(fn () => ['job_opening_id' => $jobId]);
+    }
 }

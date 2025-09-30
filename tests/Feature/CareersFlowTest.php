@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Mail\ApplicationReceived;
+use App\Mail\NewApplication;
 use App\Models\Application;
 use App\Models\Candidate;
 use App\Models\Department;
@@ -9,10 +11,12 @@ use App\Models\JobOpening;
 use App\Models\Location;
 use App\Models\Resume;
 use App\Models\Tenant;
+use App\Models\TenantRole;
 use App\Models\User;
 use App\Support\Tenancy;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -342,5 +346,48 @@ class CareersFlowTest extends TestCase
         $response->assertSee('Senior PHP Developer');
         $response->assertSee('Engineering');
         $response->assertSee('Chennai');
+    }
+
+    public function test_application_submission_sends_email_notifications()
+    {
+        Mail::fake();
+        Storage::fake('public');
+
+        // Create a recruiter user
+        $recruiter = User::factory()->create(['email' => 'recruiter@example.com']);
+        $recruiter->tenants()->attach($this->tenant->id);
+        
+        // Create Recruiter role and assign to user
+        $recruiterRole = TenantRole::createForTenant([
+            'name' => 'Recruiter',
+            'guard_name' => 'web',
+        ], $this->tenant->id);
+        $recruiter->assignRole($recruiterRole);
+
+        $resumeFile = UploadedFile::fake()->create('resume.pdf', 1000, 'application/pdf');
+
+        $response = $this->post("/{$this->tenant->slug}/careers/{$this->job->slug}/apply", [
+            'first_name' => 'John',
+            'last_name' => 'Doe',
+            'email' => 'john.doe@example.com',
+            'phone' => '+1234567890',
+            'resume' => $resumeFile,
+            'consent' => true,
+        ]);
+
+        $response->assertRedirect();
+
+        // Assert ApplicationReceived email was queued for candidate
+        Mail::assertQueued(ApplicationReceived::class, function ($mail) {
+            return $mail->candidate->primary_email === 'john.doe@example.com' &&
+                   $mail->job->title === 'Senior PHP Developer';
+        });
+
+        // Assert NewApplication email was queued for recruiter
+        Mail::assertQueued(NewApplication::class, function ($mail) {
+            return $mail->candidate->primary_email === 'john.doe@example.com' &&
+                   $mail->job->title === 'Senior PHP Developer' &&
+                   $mail->tenant->id === $this->tenant->id;
+        });
     }
 }

@@ -3,11 +3,13 @@
 namespace App\Actions\Candidates;
 
 use App\Mail\ApplicationReceived;
+use App\Mail\NewApplication;
 use App\Models\Application;
 use App\Models\Candidate;
 use App\Models\JobOpening;
 use App\Models\Resume;
 use App\Models\Tenant;
+use App\Services\NotificationService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
@@ -91,6 +93,9 @@ class UpsertCandidateAndApply
             // Send confirmation email (queued)
             $this->sendConfirmationEmail($candidate, $job, $application);
 
+            // Send notification to recruiters (queued)
+            $this->sendNewApplicationNotification($tenant, $job, $candidate, $application);
+
             return $application;
         });
     }
@@ -128,6 +133,28 @@ class UpsertCandidateAndApply
             \Log::info('Failed to send application confirmation email', [
                 'candidate_id' => $candidate->id,
                 'job_id' => $job->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    private function sendNewApplicationNotification(Tenant $tenant, JobOpening $job, Candidate $candidate, Application $application): void
+    {
+        try {
+            if (config('mail.default') !== null) {
+                $recruiters = NotificationService::getRecruiterUsers($tenant);
+                
+                foreach ($recruiters as $recruiter) {
+                    Mail::to($recruiter->email)
+                        ->queue(new NewApplication($tenant, $job, $candidate, $application));
+                }
+            }
+        } catch (\Exception $e) {
+            // Log error but don't break the application flow
+            \Log::info('Failed to send new application notification', [
+                'tenant_id' => $tenant->id,
+                'job_id' => $job->id,
+                'candidate_id' => $candidate->id,
                 'error' => $e->getMessage(),
             ]);
         }

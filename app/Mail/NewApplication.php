@@ -5,26 +5,28 @@ namespace App\Mail;
 use App\Models\Application;
 use App\Models\Candidate;
 use App\Models\JobOpening;
+use App\Models\Tenant;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
-class ApplicationReceived extends Mailable
+class NewApplication extends Mailable
 {
     use Queueable, SerializesModels;
 
     public function __construct(
-        public Candidate $candidate,
+        public Tenant $tenant,
         public JobOpening $job,
+        public Candidate $candidate,
         public Application $application
     ) {}
 
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Application Received - '.$this->job->title,
+            subject: 'New Application for ' . $this->job->title,
             from: $this->getFromAddress(),
         );
     }
@@ -32,12 +34,12 @@ class ApplicationReceived extends Mailable
     public function content(): Content
     {
         return new Content(
-            view: 'emails.application-received',
+            view: 'emails.new-application',
             with: [
-                'candidate' => $this->candidate,
+                'tenant' => $this->tenant,
                 'job' => $this->job,
+                'candidate' => $this->candidate,
                 'application' => $this->application,
-                'tenant' => tenant(),
             ]
         );
     }
@@ -49,8 +51,7 @@ class ApplicationReceived extends Mailable
 
     private function getFromAddress(): string
     {
-        $tenant = tenant();
-        $domain = $tenant->domain ?? config('mail.from.address');
+        $domain = $this->tenant->domain ?? config('mail.from.address');
         return "noreply@{$domain}";
     }
 }

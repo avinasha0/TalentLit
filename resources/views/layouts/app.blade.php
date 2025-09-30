@@ -4,10 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>{{ $title ?? 'HireHub' }}</title>
-  {{-- Only load Vite outside of testing --}}
-  @env(['local', 'development', 'production'])
-    @vite(['resources/css/app.css','resources/js/app.js'])
-  @endenv
+  {{-- Skip Vite in testing OR when the manifest isn't present --}}
+  @unless (app()->environment('testing'))
+    @if (file_exists(public_path('build/manifest.json')))
+      @vite(['resources/css/app.css','resources/js/app.js'])
+    @endif
+  @endunless
   {{-- Minimal fallback CSS for tests --}}
   @env('testing')
     <style>

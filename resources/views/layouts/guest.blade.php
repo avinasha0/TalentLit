@@ -12,10 +12,12 @@
     <link href="https://fonts.bunny.net/css?family=inter:300,400,500,600,700" rel="stylesheet" />
 
     <!-- Scripts -->
-    {{-- Only load Vite outside of testing --}}
-    @env(['local', 'development', 'production'])
-      @vite(['resources/css/app.css', 'resources/js/app.js'])
-    @endenv
+    {{-- Skip Vite in testing OR when the manifest isn't present --}}
+    @unless (app()->environment('testing'))
+      @if (file_exists(public_path('build/manifest.json')))
+        @vite(['resources/css/app.css', 'resources/js/app.js'])
+      @endif
+    @endunless
     {{-- Minimal fallback CSS for tests --}}
     @env('testing')
       <style>

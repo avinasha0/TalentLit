@@ -47,42 +47,47 @@ class RegisteredUserController extends Controller
 
         Auth::login($user);
 
-        // Get the last visited tenant from session
-        $lastTenantSlug = session('last_tenant_slug');
-        $tenant = null;
+        // Check if user already belongs to any tenant
+        $existingTenants = $user->tenants;
         
-        // If we have a last tenant, use that
-        if ($lastTenantSlug) {
-            $tenant = Tenant::where('slug', $lastTenantSlug)->first();
-        }
-        
-        // If no last tenant, use the first available tenant
-        if (!$tenant) {
-            $tenant = Tenant::first();
-        }
-        
-        // If we have a tenant, add user to it and assign Owner role
-        if ($tenant) {
-            // Add user to tenant
-            if (!$user->belongsToTenant($tenant->id)) {
-                $user->tenants()->attach($tenant->id);
-            }
-            
-            // Assign Owner role to the user for this tenant
-            $ownerRole = TenantRole::where('tenant_id', $tenant->id)->where('name', 'Owner')->first();
-            if ($ownerRole) {
-                $user->assignRole($ownerRole);
-            }
-            
+        if ($existingTenants->count() > 0) {
+            // User already has tenants, redirect to the first one
+            $tenant = $existingTenants->first();
             return redirect()->route('tenant.dashboard', $tenant->slug);
         }
         
-        // In tests, Breeze expects redirect to global dashboard
-        if (app()->environment('testing')) {
-            return redirect()->route('dashboard');
+        // New user with no tenants - redirect to onboarding
+        return redirect()->route('onboarding.organization');
+    }
+    
+    /**
+     * Ensure roles exist for a tenant
+     */
+    private function ensureRolesExistForTenant(Tenant $tenant): void
+    {
+        // Create Owner role if it doesn't exist
+        $ownerRole = TenantRole::firstOrCreate([
+            'name' => 'Owner',
+            'guard_name' => 'web',
+            'tenant_id' => $tenant->id,
+        ]);
+        
+        // Create basic permissions if they don't exist
+        $permissions = [
+            'view jobs', 'create jobs', 'edit jobs', 'delete jobs', 'publish jobs', 'close jobs',
+            'manage stages', 'view stages', 'create stages', 'edit stages', 'delete stages', 'reorder stages',
+            'view candidates', 'create candidates', 'edit candidates', 'delete candidates', 'move candidates', 'import candidates',
+            'view dashboard', 'manage users', 'manage settings'
+        ];
+        
+        foreach ($permissions as $permission) {
+            \Spatie\Permission\Models\Permission::firstOrCreate([
+                'name' => $permission,
+                'guard_name' => 'web'
+            ]);
         }
-
-        // Fallback to home page
-        return redirect('/');
+        
+        // Assign all permissions to Owner role
+        $ownerRole->syncPermissions(\Spatie\Permission\Models\Permission::all());
     }
 }

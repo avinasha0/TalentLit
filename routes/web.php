@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Career\ApplyController;
 use App\Http\Controllers\Career\CareerJobController;
@@ -141,4 +142,15 @@ Route::prefix('api')->group(function () {
 
         return response()->json($applications);
     });
+});
+
+// Add GET logout route for testing purposes
+Route::get('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout.get');
+
+// Onboarding routes (global, not tenant-scoped)
+Route::middleware(['auth'])->group(function () {
+    Route::get('/onboarding/organization', [App\Http\Controllers\Onboarding\OrganizationController::class, 'create'])->name('onboarding.organization');
+    Route::post('/onboarding/organization', [App\Http\Controllers\Onboarding\OrganizationController::class, 'store'])->name('onboarding.organization.store');
+    Route::get('/{tenant}/onboarding/setup', [App\Http\Controllers\Onboarding\SetupController::class, 'index'])->name('onboarding.setup');
+    Route::post('/{tenant}/onboarding/setup', [App\Http\Controllers\Onboarding\SetupController::class, 'store'])->name('onboarding.setup.store');
 });

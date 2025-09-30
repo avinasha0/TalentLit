@@ -7,21 +7,11 @@ use Illuminate\View\View;
 
 class AppLayout extends Component
 {
-    public $tenant;
-
     /**
-     * Create a new component instance.
-     */
-    public function __construct($tenant = null)
-    {
-        $this->tenant = $tenant;
-    }
-
-    /**
-     * Get the view / contents that represent the component.
+     * Get the view / contents that represents the component.
      */
     public function render(): View
     {
-        return view('layouts.app');
+        return view('components.app-layout');
     }
 }

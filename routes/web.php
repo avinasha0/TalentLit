@@ -21,18 +21,16 @@ Route::get('/test', function () {
     return view('test');
 })->name('test');
 
-// Simple dashboard test
+// Simple dashboard route
 Route::get('/simple-dashboard', function () {
     return view('simple-dashboard');
 })->name('simple-dashboard');
 
-// Auth routes
-Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
-Route::post('/login', [AuthController::class, 'login']);
-Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+// Auth routes (global, not tenant-scoped)
+require __DIR__.'/auth.php';
 
 // Public Career Site Routes
-Route::prefix('{tenant}/careers')->middleware(['tenant'])->group(function () {
+Route::prefix('{tenant}/careers')->middleware(['capture.tenant', 'tenant'])->group(function () {
     Route::get('/', [CareerJobController::class, 'index'])->name('careers.index');
     Route::get('/{job:slug}', [CareerJobController::class, 'show'])->name('careers.show');
     Route::get('/{job:slug}/apply', [ApplyController::class, 'create'])->name('careers.apply.create');
@@ -40,7 +38,7 @@ Route::prefix('{tenant}/careers')->middleware(['tenant'])->group(function () {
     Route::get('/{job:slug}/success', [ApplyController::class, 'success'])->name('careers.success');
 });
 
-// Internal Tenant Management Routes
+// Internal Tenant Management Routes (require authentication)
 Route::middleware(['tenant', 'auth'])->group(function () {
     Route::get('/{tenant}/dashboard', [DashboardController::class, 'index'])->name('tenant.dashboard');
     Route::get('/{tenant}/dashboard.json', [DashboardController::class, 'json'])->name('tenant.dashboard.json');
@@ -58,24 +56,21 @@ Route::middleware(['tenant', 'auth'])->group(function () {
         Route::view('/profile', 'tenant.account.profile')->name('account.profile');
         Route::view('/settings', 'tenant.account.settings')->name('account.settings');
     });
+});
 
-    // Legacy Application API Route (for backward compatibility)
-    Route::post('/{tenant}/applications', function (Request $request) {
-        $request->validate([
-            'job_opening_id' => 'required|exists:job_openings,id',
-            'candidate_id' => 'required|exists:candidates,id',
-        ]);
+// API Routes
+Route::prefix('api')->group(function () {
+    Route::get('/applications', function (Request $request) {
+        $applications = Application::with(['candidate', 'jobOpening'])
+            ->when($request->job_id, function ($query, $jobId) {
+                return $query->where('job_opening_id', $jobId);
+            })
+            ->when($request->status, function ($query, $status) {
+                return $query->where('status', $status);
+            })
+            ->orderBy('created_at', 'desc')
+            ->paginate(10);
 
-        $application = Application::create([
-            'job_opening_id' => $request->job_opening_id,
-            'candidate_id' => $request->candidate_id,
-            'status' => 'active',
-            'applied_at' => now(),
-        ]);
-
-        return response()->json([
-            'message' => 'Application created successfully',
-            'application' => $application,
-        ], 201);
+        return response()->json($applications);
     });
 });

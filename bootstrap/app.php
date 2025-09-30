@@ -14,6 +14,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'tenant' => \App\Http\Middleware\ResolveTenantFromPath::class,
+            'capture.tenant' => \App\Http\Middleware\CaptureLastTenant::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

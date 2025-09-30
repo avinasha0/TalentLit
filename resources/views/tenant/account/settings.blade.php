@@ -12,15 +12,15 @@
     <div class="space-y-4">
         <!-- Page header -->
         <div>
-            <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Settings</h1>
-            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            <h1 class="text-2xl font-bold text-gray-900">Settings</h1>
+            <p class="mt-1 text-sm text-gray-500">
                 Application preferences and configuration.
             </p>
         </div>
 
         <!-- Settings content -->
         <div class="mt-6 grid gap-4 max-w-2xl">
-            <div class="rounded-lg border border-gray-200 dark:border-gray-800 p-4">
+            <div class="rounded-lg border border-gray-200 p-4">
                 <h3 class="text-sm font-medium mb-3">Notifications</h3>
                 <div class="space-y-3">
                     <label class="flex items-center gap-3">
@@ -38,7 +38,7 @@
                 </div>
             </div>
 
-            <div class="rounded-lg border border-gray-200 dark:border-gray-800 p-4">
+            <div class="rounded-lg border border-gray-200 p-4">
                 <h3 class="text-sm font-medium mb-3">Appearance</h3>
                 <div class="space-y-3">
                     <label class="flex items-center gap-3">
@@ -56,13 +56,13 @@
                 </div>
             </div>
 
-            <div class="rounded-lg border border-gray-200 dark:border-gray-800 p-4">
+            <div class="rounded-lg border border-gray-200 p-4">
                 <h3 class="text-sm font-medium mb-3">Account</h3>
                 <div class="space-y-3">
-                    <button class="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300">
+                    <button class="text-sm text-blue-600 hover:text-blue-800">
                         Change password
                     </button>
-                    <button class="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300">
+                    <button class="text-sm text-blue-600 hover:text-blue-800">
                         Update email address
                     </button>
                 </div>

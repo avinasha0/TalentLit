@@ -9,11 +9,11 @@
                 @endif
                 
                 @if(isset($item['url']) && $index < count($items) - 1)
-                    <a href="{{ $item['url'] }}" class="text-gray-700 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400 text-sm font-medium">
+                    <a href="{{ $item['url'] }}" class="text-gray-700 hover:text-blue-600 text-sm font-medium">
                         {{ $item['label'] }}
                     </a>
                 @else
-                    <span class="text-gray-500 dark:text-gray-400 text-sm font-medium" aria-current="page">
+                    <span class="text-gray-500 text-sm font-medium" aria-current="page">
                         {{ $item['label'] }}
                     </span>
                 @endif

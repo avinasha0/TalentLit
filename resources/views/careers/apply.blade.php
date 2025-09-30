@@ -13,7 +13,7 @@
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex justify-between items-center py-6">
                     <div>
-                        <nav class="flex items-center space-x-2 text-sm text-gray-500 mb-2">
+                        <nav class="flex items-center space-x-2 text-sm text-gray-600 mb-2">
                             <a href="{{ route('careers.index', ['tenant' => tenant()->slug]) }}" class="hover:text-gray-700">Careers</a>
                             <span>></span>
                             <a href="{{ route('careers.show', ['tenant' => tenant()->slug, 'job' => $job->slug]) }}" class="hover:text-gray-700">{{ $job->title }}</a>
@@ -148,7 +148,7 @@
                                id="resume"
                                accept=".pdf,.doc,.docx"
                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 @error('resume') border-red-500 @enderror">
-                        <p class="mt-1 text-sm text-gray-500">Maximum file size: 5MB</p>
+                        <p class="mt-1 text-sm text-gray-600">Maximum file size: 5MB</p>
                     </div>
 
                     <!-- Consent Checkbox -->

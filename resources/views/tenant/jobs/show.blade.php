@@ -1,44 +1,43 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ $job->title }} - {{ tenant()->name }}</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gray-50">
-    <div class="min-h-screen">
-        <!-- Header -->
-        <header class="bg-white shadow-sm border-b">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex justify-between items-center py-6">
+@php
+    $tenant = tenant();
+    $breadcrumbs = [
+        ['label' => 'Dashboard', 'url' => route('tenant.dashboard', $tenant->slug)],
+        ['label' => 'Jobs', 'url' => route('tenant.jobs.index', $tenant->slug)],
+        ['label' => $job->title, 'url' => null]
+    ];
+@endphp
+
+<x-app-layout :tenant="$tenant">
+    <x-slot name="breadcrumbs">
+        <x-breadcrumbs :items="$breadcrumbs" />
+    </x-slot>
+
+    <div class="space-y-6">
+        <!-- Page Header -->
+        <div class="bg-white shadow rounded-lg">
+            <div class="px-6 py-4">
+                <div class="flex items-center justify-between">
                     <div>
-                        <nav class="flex items-center space-x-2 text-sm text-gray-500 mb-2">
-                            <a href="{{ route('tenant.jobs.index', ['tenant' => tenant()->slug]) }}" class="hover:text-gray-700">Jobs</a>
-                            <span>></span>
-                            <span class="text-gray-900">{{ $job->title }}</span>
-                        </nav>
-                        <h1 class="text-3xl font-bold text-gray-900">{{ $job->title }}</h1>
+                        <h1 class="text-2xl font-bold text-black">{{ $job->title }}</h1>
                     </div>
                     <div>
-                        <a href="{{ route('tenant.jobs.index', ['tenant' => tenant()->slug]) }}" 
-                           class="text-blue-600 hover:text-blue-800 font-medium">
+                        <a href="{{ route('tenant.jobs.index', ['tenant' => $tenant->slug]) }}" 
+                           class="text-blue-600 font-medium">
                             Back to Jobs
                         </a>
                     </div>
                 </div>
             </div>
-        </header>
+        </div>
 
-        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <!-- Job Details -->
-                <div class="lg:col-span-2">
-                    <div class="bg-white rounded-lg shadow-md overflow-hidden">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Job Details -->
+            <div class="lg:col-span-2">
+                <x-card>
                         <!-- Job Header -->
                         <div class="px-6 py-8 border-b border-gray-200">
                             <div class="flex items-center justify-between mb-4">
-                                <div class="flex items-center space-x-4 text-sm text-gray-600">
+                                <div class="flex items-center space-x-4 text-sm text-black">
                                     <span class="flex items-center">
                                         <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
@@ -93,12 +92,12 @@
                                                 <div class="font-medium text-gray-900">
                                                     {{ $application->candidate->full_name }}
                                                 </div>
-                                                <div class="text-sm text-gray-500">
+                                                <div class="text-sm text-gray-600">
                                                     {{ $application->candidate->primary_email }}
                                                 </div>
                                             </div>
                                             <div class="text-right">
-                                                <div class="text-sm text-gray-500">
+                                                <div class="text-sm text-gray-600">
                                                     Applied {{ $application->applied_at->format('M j, Y') }}
                                                 </div>
                                                 @if($application->currentStage)
@@ -130,25 +129,25 @@
                         <h3 class="text-lg font-semibold text-gray-900 mb-4">Job Information</h3>
                         <dl class="space-y-3">
                             <div>
-                                <dt class="text-sm font-medium text-gray-500">Status</dt>
+                                <dt class="text-sm font-medium text-gray-600">Status</dt>
                                 <dd class="text-sm text-gray-900">{{ ucfirst($job->status) }}</dd>
                             </div>
                             <div>
-                                <dt class="text-sm font-medium text-gray-500">Employment Type</dt>
+                                <dt class="text-sm font-medium text-gray-600">Employment Type</dt>
                                 <dd class="text-sm text-gray-900">{{ ucfirst(str_replace('_', ' ', $job->employment_type)) }}</dd>
                             </div>
                             <div>
-                                <dt class="text-sm font-medium text-gray-500">Openings</dt>
+                                <dt class="text-sm font-medium text-gray-600">Openings</dt>
                                 <dd class="text-sm text-gray-900">{{ $job->openings_count }}</dd>
                             </div>
                             @if($job->published_at)
                                 <div>
-                                    <dt class="text-sm font-medium text-gray-500">Published</dt>
+                                    <dt class="text-sm font-medium text-gray-600">Published</dt>
                                     <dd class="text-sm text-gray-900">{{ $job->published_at->format('M j, Y \a\t g:i A') }}</dd>
                                 </div>
                             @endif
                             <div>
-                                <dt class="text-sm font-medium text-gray-500">Created</dt>
+                                <dt class="text-sm font-medium text-gray-600">Created</dt>
                                 <dd class="text-sm text-gray-900">{{ $job->created_at->format('M j, Y \a\t g:i A') }}</dd>
                             </div>
                         </dl>
@@ -169,7 +168,7 @@
                                         <div class="flex-1">
                                             <h4 class="text-sm font-medium text-gray-900">{{ $stage->name }}</h4>
                                             @if($stage->is_terminal)
-                                                <p class="text-xs text-gray-500">Final stage</p>
+                                                <p class="text-xs text-gray-600">Final stage</p>
                                             @endif
                                         </div>
                                     </div>
@@ -177,25 +176,24 @@
                             </div>
                         </div>
                     @endif
+                </x-card>
 
-                    <!-- Actions -->
-                    <div class="bg-white rounded-lg shadow-md p-6">
-                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Actions</h3>
-                        <div class="space-y-3">
-                            <a href="{{ route('careers.show', ['tenant' => tenant()->slug, 'job' => $job->slug]) }}" 
-                               target="_blank"
-                               class="w-full bg-blue-600 text-white text-center py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors">
-                                View Public Job Page
-                            </a>
-                            <a href="{{ route('tenant.candidates.index', ['tenant' => tenant()->slug, 'job' => $job->id]) }}" 
-                               class="w-full bg-gray-100 text-gray-700 text-center py-2 px-4 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors">
-                                View Applications
-                            </a>
-                        </div>
+                <!-- Actions -->
+                <x-card>
+                    <h3 class="text-lg font-semibold text-black mb-4">Actions</h3>
+                    <div class="space-y-3">
+                        <a href="{{ route('careers.show', ['tenant' => $tenant->slug, 'job' => $job->slug]) }}" 
+                           target="_blank"
+                           class="w-full bg-blue-600 text-white text-center py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors">
+                            View Public Job Page
+                        </a>
+                        <a href="{{ route('tenant.candidates.index', ['tenant' => $tenant->slug, 'job' => $job->id]) }}" 
+                           class="w-full bg-gray-100 text-black text-center py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors">
+                            View Applications
+                        </a>
                     </div>
-                </div>
+                </x-card>
             </div>
-        </main>
+        </div>
     </div>
-</body>
-</html>
+</x-app-layout>

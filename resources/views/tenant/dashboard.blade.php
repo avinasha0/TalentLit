@@ -24,8 +24,8 @@
             <x-card class="hover:shadow-md transition-shadow">
                 <div class="flex items-center">
                     <div class="flex-shrink-0">
-                        <div class="w-8 h-8 bg-primary-100 dark:bg-primary-900/20 rounded-lg flex items-center justify-center">
-                            <svg class="w-5 h-5 text-primary-600 dark:text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div class="w-8 h-8 bg-primary-100 rounded-lg flex items-center justify-center">
+                            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2-2v2m8 0V6a2 2 0 012 2v6a2 2 0 01-2 2H6a2 2 0 01-2-2V8a2 2 0 012-2V6"></path>
                             </svg>
                         </div>
@@ -43,8 +43,8 @@
             <x-card class="hover:shadow-md transition-shadow">
                 <div class="flex items-center">
                     <div class="flex-shrink-0">
-                        <div class="w-8 h-8 bg-green-100 dark:bg-green-900/20 rounded-lg flex items-center justify-center">
-                            <svg class="w-5 h-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                            <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
                             </svg>
                         </div>
@@ -62,8 +62,8 @@
             <x-card class="hover:shadow-md transition-shadow">
                 <div class="flex items-center">
                     <div class="flex-shrink-0">
-                        <div class="w-8 h-8 bg-yellow-100 dark:bg-yellow-900/20 rounded-lg flex items-center justify-center">
-                            <svg class="w-5 h-5 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div class="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center">
+                            <svg class="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                             </svg>
                         </div>
@@ -81,8 +81,8 @@
             <x-card class="hover:shadow-md transition-shadow">
                 <div class="flex items-center">
                     <div class="flex-shrink-0">
-                        <div class="w-8 h-8 bg-purple-100 dark:bg-purple-900/20 rounded-lg flex items-center justify-center">
-                            <svg class="w-5 h-5 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div class="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                            <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path>
                             </svg>
                         </div>
@@ -102,8 +102,8 @@
             <x-card>
                 <x-slot name="header">
                     <div class="flex items-center justify-between">
-                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">Recent Applications</h3>
-                        <a href="{{ route('tenant.candidates.index', $tenant->slug) }}" class="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-500">
+                        <h3 class="text-lg font-medium text-gray-900">Recent Applications</h3>
+                        <a href="{{ route('tenant.candidates.index', $tenant->slug) }}" class="text-sm text-blue-600 hover:text-blue-700">
                             View all
                         </a>
                     </div>
@@ -112,29 +112,29 @@
                 @if($recentApplications->count() > 0)
                     <div class="space-y-4">
                         @foreach($recentApplications as $application)
-                            <div class="flex items-center justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0">
+                            <div class="flex items-center justify-between py-3 border-b border-gray-200 last:border-b-0">
                                 <div class="flex-1 min-w-0">
-                                    <p class="text-sm font-medium text-gray-900 dark:text-white truncate">
+                                    <p class="text-sm font-medium text-gray-900 truncate">
                                         {{ $application->candidate->full_name }}
                                     </p>
-                                    <p class="text-sm text-gray-500 dark:text-gray-400">
+                                    <p class="text-sm text-gray-500">
                                         {{ $application->jobOpening->title }}
                                     </p>
                                 </div>
                                 <div class="flex items-center space-x-2">
                                     @php
                                         $statusColors = [
-                                            'active' => 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300',
-                                            'hired' => 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300',
-                                            'rejected' => 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300',
-                                            'withdrawn' => 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
+                                            'active' => 'bg-green-100 text-green-800',
+                                            'hired' => 'bg-blue-100 text-blue-800',
+                                            'rejected' => 'bg-red-100 text-red-800',
+                                            'withdrawn' => 'bg-gray-100 text-gray-800',
                                         ];
-                                        $statusColor = $statusColors[$application->status] ?? 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
+                                        $statusColor = $statusColors[$application->status] ?? 'bg-gray-100 text-gray-800';
                                     @endphp
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $statusColor }}">
                                         {{ ucfirst($application->status) }}
                                     </span>
-                                    <span class="text-xs text-gray-500 dark:text-gray-400">
+                                    <span class="text-xs text-gray-500">
                                         {{ $application->applied_at->diffForHumans() }}
                                     </span>
                                 </div>
@@ -155,52 +155,52 @@
             <!-- Quick Actions -->
             <x-card>
                 <x-slot name="header">
-                    <h3 class="text-lg font-medium text-gray-900 dark:text-white">Quick Actions</h3>
+                    <h3 class="text-lg font-medium text-gray-900">Quick Actions</h3>
                 </x-slot>
 
                 <div class="space-y-3">
                     <a href="{{ route('tenant.jobs.index', $tenant->slug) }}" 
-                       class="flex items-center p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                       class="flex items-center p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
                         <div class="flex-shrink-0">
-                            <div class="w-8 h-8 bg-primary-100 dark:bg-primary-900/20 rounded-lg flex items-center justify-center">
-                                <svg class="w-4 h-4 text-primary-600 dark:text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div class="w-8 h-8 bg-primary-100 rounded-lg flex items-center justify-center">
+                                <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                                 </svg>
                             </div>
                         </div>
                         <div class="ml-3">
-                            <p class="text-sm font-medium text-gray-900 dark:text-white">New Job</p>
-                            <p class="text-sm text-gray-500 dark:text-gray-400">Create a new job posting</p>
+                            <p class="text-sm font-medium text-gray-900">New Job</p>
+                            <p class="text-sm text-gray-500">Create a new job posting</p>
                         </div>
                     </a>
 
                     <a href="{{ route('tenant.candidates.index', $tenant->slug) }}" 
-                       class="flex items-center p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                       class="flex items-center p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
                         <div class="flex-shrink-0">
-                            <div class="w-8 h-8 bg-green-100 dark:bg-green-900/20 rounded-lg flex items-center justify-center">
-                                <svg class="w-4 h-4 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                                <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"></path>
                                 </svg>
                             </div>
                         </div>
                         <div class="ml-3">
-                            <p class="text-sm font-medium text-gray-900 dark:text-white">Import Candidates</p>
-                            <p class="text-sm text-gray-500 dark:text-gray-400">Upload candidate data</p>
+                            <p class="text-sm font-medium text-gray-900">Import Candidates</p>
+                            <p class="text-sm text-gray-500">Upload candidate data</p>
                         </div>
                     </a>
 
                     <a href="#" 
-                       class="flex items-center p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                       class="flex items-center p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
                         <div class="flex-shrink-0">
-                            <div class="w-8 h-8 bg-yellow-100 dark:bg-yellow-900/20 rounded-lg flex items-center justify-center">
-                                <svg class="w-4 h-4 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div class="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center">
+                                <svg class="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
                                 </svg>
                             </div>
                         </div>
                         <div class="ml-3">
-                            <p class="text-sm font-medium text-gray-900 dark:text-white">Create Email Template</p>
-                            <p class="text-sm text-gray-500 dark:text-gray-400">Design communication templates</p>
+                            <p class="text-sm font-medium text-gray-900">Create Email Template</p>
+                            <p class="text-sm text-gray-500">Design communication templates</p>
                     </div>
                     </a>
                 </div>

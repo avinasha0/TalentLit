@@ -96,7 +96,7 @@
         <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <div class="mb-6">
                 <h2 class="text-2xl font-bold text-gray-900">Open Positions</h2>
-                <p class="text-gray-600">{{ $jobs->total() }} job{{ $jobs->total() !== 1 ? 's' : '' }} found</p>
+                    <p class="text-gray-900">{{ $jobs->total() }} job{{ $jobs->total() !== 1 ? 's' : '' }} found</p>
             </div>
 
             @if($jobs->count() > 0)
@@ -106,7 +106,7 @@
                             <div class="flex justify-between items-start mb-4">
                                 <div>
                                     <h3 class="text-xl font-semibold text-gray-900 mb-2">{{ $job->title }}</h3>
-                                    <div class="flex items-center space-x-4 text-sm text-gray-600 mb-3">
+                                    <div class="flex items-center space-x-4 text-sm text-gray-900 mb-3">
                                         <span class="flex items-center">
                                             <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
@@ -128,13 +128,13 @@
                             </div>
 
                             @if($job->description)
-                                <p class="text-gray-600 text-sm mb-4 line-clamp-3">
+                                <p class="text-gray-900 text-sm mb-4 line-clamp-3">
                                     {{ Str::limit(strip_tags($job->description), 150) }}
                                 </p>
                             @endif
 
                             <div class="flex justify-between items-center">
-                                <div class="text-sm text-gray-500">
+                                <div class="text-sm text-gray-900">
                                     {{ $job->openings_count }} opening{{ $job->openings_count !== 1 ? 's' : '' }}
                                 </div>
                                 <a href="{{ route('careers.show', ['tenant' => tenant()->slug, 'job' => $job->slug]) }}" 
@@ -156,7 +156,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2-2v2m8 0V6a2 2 0 012 2v6a2 2 0 01-2 2H6a2 2 0 01-2-2V8a2 2 0 012-2V6"></path>
                     </svg>
                     <h3 class="mt-2 text-sm font-medium text-gray-900">No jobs found</h3>
-                    <p class="mt-1 text-sm text-gray-500">Try adjusting your search criteria.</p>
+                    <p class="mt-1 text-sm text-gray-900">Try adjusting your search criteria.</p>
                 </div>
             @endif
         </main>

@@ -1,8 +1,8 @@
 @props(['class' => ''])
 
-<div {{ $attributes->merge(['class' => 'bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 ' . $class]) }}>
+<div {{ $attributes->merge(['class' => 'bg-white rounded-lg shadow-sm border border-gray-200 ' . $class]) }}>
     @if(isset($header))
-        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+        <div class="px-6 py-4 border-b border-gray-200">
             {{ $header }}
         </div>
     @endif
@@ -12,7 +12,7 @@
     </div>
     
     @if(isset($footer))
-        <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50 rounded-b-lg">
+        <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-lg">
             {{ $footer }}
         </div>
     @endif

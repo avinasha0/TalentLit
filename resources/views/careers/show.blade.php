@@ -13,7 +13,7 @@
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex justify-between items-center py-6">
                     <div>
-                        <nav class="flex items-center space-x-2 text-sm text-gray-500 mb-2">
+                        <nav class="flex items-center space-x-2 text-sm text-gray-600 mb-2">
                             <a href="{{ route('careers.index', ['tenant' => tenant()->slug]) }}" class="hover:text-gray-700">Careers</a>
                             <span>></span>
                             <span class="text-gray-900">{{ $job->title }}</span>
@@ -96,7 +96,7 @@
                                     <div class="flex-1">
                                         <h4 class="text-sm font-medium text-gray-900">{{ $stage->name }}</h4>
                                         @if($stage->is_terminal)
-                                            <p class="text-xs text-gray-500">Final stage</p>
+                                            <p class="text-xs text-gray-600">Final stage</p>
                                         @endif
                                     </div>
                                 </div>

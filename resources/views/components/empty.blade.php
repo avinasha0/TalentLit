@@ -19,10 +19,10 @@ $icons = [
     <div class="flex justify-center">
         {!! $icons[$icon] ?? $icons['document'] !!}
     </div>
-    <h3 class="mt-4 text-lg font-medium text-gray-900 dark:text-gray-100">
+    <h3 class="mt-4 text-lg font-medium text-gray-900">
         {{ $title }}
     </h3>
-    <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+    <p class="mt-2 text-sm text-gray-500">
         {{ $description }}
     </p>
     @if($action)

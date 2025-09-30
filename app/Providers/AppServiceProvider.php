@@ -20,11 +20,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Register layout components
-        $this->loadViewComponentsAs('', [
-            'app-layout' => \App\View\Components\AppLayout::class,
-            'guest-layout' => \App\View\Components\GuestLayout::class,
-        ]);
+                // Register layout components
+                $this->loadViewComponentsAs('', [
+                    'app-layout' => \App\View\Components\AppLayout::class,
+                    'guest-layout' => \App\View\Components\GuestLayout::class,
+                    'public-layout' => \App\View\Components\PublicLayout::class,
+                ]);
 
         // Hard-disable @vite in testing environment (belt-and-suspenders safety)
         if (app()->environment('testing')) {

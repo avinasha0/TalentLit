@@ -25,7 +25,7 @@ class ApplyRequest extends FormRequest
             ],
             'phone' => ['nullable', 'string', 'max:20'],
             'resume' => [
-                'nullable',
+                'required',
                 'file',
                 'max:5120', // 5MB
                 'mimetypes:application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -43,6 +43,7 @@ class ApplyRequest extends FormRequest
             'email.email' => 'Please enter a valid email address.',
             'email.unique' => 'An application with this email already exists.',
             'phone.max' => 'Phone number must not exceed 20 characters.',
+            'resume.required' => 'Resume is required.',
             'resume.file' => 'Resume must be a valid file.',
             'resume.max' => 'Resume file size must not exceed 5MB.',
             'resume.mimetypes' => 'Resume must be a PDF, DOC, or DOCX file.',

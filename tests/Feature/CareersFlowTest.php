@@ -198,7 +198,7 @@ class CareersFlowTest extends TestCase
         Storage::disk('public')->assertExists("resumes/{$this->tenant->id}/".basename($candidate->resumes->first()->path));
     }
 
-    public function test_application_submission_without_resume_works()
+    public function test_application_submission_without_resume_fails_validation()
     {
         $response = $this->post("/{$this->tenant->slug}/careers/{$this->job->slug}/apply", [
             'first_name' => 'Jane',
@@ -207,30 +207,17 @@ class CareersFlowTest extends TestCase
             'consent' => true,
         ]);
 
-        $response->assertRedirect();
-        $response->assertSessionHas('application_id');
+        $response->assertSessionHasErrors(['resume']);
 
-        // Assert candidate was created
-        $this->assertDatabaseHas('candidates', [
-            'tenant_id' => $this->tenant->id,
-            'first_name' => 'Jane',
-            'last_name' => 'Smith',
-            'primary_email' => 'jane.smith@example.com',
-            'source' => 'Career Site',
-        ]);
-
-        // Assert application was created
-        $candidate = Candidate::where('primary_email', 'jane.smith@example.com')->first();
-        $this->assertDatabaseHas('applications', [
-            'tenant_id' => $this->tenant->id,
-            'job_opening_id' => $this->job->id,
-            'candidate_id' => $candidate->id,
-            'status' => 'active',
-        ]);
+        // Assert no candidate or application was created
+        $this->assertEquals(0, Candidate::count());
+        $this->assertEquals(0, Application::count());
     }
 
     public function test_application_submission_reuses_existing_candidate()
     {
+        Storage::fake('public');
+
         // Create existing candidate
         $existingCandidate = Candidate::factory()
             ->forTenant($this->tenant)
@@ -240,10 +227,13 @@ class CareersFlowTest extends TestCase
                 'primary_email' => 'john.doe@example.com',
             ]);
 
+        $resumeFile = UploadedFile::fake()->create('resume.pdf', 1000, 'application/pdf');
+
         $response = $this->post("/{$this->tenant->slug}/careers/{$this->job->slug}/apply", [
             'first_name' => 'John',
             'last_name' => 'Doe',
             'email' => 'john.doe@example.com',
+            'resume' => $resumeFile,
             'consent' => true,
         ]);
 
@@ -272,7 +262,7 @@ class CareersFlowTest extends TestCase
             'consent' => false,
         ]);
 
-        $response->assertSessionHasErrors(['first_name', 'last_name', 'email', 'consent']);
+        $response->assertSessionHasErrors(['first_name', 'last_name', 'email', 'resume', 'consent']);
 
         // Assert no candidate or application was created
         $this->assertEquals(0, Candidate::count());
@@ -323,14 +313,19 @@ class CareersFlowTest extends TestCase
 
     public function test_tenant_isolation_application_submission()
     {
+        Storage::fake('public');
+
         // Create another tenant
         $otherTenant = Tenant::factory()->create(['slug' => 'beta']);
+
+        $resumeFile = UploadedFile::fake()->create('resume.pdf', 1000, 'application/pdf');
 
         // Try to apply to a job from another tenant
         $response = $this->post("/{$otherTenant->slug}/careers/{$this->job->slug}/apply", [
             'first_name' => 'John',
             'last_name' => 'Doe',
             'email' => 'john.doe@example.com',
+            'resume' => $resumeFile,
             'consent' => true,
         ]);
 

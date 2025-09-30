@@ -141,7 +141,7 @@
                     <!-- Resume Upload -->
                     <div>
                         <label for="resume" class="block text-sm font-medium text-gray-700 mb-1">
-                            Resume (PDF, DOC, DOCX)
+                            Resume (PDF, DOC, DOCX) <span class="text-red-500">*</span>
                         </label>
                         <input type="file" 
                                name="resume" 

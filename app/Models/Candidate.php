@@ -70,6 +70,12 @@ class Candidate extends Model
 
     public function getFullNameAttribute(): string
     {
-        return $this->first_name.' '.$this->last_name;
+        return trim($this->first_name . ' ' . $this->last_name);
+    }
+
+    public function getLatestResumePathAttribute(): ?string
+    {
+        $latestResume = $this->resumes()->latest()->first();
+        return $latestResume ? $latestResume->path : null;
     }
 }

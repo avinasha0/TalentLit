@@ -45,7 +45,22 @@ class JobOpeningFactory extends Factory
     {
         $tenantId = is_string($tenant) ? $tenant : $tenant->id;
 
-        return $this->state(fn () => ['tenant_id' => $tenantId]);
+        return $this->afterCreating(function ($jobOpening) use ($tenantId) {
+            // Ensure related models have the correct tenant_id
+            if ($jobOpening->department) {
+                $jobOpening->department->update(['tenant_id' => $tenantId]);
+            }
+            if ($jobOpening->location) {
+                $jobOpening->location->update(['tenant_id' => $tenantId]);
+            }
+            if ($jobOpening->requisition) {
+                $jobOpening->requisition->update(['tenant_id' => $tenantId]);
+            }
+        })->state(function () use ($tenantId) {
+            return [
+                'tenant_id' => $tenantId,
+            ];
+        });
     }
 
     /** Published job state */

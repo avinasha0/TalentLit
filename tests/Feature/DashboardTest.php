@@ -21,6 +21,6 @@ class DashboardTest extends TestCase
         $response->assertSee('Open Jobs');
         $response->assertSee('Active Candidates');
         $response->assertSee('Interviews This Week');
-        $response->assertSee('Total Hires');
+        $response->assertSee('Hires This Month');
     }
 }

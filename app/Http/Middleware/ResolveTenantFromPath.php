@@ -6,6 +6,7 @@ use App\Models\Tenant;
 use App\Support\Tenancy;
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\View;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 class ResolveTenantFromPath
@@ -25,6 +26,7 @@ class ResolveTenantFromPath
         }
 
         Tenancy::set($tenant);
+        View::share('tenant', $tenant); // Make tenant available in all views
 
         try {
             return $next($request);

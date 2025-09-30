@@ -6,6 +6,15 @@
         ['label' => 'Candidates', 'url' => route('tenant.candidates.index', $tenantSlug)],
         ['label' => $candidate->full_name, 'url' => null]
     ];
+    
+    // Status configuration for applications - moved outside loop for performance
+    $statusConfig = [
+        'applied' => ['bg' => 'bg-blue-100', 'text' => 'text-blue-800', 'dark_bg' => 'dark:bg-blue-900/20', 'dark_text' => 'dark:text-blue-300'],
+        'active' => ['bg' => 'bg-green-100', 'text' => 'text-green-800', 'dark_bg' => 'dark:bg-green-900/20', 'dark_text' => 'dark:text-green-300'],
+        'interview' => ['bg' => 'bg-yellow-100', 'text' => 'text-yellow-800', 'dark_bg' => 'dark:bg-yellow-900/20', 'dark_text' => 'dark:text-yellow-300'],
+        'hired' => ['bg' => 'bg-emerald-100', 'text' => 'text-emerald-800', 'dark_bg' => 'dark:bg-emerald-900/20', 'dark_text' => 'dark:text-emerald-300'],
+        'rejected' => ['bg' => 'bg-red-100', 'text' => 'text-red-800', 'dark_bg' => 'dark:bg-red-900/20', 'dark_text' => 'dark:text-red-300'],
+    ];
 @endphp
 
 <x-app-layout :tenant="$tenant">
@@ -112,19 +121,19 @@
                                     <div class="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
                                         <div>
                                             <h4 class="text-sm font-medium text-gray-900 dark:text-white">
-                                                {{ $application->jobOpening->title }}
+                                                {{ $application->jobOpening->title ?? 'Unknown Job' }}
                                             </h4>
                                             <p class="text-sm text-gray-500 dark:text-gray-400">
                                                 {{ $application->jobOpening->department->name ?? 'No Department' }} • 
-                                                Applied {{ $application->applied_at->format('M j, Y') }}
+                                                Applied {{ $application->applied_at ? $application->applied_at->format('M j, Y') : 'Unknown' }}
                                             </p>
                                         </div>
                                         <div class="flex items-center space-x-2">
-                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                                                @if($application->status === 'active') bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300
-                                                @elseif($application->status === 'hired') bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300
-                                                @elseif($application->status === 'rejected') bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300
-                                                @else bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300 @endif">
+                                            @php
+                                                $status = strtolower($application->status);
+                                                $config = $statusConfig[$status] ?? $statusConfig['applied'];
+                                            @endphp
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $config['bg'] }} {{ $config['text'] }} {{ $config['dark_bg'] }} {{ $config['dark_text'] }}">
                                                 {{ ucfirst($application->status) }}
                                             </span>
                                         </div>
@@ -152,12 +161,14 @@
                                                 </p>
                                             </div>
                                         </div>
-                                        <x-button variant="ghost" size="sm">
+                                        <a href="{{ asset('storage/' . $resume->path) }}" 
+                                           class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-600"
+                                           download="{{ $resume->filename }}">
                                             <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                                             </svg>
                                             Download
-                                        </x-button>
+                                        </a>
                                     </div>
                                 @endforeach
                             </div>

@@ -23,7 +23,7 @@ class JobRequisitionFactory extends Factory
     public function definition(): array
     {
         return [
-            'tenant_id' => Tenant::factory(),
+            'tenant_id' => tenant_id(), // will be null in CLI unless set
             'department_id' => Department::factory(),
             'location_id' => Location::factory(),
             'title' => $this->faker->jobTitle(),
@@ -31,5 +31,13 @@ class JobRequisitionFactory extends Factory
             'status' => $this->faker->randomElement(['draft', 'submitted', 'approved', 'rejected', 'closed']),
             'description' => $this->faker->paragraphs(3, true),
         ];
+    }
+
+    /** Explicit state helper */
+    public function forTenant($tenant): static
+    {
+        $tenantId = is_string($tenant) ? $tenant : $tenant->id;
+
+        return $this->state(fn () => ['tenant_id' => $tenantId]);
     }
 }

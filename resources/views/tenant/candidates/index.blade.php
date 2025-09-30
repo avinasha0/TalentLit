@@ -140,7 +140,7 @@
                                     {{ $candidate->updated_at->diffForHumans() }}
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                    <a href="{{ route('tenant.candidates.show', ['tenant' => $tenant, 'candidate' => $candidate->id]) }}" 
+                                    <a href="{{ route('tenant.candidates.show', ['tenant' => $tenant->slug, 'candidate' => $candidate->id]) }}" 
                                        class="text-primary-600 hover:text-primary-900 dark:text-primary-400 dark:hover:text-primary-300">
                                         View
                                     </a>

@@ -80,12 +80,22 @@ class CandidateController extends Controller
 
     public function show(string $tenant, Candidate $candidate)
     {
+        // Ensure candidate belongs to current tenant
+        if ($candidate->tenant_id !== tenant_id()) {
+            abort(404);
+        }
+
+        // Load relationships efficiently
         $candidate->load([
             'tags',
             'resumes',
-            'applications.jobOpening.department',
-            'applications.currentStage',
-            'applications.stageEvents',
+            'applications' => function ($query) {
+                $query->with([
+                    'jobOpening:id,title,department_id',
+                    'jobOpening.department:id,name',
+                    'currentStage:id,name'
+                ]);
+            }
         ]);
 
         $tenant = tenant();

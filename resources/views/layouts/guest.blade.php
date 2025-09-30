@@ -12,7 +12,9 @@
         <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700&display=swap" rel="stylesheet" />
 
         <!-- Scripts -->
-        @vite(['resources/css/app.css', 'resources/js/app.js'])
+        @unless (app()->environment('testing'))
+            @vite(['resources/css/app.css', 'resources/js/app.js'])
+        @endunless
     </head>
     <body class="h-full bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
         <div class="min-h-full flex flex-col justify-center py-12 sm:px-6 lg:px-8">

@@ -11,8 +11,8 @@
     <div class="space-y-4">
         <!-- Page header -->
         <div>
-            <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
-            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            <h1 class="text-2xl font-bold text-white">Dashboard</h1>
+            <p class="mt-1 text-sm text-white">
                 Welcome back! Here's what's happening with your hiring process.
             </p>
         </div>
@@ -32,8 +32,8 @@
                     </div>
                     <div class="ml-5 w-0 flex-1">
                         <dl>
-                            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Open Jobs</dt>
-                            <dd class="text-lg font-medium text-gray-900 dark:text-white">{{ $openJobsCount }}</dd>
+                            <dt class="text-sm font-medium text-black truncate">Open Jobs</dt>
+                            <dd class="text-lg font-medium text-black">{{ $openJobsCount }}</dd>
                         </dl>
                     </div>
                 </div>
@@ -51,8 +51,8 @@
                     </div>
                     <div class="ml-5 w-0 flex-1">
                         <dl>
-                            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Active Candidates</dt>
-                            <dd class="text-lg font-medium text-gray-900 dark:text-white">{{ $activeCandidatesCount }}</dd>
+                            <dt class="text-sm font-medium text-black truncate">Active Candidates</dt>
+                            <dd class="text-lg font-medium text-black">{{ $activeCandidatesCount }}</dd>
                         </dl>
                     </div>
                 </div>
@@ -70,8 +70,8 @@
                     </div>
                     <div class="ml-5 w-0 flex-1">
                         <dl>
-                            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Interviews This Week</dt>
-                            <dd class="text-lg font-medium text-gray-900 dark:text-white">{{ $interviewsThisWeek }}</dd>
+                            <dt class="text-sm font-medium text-black truncate">Interviews This Week</dt>
+                            <dd class="text-lg font-medium text-black">{{ $interviewsThisWeek }}</dd>
                         </dl>
                     </div>
                 </div>
@@ -89,8 +89,8 @@
                     </div>
                     <div class="ml-5 w-0 flex-1">
                         <dl>
-                            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Hires This Month</dt>
-                            <dd class="text-lg font-medium text-gray-900 dark:text-white">{{ $hiresThisMonth }}</dd>
+                            <dt class="text-sm font-medium text-black truncate">Hires This Month</dt>
+                            <dd class="text-lg font-medium text-black">{{ $hiresThisMonth }}</dd>
                         </dl>
                 </div>
             </div>
@@ -102,7 +102,7 @@
             <x-card>
                 <x-slot name="header">
                     <div class="flex items-center justify-between">
-                        <h3 class="text-lg font-medium text-gray-900">Recent Applications</h3>
+                        <h3 class="text-lg font-medium text-black">Recent Applications</h3>
                         <a href="{{ route('tenant.candidates.index', $tenant->slug) }}" class="text-sm text-blue-600 hover:text-blue-700">
                             View all
                         </a>
@@ -114,10 +114,10 @@
                         @foreach($recentApplications as $application)
                             <div class="flex items-center justify-between py-3 border-b border-gray-200 last:border-b-0">
                                 <div class="flex-1 min-w-0">
-                                    <p class="text-sm font-medium text-gray-900 truncate">
+                                    <p class="text-sm font-medium text-black truncate">
                                         {{ $application->candidate->full_name }}
                                     </p>
-                                    <p class="text-sm text-gray-500">
+                                    <p class="text-sm text-black">
                                         {{ $application->jobOpening->title }}
                                     </p>
                                 </div>
@@ -134,7 +134,7 @@
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $statusColor }}">
                                         {{ ucfirst($application->status) }}
                                     </span>
-                                    <span class="text-xs text-gray-500">
+                                    <span class="text-xs text-black">
                                         {{ $application->applied_at->diffForHumans() }}
                                     </span>
                                 </div>
@@ -155,7 +155,7 @@
             <!-- Quick Actions -->
             <x-card>
                 <x-slot name="header">
-                    <h3 class="text-lg font-medium text-gray-900">Quick Actions</h3>
+                    <h3 class="text-lg font-medium text-black">Quick Actions</h3>
                 </x-slot>
 
                 <div class="space-y-3">
@@ -169,8 +169,8 @@
                             </div>
                         </div>
                         <div class="ml-3">
-                            <p class="text-sm font-medium text-gray-900">New Job</p>
-                            <p class="text-sm text-gray-500">Create a new job posting</p>
+                            <p class="text-sm font-medium text-black">New Job</p>
+                            <p class="text-sm text-black">Create a new job posting</p>
                         </div>
                     </a>
 
@@ -184,8 +184,8 @@
                             </div>
                         </div>
                         <div class="ml-3">
-                            <p class="text-sm font-medium text-gray-900">Import Candidates</p>
-                            <p class="text-sm text-gray-500">Upload candidate data</p>
+                            <p class="text-sm font-medium text-black">Import Candidates</p>
+                            <p class="text-sm text-black">Upload candidate data</p>
                         </div>
                     </a>
 
@@ -199,8 +199,8 @@
                             </div>
                         </div>
                         <div class="ml-3">
-                            <p class="text-sm font-medium text-gray-900">Create Email Template</p>
-                            <p class="text-sm text-gray-500">Design communication templates</p>
+                            <p class="text-sm font-medium text-black">Create Email Template</p>
+                            <p class="text-sm text-black">Design communication templates</p>
                     </div>
                     </a>
                 </div>

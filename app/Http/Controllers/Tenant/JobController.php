@@ -4,7 +4,12 @@ namespace App\Http\Controllers\Tenant;
 
 use App\Http\Controllers\Controller;
 use App\Models\JobOpening;
+use App\Models\Department;
+use App\Models\Location;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Gate;
 
 class JobController extends Controller
 {
@@ -85,10 +90,163 @@ class JobController extends Controller
         return view('tenant.jobs.index', compact('jobs', 'departments', 'locations', 'statuses'));
     }
 
+    public function create(string $tenant)
+    {
+        Gate::authorize('create', JobOpening::class);
+        
+        $departments = Department::orderBy('name')->get();
+        $locations = Location::orderBy('name')->get();
+        $employmentTypes = ['full_time', 'part_time', 'contract', 'internship'];
+
+        return view('tenant.jobs.create', compact('departments', 'locations', 'employmentTypes'));
+    }
+
+    public function store(Request $request, string $tenant)
+    {
+        Gate::authorize('create', JobOpening::class);
+        
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+            'slug' => 'nullable|string|max:255|unique:job_openings,slug,NULL,id,tenant_id,' . tenant_id(),
+            'department_id' => 'required|exists:departments,id',
+            'location_id' => 'required|exists:locations,id',
+            'employment_type' => 'required|in:full_time,part_time,contract,internship',
+            'status' => 'required|in:draft,published,closed',
+            'openings_count' => 'required|integer|min:1',
+            'description' => 'required|string',
+        ]);
+
+        // Generate slug if not provided
+        if (empty($validated['slug'])) {
+            $validated['slug'] = Str::slug($validated['title']);
+            
+            // Ensure uniqueness within tenant
+            $originalSlug = $validated['slug'];
+            $counter = 1;
+            while (JobOpening::where('slug', $validated['slug'])
+                ->where('tenant_id', tenant_id())
+                ->exists()) {
+                $validated['slug'] = $originalSlug . '-' . $counter;
+                $counter++;
+            }
+        }
+
+        $validated['tenant_id'] = tenant_id();
+        
+        if ($validated['status'] === 'published') {
+            $validated['published_at'] = now();
+        }
+
+        $job = JobOpening::create($validated);
+
+        return redirect()
+            ->route('tenant.jobs.show', ['tenant' => $tenant, 'job' => $job])
+            ->with('success', 'Job created successfully.');
+    }
+
     public function show(string $tenant, JobOpening $job)
     {
         $job->load(['department', 'location', 'jobStages', 'applications.candidate']);
 
         return view('tenant.jobs.show', compact('job'));
+    }
+
+    public function edit(string $tenant, JobOpening $job)
+    {
+        Gate::authorize('update', $job);
+        
+        $departments = Department::orderBy('name')->get();
+        $locations = Location::orderBy('name')->get();
+        $employmentTypes = ['full_time', 'part_time', 'contract', 'internship'];
+
+        return view('tenant.jobs.edit', compact('job', 'departments', 'locations', 'employmentTypes'));
+    }
+
+    public function update(Request $request, string $tenant, JobOpening $job)
+    {
+        Gate::authorize('update', $job);
+        
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+            'slug' => [
+                'nullable',
+                'string',
+                'max:255',
+                Rule::unique('job_openings', 'slug')
+                    ->ignore($job->id)
+                    ->where('tenant_id', tenant_id())
+            ],
+            'department_id' => 'required|exists:departments,id',
+            'location_id' => 'required|exists:locations,id',
+            'employment_type' => 'required|in:full_time,part_time,contract,internship',
+            'status' => 'required|in:draft,published,closed',
+            'openings_count' => 'required|integer|min:1',
+            'description' => 'required|string',
+        ]);
+
+        // Generate slug if not provided
+        if (empty($validated['slug'])) {
+            $validated['slug'] = Str::slug($validated['title']);
+            
+            // Ensure uniqueness within tenant
+            $originalSlug = $validated['slug'];
+            $counter = 1;
+            while (JobOpening::where('slug', $validated['slug'])
+                ->where('tenant_id', tenant_id())
+                ->where('id', '!=', $job->id)
+                ->exists()) {
+                $validated['slug'] = $originalSlug . '-' . $counter;
+                $counter++;
+            }
+        }
+
+        // Set published_at if status changed to published
+        if ($validated['status'] === 'published' && $job->status !== 'published') {
+            $validated['published_at'] = now();
+        }
+
+        $job->update($validated);
+
+        return redirect()
+            ->route('tenant.jobs.show', ['tenant' => $tenant, 'job' => $job])
+            ->with('success', 'Job updated successfully.');
+    }
+
+    public function publish(string $tenant, JobOpening $job)
+    {
+        Gate::authorize('publish', $job);
+        
+        $job->update([
+            'status' => 'published',
+            'published_at' => now(),
+        ]);
+
+        return redirect()
+            ->back()
+            ->with('success', 'Job published successfully.');
+    }
+
+    public function close(string $tenant, JobOpening $job)
+    {
+        Gate::authorize('close', $job);
+        
+        $job->update([
+            'status' => 'closed',
+        ]);
+
+        return redirect()
+            ->back()
+            ->with('success', 'Job closed successfully.');
+    }
+
+    public function destroy(string $tenant, JobOpening $job)
+    {
+        Gate::authorize('delete', $job);
+        
+        $job->delete();
+
+        return redirect()
+            ->route('tenant.jobs.index', ['tenant' => $tenant])
+            ->with('success', 'Job deleted successfully.');
     }
 }

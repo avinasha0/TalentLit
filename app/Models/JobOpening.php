@@ -57,4 +57,25 @@ class JobOpening extends Model
     {
         return $this->hasMany(Application::class);
     }
+
+    // Scopes
+    public function scopePublished($query)
+    {
+        return $query->where('status', 'published');
+    }
+
+    public function scopeNotClosed($query)
+    {
+        return $query->where('status', '!=', 'closed');
+    }
+
+    public function scopeForTenant($query, $tenantId)
+    {
+        return $query->where('tenant_id', $tenantId);
+    }
+
+    public function scopeWithApplicationsCount($query)
+    {
+        return $query->withCount('applications');
+    }
 }

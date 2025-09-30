@@ -44,4 +44,14 @@ class JobOpeningPolicy
     {
         return $user->hasAnyRole(['Owner', 'Admin']);
     }
+
+    public function publish(User $user, JobOpening $jobOpening): bool
+    {
+        return $user->hasAnyRole(['Owner', 'Admin', 'Recruiter']);
+    }
+
+    public function close(User $user, JobOpening $jobOpening): bool
+    {
+        return $user->hasAnyRole(['Owner', 'Admin', 'Recruiter']);
+    }
 }

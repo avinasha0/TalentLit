@@ -47,10 +47,10 @@
              class="absolute right-0 mt-2 w-48 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg py-1 z-[60]"
              role="menu"
              style="display: none;">
-          <a href="{{ route('account.profile', $tenant->slug) }}"
+          <a href="{{ isset($tenant) ? route('account.profile', $tenant->slug) : route('dashboard') }}"
              class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
              role="menuitem">Profile</a>
-          <a href="{{ route('account.settings', $tenant->slug) }}"
+          <a href="{{ isset($tenant) ? route('account.settings', $tenant->slug) : route('dashboard') }}"
              class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
              role="menuitem">Settings</a>
           <div class="border-t border-gray-200 dark:border-gray-700 mt-1"></div>

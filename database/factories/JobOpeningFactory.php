@@ -23,13 +23,14 @@ class JobOpeningFactory extends Factory
      */
     public function definition(): array
     {
-        $title = $this->faker->jobTitle();
+        $title = $this->faker->unique()->jobTitle();
 
         return [
             'tenant_id' => tenant_id(), // will be null in CLI unless set
             'requisition_id' => JobRequisition::factory(),
             'title' => $title,
-            'slug' => Str::slug($title),
+            // Append random suffix to keep slug unique per tenant in tests
+            'slug' => Str::slug($title.'-'.$this->faker->unique()->numerify('###')),
             'department_id' => Department::factory(),
             'location_id' => Location::factory(),
             'employment_type' => $this->faker->randomElement(['full_time', 'part_time', 'contract', 'intern']),

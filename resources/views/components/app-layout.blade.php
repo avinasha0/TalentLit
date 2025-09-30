@@ -20,13 +20,19 @@
                 <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
                     <!-- Sidebar -->
                     <div class="hidden md:block md:fixed md:inset-y-0 md:w-64">
-                        <x-sidebar :tenant="$tenant" />
+                        @isset($tenant)
+                            <x-sidebar :tenant="$tenant" />
+                        @endisset
                     </div>
 
                     <!-- Main content -->
                     <div class="md:ml-64">
                         <!-- Top navigation -->
-                        <x-navbar :tenant="$tenant" />
+                        @isset($tenant)
+                            <x-navbar :tenant="$tenant" />
+                        @else
+                            <x-navbar :tenant="tenant()" />
+                        @endisset
 
                         <!-- Page content -->
                         <main class="py-6">

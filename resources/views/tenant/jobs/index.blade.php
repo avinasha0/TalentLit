@@ -20,6 +20,12 @@
                         <h1 class="text-2xl font-bold text-black">Job Openings</h1>
                         <p class="mt-1 text-sm text-black">Manage job postings and applications</p>
                     </div>
+                    <div>
+                        <a href="{{ route('tenant.jobs.create', $tenant->slug) }}"
+                           class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            Create Job
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
@@ -139,7 +145,7 @@
                                                     {{ $job->applications->count() }} application{{ $job->applications->count() !== 1 ? 's' : '' }}
                                                 </div>
                                             </div>
-                                            <div class="flex flex-col items-end">
+                                            <div class="flex flex-col items-end space-y-2">
                                                 <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full
                                                     @if($job->status === 'published') bg-green-600 text-white
                                                     @elseif($job->status === 'draft') bg-yellow-600 text-white
@@ -148,10 +154,49 @@
                                                     {{ ucfirst($job->status) }}
                                                 </span>
                                                 @if($job->published_at)
-                                                    <div class="text-xs text-black mt-1">
+                                                    <div class="text-xs text-black">
                                                         Published {{ $job->published_at->format('M j, Y') }}
                                                     </div>
                                                 @endif
+                                                
+                                                <!-- Action Buttons -->
+                                                <div class="flex items-center space-x-2">
+                                                    <a href="{{ route('tenant.jobs.show', ['tenant' => $tenant->slug, 'job' => $job->id]) }}"
+                                                       class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                                                        View
+                                                    </a>
+                                                    <a href="{{ route('tenant.jobs.edit', ['tenant' => $tenant->slug, 'job' => $job->id]) }}"
+                                                       class="text-gray-600 hover:text-gray-800 text-sm font-medium">
+                                                        Edit
+                                                    </a>
+                                                    
+                                                    @if($job->status === 'draft')
+                                                        <form method="POST" action="{{ route('tenant.jobs.publish', ['tenant' => $tenant->slug, 'job' => $job->id]) }}" class="inline">
+                                                            @csrf
+                                                            @method('PATCH')
+                                                            <button type="submit" class="text-green-600 hover:text-green-800 text-sm font-medium">
+                                                                Publish
+                                                            </button>
+                                                        </form>
+                                                    @elseif($job->status === 'published')
+                                                        <form method="POST" action="{{ route('tenant.jobs.close', ['tenant' => $tenant->slug, 'job' => $job->id]) }}" class="inline">
+                                                            @csrf
+                                                            @method('PATCH')
+                                                            <button type="submit" class="text-red-600 hover:text-red-800 text-sm font-medium">
+                                                                Close
+                                                            </button>
+                                                        </form>
+                                                    @endif
+                                                    
+                                                    <form method="POST" action="{{ route('tenant.jobs.destroy', ['tenant' => $tenant->slug, 'job' => $job->id]) }}" class="inline"
+                                                          onsubmit="return confirm('Are you sure you want to delete this job?')">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button type="submit" class="text-red-600 hover:text-red-800 text-sm font-medium">
+                                                            Delete
+                                                        </button>
+                                                    </form>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>

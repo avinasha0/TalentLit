@@ -179,7 +179,8 @@
                                             <div class="flex flex-col items-end space-y-2">
                                                 @php
                                                     $statusColors = [
-                                                        'active' => 'bg-green-100 text-green-800',
+                                                        'active' => 'bg-green-600 text-white',
+                                                        'applied' => 'bg-green-600 text-white',
                                                         'hired' => 'bg-blue-100 text-blue-800',
                                                         'rejected' => 'bg-red-100 text-red-800',
                                                         'withdrawn' => 'bg-gray-100 text-gray-800',

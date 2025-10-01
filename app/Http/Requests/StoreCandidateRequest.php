@@ -22,7 +22,8 @@ class StoreCandidateRequest extends FormRequest
      */
     public function rules(): array
     {
-        $tenantId = currentTenant()?->id;
+        $tenantId = tenant_id();
+        $candidateId = $this->route('candidate')?->id;
 
         return [
             'first_name' => 'required|string|max:255',
@@ -33,7 +34,7 @@ class StoreCandidateRequest extends FormRequest
                 'max:255',
                 Rule::unique('candidates')->where(function ($query) use ($tenantId) {
                     return $query->where('tenant_id', $tenantId);
-                }),
+                })->ignore($candidateId),
             ],
             'primary_phone' => 'nullable|string|max:20',
             'source' => 'nullable|string|max:255',

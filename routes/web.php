@@ -151,6 +151,8 @@ Route::middleware(['capture.tenant', 'tenant', 'auth'])->group(function () {
         Route::get('/{tenant}/candidates', [CandidateController::class, 'index'])->name('tenant.candidates.index');
         Route::get('/{tenant}/candidates/job/{job}', [CandidateController::class, 'index'])->name('tenant.candidates.index.job');
         Route::get('/{tenant}/candidates/{candidate}', [CandidateController::class, 'show'])->name('tenant.candidates.show');
+        Route::get('/{tenant}/candidates/{candidate}/edit', [CandidateController::class, 'edit'])->name('tenant.candidates.edit');
+        Route::put('/{tenant}/candidates/{candidate}', [CandidateController::class, 'update'])->name('tenant.candidates.update');
         
         // Candidate Notes Routes
         Route::post('/{tenant}/candidates/{candidate}/notes', [CandidateNoteController::class, 'store'])->name('tenant.candidates.notes.store');
@@ -160,6 +162,10 @@ Route::middleware(['capture.tenant', 'tenant', 'auth'])->group(function () {
         Route::get('/{tenant}/tags.json', [CandidateTagController::class, 'index'])->name('tenant.tags.index');
         Route::post('/{tenant}/candidates/{candidate}/tags', [CandidateTagController::class, 'store'])->name('tenant.candidates.tags.store');
         Route::delete('/{tenant}/candidates/{candidate}/tags/{tag}', [CandidateTagController::class, 'destroy'])->name('tenant.candidates.tags.destroy');
+        
+        // Candidate Resume Routes
+        Route::post('/{tenant}/candidates/{candidate}/resumes', [CandidateController::class, 'storeResume'])->name('tenant.candidates.resumes.store');
+        Route::delete('/{tenant}/candidates/{candidate}/resumes/{resume}', [CandidateController::class, 'destroyResume'])->name('tenant.candidates.resumes.destroy');
     });
 
     // Candidate Import Routes - Owner, Admin, Recruiter
@@ -214,9 +220,8 @@ Route::middleware(['capture.tenant', 'tenant', 'auth'])->group(function () {
         })->name('tenant.settings.roles');
         
         // General Settings
-        Route::get('/{tenant}/settings/general', function() {
-            return view('tenant.settings.general');
-        })->name('tenant.settings.general');
+        Route::get('/{tenant}/settings/general', [App\Http\Controllers\Tenant\GeneralSettingsController::class, 'edit'])->name('tenant.settings.general');
+        Route::put('/{tenant}/settings/general', [App\Http\Controllers\Tenant\GeneralSettingsController::class, 'update'])->name('tenant.settings.general.update');
     });
 
     // User Management Routes - Owner, Admin only

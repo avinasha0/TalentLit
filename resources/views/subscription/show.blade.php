@@ -1,8 +1,15 @@
-@extends('layouts.app')
+@php
+    $tenant = tenant();
+    $breadcrumbs = [
+        ['label' => 'Dashboard', 'url' => route('tenant.dashboard', $tenant->slug)],
+        ['label' => 'Subscription', 'url' => null]
+    ];
+@endphp
 
-@section('title', 'Subscription - HireHub')
-
-@section('content')
+<x-app-layout :tenant="$tenant">
+    <x-slot name="breadcrumbs">
+        <x-breadcrumbs :items="$breadcrumbs" />
+    </x-slot>
 <div class="min-h-screen bg-gray-50 py-8">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <!-- Header -->
@@ -179,4 +186,4 @@
         </div>
     </div>
 </div>
-@endsection
+</x-app-layout>

@@ -3,10 +3,9 @@
   <div class="h-16 flex items-center justify-between px-3 lg:px-4">
     <div class="flex items-center gap-2">
       {{-- Mobile hamburger --}}
-      <button type="button"
+      <button type="button" data-mobile-toggle
               class="lg:hidden inline-flex items-center justify-center rounded-md p-2 hover:bg-gray-100 dark:hover:bg-gray-700"
-              @click="$store.sidebar.toggleMobile()"
-              aria-label="Open sidebar" :aria-expanded="$store.sidebar.mobileOpen">
+              aria-label="Open sidebar">
         <svg class="h-6 w-6 text-gray-700 dark:text-gray-300" viewBox="0 0 24 24" stroke="currentColor" fill="none">
           <path stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
         </svg>

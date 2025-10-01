@@ -23,9 +23,12 @@
                                 </a>
                             </div>
                 <div class="flex items-center space-x-4">
+                    <a href="{{ route('contact') }}" class="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium">
+                        Contact
+                    </a>
                     <a href="{{ route('login') }}" class="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium">
-                                    Sign In
-                                </a>
+                        Sign In
+                    </a>
                     <a href="{{ route('register') }}" class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-lg">
                         Get Started Free
                     </a>
@@ -430,58 +433,61 @@
                 </div>
 
                 <!-- Pro Plan -->
-                <div class="bg-white rounded-2xl p-8 border-2 border-indigo-600 relative">
+                <div class="bg-gray-100 rounded-2xl p-8 border border-gray-300 relative opacity-60">
                     <div class="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                        <span class="bg-indigo-600 text-white px-4 py-1 rounded-full text-sm font-semibold">Most Popular</span>
+                        <span class="bg-gray-500 text-white px-4 py-1 rounded-full text-sm font-semibold">Coming Soon</span>
                     </div>
                     <div class="text-center">
-                        <h3 class="text-xl font-semibold text-gray-900 mb-2">Pro</h3>
+                        <h3 class="text-xl font-semibold text-gray-500 mb-2">Pro</h3>
                         <div class="mb-4">
-                            <span class="text-4xl font-bold text-gray-900">$29</span>
-                            <span class="text-gray-600">/month</span>
+                            <span class="text-4xl font-bold text-gray-500">--</span>
+                            <span class="text-gray-400">₹/month</span>
                         </div>
-                        <p class="text-gray-600 mb-6">For growing teams and companies</p>
+                        <p class="text-gray-400 mb-6">For growing teams and companies</p>
                         <ul class="text-left space-y-3 mb-8">
-                            <li class="flex items-center text-gray-600">
-                                <svg class="w-5 h-5 text-green-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <li class="flex items-center text-gray-400">
+                                <svg class="w-5 h-5 text-gray-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                                 </svg>
                                 Unlimited job postings
                             </li>
-                            <li class="flex items-center text-gray-600">
-                                <svg class="w-5 h-5 text-green-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <li class="flex items-center text-gray-400">
+                                <svg class="w-5 h-5 text-gray-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                                 </svg>
                                 Unlimited candidates
                             </li>
-                            <li class="flex items-center text-gray-600">
-                                <svg class="w-5 h-5 text-green-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <li class="flex items-center text-gray-400">
+                                <svg class="w-5 h-5 text-gray-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                                 </svg>
                                 Advanced analytics
                             </li>
-                            <li class="flex items-center text-gray-600">
-                                <svg class="w-5 h-5 text-green-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <li class="flex items-center text-gray-400">
+                                <svg class="w-5 h-5 text-gray-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                                 </svg>
                                 Team collaboration
                             </li>
-                            <li class="flex items-center text-gray-600">
-                                <svg class="w-5 h-5 text-green-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <li class="flex items-center text-gray-400">
+                                <svg class="w-5 h-5 text-gray-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                                 </svg>
                                 Priority support
                             </li>
                         </ul>
-                        <a href="{{ route('register') }}" 
-                           class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all duration-200">
-                            Start Pro Trial
-                        </a>
+                        <button disabled 
+                           class="w-full bg-gray-400 text-gray-200 px-6 py-3 rounded-lg font-semibold cursor-not-allowed">
+                            Coming Soon
+                        </button>
                     </div>
                 </div>
 
                 <!-- Enterprise Plan -->
-                <div class="bg-white rounded-2xl p-8 border border-gray-200 relative">
+                <div class="bg-white rounded-2xl p-8 border-2 border-indigo-600 relative">
+                    <div class="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                        <span class="bg-indigo-600 text-white px-4 py-1 rounded-full text-sm font-semibold">Most Popular</span>
+                    </div>
                     <div class="text-center">
                         <h3 class="text-xl font-semibold text-gray-900 mb-2">Enterprise</h3>
                         <div class="mb-4">
@@ -510,12 +516,12 @@
                             <li class="flex items-center text-gray-600">
                                 <svg class="w-5 h-5 text-green-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                        </svg>
+                                </svg>
                                 On-premise deployment
                             </li>
                         </ul>
                         <a href="#" 
-                           class="w-full border-2 border-gray-300 text-gray-900 px-6 py-3 rounded-lg font-semibold hover:border-gray-400 transition-colors">
+                           class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all duration-200">
                             Contact Sales
                         </a>
                     </div>

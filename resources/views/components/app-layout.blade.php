@@ -45,5 +45,7 @@
                 </div>
             @endif
         </div>
+        
+        @include('layouts.partials.mobile-menu')
     </body>
 </html>

@@ -4,6 +4,7 @@ use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Career\ApplyController;
 use App\Http\Controllers\Career\CareerJobController;
+use App\Http\Controllers\ContactController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\Tenant\CandidateController;
@@ -24,6 +25,10 @@ use App\Http\Controllers\ProfileController;
 
 // Public route
 Route::get('/', [HomeController::class, 'index'])->name('home');
+
+// Contact routes
+Route::get('/contact', [ContactController::class, 'index'])->name('contact');
+Route::post('/contact', [ContactController::class, 'store'])->name('contact.store');
 
 // SEO Routes
 Route::get('/sitemap.xml', [SitemapController::class, 'index'])->name('sitemap');

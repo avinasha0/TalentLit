@@ -10,6 +10,9 @@ class CareerJobController extends Controller
 {
     public function index(Request $request)
     {
+        $tenant = tenant();
+        $branding = $tenant->branding;
+        
         $query = JobOpening::with(['department', 'location'])
             ->where('status', 'published')
             ->orderBy('published_at', 'desc');
@@ -64,13 +67,15 @@ class CareerJobController extends Controller
             ->sort()
             ->values();
 
-        return view('careers.index', compact('jobs', 'departments', 'locations', 'employmentTypes'));
+        return view('careers.index', compact('jobs', 'departments', 'locations', 'employmentTypes', 'tenant', 'branding'));
     }
 
     public function show(string $tenant, JobOpening $job)
     {
+        $tenantModel = tenant();
+        
         // Ensure job belongs to the current tenant
-        if ($job->tenant_id !== tenant()->id) {
+        if ($job->tenant_id !== $tenantModel->id) {
             abort(404);
         }
 
@@ -79,8 +84,9 @@ class CareerJobController extends Controller
             abort(404);
         }
 
-        $job->load(['department', 'location', 'jobStages']);
+        $branding = $tenantModel->branding;
+        $job->load(['department', 'location', 'jobStages', 'applicationQuestions']);
 
-        return view('careers.show', compact('job'));
+        return view('careers.show', compact('job', 'tenant', 'branding'));
     }
 }

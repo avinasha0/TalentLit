@@ -4,6 +4,7 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
@@ -61,5 +62,14 @@ class User extends Authenticatable
     public function belongsToTenant($tenantId)
     {
         return $this->tenants()->where('tenant_id', $tenantId)->exists();
+    }
+
+    /**
+     * The interviews that the user is a panelist for
+     */
+    public function interviews(): BelongsToMany
+    {
+        return $this->belongsToMany(Interview::class, 'interview_user')
+            ->withTimestamps();
     }
 }

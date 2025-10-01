@@ -5,6 +5,7 @@ namespace App\Actions\Candidates;
 use App\Mail\ApplicationReceived;
 use App\Mail\NewApplication;
 use App\Models\Application;
+use App\Models\ApplicationAnswer;
 use App\Models\Candidate;
 use App\Models\JobOpening;
 use App\Models\Resume;
@@ -26,7 +27,8 @@ class UpsertCandidateAndApply
         string $email,
         ?string $phone,
         ?UploadedFile $resume,
-        bool $consent
+        bool $consent,
+        array $customAnswers = []
     ): Application {
         return DB::transaction(function () use (
             $tenant,
@@ -35,8 +37,8 @@ class UpsertCandidateAndApply
             $lastName,
             $email,
             $phone,
-            $resume
-
+            $resume,
+            $customAnswers
         ) {
             // Find or create candidate
             $candidate = Candidate::firstOrCreate(
@@ -90,6 +92,9 @@ class UpsertCandidateAndApply
                 $application->update(['resume_id' => $resumeModel->id]);
             }
 
+            // Handle custom answers
+            $this->storeCustomAnswers($tenant, $application, $customAnswers);
+
             // Send confirmation email (queued)
             $this->sendConfirmationEmail($candidate, $job, $application);
 
@@ -136,6 +141,62 @@ class UpsertCandidateAndApply
                 'error' => $e->getMessage(),
             ]);
         }
+    }
+
+    private function storeCustomAnswers(Tenant $tenant, Application $application, array $customAnswers): void
+    {
+        foreach ($customAnswers as $questionId => $answer) {
+            if (empty($answer)) {
+                continue;
+            }
+
+            $question = \App\Models\ApplicationQuestion::find($questionId);
+            if (!$question || $question->tenant_id !== $tenant->id) {
+                continue;
+            }
+
+            $answerData = [
+                'tenant_id' => $tenant->id,
+                'application_id' => $application->id,
+                'question_id' => $questionId,
+            ];
+
+            // Handle different answer types
+            switch ($question->type) {
+                case 'short_text':
+                case 'long_text':
+                case 'email':
+                case 'phone':
+                    $answerData['answer_text'] = $answer;
+                    break;
+                
+                case 'select':
+                case 'multi_select':
+                case 'checkbox':
+                    $answerData['answer_json'] = is_array($answer) ? $answer : [$answer];
+                    break;
+                
+                case 'file':
+                    if ($answer instanceof \Illuminate\Http\UploadedFile) {
+                        $path = $this->storeAnswerFile($tenant, $application, $questionId, $answer);
+                        $answerData['answer_file_path'] = $path;
+                    }
+                    break;
+            }
+
+            ApplicationAnswer::create($answerData);
+        }
+    }
+
+    private function storeAnswerFile(Tenant $tenant, Application $application, string $questionId, \Illuminate\Http\UploadedFile $file): string
+    {
+        $extension = $file->getClientOriginalExtension();
+        $filename = Str::uuid() . '.' . $extension;
+        $path = "app-answers/{$tenant->id}/{$application->id}/{$questionId}/{$filename}";
+
+        Storage::disk('public')->put($path, file_get_contents($file));
+
+        return $path;
     }
 
     private function sendNewApplicationNotification(Tenant $tenant, JobOpening $job, Candidate $candidate, Application $application): void

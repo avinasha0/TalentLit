@@ -3,21 +3,66 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Careers - {{ tenant()->name }}</title>
+    <title>Careers - {{ $tenant->name }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --brand: {{ $branding->primary_color ?? '#4f46e5' }};
+        }
+    </style>
 </head>
 <body class="bg-gray-50">
     <div class="min-h-screen">
+        <!-- Hero Section -->
+        <div class="relative bg-gray-900 text-white">
+            @if($branding && $branding->hero_image_path)
+                <div class="absolute inset-0">
+                    <img src="{{ Storage::url($branding->hero_image_path) }}" 
+                         alt="Hero Background" 
+                         class="w-full h-full object-cover">
+                    <div class="absolute inset-0 bg-black bg-opacity-40"></div>
+                </div>
+            @else
+                <div class="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-700"></div>
+            @endif
+            
+            <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
+                <div class="text-center">
+                    @if($branding && $branding->logo_path)
+                        <img src="{{ Storage::url($branding->logo_path) }}" 
+                             alt="{{ $tenant->name }} Logo" 
+                             class="h-16 mx-auto mb-8">
+                    @endif
+                    
+                    <h1 class="text-4xl md:text-6xl font-bold mb-6">
+                        {{ $branding->intro_headline ?? 'Join Our Amazing Team' }}
+                    </h1>
+                    
+                    @if($branding && $branding->intro_subtitle)
+                        <p class="text-xl md:text-2xl mb-8 opacity-90">
+                            {{ $branding->intro_subtitle }}
+                        </p>
+                    @endif
+                    
+                    <a href="#jobs" 
+                       class="inline-block px-8 py-3 text-lg font-semibold text-white rounded-lg transition-colors"
+                       style="background-color: var(--brand);">
+                        View Open Positions
+                    </a>
+                </div>
+            </div>
+        </div>
+
         <!-- Header -->
         <header class="bg-white shadow-sm border-b">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex justify-between items-center py-6">
                     <div>
-                        <h1 class="text-3xl font-bold text-gray-900">{{ tenant()->name }}</h1>
-                        <p class="text-gray-600">Join our team</p>
+                        <h2 class="text-2xl font-bold text-gray-900">{{ $tenant->name }}</h2>
+                        <p class="text-gray-600">Current Openings</p>
                     </div>
                     <div>
-                        <a href="{{ route('tenant.dashboard', ['tenant' => tenant()->slug]) }}" 
+                        <a href="{{ route('tenant.dashboard', ['tenant' => $tenant->slug]) }}" 
                            class="text-blue-600 hover:text-blue-800 font-medium">
                             Back to Dashboard
                         </a>
@@ -93,7 +138,7 @@
         </div>
 
         <!-- Jobs List -->
-        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <main id="jobs" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <div class="mb-6">
                 <h2 class="text-2xl font-bold text-gray-900">Open Positions</h2>
                     <p class="text-gray-900">{{ $jobs->total() }} job{{ $jobs->total() !== 1 ? 's' : '' }} found</p>

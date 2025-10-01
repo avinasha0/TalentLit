@@ -10,7 +10,7 @@
         .header { background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
         .content { padding: 20px 0; }
         .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 14px; color: #666; }
-        .button { display: inline-block; background: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; margin: 10px 0; }
+        .button { display: inline-block; background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; margin: 10px 0; }
         .candidate-info { background: #f8f9fa; padding: 15px; border-radius: 4px; margin: 15px 0; }
     </style>
 </head>

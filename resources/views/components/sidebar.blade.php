@@ -59,5 +59,13 @@
       </svg>
       <span class="truncate">Candidates</span>
     </a>
+    <a href="{{ route('tenant.analytics.index', $tenant->slug) }}"
+       class="flex items-center gap-3 px-3 py-2 rounded-md text-sm text-gray-700 dark:text-gray-300
+              hover:bg-gray-100 dark:hover:bg-gray-700 {{ request()->routeIs('tenant.analytics.*') ? 'bg-gray-100 dark:bg-gray-700' : '' }}">
+      <svg class="h-5 w-5 text-gray-600 dark:text-gray-400" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/>
+      </svg>
+      <span class="truncate">Analytics</span>
+    </a>
   </nav>
 </aside>

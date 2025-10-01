@@ -44,6 +44,15 @@ class RolePermissionSeeder extends Seeder
             // Dashboard permissions
             'view dashboard',
             
+            // Analytics permissions
+            'view analytics',
+            
+            // Interview permissions
+            'view interviews',
+            'create interviews',
+            'edit interviews',
+            'delete interviews',
+            
             // Admin permissions
             'manage users',
             'manage settings',
@@ -104,7 +113,8 @@ class RolePermissionSeeder extends Seeder
             'view jobs', 'create jobs', 'edit jobs', 'delete jobs', 'publish jobs', 'close jobs',
             'manage stages', 'view stages', 'create stages', 'edit stages', 'delete stages', 'reorder stages',
             'view candidates', 'create candidates', 'edit candidates', 'delete candidates', 'move candidates', 'import candidates',
-            'view dashboard',
+            'view dashboard', 'view analytics',
+            'view interviews', 'create interviews', 'edit interviews', 'delete interviews',
         ]);
 
         // Recruiter - Job and candidate management
@@ -118,7 +128,8 @@ class RolePermissionSeeder extends Seeder
             'view jobs', 'create jobs', 'edit jobs', 'publish jobs', 'close jobs',
             'view stages', 'create stages', 'edit stages', 'reorder stages',
             'view candidates', 'create candidates', 'edit candidates', 'move candidates',
-            'view dashboard',
+            'view dashboard', 'view analytics',
+            'view interviews', 'create interviews', 'edit interviews', 'delete interviews',
         ]);
 
         // Hiring Manager - View only
@@ -133,6 +144,8 @@ class RolePermissionSeeder extends Seeder
             'view stages',
             'view candidates',
             'view dashboard',
+            'view analytics',
+            'view interviews',
         ]);
     }
 }

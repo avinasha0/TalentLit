@@ -64,6 +64,11 @@ class Application extends Model
         return $this->hasMany(Activity::class);
     }
 
+    public function answers(): HasMany
+    {
+        return $this->hasMany(ApplicationAnswer::class);
+    }
+
     // Query scopes
     public function scopeThisMonthHired($query)
     {
@@ -83,5 +88,20 @@ class Application extends Model
     {
         return $query->orderBy('stage_position', 'asc')
                     ->orderBy('created_at', 'asc');
+    }
+
+    public function scopeForTenant($query, $tenantId)
+    {
+        return $query->where('tenant_id', $tenantId);
+    }
+
+    public function scopeRange($query, $from, $to, $column = 'applied_at')
+    {
+        return $query->whereBetween($column, [$from, $to]);
+    }
+
+    public function scopeHired($query)
+    {
+        return $query->where('status', 'hired');
     }
 }

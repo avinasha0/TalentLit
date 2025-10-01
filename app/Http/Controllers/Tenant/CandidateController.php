@@ -89,13 +89,20 @@ class CandidateController extends Controller
     {
         // Ensure candidate belongs to current tenant
         if ($candidate->tenant_id !== tenant_id()) {
-            abort(404);
+            abort(404, 'Candidate not found in this tenant');
         }
 
         // Load relationships efficiently
         $candidate->load([
             'tags',
+            'notes.user',
             'resumes',
+            'interviews' => function ($query) {
+                $query->with([
+                    'job:id,title',
+                    'panelists:id,name'
+                ])->orderBy('scheduled_at', 'desc');
+            },
             'applications' => function ($query) {
                 $query->with([
                     'jobOpening:id,title,department_id',

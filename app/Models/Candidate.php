@@ -50,8 +50,17 @@ class Candidate extends Model
             ->using(CandidateTag::class)
             ->withTimestamps()
             ->withPivot('tenant_id')
-            ->when(tenant_id(), fn ($q) => $q->where('candidate_tags.tenant_id', tenant_id()))
-            ->withPivot('id'); // Include the UUID id field
+            ->when(tenant_id(), fn ($q) => $q->where('candidate_tags.tenant_id', tenant_id()));
+    }
+
+    public function notes(): HasMany
+    {
+        return $this->hasMany(CandidateNote::class);
+    }
+
+    public function interviews(): HasMany
+    {
+        return $this->hasMany(Interview::class);
     }
 
     public function consents(): HasMany

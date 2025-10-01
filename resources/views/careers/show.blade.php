@@ -3,25 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ $job->title }} - {{ tenant()->name }}</title>
+    <title>{{ $job->title }} - {{ $tenant->name }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --brand: {{ $branding->primary_color ?? '#4f46e5' }};
+        }
+    </style>
 </head>
 <body class="bg-gray-50">
     <div class="min-h-screen">
+        <!-- Branding Banner -->
+        @if($branding)
+            <div class="bg-white border-b">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+                    <div class="flex items-center justify-between">
+                        @if($branding->logo_path)
+                            <img src="{{ Storage::url($branding->logo_path) }}" 
+                                 alt="{{ $tenant->name }} Logo" 
+                                 class="h-8">
+                        @else
+                            <h2 class="text-xl font-bold text-gray-900">{{ $tenant->name }}</h2>
+                        @endif
+                        <div class="w-2 h-2 rounded-full" style="background-color: var(--brand);"></div>
+                    </div>
+                </div>
+            </div>
+        @endif
+
         <!-- Header -->
         <header class="bg-white shadow-sm border-b">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex justify-between items-center py-6">
                     <div>
                         <nav class="flex items-center space-x-2 text-sm text-gray-600 mb-2">
-                            <a href="{{ route('careers.index', ['tenant' => tenant()->slug]) }}" class="hover:text-gray-700">Careers</a>
+                            <a href="{{ route('careers.index', ['tenant' => $tenant->slug]) }}" class="hover:text-gray-700">Careers</a>
                             <span>></span>
                             <span class="text-gray-900">{{ $job->title }}</span>
                         </nav>
                         <h1 class="text-3xl font-bold text-gray-900">{{ $job->title }}</h1>
                     </div>
                     <div>
-                        <a href="{{ route('careers.index', ['tenant' => tenant()->slug]) }}" 
+                        <a href="{{ route('careers.index', ['tenant' => $tenant->slug]) }}" 
                            class="text-blue-600 hover:text-blue-800 font-medium">
                             Back to Jobs
                         </a>

@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -58,6 +59,18 @@ class JobOpening extends Model
         return $this->hasMany(Application::class);
     }
 
+    public function interviews(): HasMany
+    {
+        return $this->hasMany(Interview::class, 'job_id');
+    }
+
+    public function applicationQuestions(): BelongsToMany
+    {
+        return $this->belongsToMany(ApplicationQuestion::class, 'job_application_question', 'job_id', 'question_id')
+            ->withPivot(['sort_order', 'required_override'])
+            ->orderByPivot('sort_order');
+    }
+
     // Scopes
     public function scopePublished($query)
     {
@@ -77,6 +90,11 @@ class JobOpening extends Model
     public function scopeWithApplicationsCount($query)
     {
         return $query->withCount('applications');
+    }
+
+    public function scopeOpen($query)
+    {
+        return $query->whereIn('status', ['draft', 'published']);
     }
 
     /**

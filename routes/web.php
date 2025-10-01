@@ -5,8 +5,13 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Career\ApplyController;
 use App\Http\Controllers\Career\CareerJobController;
 use App\Http\Controllers\Tenant\CandidateController;
+use App\Http\Controllers\Tenant\CandidateNoteController;
+use App\Http\Controllers\Tenant\CandidateTagController;
+use App\Http\Controllers\Tenant\CareersSettingsController;
 use App\Http\Controllers\Tenant\DashboardController;
+use App\Http\Controllers\Tenant\InterviewController;
 use App\Http\Controllers\Tenant\JobController;
+use App\Http\Controllers\Tenant\JobQuestionsController;
 use App\Http\Controllers\Tenant\JobStageController;
 use App\Http\Controllers\Tenant\PipelineController;
 use App\Models\Application;
@@ -56,7 +61,7 @@ Route::prefix('{tenant}/careers')->middleware(['capture.tenant', 'tenant'])->gro
 });
 
 // Internal Tenant Management Routes (require authentication)
-Route::middleware(['tenant', 'auth'])->group(function () {
+Route::middleware(['capture.tenant', 'tenant', 'auth'])->group(function () {
     // Dashboard - accessible by all authenticated users with view dashboard permission
     Route::middleware('permission:view dashboard')->group(function () {
         Route::get('/{tenant}/dashboard', [DashboardController::class, 'index'])->name('tenant.dashboard');
@@ -118,6 +123,56 @@ Route::middleware(['tenant', 'auth'])->group(function () {
         Route::get('/{tenant}/candidates', [CandidateController::class, 'index'])->name('tenant.candidates.index');
         Route::get('/{tenant}/candidates/job/{job}', [CandidateController::class, 'index'])->name('tenant.candidates.index.job');
         Route::get('/{tenant}/candidates/{candidate}', [CandidateController::class, 'show'])->name('tenant.candidates.show');
+        
+        // Candidate Notes Routes
+        Route::post('/{tenant}/candidates/{candidate}/notes', [CandidateNoteController::class, 'store'])->name('tenant.candidates.notes.store');
+        Route::delete('/{tenant}/candidates/{candidate}/notes/{note}', [CandidateNoteController::class, 'destroy'])->name('tenant.candidates.notes.destroy');
+        
+        // Candidate Tags Routes
+        Route::get('/{tenant}/tags.json', [CandidateTagController::class, 'index'])->name('tenant.tags.index');
+        Route::post('/{tenant}/candidates/{candidate}/tags', [CandidateTagController::class, 'store'])->name('tenant.candidates.tags.store');
+        Route::delete('/{tenant}/candidates/{candidate}/tags/{tag}', [CandidateTagController::class, 'destroy'])->name('tenant.candidates.tags.destroy');
+    });
+
+    // Interview Management Routes - Owner, Admin, Recruiter, Hiring Manager
+    Route::middleware('permission:view interviews')->group(function () {
+        Route::get('/{tenant}/interviews', [InterviewController::class, 'index'])->name('tenant.interviews.index');
+        Route::get('/{tenant}/interviews/{interview}', [InterviewController::class, 'show'])->name('tenant.interviews.show');
+    });
+
+    Route::middleware('permission:create interviews')->group(function () {
+        Route::get('/{tenant}/candidates/{candidate}/interviews/create', [InterviewController::class, 'create'])->name('tenant.interviews.create');
+        Route::post('/{tenant}/candidates/{candidate}/interviews', [InterviewController::class, 'store'])->name('tenant.interviews.store');
+    });
+
+    Route::middleware('permission:edit interviews')->group(function () {
+        Route::get('/{tenant}/interviews/{interview}/edit', [InterviewController::class, 'edit'])->name('tenant.interviews.edit');
+        Route::put('/{tenant}/interviews/{interview}', [InterviewController::class, 'update'])->name('tenant.interviews.update');
+        Route::patch('/{tenant}/interviews/{interview}/cancel', [InterviewController::class, 'cancel'])->name('tenant.interviews.cancel');
+        Route::patch('/{tenant}/interviews/{interview}/complete', [InterviewController::class, 'complete'])->name('tenant.interviews.complete');
+    });
+
+    Route::middleware('permission:delete interviews')->group(function () {
+        Route::delete('/{tenant}/interviews/{interview}', [InterviewController::class, 'destroy'])->name('tenant.interviews.destroy');
+    });
+
+    // Analytics Routes - Owner, Admin, Recruiter, Hiring Manager
+    Route::middleware('permission:view analytics')->group(function () {
+        Route::get('/{tenant}/analytics', [App\Http\Controllers\Tenant\AnalyticsController::class, 'index'])->name('tenant.analytics.index');
+        Route::get('/{tenant}/analytics/data', [App\Http\Controllers\Tenant\AnalyticsController::class, 'data'])->name('tenant.analytics.data');
+        Route::get('/{tenant}/analytics/export', [App\Http\Controllers\Tenant\AnalyticsController::class, 'export'])->name('tenant.analytics.export');
+    });
+
+    // Careers Settings Routes - Owner, Admin, Recruiter
+    Route::middleware('permission:edit jobs')->group(function () {
+        Route::get('/{tenant}/settings/careers', [CareersSettingsController::class, 'edit'])->name('tenant.settings.careers');
+        Route::put('/{tenant}/settings/careers', [CareersSettingsController::class, 'update'])->name('tenant.settings.careers.update');
+    });
+
+    // Job Questions Routes - Owner, Admin, Recruiter
+    Route::middleware('permission:edit jobs')->group(function () {
+        Route::get('/{tenant}/jobs/{job}/questions', [JobQuestionsController::class, 'edit'])->name('tenant.jobs.questions');
+        Route::put('/{tenant}/jobs/{job}/questions', [JobQuestionsController::class, 'update'])->name('tenant.jobs.questions.update');
     });
 
     // Account Routes

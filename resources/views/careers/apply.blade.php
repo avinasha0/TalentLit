@@ -3,8 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Apply for {{ $job->title }} - {{ tenant()->name }}</title>
+    <title>Apply for {{ $job->title }} - {{ $tenant->name }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --brand: {{ $branding->primary_color ?? '#4f46e5' }};
+        }
+    </style>
 </head>
 <body class="bg-gray-50">
     <div class="min-h-screen">
@@ -14,16 +19,16 @@
                 <div class="flex justify-between items-center py-6">
                     <div>
                         <nav class="flex items-center space-x-2 text-sm text-gray-600 mb-2">
-                            <a href="{{ route('careers.index', ['tenant' => tenant()->slug]) }}" class="hover:text-gray-700">Careers</a>
+                            <a href="{{ route('careers.index', ['tenant' => $tenant->slug]) }}" class="hover:text-gray-700">Careers</a>
                             <span>></span>
-                            <a href="{{ route('careers.show', ['tenant' => tenant()->slug, 'job' => $job->slug]) }}" class="hover:text-gray-700">{{ $job->title }}</a>
+                            <a href="{{ route('careers.show', ['tenant' => $tenant->slug, 'job' => $job->slug]) }}" class="hover:text-gray-700">{{ $job->title }}</a>
                             <span>></span>
                             <span class="text-gray-900">Apply</span>
                         </nav>
                         <h1 class="text-3xl font-bold text-gray-900">Apply for {{ $job->title }}</h1>
                     </div>
                     <div>
-                        <a href="{{ route('careers.show', ['tenant' => tenant()->slug, 'job' => $job->slug]) }}" 
+                        <a href="{{ route('careers.show', ['tenant' => $tenant->slug, 'job' => $job->slug]) }}" 
                            class="text-blue-600 hover:text-blue-800 font-medium">
                             Back to Job
                         </a>
@@ -82,7 +87,7 @@
                     </div>
                 @endif
 
-                <form action="{{ route('careers.apply.store', ['tenant' => tenant()->slug, 'job' => $job->slug]) }}" 
+                <form action="{{ route('careers.apply.store', ['tenant' => $tenant->slug, 'job' => $job->slug]) }}" 
                       method="POST" 
                       enctype="multipart/form-data"
                       class="space-y-6">
@@ -151,6 +156,126 @@
                         <p class="mt-1 text-sm text-gray-600">Maximum file size: 5MB</p>
                     </div>
 
+                    <!-- Custom Questions -->
+                    @if($job->applicationQuestions->count() > 0)
+                        <div class="border-t pt-6">
+                            <h3 class="text-lg font-medium text-gray-900 mb-4">Additional Information</h3>
+                            <div class="space-y-6">
+                                @foreach($job->applicationQuestions as $question)
+                                    @php
+                                        $isRequired = $question->pivot->required_override ?? $question->required;
+                                        $fieldName = "question_{$question->id}";
+                                        $oldValue = old($fieldName);
+                                    @endphp
+                                    
+                                    <div>
+                                        <label for="{{ $fieldName }}" class="block text-sm font-medium text-gray-700 mb-1">
+                                            {{ $question->label }}
+                                            @if($isRequired)
+                                                <span class="text-red-500">*</span>
+                                            @endif
+                                        </label>
+                                        
+                                        @switch($question->type)
+                                            @case('short_text')
+                                                <input type="text" 
+                                                       name="{{ $fieldName }}" 
+                                                       id="{{ $fieldName }}"
+                                                       value="{{ $oldValue }}"
+                                                       @if($isRequired) required @endif
+                                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 @error($fieldName) border-red-500 @enderror">
+                                                @break
+                                            
+                                            @case('long_text')
+                                                <textarea name="{{ $fieldName }}" 
+                                                          id="{{ $fieldName }}"
+                                                          rows="4"
+                                                          @if($isRequired) required @endif
+                                                          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 @error($fieldName) border-red-500 @enderror">{{ $oldValue }}</textarea>
+                                                @break
+                                            
+                                            @case('email')
+                                                <input type="email" 
+                                                       name="{{ $fieldName }}" 
+                                                       id="{{ $fieldName }}"
+                                                       value="{{ $oldValue }}"
+                                                       @if($isRequired) required @endif
+                                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 @error($fieldName) border-red-500 @enderror">
+                                                @break
+                                            
+                                            @case('phone')
+                                                <input type="tel" 
+                                                       name="{{ $fieldName }}" 
+                                                       id="{{ $fieldName }}"
+                                                       value="{{ $oldValue }}"
+                                                       @if($isRequired) required @endif
+                                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 @error($fieldName) border-red-500 @enderror">
+                                                @break
+                                            
+                                            @case('select')
+                                                <select name="{{ $fieldName }}" 
+                                                        id="{{ $fieldName }}"
+                                                        @if($isRequired) required @endif
+                                                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 @error($fieldName) border-red-500 @enderror">
+                                                    <option value="">Please select...</option>
+                                                    @if($question->options)
+                                                        @foreach($question->options as $option)
+                                                            <option value="{{ $option }}" {{ $oldValue == $option ? 'selected' : '' }}>
+                                                                {{ $option }}
+                                                            </option>
+                                                        @endforeach
+                                                    @endif
+                                                </select>
+                                                @break
+                                            
+                                            @case('multi_select')
+                                                <div class="space-y-2">
+                                                    @if($question->options)
+                                                        @foreach($question->options as $option)
+                                                            <label class="flex items-center">
+                                                                <input type="checkbox" 
+                                                                       name="{{ $fieldName }}[]" 
+                                                                       value="{{ $option }}"
+                                                                       {{ in_array($option, (array)$oldValue) ? 'checked' : '' }}
+                                                                       class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                                                <span class="ml-2 text-sm text-gray-700">{{ $option }}</span>
+                                                            </label>
+                                                        @endforeach
+                                                    @endif
+                                                </div>
+                                                @break
+                                            
+                                            @case('checkbox')
+                                                <label class="flex items-center">
+                                                    <input type="checkbox" 
+                                                           name="{{ $fieldName }}" 
+                                                           value="1"
+                                                           {{ $oldValue ? 'checked' : '' }}
+                                                           @if($isRequired) required @endif
+                                                           class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                                    <span class="ml-2 text-sm text-gray-700">Yes</span>
+                                                </label>
+                                                @break
+                                            
+                                            @case('file')
+                                                <input type="file" 
+                                                       name="{{ $fieldName }}" 
+                                                       id="{{ $fieldName }}"
+                                                       @if($isRequired) required @endif
+                                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 @error($fieldName) border-red-500 @enderror">
+                                                <p class="mt-1 text-sm text-gray-600">Maximum file size: 5MB</p>
+                                                @break
+                                        @endswitch
+                                        
+                                        @error($fieldName)
+                                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                        @enderror
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
+
                     <!-- Consent Checkbox -->
                     <div class="flex items-start">
                         <div class="flex items-center h-5">
@@ -171,7 +296,7 @@
 
                     <!-- Submit Button -->
                     <div class="flex justify-end space-x-4">
-                        <a href="{{ route('careers.show', ['tenant' => tenant()->slug, 'job' => $job->slug]) }}" 
+                        <a href="{{ route('careers.show', ['tenant' => $tenant->slug, 'job' => $job->slug]) }}" 
                            class="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
                             Cancel
                         </a>

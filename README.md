@@ -14,6 +14,8 @@ A Laravel 11 application with path-based tenancy for hiring and recruitment mana
 - **Testing**: Comprehensive test suite with PHPUnit
 - **CI/CD**: GitHub Actions workflow for automated testing
 - **Core Domains**: Complete hiring pipeline with candidates, jobs, applications, and interviews
+- **Analytics Dashboard**: Comprehensive ATS metrics with interactive charts and data export
+- **Careers Customization**: Tenant-level branding and custom application questions for public careers pages
 
 ## Tech Stack
 
@@ -79,6 +81,9 @@ A Laravel 11 application with path-based tenancy for hiring and recruitment mana
 - `GET /{tenant}/jobs` - List published job openings (JSON)
 - `GET /{tenant}/candidates` - List candidates with search filters (JSON)
 - `POST /{tenant}/applications` - Create new application
+- `GET /{tenant}/analytics` - Analytics dashboard with interactive charts
+- `GET /{tenant}/analytics/data` - JSON API for analytics data (supports date filtering)
+- `GET /{tenant}/analytics/export` - CSV export of analytics data
 
 ### API Routes
 - `GET /api/{tenant}/v1/user` - Get authenticated user (requires Sanctum token)
@@ -127,6 +132,36 @@ The application includes a comprehensive hiring pipeline with the following core
 - **Soft Deletes**: Candidates, job openings, and applications support soft deletion
 - **Audit Trail**: Complete tracking of application stage changes
 - **Search & Filtering**: Full-text search capabilities for candidates and applications
+
+## Analytics Dashboard
+
+The analytics dashboard provides comprehensive insights into your hiring process with interactive charts and metrics.
+
+### Features
+- **Interactive Charts**: Built with Chart.js for responsive, interactive visualizations
+- **Date Range Filtering**: Filter data by custom date ranges or use presets (30D, 90D, YTD, ALL)
+- **Real-time KPIs**: Key performance indicators including total applications, hires, time-to-hire, and active pipeline
+- **Data Export**: CSV export functionality for further analysis
+- **Performance Optimized**: Cached queries and database indexes for fast loading on shared hosting
+
+### Available Metrics
+1. **Applications Over Time**: Line chart showing application trends
+2. **Hires Over Time**: Area chart displaying hiring patterns
+3. **Stage Funnel**: Horizontal bar chart showing application distribution across stages
+4. **Source Effectiveness**: Grouped bar chart comparing applications vs hires by source
+5. **Open Jobs by Department**: Bar chart showing job distribution
+6. **Pipeline Snapshot**: Doughnut chart of current pipeline status
+
+### Access Control
+- **Roles**: Owner, Admin, Recruiter, and Hiring Manager can access analytics
+- **Permission**: Requires `view analytics` permission
+- **Tenant Scoped**: All data is automatically filtered by tenant
+
+### Performance Features
+- **Caching**: 60-second cache for analytics data to reduce database load
+- **Database Indexes**: Optimized indexes for fast query performance
+- **Efficient Queries**: Uses raw SQL with proper grouping for MySQL compatibility
+- **Responsive Design**: Mobile-friendly interface with Tailwind CSS
 
 ## Commands
 
@@ -183,6 +218,38 @@ php artisan optimize:clear
 # Generate model with factory and policy
 php artisan make:model ModelName -mf --policy
 ```
+
+## Careers Customization
+
+The application includes comprehensive tenant-level customization for public careers pages:
+
+### Branding Features
+- **Company Logo**: Upload and display custom logos on careers pages
+- **Hero Background Image**: Custom background images for the careers landing page
+- **Primary Color**: Brand color customization with CSS variables
+- **Intro Content**: Customizable headline and subtitle for the hero section
+
+### Custom Application Questions
+- **Question Library**: Create reusable questions that can be attached to any job
+- **Question Types**: Support for short text, long text, email, phone, select, multi-select, checkbox, and file upload
+- **Job-Specific Questions**: Attach custom questions to specific jobs with ordering and required status
+- **Dynamic Validation**: Server-side validation for all custom question types
+
+### Admin Interface
+- **Careers Settings**: Manage branding and hero content at `/{tenant}/settings/careers`
+- **Job Questions**: Configure custom questions for each job at `/{tenant}/jobs/{job}/questions`
+- **Drag-and-Drop**: Easy reordering of questions with visual interface
+
+### Public Pages
+- **Branded Hero Section**: Customizable hero with logo, background, and content
+- **Dynamic Application Forms**: Job-specific questions rendered based on configuration
+- **Responsive Design**: Mobile-friendly forms with proper validation
+
+### Database Structure
+- `tenant_branding`: Stores branding information per tenant
+- `application_questions`: Question library with tenant scoping
+- `job_application_question`: Pivot table for job-question relationships
+- `application_answers`: Stores candidate responses to custom questions
 
 ## Contributing
 

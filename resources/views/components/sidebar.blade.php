@@ -217,6 +217,15 @@ class="fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 text-white transform lg:tran
                         </svg>
                         Roles & Permissions
                     </a>
+                    @role('Owner')
+                    <a href="{{ route('subscription.show', $tenant->slug) }}" 
+                       class="flex items-center px-3 py-2 text-sm text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors duration-200 {{ str_starts_with($currentRoute, 'subscription') ? 'bg-gray-700 text-white' : '' }}">
+                        <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+                        </svg>
+                        Subscription
+                    </a>
+                    @endrole
                     <a href="{{ route('tenant.settings.general', $tenant->slug) }}" 
                        class="flex items-center px-3 py-2 text-sm text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors duration-200 {{ $currentRoute === 'tenant.settings.general' ? 'bg-gray-700 text-white' : '' }}">
                         <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">

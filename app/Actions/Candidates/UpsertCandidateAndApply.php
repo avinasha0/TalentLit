@@ -71,6 +71,14 @@ class UpsertCandidateAndApply
                 $resumeModel = $this->storeResume($tenant, $candidate, $resume);
             }
 
+            // Get the first stage (Applied stage) for this job
+            $firstStage = $job->jobStages()->orderBy('sort_order')->first();
+            
+            // Get the next position for this stage
+            $nextPosition = $job->applications()
+                ->where('current_stage_id', $firstStage?->id)
+                ->max('stage_position') + 1;
+            
             // Create or find application
             $application = Application::firstOrCreate(
                 [
@@ -84,6 +92,8 @@ class UpsertCandidateAndApply
                     'candidate_id' => $candidate->id,
                     'status' => 'active',
                     'applied_at' => now(),
+                    'current_stage_id' => $firstStage?->id,
+                    'stage_position' => $nextPosition,
                 ]
             );
 

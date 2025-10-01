@@ -23,6 +23,9 @@
                                 </a>
                             </div>
                 <div class="flex items-center space-x-4">
+                    <a href="{{ route('subscription.pricing') }}" class="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium">
+                        Pricing
+                    </a>
                     <a href="{{ route('contact') }}" class="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium">
                         Contact
                     </a>

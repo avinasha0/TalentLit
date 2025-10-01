@@ -88,6 +88,6 @@ class CareerJobController extends Controller
         $branding = $tenantModel->branding;
         $job->load(['department', 'location', 'jobStages', 'applicationQuestions']);
 
-        return view('careers.show', compact('job', 'tenant', 'branding'));
+        return view('careers.show', compact('job', 'tenantModel', 'branding'));
     }
 }

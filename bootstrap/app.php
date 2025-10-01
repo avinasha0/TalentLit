@@ -17,6 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'capture.tenant' => \App\Http\Middleware\CaptureLastTenant::class,
             'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
             'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
+            'subscription.limit' => \App\Http\Middleware\CheckSubscriptionLimits::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

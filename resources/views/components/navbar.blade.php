@@ -15,6 +15,30 @@
     </div>
 
     <div class="flex items-center gap-2">
+      {{-- Subscription Plan Indicator (for Owners only) --}}
+      @if(isset($tenant) && auth()->user()->hasRole('Owner') && $tenant->activeSubscription)
+        @php
+          $plan = $tenant->activeSubscription->plan;
+          $planColors = [
+            'free' => 'bg-gray-100 text-gray-800 border-gray-200',
+            'pro' => 'bg-blue-100 text-blue-800 border-blue-200',
+            'enterprise' => 'bg-purple-100 text-purple-800 border-purple-200'
+          ];
+          $planColor = $planColors[$plan->slug] ?? 'bg-gray-100 text-gray-800 border-gray-200';
+        @endphp
+        <div class="hidden sm:flex items-center px-3 py-1 rounded-full text-xs font-medium border {{ $planColor }}">
+          <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" clip-rule="evenodd"></path>
+          </svg>
+          {{ $plan->name }}
+          @if($plan->isFree())
+            <span class="ml-1 text-green-600">Free</span>
+          @else
+            <span class="ml-1">${{ number_format($plan->price) }}</span>
+          @endif
+        </div>
+      @endif
+
       {{-- (Optional) Search placeholder --}}
       <div class="hidden md:flex">
         <input type="search" placeholder="Search…" class="rounded-md text-sm px-3 py-2 border

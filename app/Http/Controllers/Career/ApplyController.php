@@ -27,7 +27,7 @@ class ApplyController extends Controller
         $branding = $tenantModel->branding;
         $job->load('applicationQuestions');
 
-        return view('careers.apply', compact('job', 'tenant', 'branding'));
+        return view('careers.apply', compact('job', 'tenantModel', 'branding'));
     }
 
     public function store(ApplyRequest $request, string $tenant, JobOpening $job, UpsertCandidateAndApply $upsertAction)

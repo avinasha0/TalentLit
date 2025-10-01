@@ -7,6 +7,7 @@ use App\Http\Controllers\Career\CareerJobController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\SitemapController;
+use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\Tenant\CandidateController;
 use App\Http\Controllers\Tenant\CandidateNoteController;
 use App\Http\Controllers\Tenant\CandidateTagController;
@@ -29,6 +30,9 @@ Route::get('/', [HomeController::class, 'index'])->name('home');
 // Contact routes
 Route::get('/contact', [ContactController::class, 'index'])->name('contact');
 Route::post('/contact', [ContactController::class, 'store'])->name('contact.store');
+
+// Subscription routes (public)
+Route::get('/pricing', [SubscriptionController::class, 'pricing'])->name('subscription.pricing');
 
 // SEO Routes
 Route::get('/sitemap.xml', [SitemapController::class, 'index'])->name('sitemap');
@@ -87,12 +91,15 @@ Route::middleware(['capture.tenant', 'tenant', 'auth'])->group(function () {
     // Job Management Routes - Owner, Admin, Recruiter
     Route::middleware('permission:view jobs')->group(function () {
         Route::get('/{tenant}/jobs', [JobController::class, 'index'])->name('tenant.jobs.index');
-        Route::get('/{tenant}/jobs/{job}', [JobController::class, 'show'])->name('tenant.jobs.show');
     });
 
-    Route::middleware('permission:create jobs')->group(function () {
+    Route::middleware(['permission:create jobs', 'subscription.limit:max_job_openings'])->group(function () {
         Route::get('/{tenant}/jobs/create', [JobController::class, 'create'])->name('tenant.jobs.create');
         Route::post('/{tenant}/jobs', [JobController::class, 'store'])->name('tenant.jobs.store');
+    });
+
+    Route::middleware('permission:view jobs')->group(function () {
+        Route::get('/{tenant}/jobs/{job}', [JobController::class, 'show'])->name('tenant.jobs.show');
     });
 
     Route::middleware('permission:edit jobs')->group(function () {
@@ -156,9 +163,10 @@ Route::middleware(['capture.tenant', 'tenant', 'auth'])->group(function () {
         Route::get('/{tenant}/interviews/{interview}', [InterviewController::class, 'show'])->name('tenant.interviews.show');
     });
 
-    Route::middleware('permission:create interviews')->group(function () {
+    Route::middleware(['permission:create interviews', 'subscription.limit:max_interviews_per_month'])->group(function () {
         Route::get('/{tenant}/candidates/{candidate}/interviews/create', [InterviewController::class, 'create'])->name('tenant.interviews.create');
         Route::post('/{tenant}/candidates/{candidate}/interviews', [InterviewController::class, 'store'])->name('tenant.interviews.store');
+        Route::post('/{tenant}/interviews/schedule', [InterviewController::class, 'storeDirect'])->name('tenant.interviews.store-direct');
     });
 
     Route::middleware('permission:edit interviews')->group(function () {
@@ -199,6 +207,13 @@ Route::middleware(['capture.tenant', 'tenant', 'auth'])->group(function () {
         Route::get('/{tenant}/settings/general', function() {
             return view('tenant.settings.general');
         })->name('tenant.settings.general');
+    });
+
+    // Subscription Management Routes - Owner only
+    Route::middleware('role:Owner')->group(function () {
+        Route::get('/{tenant}/subscription', [SubscriptionController::class, 'show'])->name('subscription.show');
+        Route::post('/{tenant}/subscription/subscribe', [SubscriptionController::class, 'subscribe'])->name('subscription.subscribe');
+        Route::post('/{tenant}/subscription/cancel', [SubscriptionController::class, 'cancel'])->name('subscription.cancel');
     });
 
     // Job Questions Routes - Owner, Admin, Recruiter

@@ -47,10 +47,15 @@ class InterviewController extends Controller
         }
 
         // Get filter options
-        $candidates = Candidate::select('id', 'first_name', 'last_name')->get();
+        $candidates = Candidate::select('id', 'first_name', 'last_name', 'primary_email')->get();
         $jobs = JobOpening::select('id', 'title')->get();
+        
+        // Get users for panelist selection
+        $users = User::whereHas('tenants', function ($query) use ($tenantModel) {
+            $query->where('tenant_id', $tenantModel->id);
+        })->select('id', 'name')->get();
 
-        return view('tenant.interviews.index', compact('interviews', 'candidates', 'jobs', 'tenantModel'));
+        return view('tenant.interviews.index', compact('interviews', 'candidates', 'jobs', 'users', 'tenantModel'));
     }
 
     public function create(Request $request, string $tenant, Candidate $candidate)
@@ -345,6 +350,88 @@ class InterviewController extends Controller
                 'type' => $type,
                 'error' => $e->getMessage()
             ]);
+        }
+    }
+
+    /**
+     * Store a directly scheduled interview (without candidate parameter)
+     */
+    public function storeDirect(Request $request, string $tenant)
+    {
+        $this->authorize('create', Interview::class);
+
+        $request->validate([
+            'candidate_id' => 'required|exists:candidates,id',
+            'job_id' => 'nullable|exists:job_openings,id',
+            'scheduled_at' => 'required|date|after:now',
+            'duration_minutes' => 'required|integer|min:15|max:480',
+            'mode' => 'required|in:onsite,remote,phone',
+            'location' => 'nullable|string|max:255',
+            'meeting_link' => 'nullable|url|max:500',
+            'notes' => 'nullable|string|max:2000',
+            'panelists' => 'array',
+            'panelists.*' => 'exists:users,id',
+        ]);
+
+        // Get the candidate
+        $candidate = Candidate::findOrFail($request->candidate_id);
+
+        // Find application if job_id is provided
+        $applicationId = null;
+        if ($request->job_id) {
+            $application = $candidate->applications()
+                ->where('job_opening_id', $request->job_id)
+                ->first();
+            $applicationId = $application?->id;
+        }
+
+        try {
+            $interview = Interview::create([
+                'tenant_id' => tenant_id(),
+                'candidate_id' => $candidate->id,
+                'job_id' => $request->job_id,
+                'application_id' => $applicationId,
+                'scheduled_at' => $request->scheduled_at,
+                'duration_minutes' => $request->duration_minutes,
+                'mode' => $request->mode,
+                'location' => $request->location,
+                'meeting_link' => $request->meeting_link,
+                'created_by' => Auth::id(),
+                'notes' => $request->notes,
+                'status' => 'scheduled',
+            ]);
+
+            // Attach panelists
+            if ($request->has('panelists')) {
+                $interview->panelists()->attach($request->panelists);
+            }
+
+            // Send notifications
+            $this->sendInterviewNotifications($interview, 'scheduled');
+            
+            Log::info('Interview scheduled directly', [
+                'interview_id' => $interview->id,
+                'candidate_id' => $candidate->id,
+                'scheduled_at' => $interview->scheduled_at,
+                'panelists_count' => $interview->panelists()->count()
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Interview scheduled successfully',
+                'interview' => $interview->load(['candidate', 'job', 'panelists'])
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to schedule interview directly', [
+                'candidate_id' => $request->candidate_id,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to schedule interview. Please try again.'
+            ], 500);
         }
     }
 }

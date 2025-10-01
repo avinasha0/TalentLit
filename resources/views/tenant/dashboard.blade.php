@@ -16,8 +16,9 @@
                 Welcome back! Here's what's happening with your hiring process.
             </p>
             
-            <!-- User Role Information -->
-            <div class="mt-3">
+            <!-- User Role and Subscription Information -->
+            <div class="mt-3 flex flex-wrap items-center gap-3">
+                <!-- User Role -->
                 <div class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium
                     @if(auth()->user()->hasRole('Owner')) bg-purple-100 text-purple-800
                     @elseif(auth()->user()->hasRole('Admin')) bg-blue-100 text-blue-800
@@ -29,12 +30,36 @@
                     </svg>
                     {{ auth()->user()->roles->first()->name ?? 'No Role' }}
                 </div>
+
+                <!-- Subscription Plan (for Owners only) -->
+                @if(auth()->user()->hasRole('Owner') && $tenant->activeSubscription)
+                    @php
+                        $plan = $tenant->activeSubscription->plan;
+                        $planColors = [
+                            'free' => 'bg-gray-100 text-gray-800',
+                            'pro' => 'bg-blue-100 text-blue-800',
+                            'enterprise' => 'bg-purple-100 text-purple-800'
+                        ];
+                        $planColor = $planColors[$plan->slug] ?? 'bg-gray-100 text-gray-800';
+                    @endphp
+                    <div class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium {{ $planColor }}">
+                        <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" clip-rule="evenodd"></path>
+                        </svg>
+                        {{ $plan->name }} Plan
+                        @if($plan->isFree())
+                            <span class="ml-1 text-green-600 font-semibold">(Free)</span>
+                        @else
+                            <span class="ml-1 font-semibold">(${{ number_format($plan->price) }}/month)</span>
+                        @endif
+                    </div>
+                @endif
             </div>
         </div>
 
 
         <!-- KPI Cards -->
-        <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-5">
             <!-- Open Jobs -->
             <x-card class="hover:shadow-md transition-shadow">
                 <div class="flex items-center">
@@ -107,9 +132,46 @@
                             <dt class="text-sm font-medium text-black truncate">Hired</dt>
                             <dd class="text-lg font-medium text-black">{{ $hiresThisMonth }}</dd>
                         </dl>
+                    </div>
                 </div>
-            </div>
             </x-card>
+
+            <!-- Subscription Status (for Owners only) -->
+            @if(auth()->user()->hasRole('Owner') && $tenant->activeSubscription)
+                @php
+                    $plan = $tenant->activeSubscription->plan;
+                    $planColors = [
+                        'free' => 'bg-gray-100 text-gray-600',
+                        'pro' => 'bg-blue-100 text-blue-600',
+                        'enterprise' => 'bg-purple-100 text-purple-600'
+                    ];
+                    $planColor = $planColors[$plan->slug] ?? 'bg-gray-100 text-gray-600';
+                @endphp
+                <x-card class="hover:shadow-md transition-shadow">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <div class="w-8 h-8 {{ $planColor }} rounded-lg flex items-center justify-center">
+                                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" clip-rule="evenodd"></path>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="ml-5 w-0 flex-1">
+                            <dl>
+                                <dt class="text-sm font-medium text-black truncate">Current Plan</dt>
+                                <dd class="text-lg font-medium text-black">
+                                    {{ $plan->name }}
+                                    @if($plan->isFree())
+                                        <span class="text-green-600">(Free)</span>
+                                    @else
+                                        <span class="text-gray-500">(${{ number_format($plan->price) }})</span>
+                                    @endif
+                                </dd>
+                            </dl>
+                        </div>
+                    </div>
+                </x-card>
+            @endif
         </div>
 
         <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">

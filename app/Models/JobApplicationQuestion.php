@@ -2,17 +2,17 @@
 
 namespace App\Models;
 
-use App\Models\Concerns\TenantScoped;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class JobApplicationQuestion extends Model
 {
-    use HasFactory, HasUuids, TenantScoped;
+    use HasUuids;
 
     protected $table = 'job_application_question';
+    protected $keyType = 'string';
+    public $incrementing = false;
 
     protected $fillable = [
         'tenant_id',
@@ -26,8 +26,10 @@ class JobApplicationQuestion extends Model
         'required_override' => 'boolean',
     ];
 
-    protected $keyType = 'string';
-    public $incrementing = false;
+    public function tenant(): BelongsTo
+    {
+        return $this->belongsTo(Tenant::class);
+    }
 
     public function job(): BelongsTo
     {

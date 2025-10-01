@@ -4,6 +4,8 @@ use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Career\ApplyController;
 use App\Http\Controllers\Career\CareerJobController;
+use App\Http\Controllers\HomeController;
+use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\Tenant\CandidateController;
 use App\Http\Controllers\Tenant\CandidateNoteController;
 use App\Http\Controllers\Tenant\CandidateTagController;
@@ -21,9 +23,10 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ProfileController;
 
 // Public route
-Route::get('/', function () {
-    return view('home');
-})->name('home');
+Route::get('/', [HomeController::class, 'index'])->name('home');
+
+// SEO Routes
+Route::get('/sitemap.xml', [SitemapController::class, 'index'])->name('sitemap');
 
 // Test route
 Route::get('/test', function () {
@@ -42,6 +45,14 @@ require __DIR__.'/auth.php';
 Route::middleware('auth')->group(function () {
     // Minimal dashboard route used by Breeze tests/controllers
     Route::get('/dashboard', function () {
+        // Redirect authenticated users to their tenant dashboard
+        if (auth()->check()) {
+            $user = auth()->user();
+            if ($user->tenants->count() > 0) {
+                $tenant = $user->tenants->first();
+                return redirect()->route('tenant.dashboard', $tenant->slug);
+            }
+        }
         return view('simple-dashboard');
     })->name('dashboard');
 
@@ -163,10 +174,26 @@ Route::middleware(['capture.tenant', 'tenant', 'auth'])->group(function () {
         Route::get('/{tenant}/analytics/export', [App\Http\Controllers\Tenant\AnalyticsController::class, 'export'])->name('tenant.analytics.export');
     });
 
-    // Careers Settings Routes - Owner, Admin, Recruiter
-    Route::middleware('permission:edit jobs')->group(function () {
+    // Settings Routes - Owner, Admin only
+    Route::middleware('role:Owner|Admin')->group(function () {
+        // Careers Settings
         Route::get('/{tenant}/settings/careers', [CareersSettingsController::class, 'edit'])->name('tenant.settings.careers');
         Route::put('/{tenant}/settings/careers', [CareersSettingsController::class, 'update'])->name('tenant.settings.careers.update');
+        
+        // Team Management
+        Route::get('/{tenant}/settings/team', function() {
+            return view('tenant.settings.team');
+        })->name('tenant.settings.team');
+        
+        // Roles & Permissions
+        Route::get('/{tenant}/settings/roles', function() {
+            return view('tenant.settings.roles');
+        })->name('tenant.settings.roles');
+        
+        // General Settings
+        Route::get('/{tenant}/settings/general', function() {
+            return view('tenant.settings.general');
+        })->name('tenant.settings.general');
     });
 
     // Job Questions Routes - Owner, Admin, Recruiter

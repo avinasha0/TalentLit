@@ -1,30 +1,36 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ $job->title }} - {{ $tenant->name }}</title>
+    @php
+        $seoTitle = $job->title . ' – Careers at ' . $tenant->name . ' | TalentLit';
+        $jobDescSummary = $job->description 
+            ? Str::limit(strip_tags($job->description), 150) 
+            : 'Join ' . $tenant->name . ' as a ' . $job->title . '. Apply now to be part of our team.';
+        $seoDescription = $job->title . ' position at ' . $tenant->name . '. ' . $jobDescSummary;
+        $seoKeywords = $job->title . ', ' . $tenant->name . ', ' . $job->department->name . ', ' . $job->location->name . ', careers, jobs, hiring, employment, TalentLit';
+        $seoAuthor = $tenant->name;
+        $seoImage = ($branding && $branding->logo_path) 
+            ? asset('storage/' . $branding->logo_path) 
+            : asset('logo-talentlit-small.svg');
+    @endphp
+    @include('layouts.partials.head')
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         :root {
-            --brand: {{ $branding->primary_color ?? '#4f46e5' }};
+            --brand: {{ $branding && $branding->primary_color ? $branding->primary_color : '#4f46e5' }};
         }
     </style>
 </head>
 <body class="bg-gray-50">
     <div class="min-h-screen">
         <!-- Branding Banner -->
-        @if($branding)
+        @if($branding && $branding->logo_path)
             <div class="bg-white border-b">
                 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
                     <div class="flex items-center justify-between">
-                        @if($branding->logo_path)
-                            <img src="{{ Storage::url($branding->logo_path) }}" 
-                                 alt="{{ $tenant->name }} Logo" 
-                                 class="h-8">
-                        @else
-                            <h2 class="text-xl font-bold text-gray-900">{{ $tenant->name }}</h2>
-                        @endif
+                        <img src="{{ asset('storage/' . $branding->logo_path) }}" 
+                             alt="{{ $tenant->name }} Company Logo" 
+                             class="h-8">
                         <div class="w-2 h-2 rounded-full" style="background-color: var(--brand);"></div>
                     </div>
                 </div>

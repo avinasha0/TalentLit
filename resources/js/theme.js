@@ -22,10 +22,14 @@ document.addEventListener('alpine:init', () => {
     
     // Sidebar store
     Alpine.store('sidebar', {
+        open: window.innerWidth >= 1024 ? true : false, // Show on desktop by default
         collapsed: localStorage.getItem('sidebar-collapsed') === 'true',
         mobileOpen: false,
         
         init() {
+            // Set initial state based on screen size
+            this.open = window.innerWidth >= 1024;
+            
             // Set initial collapsed state
             if (this.collapsed) {
                 const sidebar = document.getElementById('sidebar');
@@ -36,6 +40,10 @@ document.addEventListener('alpine:init', () => {
         },
         
         toggle() {
+            this.open = !this.open;
+        },
+        
+        toggleCollapsed() {
             this.collapsed = !this.collapsed;
             localStorage.setItem('sidebar-collapsed', this.collapsed);
             const sidebar = document.getElementById('sidebar');

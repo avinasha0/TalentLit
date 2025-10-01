@@ -1,2 +1,17 @@
+# TalentLit ATS - Robots.txt
 User-agent: *
-Disallow:
+
+# Disallow internal/dashboard pages
+Disallow: /*/dashboard
+Disallow: /*/settings
+Disallow: /*/jobs/*/applications
+Disallow: /*/candidates
+Disallow: /*/interviews
+Disallow: /*/analytics
+Disallow: /login
+Disallow: /register
+Disallow: /password
+
+# Allow public career pages
+Allow: /*/careers
+Allow: /*/careers/*

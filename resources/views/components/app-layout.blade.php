@@ -1,32 +1,28 @@
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="h-full">
     <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <meta name="csrf-token" content="{{ csrf_token() }}">
-
-        <title>{{ config('app.name', 'HireHub') }}</title>
-
-        <!-- Fonts -->
-        <link rel="preconnect" href="https://fonts.bunny.net">
-        <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700&display=swap" rel="stylesheet" />
-
-        <!-- Scripts -->
-        @vite(['resources/css/app.css', 'resources/js/app.js'])
+        @php
+            $seoTitle = ($pageTitle ?? 'Dashboard') . ' – TalentLit ATS';
+            $seoDescription = 'TalentLit ATS Dashboard - Manage your recruitment pipeline, track candidates, and make smarter hiring decisions.';
+            $tenant = tenant();
+        @endphp
+        @include('layouts.partials.head')
     </head>
     <body class="h-full bg-gray-50 dark:bg-gray-900">
         <div class="h-full">
             @if(Auth::check())
                 <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
                     <!-- Sidebar -->
-                    <div class="hidden md:block md:fixed md:inset-y-0 md:w-64">
+                    <div class="lg:block lg:fixed lg:inset-y-0 lg:w-64">
                         @isset($tenant)
                             <x-sidebar :tenant="$tenant" />
+                        @else
+                            <x-sidebar :tenant="tenant()" />
                         @endisset
                     </div>
 
                     <!-- Main content -->
-                    <div class="md:ml-64">
+                    <div class="lg:ml-64">
                         <!-- Top navigation -->
                         @isset($tenant)
                             <x-navbar :tenant="$tenant" />

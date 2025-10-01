@@ -117,7 +117,7 @@
                         <!-- Hero Section Preview -->
                         <div class="relative bg-gray-200 rounded-lg overflow-hidden" style="height: 300px;">
                             @if($branding->hero_image_path)
-                                <img src="{{ Storage::url($branding->hero_image_path) }}" 
+                                <img src="{{ asset('storage/' . $branding->hero_image_path) }}" 
                                      alt="Hero Preview" 
                                      class="w-full h-full object-cover">
                             @else
@@ -130,7 +130,7 @@
                             <!-- Content -->
                             <div class="absolute inset-0 flex flex-col justify-center items-center text-white p-6 text-center">
                                 @if($branding->logo_path)
-                                    <img src="{{ Storage::url($branding->logo_path) }}" 
+                                    <img src="{{ asset('storage/' . $branding->logo_path) }}" 
                                          alt="Logo" 
                                          class="h-12 mb-4">
                                 @endif

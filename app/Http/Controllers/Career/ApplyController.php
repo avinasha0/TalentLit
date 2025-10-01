@@ -6,6 +6,7 @@ use App\Actions\Candidates\UpsertCandidateAndApply;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ApplyRequest;
 use App\Models\JobOpening;
+use Illuminate\Support\Facades\Storage;
 
 class ApplyController extends Controller
 {

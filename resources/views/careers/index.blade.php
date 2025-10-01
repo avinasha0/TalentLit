@@ -1,13 +1,22 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Careers - {{ $tenant->name }}</title>
+    @php
+        $seoTitle = 'Careers at ' . $tenant->name . ' | TalentLit';
+        $seoDescription = ($branding && $branding->intro_subtitle) 
+            ? Str::limit($branding->intro_subtitle, 150) 
+            : 'Explore career opportunities at ' . $tenant->name . '. Join our team and make an impact. View our current job openings and apply today.';
+        $seoKeywords = 'careers, jobs, ' . $tenant->name . ', employment, recruitment, hiring, TalentLit, job opportunities';
+        $seoAuthor = $tenant->name;
+        $seoImage = ($branding && $branding->logo_path) 
+            ? asset('storage/' . $branding->logo_path) 
+            : asset('logo-talentlit-small.svg');
+    @endphp
+    @include('layouts.partials.head')
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         :root {
-            --brand: {{ $branding->primary_color ?? '#4f46e5' }};
+            --brand: {{ $branding && $branding->primary_color ? $branding->primary_color : '#4f46e5' }};
         }
     </style>
 </head>
@@ -17,8 +26,8 @@
         <div class="relative bg-gray-900 text-white">
             @if($branding && $branding->hero_image_path)
                 <div class="absolute inset-0">
-                    <img src="{{ Storage::url($branding->hero_image_path) }}" 
-                         alt="Hero Background" 
+                    <img src="{{ asset('storage/' . $branding->hero_image_path) }}" 
+                         alt="{{ $tenant->name }} Careers Hero Image" 
                          class="w-full h-full object-cover">
                     <div class="absolute inset-0 bg-black bg-opacity-40"></div>
                 </div>
@@ -29,18 +38,18 @@
             <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
                 <div class="text-center">
                     @if($branding && $branding->logo_path)
-                        <img src="{{ Storage::url($branding->logo_path) }}" 
-                             alt="{{ $tenant->name }} Logo" 
+                        <img src="{{ asset('storage/' . $branding->logo_path) }}" 
+                             alt="{{ $tenant->name }} Company Logo" 
                              class="h-16 mx-auto mb-8">
                     @endif
                     
                     <h1 class="text-4xl md:text-6xl font-bold mb-6">
-                        {{ $branding->intro_headline ?? 'Join Our Amazing Team' }}
+                        {{ $branding?->intro_headline ?? 'Join Our Amazing Team' }}
                     </h1>
                     
                     @if($branding && $branding->intro_subtitle)
                         <p class="text-xl md:text-2xl mb-8 opacity-90">
-                            {{ $branding->intro_subtitle }}
+                            {{ $branding?->intro_subtitle }}
                         </p>
                     @endif
                     

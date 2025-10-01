@@ -1,38 +1,44 @@
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
     <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <meta name="csrf-token" content="{{ csrf_token() }}">
-
-        <title>{{ config('app.name', 'Laravel') }}</title>
-
-        <!-- Fonts -->
-        <link rel="preconnect" href="https://fonts.bunny.net">
-        <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
-
-        <!-- Scripts -->
-        @unless (app()->environment('testing'))
-            @vite(['resources/css/app.css', 'resources/js/app.js'])
-        @endunless
+        @php
+            $seoTitle = (isset($header) ? strip_tags($header) . ' – ' : '') . 'TalentLit ATS';
+            $seoDescription = 'Manage your recruitment process with TalentLit. Track candidates, schedule interviews, and make data-driven hiring decisions with our modern ATS platform.';
+            $tenant = tenant();
+        @endphp
+        @include('layouts.partials.head')
     </head>
-    <body class="font-sans antialiased">
-        <div class="min-h-screen bg-gray-100">
-            @include('layouts.navigation')
+    <body class="font-sans antialiased" x-data x-init="$store.sidebar = { open: false }">
+        <div class="min-h-screen bg-gray-100 flex">
+            <!-- Sidebar -->
+            <x-sidebar />
+            
+            <!-- Main Content Area -->
+            <div class="flex-1 flex flex-col lg:ml-0">
+                <!-- Mobile Header -->
+                <x-mobile-header />
+                
+                <!-- Desktop Navigation -->
+                <div class="hidden lg:block">
+                    @include('layouts.navigation')
+                </div>
 
-            <!-- Page Heading -->
-            @isset($header)
-                <header class="bg-white shadow">
-                    <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-                        {{ $header }}
-                    </div>
-                </header>
-            @endisset
+                <!-- Page Heading -->
+                @isset($header)
+                    <header class="bg-white shadow">
+                        <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+                            {{ $header }}
+                        </div>
+                    </header>
+                @endisset
 
-            <!-- Page Content -->
-            <main>
-                {{ $slot }}
-            </main>
+                <!-- Page Content -->
+                <main class="flex-1">
+                    {{ $slot }}
+                </main>
+            </div>
         </div>
+        
+        @include('layouts.partials.mobile-menu')
     </body>
 </html>

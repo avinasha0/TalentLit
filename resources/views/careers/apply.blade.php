@@ -7,7 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         :root {
-            --brand: {{ $branding->primary_color ?? '#4f46e5' }};
+            --brand: {{ $branding && $branding->primary_color ? $branding->primary_color : '#4f46e5' }};
         }
     </style>
 </head>

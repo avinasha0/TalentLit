@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Career;
 use App\Http\Controllers\Controller;
 use App\Models\JobOpening;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class CareerJobController extends Controller
 {

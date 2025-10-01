@@ -2,9 +2,57 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Mobile sidebar functionality */
-@media (max-width: 767px) {
+/* Sidebar functionality */
+@media (max-width: 1023px) {
     .mobile-open {
         transform: translateX(0) !important;
+    }
+}
+
+/* Collapsed sidebar styles */
+.collapsed {
+    width: 4rem !important;
+}
+
+.collapsed .sidebar-text {
+    display: none;
+}
+
+.collapsed .sidebar-submenu {
+    display: none !important;
+}
+
+.collapsed .sidebar-user-info {
+    display: none;
+}
+
+.collapsed .sidebar-footer {
+    padding: 1rem 0.5rem;
+}
+
+/* Smooth transitions for sidebar */
+#sidebar {
+    transition: width 0.3s ease-in-out, transform 0.3s ease-in-out;
+}
+
+/* Ensure proper z-index layering */
+#sidebar {
+    z-index: 40;
+}
+
+/* Mobile overlay */
+.sidebar-overlay {
+    z-index: 30;
+}
+
+/* Ensure main content adjusts properly */
+.main-content {
+    transition: margin-left 0.3s ease-in-out;
+}
+
+/* Dark mode adjustments */
+@media (prefers-color-scheme: dark) {
+    .collapsed {
+        background-color: rgb(31 41 55); /* gray-800 */
     }
 }

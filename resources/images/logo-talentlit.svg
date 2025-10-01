@@ -1,0 +1,22 @@
+<svg width="200" height="60" viewBox="0 0 200 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- TL Mark with Gradient -->
+  <defs>
+    <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6E46AE;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#00B6B4;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- TL Icon/Mark -->
+  <rect x="5" y="5" width="50" height="50" rx="10" fill="url(#logoGradient)"/>
+  <text x="30" y="42" font-family="Inter, sans-serif" font-size="32" font-weight="700" fill="white" text-anchor="middle">TL</text>
+  
+  <!-- TalentLit Text -->
+  <text x="65" y="32" font-family="Inter, sans-serif" font-size="24" font-weight="700" fill="#1F2937">
+    <tspan fill="url(#logoGradient)">Talent</tspan><tspan fill="#6B7280">Lit</tspan>
+  </text>
+  <text x="65" y="48" font-family="Inter, sans-serif" font-size="10" font-weight="500" fill="#9CA3AF" letter-spacing="2">
+    SMARTER RECRUITMENT
+  </text>
+</svg>
+

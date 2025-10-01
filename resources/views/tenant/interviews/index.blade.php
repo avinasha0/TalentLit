@@ -101,7 +101,7 @@
 
                     <!-- Interviews List -->
                     @if($interviews->count() > 0)
-                        <div class="space-y-4">
+                        <div class="space-y-4 interviews-list">
                             @foreach($interviews as $interview)
                     <x-card class="hover:shadow-md transition-shadow duration-200">
                                     <div class="flex justify-between items-start">
@@ -136,6 +136,11 @@
                                                     @else bg-red-100 text-red-800
                                                     @endif">
                                                     {{ ucfirst($interview->status) }}
+                                                    @if($interview->status === 'canceled' && $interview->updated_at > $interview->created_at)
+                                                        <svg class="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" title="Status updated due to stage change">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                                        </svg>
+                                                    @endif
                                                 </span>
 
                                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
@@ -144,7 +149,7 @@
 
                                     <span class="text-sm text-gray-500">
                                         {{ $interview->duration_minutes }} minutes
-                                    </span>
+                                                </span>
                                             </div>
 
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600">
@@ -651,8 +656,20 @@ document.getElementById('scheduleInterviewForm').addEventListener('submit', func
             
             // Close modal
             closeScheduleModal();
-            // Reload page to show new interview
-            window.location.reload();
+            
+            // Add new interview to the list dynamically
+            addInterviewToList(data.interview);
+            
+            // Notify other tabs (like pipeline) about the new interview
+            localStorage.setItem('interviewScheduled', JSON.stringify({
+                interview: data.interview,
+                timestamp: Date.now()
+            }));
+            
+            // Trigger custom event for same-tab listeners
+            window.dispatchEvent(new CustomEvent('interviewScheduled', {
+                detail: { interview: data.interview }
+            }));
         } else {
             // Show error message
             const errorMessage = document.createElement('div');
@@ -684,5 +701,167 @@ document.getElementById('scheduleInterviewForm').addEventListener('submit', func
         submitButton.querySelector('.submit-text').classList.remove('hidden');
         submitButton.querySelector('.loading-text').classList.add('hidden');
     });
+});
+
+// Function to add new interview to the list dynamically
+function addInterviewToList(interview) {
+    const interviewsList = document.querySelector('.interviews-list');
+    if (!interviewsList) return;
+    
+    // Create new interview card
+    const interviewCard = createInterviewCard(interview);
+    
+    // Add to the beginning of the list
+    interviewsList.insertBefore(interviewCard, interviewsList.firstChild);
+    
+    // Update empty state if it exists
+    const emptyState = document.querySelector('.empty-state');
+    if (emptyState) {
+        emptyState.style.display = 'none';
+    }
+}
+
+// Function to create interview card HTML
+function createInterviewCard(interview) {
+    const scheduledAt = new Date(interview.scheduled_at);
+    const formattedDate = scheduledAt.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+    });
+    
+    const statusClass = interview.status === 'scheduled' ? 'bg-blue-100 text-blue-800' :
+                       interview.status === 'completed' ? 'bg-green-100 text-green-800' :
+                       'bg-red-100 text-red-800';
+    
+    const statusText = interview.status.charAt(0).toUpperCase() + interview.status.slice(1);
+    
+    const locationHtml = interview.location ? `
+        <div class="flex items-center">
+            <svg class="w-4 h-4 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+            </svg>
+            ${interview.location}
+        </div>
+    ` : '';
+    
+    const meetingLinkHtml = interview.meeting_link ? `
+        <div class="flex items-center">
+            <svg class="w-4 h-4 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+            </svg>
+            <a href="${interview.meeting_link}" target="_blank" class="text-blue-600 hover:text-blue-800 transition-colors duration-200">
+                Join Meeting
+            </a>
+        </div>
+    ` : '';
+    
+    const panelistsHtml = interview.panelists && interview.panelists.length > 0 ? `
+        <div class="mt-3">
+            <span class="text-sm font-medium text-gray-700">Panelists:</span>
+            <div class="flex flex-wrap gap-1 mt-1">
+                ${interview.panelists.map(panelist => `
+                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                        ${panelist.name}
+                    </span>
+                `).join('')}
+            </div>
+        </div>
+    ` : '';
+    
+    const notesHtml = interview.notes ? `
+        <div class="mt-3">
+            <span class="text-sm font-medium text-gray-700">Notes:</span>
+            <p class="text-sm text-gray-600 mt-1">${interview.notes}</p>
+        </div>
+    ` : '';
+    
+    const card = document.createElement('div');
+    card.className = 'bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-200';
+    card.innerHTML = `
+        <div class="p-6">
+            <div class="flex justify-between items-start">
+                <div class="flex-1">
+                    <div class="flex items-center space-x-4 mb-3">
+                        <div class="flex-shrink-0">
+                            <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <h3 class="text-lg font-medium text-gray-900 truncate">
+                                <a href="/${window.location.pathname.split('/')[1]}/candidates/${interview.candidate.id}" class="hover:text-blue-600 transition-colors duration-200">
+                                    ${interview.candidate.first_name} ${interview.candidate.last_name}
+                                </a>
+                            </h3>
+                            ${interview.job ? `<p class="text-sm text-gray-500 truncate">for ${interview.job.title}</p>` : ''}
+                        </div>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-3 mb-3">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusClass}">
+                            ${statusText}
+                        </span>
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                            ${interview.mode.charAt(0).toUpperCase() + interview.mode.slice(1)}
+                        </span>
+                        <span class="text-sm text-gray-500">
+                            ${interview.duration_minutes} minutes
+                        </span>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600">
+                        <div class="flex items-center">
+                            <svg class="w-4 h-4 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                            </svg>
+                            ${formattedDate}
+                        </div>
+                        ${locationHtml}
+                        ${meetingLinkHtml}
+                    </div>
+
+                    ${panelistsHtml}
+                    ${notesHtml}
+                </div>
+
+                <div class="flex items-center space-x-2 ml-4">
+                    <a href="/${window.location.pathname.split('/')[1]}/interviews/${interview.id}" 
+                       class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        View
+                    </a>
+                    <a href="/${window.location.pathname.split('/')[1]}/interviews/${interview.id}/edit" 
+                       class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        Edit
+                    </a>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    return card;
+}
+
+// Listen for interview scheduled events from other tabs
+window.addEventListener('storage', function(e) {
+    if (e.key === 'interviewScheduled') {
+        const data = JSON.parse(e.newValue);
+        if (data && data.interview) {
+            addInterviewToList(data.interview);
+        }
+    }
+});
+
+// Listen for interview scheduled events from same tab
+window.addEventListener('interviewScheduled', function(e) {
+    if (e.detail && e.detail.interview) {
+        addInterviewToList(e.detail.interview);
+    }
 });
 </script>

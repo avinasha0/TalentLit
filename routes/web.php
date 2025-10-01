@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
+use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Career\ApplyController;
 use App\Http\Controllers\Career\CareerJobController;
@@ -30,6 +31,10 @@ Route::get('/', [HomeController::class, 'index'])->name('home');
 // Contact routes
 Route::get('/contact', [ContactController::class, 'index'])->name('contact');
 Route::post('/contact', [ContactController::class, 'store'])->name('contact.store');
+
+// Invitation routes
+Route::get('/invitation/{token}', [InvitationController::class, 'show'])->name('invitation.show');
+Route::post('/invitation/{token}', [InvitationController::class, 'accept'])->name('invitation.accept');
 
 // Subscription routes (public)
 Route::get('/pricing', [SubscriptionController::class, 'pricing'])->name('subscription.pricing');
@@ -157,6 +162,13 @@ Route::middleware(['capture.tenant', 'tenant', 'auth'])->group(function () {
         Route::delete('/{tenant}/candidates/{candidate}/tags/{tag}', [CandidateTagController::class, 'destroy'])->name('tenant.candidates.tags.destroy');
     });
 
+    // Candidate Import Routes - Owner, Admin, Recruiter
+    Route::middleware('permission:import candidates')->group(function () {
+        Route::get('/{tenant}/candidates/import', [App\Http\Controllers\Tenant\CandidateImportController::class, 'index'])->name('tenant.candidates.import');
+        Route::post('/{tenant}/candidates/import', [App\Http\Controllers\Tenant\CandidateImportController::class, 'store'])->name('tenant.candidates.import.store');
+        Route::get('/{tenant}/candidates/import/template', [App\Http\Controllers\Tenant\CandidateImportController::class, 'downloadTemplate'])->name('tenant.candidates.import.template');
+    });
+
     // Interview Management Routes - Owner, Admin, Recruiter, Hiring Manager
     Route::middleware('permission:view interviews')->group(function () {
         Route::get('/{tenant}/interviews', [InterviewController::class, 'index'])->name('tenant.interviews.index');
@@ -194,9 +206,7 @@ Route::middleware(['capture.tenant', 'tenant', 'auth'])->group(function () {
         Route::put('/{tenant}/settings/careers', [CareersSettingsController::class, 'update'])->name('tenant.settings.careers.update');
         
         // Team Management
-        Route::get('/{tenant}/settings/team', function() {
-            return view('tenant.settings.team');
-        })->name('tenant.settings.team');
+        Route::get('/{tenant}/settings/team', [App\Http\Controllers\Tenant\UserManagementController::class, 'index'])->name('tenant.settings.team');
         
         // Roles & Permissions
         Route::get('/{tenant}/settings/roles', function() {
@@ -207,6 +217,15 @@ Route::middleware(['capture.tenant', 'tenant', 'auth'])->group(function () {
         Route::get('/{tenant}/settings/general', function() {
             return view('tenant.settings.general');
         })->name('tenant.settings.general');
+    });
+
+    // User Management Routes - Owner, Admin only
+    Route::middleware('role:Owner|Admin')->group(function () {
+        Route::post('/{tenant}/users', [App\Http\Controllers\Tenant\UserManagementController::class, 'store'])->name('tenant.users.store');
+        Route::put('/{tenant}/users/{user}', [App\Http\Controllers\Tenant\UserManagementController::class, 'update'])->name('tenant.users.update');
+        Route::delete('/{tenant}/users/{user}', [App\Http\Controllers\Tenant\UserManagementController::class, 'destroy'])->name('tenant.users.destroy');
+        Route::post('/{tenant}/users/{user}/resend-invitation', [App\Http\Controllers\Tenant\UserManagementController::class, 'resendInvitation'])->name('tenant.users.resend-invitation');
+        Route::patch('/{tenant}/users/{user}/toggle-status', [App\Http\Controllers\Tenant\UserManagementController::class, 'toggleStatus'])->name('tenant.users.toggle-status');
     });
 
     // Subscription Management Routes - Owner only
@@ -220,6 +239,19 @@ Route::middleware(['capture.tenant', 'tenant', 'auth'])->group(function () {
     Route::middleware('permission:edit jobs')->group(function () {
         Route::get('/{tenant}/jobs/{job}/questions', [JobQuestionsController::class, 'edit'])->name('tenant.jobs.questions');
         Route::put('/{tenant}/jobs/{job}/questions', [JobQuestionsController::class, 'update'])->name('tenant.jobs.questions.update');
+    });
+
+    // Email Template Routes - Owner, Admin, Recruiter
+    Route::middleware('permission:manage email templates')->group(function () {
+        Route::get('/{tenant}/email-templates', [App\Http\Controllers\Tenant\EmailTemplateController::class, 'index'])->name('tenant.email-templates.index');
+        Route::get('/{tenant}/email-templates/create', [App\Http\Controllers\Tenant\EmailTemplateController::class, 'create'])->name('tenant.email-templates.create');
+        Route::post('/{tenant}/email-templates', [App\Http\Controllers\Tenant\EmailTemplateController::class, 'store'])->name('tenant.email-templates.store');
+        Route::get('/{tenant}/email-templates/{template}', [App\Http\Controllers\Tenant\EmailTemplateController::class, 'show'])->name('tenant.email-templates.show');
+        Route::get('/{tenant}/email-templates/{template}/edit', [App\Http\Controllers\Tenant\EmailTemplateController::class, 'edit'])->name('tenant.email-templates.edit');
+        Route::put('/{tenant}/email-templates/{template}', [App\Http\Controllers\Tenant\EmailTemplateController::class, 'update'])->name('tenant.email-templates.update');
+        Route::delete('/{tenant}/email-templates/{template}', [App\Http\Controllers\Tenant\EmailTemplateController::class, 'destroy'])->name('tenant.email-templates.destroy');
+        Route::get('/{tenant}/email-templates/{template}/preview', [App\Http\Controllers\Tenant\EmailTemplateController::class, 'preview'])->name('tenant.email-templates.preview');
+        Route::post('/{tenant}/email-templates/{template}/duplicate', [App\Http\Controllers\Tenant\EmailTemplateController::class, 'duplicate'])->name('tenant.email-templates.duplicate');
     });
 
     // Account Routes

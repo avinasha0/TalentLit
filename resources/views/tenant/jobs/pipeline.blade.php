@@ -21,6 +21,14 @@
             </div>
             
             <div class="flex items-center space-x-3">
+                <a href="{{ route('tenant.interviews.index', $tenant->slug) }}?job_id={{ $job->id }}" 
+                   class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                    </svg>
+                    View Interviews
+                </a>
+                
                 <button id="refresh-btn" 
                         class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -78,7 +86,7 @@
                                          ondragend="dragEnd(event)">
                                         
                                         <div class="flex items-start justify-between">
-                                            <div class="flex-1 min-w-0">
+                                            <div class="flex-1 min-w-0 candidate-info">
                                                 <a href="{{ route('tenant.candidates.show', ['tenant' => $tenant->slug, 'candidate' => $application->candidate->id]) }}" 
                                                    class="block hover:bg-gray-50 rounded-md p-1 -m-1 transition-colors">
                                                     <h4 class="text-sm font-medium text-gray-900 truncate hover:text-blue-600">
@@ -90,21 +98,112 @@
                                                     <p class="text-xs text-gray-400 mt-1">
                                                         Applied {{ $application->applied_at->diffForHumans() }}
                                                     </p>
+                                                    
+                                                    <!-- Interview Information -->
+                                                    @if($application->interviews->count() > 0)
+                                                        @php
+                                                            // Smart interview filtering based on stage:
+                                                            $scheduledInterviews = $application->interviews->where('status', 'scheduled');
+                                                            $completedInterviews = $application->interviews->where('status', 'completed');
+                                                            
+                                                            // Check if we're in Screen stage - hide all cancelled interviews
+                                                            $isScreenStage = str_contains(strtolower($stage->name), 'screen');
+                                                            
+                                                            if ($isScreenStage) {
+                                                                // In Screen stage: Only show scheduled or completed interviews, hide all cancelled
+                                                                if ($scheduledInterviews->count() > 0) {
+                                                                    $interviewsToShow = $scheduledInterviews;
+                                                                } elseif ($completedInterviews->count() > 0) {
+                                                                    $interviewsToShow = $completedInterviews;
+                                                                } else {
+                                                                    $interviewsToShow = collect(); // No interviews to show
+                                                                }
+                                                            } else {
+                                                                // In other stages: Show scheduled, completed, or manually cancelled interviews
+                                                                $cancelledInterviews = $application->interviews->where('status', 'canceled')
+                                                                    ->filter(function($interview) {
+                                                                        // Only show cancelled interviews that were cancelled manually (not due to stage changes)
+                                                                        return $interview->cancellation_reason !== 'stage_change';
+                                                                    });
+                                                                
+                                                                if ($scheduledInterviews->count() > 0) {
+                                                                    $interviewsToShow = $scheduledInterviews;
+                                                                } elseif ($completedInterviews->count() > 0) {
+                                                                    $interviewsToShow = $completedInterviews;
+                                                                } elseif ($cancelledInterviews->count() > 0) {
+                                                                    $interviewsToShow = $cancelledInterviews;
+                                                                } else {
+                                                                    $interviewsToShow = collect(); // No interviews to show
+                                                                }
+                                                            }
+                                                        @endphp
+                                                        @if($interviewsToShow->count() > 0)
+                                                            <div class="mt-2 space-y-1">
+                                                                @if($scheduledInterviews->count() > 0 && !$isScreenStage && $application->interviews->where('status', 'canceled')->where('cancellation_reason', '!=', 'stage_change')->count() > 0)
+                                                                    <p class="text-xs text-gray-400 italic">Showing scheduled interviews only</p>
+                                                                @endif
+                                                                @foreach($interviewsToShow->take(2) as $interview)
+                                                                <div class="flex items-center space-x-2 text-xs">
+                                                                    <div class="flex items-center space-x-1">
+                                                                        <svg class="w-3 h-3 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                                                        </svg>
+                                                                        <span class="text-blue-600 font-medium">
+                                                                            {{ $interview->scheduled_at->format('M j, g:i A') }}
+                                                                        </span>
+                                                                    </div>
+                                                        <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium
+                                                            @if($interview->status === 'scheduled') bg-blue-100 text-blue-800
+                                                            @elseif($interview->status === 'completed') bg-green-100 text-green-800
+                                                            @else bg-red-100 text-red-800
+                                                            @endif">
+                                                            {{ ucfirst($interview->status) }}
+                                                            @if($interview->status === 'canceled' && $interview->updated_at > $interview->created_at)
+                                                                            <svg class="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" title="Moved to screen stage">
+                                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                                                            </svg>
+                                                                        @endif
+                                                                    </span>
+                                                                    <span class="text-gray-500">{{ ucfirst($interview->mode) }}</span>
+                                                                </div>
+                                                                @endforeach
+                                                                @if($interviewsToShow->count() > 2)
+                                                                    <p class="text-xs text-gray-500">+{{ $interviewsToShow->count() - 2 }} more interviews</p>
+                                                                @endif
+                                                            </div>
+                                                        @endif
+                                                    @endif
                                                 </a>
                                             </div>
                                             
-                                            @php
-                                                $statusColors = [
-                                                    'active' => 'bg-green-100 text-green-800',
-                                                    'hired' => 'bg-blue-100 text-blue-800',
-                                                    'rejected' => 'bg-red-100 text-red-800',
-                                                    'withdrawn' => 'bg-gray-100 text-gray-800',
-                                                ];
-                                                $statusColor = $statusColors[$application->status] ?? 'bg-gray-100 text-gray-800';
-                                            @endphp
-                                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium {{ $statusColor }}">
-                                                {{ ucfirst($application->status) }}
-                                            </span>
+                                            <div class="flex flex-col items-end space-y-2">
+                                                @php
+                                                    $statusColors = [
+                                                        'active' => 'bg-green-100 text-green-800',
+                                                        'hired' => 'bg-blue-100 text-blue-800',
+                                                        'rejected' => 'bg-red-100 text-red-800',
+                                                        'withdrawn' => 'bg-gray-100 text-gray-800',
+                                                    ];
+                                                    $statusColor = $statusColors[$application->status] ?? 'bg-gray-100 text-gray-800';
+                                                @endphp
+                                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium {{ $statusColor }}">
+                                                    {{ ucfirst($application->status) }}
+                                                </span>
+                                                
+                                                <!-- Schedule Interview Button for Interview Stages -->
+                                                @if(str_contains(strtolower($stage->name), 'interview') && $application->interviews->count() == 0)
+                                                    @can('create', App\Models\Interview::class)
+                                                        <a href="{{ route('tenant.interviews.create', ['tenant' => $tenant->slug, 'candidate' => $application->candidate->id]) }}?job_id={{ $job->id }}"
+                                                           class="inline-flex items-center px-2 py-1 text-xs font-medium text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-md transition-colors duration-200"
+                                                           title="Schedule Interview">
+                                                            <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                                            </svg>
+                                                            Schedule
+                                                        </a>
+                                                    @endcan
+                                                @endif
+                                            </div>
                                         </div>
                                         
                                         <!-- Loading indicator (hidden by default) -->
@@ -183,6 +282,212 @@
         @endif
     </div>
 
+    <!-- Interview Scheduling Modal -->
+    <div id="interviewModal" class="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+        <div class="relative min-h-screen flex items-center justify-center p-4">
+            <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-2xl transform transition-all duration-300 scale-95 opacity-0" id="interviewModalContent">
+                <!-- Modal Header -->
+                <div class="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 rounded-t-xl">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="text-xl font-semibold text-white">Schedule Interview</h3>
+                                <p class="text-blue-100 text-sm">Schedule interview for <span id="modalCandidateName"></span></p>
+                            </div>
+                        </div>
+                        <button onclick="closeInterviewModal()" class="text-white hover:text-blue-200 transition-colors duration-200 p-1 rounded-lg hover:bg-white hover:bg-opacity-20">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Modal Form -->
+                <div class="px-6 py-6">
+                    <form id="pipelineInterviewForm" class="space-y-6">
+                        @csrf
+                        <input type="hidden" id="modalApplicationId" name="application_id">
+                        <input type="hidden" id="modalCandidateId" name="candidate_id">
+                        <input type="hidden" name="job_id" value="{{ $job->id }}">
+                        
+                        <!-- Schedule Details Section -->
+                        <div class="space-y-6">
+                            <div class="border-l-4 border-green-500 pl-4">
+                                <h4 class="text-lg font-semibold text-gray-900">Schedule Details</h4>
+                                <p class="text-sm text-gray-500">Set the date, time, and duration for the interview</p>
+                            </div>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <!-- Date and Time -->
+                                <div>
+                                    <label for="pipeline_scheduled_at" class="block text-sm font-medium text-gray-700 mb-2">
+                                        Date & Time <span class="text-red-500">*</span>
+                                    </label>
+                                    <div class="relative">
+                                        <input type="datetime-local" name="scheduled_at" id="pipeline_scheduled_at" required 
+                                               min="{{ now()->format('Y-m-d\TH:i') }}"
+                                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200">
+                                        <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                            </svg>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Duration -->
+                                <div>
+                                    <label for="pipeline_duration_minutes" class="block text-sm font-medium text-gray-700 mb-2">
+                                        Duration <span class="text-red-500">*</span>
+                                    </label>
+                                    <div class="relative">
+                                        <select name="duration_minutes" id="pipeline_duration_minutes" required 
+                                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 appearance-none bg-white">
+                                            <option value="30">30 minutes</option>
+                                            <option value="45">45 minutes</option>
+                                            <option value="60" selected>60 minutes</option>
+                                            <option value="90">90 minutes</option>
+                                            <option value="120">120 minutes</option>
+                                        </select>
+                                        <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                            </svg>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Interview Mode Section -->
+                        <div class="space-y-6">
+                            <div class="border-l-4 border-purple-500 pl-4">
+                                <h4 class="text-lg font-semibold text-gray-900">Interview Mode</h4>
+                                <p class="text-sm text-gray-500">Choose how the interview will be conducted</p>
+                            </div>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <label class="relative cursor-pointer">
+                                    <input type="radio" name="mode" value="onsite" class="sr-only peer" required>
+                                    <div class="p-4 border-2 border-gray-200 rounded-lg peer-checked:border-blue-500 peer-checked:bg-blue-50 transition-all duration-200 hover:border-gray-300">
+                                        <div class="flex items-center space-x-3">
+                                            <div class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center peer-checked:bg-blue-100">
+                                                <svg class="w-4 h-4 text-gray-600 peer-checked:text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                                </svg>
+                                            </div>
+                                            <div>
+                                                <div class="font-medium text-gray-900">Onsite</div>
+                                                <div class="text-sm text-gray-500">In-person interview</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </label>
+
+                                <label class="relative cursor-pointer">
+                                    <input type="radio" name="mode" value="remote" class="sr-only peer" required>
+                                    <div class="p-4 border-2 border-gray-200 rounded-lg peer-checked:border-blue-500 peer-checked:bg-blue-50 transition-all duration-200 hover:border-gray-300">
+                                        <div class="flex items-center space-x-3">
+                                            <div class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center peer-checked:bg-blue-100">
+                                                <svg class="w-4 h-4 text-gray-600 peer-checked:text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                                                </svg>
+                                            </div>
+                                            <div>
+                                                <div class="font-medium text-gray-900">Remote</div>
+                                                <div class="text-sm text-gray-500">Video call interview</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </label>
+
+                                <label class="relative cursor-pointer">
+                                    <input type="radio" name="mode" value="phone" class="sr-only peer" required>
+                                    <div class="p-4 border-2 border-gray-200 rounded-lg peer-checked:border-blue-500 peer-checked:bg-blue-50 transition-all duration-200 hover:border-gray-300">
+                                        <div class="flex items-center space-x-3">
+                                            <div class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center peer-checked:bg-blue-100">
+                                                <svg class="w-4 h-4 text-gray-600 peer-checked:text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 00-2 2h-1C9.716 21 3 14.284 3 6V5z"></path>
+                                                </svg>
+                                            </div>
+                                            <div>
+                                                <div class="font-medium text-gray-900">Phone</div>
+                                                <div class="text-sm text-gray-500">Phone call interview</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </label>
+                            </div>
+
+                            <!-- Location (shown when onsite) -->
+                            <div id="pipelineLocationField" class="hidden">
+                                <label for="pipeline_location" class="block text-sm font-medium text-gray-700 mb-2">
+                                    Location <span class="text-red-500">*</span>
+                                </label>
+                                <input type="text" name="location" id="pipeline_location" 
+                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                                       placeholder="Office address or room number">
+                            </div>
+
+                            <!-- Meeting Link (shown when remote) -->
+                            <div id="pipelineMeetingLinkField" class="hidden">
+                                <label for="pipeline_meeting_link" class="block text-sm font-medium text-gray-700 mb-2">
+                                    Meeting Link <span class="text-red-500">*</span>
+                                </label>
+                                <input type="url" name="meeting_link" id="pipeline_meeting_link" 
+                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                                       placeholder="https://zoom.us/j/...">
+                            </div>
+                        </div>
+
+                        <!-- Notes Section -->
+                        <div class="space-y-6">
+                            <div class="border-l-4 border-gray-400 pl-4">
+                                <h4 class="text-lg font-semibold text-gray-900">Additional Information</h4>
+                                <p class="text-sm text-gray-500">Add any notes or special instructions</p>
+                            </div>
+                            
+                            <div>
+                                <label for="pipeline_notes" class="block text-sm font-medium text-gray-700 mb-2">Notes (Optional)</label>
+                                <textarea name="notes" id="pipeline_notes" rows="3" 
+                                          class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 resize-none"
+                                          placeholder="Any additional notes about this interview..."></textarea>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="bg-gray-50 px-6 py-4 rounded-b-xl border-t border-gray-200">
+                    <div class="flex justify-end space-x-3">
+                        <button type="button" onclick="closeInterviewModal()" 
+                                class="px-6 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200">
+                            Cancel
+                        </button>
+                        <button type="button" onclick="scheduleInterviewFromPipeline()" id="pipelineSubmitButton"
+                                class="px-6 py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 flex items-center space-x-2">
+                            <span class="submit-text">Schedule Interview</span>
+                            <span class="loading-text hidden flex items-center space-x-2">
+                                <svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                <span>Scheduling...</span>
+                            </span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- CSRF Token for AJAX requests -->
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <script>
@@ -201,37 +506,23 @@ function allowDrop(ev) {
 }
 
 function drag(ev) {
-    console.log('=== DRAG START ===');
-    console.log('Drag started on:', ev.target);
-    console.log('Target dataset:', ev.target.dataset);
     draggedElement = ev.target;
     ev.target.style.opacity = '0.5';
     ev.dataTransfer.effectAllowed = 'move';
     ev.dataTransfer.setData('text/html', ev.target.outerHTML);
-    console.log('Dragged element set:', draggedElement);
 }
 
 function dragEnd(ev) {
-    console.log('=== DRAG END ===');
-    console.log('Drag ended on:', ev.target);
+    // Reset opacity immediately on drag end
     ev.target.style.opacity = '1';
-    if (draggedElement) {
-        console.log('Clearing dragged element');
-        draggedElement = null;
-    }
+    // Don't clear draggedElement here - let the AJAX response handle it
 }
 
 function drop(ev) {
-    console.log('=== DROP EVENT ===');
-    console.log('Drop event triggered on:', ev.currentTarget);
-    console.log('Event target:', ev.target);
-    console.log('Dragged element:', draggedElement);
-    
     ev.preventDefault();
     ev.stopPropagation();
     
     if (!draggedElement) {
-        console.error('ERROR: No dragged element found!');
         return;
     }
     
@@ -240,47 +531,29 @@ function drop(ev) {
     const applicationId = draggedElement.dataset.applicationId;
     const fromStageId = draggedElement.dataset.stageId;
     
-    console.log('Drop data:', {
-        targetStageId,
-        applicationId,
-        fromStageId,
-        targetStage: targetStage,
-        draggedElement: draggedElement
-    });
-    
     // Don't do anything if dropped in the same stage
     if (fromStageId === targetStageId) {
-        console.log('Same stage, ignoring');
         draggedElement.style.opacity = '1';
         draggedElement = null;
         return;
     }
     
-    console.log('Moving to different stage...');
-    
     // Show loading indicator
     const loadingIndicator = draggedElement.querySelector('.loading-indicator');
     if (loadingIndicator) {
-        console.log('Showing loading indicator');
         loadingIndicator.classList.remove('hidden');
-    } else {
-        console.log('No loading indicator found');
     }
     
     // Move the element visually
     const targetContainer = targetStage.querySelector(`[id^="stage-${targetStageId}-applications"]`);
     if (!targetContainer) {
-        console.error('ERROR: Target container not found for stage:', targetStageId);
-        console.log('Available containers:', document.querySelectorAll('[id^="stage-"]'));
         return;
     }
     
-    console.log('Moving element to target container:', targetContainer);
     targetContainer.appendChild(draggedElement);
     
     // Update the stage ID
     draggedElement.dataset.stageId = targetStageId;
-    console.log('Updated stage ID to:', targetStageId);
     
     // Send AJAX request
     const requestData = {
@@ -289,11 +562,6 @@ function drop(ev) {
         to_stage_id: targetStageId,
         to_position: 0
     };
-    
-    console.log('=== SENDING AJAX REQUEST ===');
-    console.log('Request data:', requestData);
-    console.log('CSRF Token:', window.Laravel.csrfToken);
-    console.log('URL:', `/{{ $tenant->slug }}/jobs/{{ $job->id }}/pipeline/move`);
     
     fetch(`/{{ $tenant->slug }}/jobs/{{ $job->id }}/pipeline/move`, {
         method: 'POST',
@@ -304,21 +572,9 @@ function drop(ev) {
         },
         body: JSON.stringify(requestData)
     })
-    .then(response => {
-        console.log('=== AJAX RESPONSE ===');
-        console.log('Response status:', response.status);
-        console.log('Response headers:', response.headers);
-        if (!response.ok) {
-            console.error('HTTP error! status:', response.status);
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return response.json();
-    })
+    .then(response => response.json())
     .then(data => {
-        console.log('=== RESPONSE DATA ===');
-        console.log('Response data:', data);
         if (data.ok) {
-            console.log('Move successful, updating UI...');
             // Update stage counts
             updateStageCounts(data.counts);
             
@@ -329,24 +585,21 @@ function drop(ev) {
             
             // Show success message
             showNotification('Application moved successfully', 'success');
+            
+            // Check if moved to interview stage and open modal
+            checkForInterviewStage(data.toStageId, applicationId, data.candidateName);
         } else {
-            console.error('Move failed:', data.message);
             // Revert the move on error
             revertMove(draggedElement, fromStageId);
             showNotification('Failed to move application: ' + (data.message || 'Unknown error'), 'error');
         }
     })
     .catch(error => {
-        console.error('=== AJAX ERROR ===');
-        console.error('Error details:', error);
-        console.error('Error message:', error.message);
-        console.error('Error stack:', error.stack);
         // Revert the move on error
         revertMove(draggedElement, fromStageId);
         showNotification('Failed to move application: ' + error.message, 'error');
     })
     .finally(() => {
-        draggedElement.style.opacity = '1';
         draggedElement = null;
     });
 }
@@ -390,7 +643,6 @@ document.getElementById('refresh-btn').addEventListener('click', function() {
             window.location.reload();
         })
         .catch(error => {
-            console.error('Error refreshing pipeline:', error);
             showNotification('Failed to refresh pipeline', 'error');
         });
 });
@@ -401,4 +653,241 @@ document.addEventListener('dragstart', function(e) {
         e.preventDefault();
     }
 });
+
+// Interview Modal Functions
+function openInterviewModal(applicationId, candidateId, candidateName) {
+    const modal = document.getElementById('interviewModal');
+    const modalContent = document.getElementById('interviewModalContent');
+    
+    // Set form data
+    document.getElementById('modalApplicationId').value = applicationId;
+    document.getElementById('modalCandidateId').value = candidateId;
+    document.getElementById('modalCandidateName').textContent = candidateName;
+    
+    // Set minimum date to now
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    document.getElementById('pipeline_scheduled_at').min = now.toISOString().slice(0, 16);
+    
+    modal.classList.remove('hidden');
+    
+    // Trigger animation
+    setTimeout(() => {
+        modalContent.classList.remove('scale-95', 'opacity-0');
+        modalContent.classList.add('scale-100', 'opacity-100');
+    }, 10);
+}
+
+function closeInterviewModal() {
+    const modal = document.getElementById('interviewModal');
+    const modalContent = document.getElementById('interviewModalContent');
+    
+    // Trigger close animation
+    modalContent.classList.remove('scale-100', 'opacity-100');
+    modalContent.classList.add('scale-95', 'opacity-0');
+    
+    // Hide modal after animation
+    setTimeout(() => {
+        modal.classList.add('hidden');
+    }, 300);
+    
+    // Reset form
+    document.getElementById('pipelineInterviewForm').reset();
+    
+    // Hide conditional fields
+    document.getElementById('pipelineLocationField').classList.add('hidden');
+    document.getElementById('pipelineMeetingLinkField').classList.add('hidden');
+    
+    // Reset button state
+    const submitButton = document.getElementById('pipelineSubmitButton');
+    submitButton.disabled = false;
+    submitButton.querySelector('.submit-text').classList.remove('hidden');
+    submitButton.querySelector('.loading-text').classList.add('hidden');
+}
+
+function checkForInterviewStage(stageId, applicationId, candidateName) {
+    // Get stage name from the DOM
+    const stageElement = document.querySelector(`[data-stage-id="${stageId}"]`);
+    if (stageElement) {
+        const stageName = stageElement.querySelector('h3').textContent.toLowerCase();
+        if (stageName.includes('interview')) {
+            // Get candidate ID from the application element
+            const applicationElement = document.querySelector(`[data-application-id="${applicationId}"]`);
+            if (applicationElement) {
+                const candidateLink = applicationElement.querySelector('a[href*="/candidates/"]');
+                if (candidateLink) {
+                    const candidateId = candidateLink.href.split('/candidates/')[1];
+                    openInterviewModal(applicationId, candidateId, candidateName);
+                }
+            }
+        }
+    }
+}
+
+function scheduleInterviewFromPipeline() {
+    const form = document.getElementById('pipelineInterviewForm');
+    const formData = new FormData(form);
+    const submitButton = document.getElementById('pipelineSubmitButton');
+    
+    // Show loading state
+    submitButton.disabled = true;
+    submitButton.querySelector('.submit-text').classList.add('hidden');
+    submitButton.querySelector('.loading-text').classList.remove('hidden');
+    
+    fetch('{{ route("tenant.interviews.store-direct", $tenant->slug) }}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRF-TOKEN': window.Laravel.csrfToken
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Show success message
+            showNotification('Interview scheduled successfully!', 'success');
+            
+            // Close modal
+            closeInterviewModal();
+            
+            // Reload page to show updated interview information
+            window.location.reload();
+        } else {
+            // Show error message
+            showNotification(data.message || 'Failed to schedule interview. Please try again.', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('An error occurred. Please try again.', 'error');
+    })
+    .finally(() => {
+        // Reset button state
+        submitButton.disabled = false;
+        submitButton.querySelector('.submit-text').classList.remove('hidden');
+        submitButton.querySelector('.loading-text').classList.add('hidden');
+    });
+}
+
+// Show/hide location and meeting link fields based on mode
+document.addEventListener('change', function(e) {
+    if (e.target.name === 'mode') {
+        const mode = e.target.value;
+        const locationField = document.getElementById('pipelineLocationField');
+        const meetingLinkField = document.getElementById('pipelineMeetingLinkField');
+        
+        // Hide both fields first
+        locationField.classList.add('hidden');
+        meetingLinkField.classList.add('hidden');
+        
+        // Show appropriate field based on mode
+        if (mode === 'onsite') {
+            locationField.classList.remove('hidden');
+            document.getElementById('pipeline_location').required = true;
+            document.getElementById('pipeline_meeting_link').required = false;
+        } else if (mode === 'remote') {
+            meetingLinkField.classList.remove('hidden');
+            document.getElementById('pipeline_meeting_link').required = true;
+            document.getElementById('pipeline_location').required = false;
+        } else {
+            document.getElementById('pipeline_location').required = false;
+            document.getElementById('pipeline_meeting_link').required = false;
+        }
+    }
+});
+
+// Listen for interview scheduled events from other tabs (like interviews page)
+window.addEventListener('storage', function(e) {
+    if (e.key === 'interviewScheduled') {
+        const data = JSON.parse(e.newValue);
+        if (data && data.interview) {
+            updatePipelineWithNewInterview(data.interview);
+        }
+    }
+});
+
+// Listen for interview scheduled events from same tab
+window.addEventListener('interviewScheduled', function(e) {
+    if (e.detail && e.detail.interview) {
+        updatePipelineWithNewInterview(e.detail.interview);
+    }
+});
+
+// Function to update pipeline with new interview
+function updatePipelineWithNewInterview(interview) {
+    // Find the application card that matches this interview
+    const applicationCards = document.querySelectorAll('[data-application-id]');
+    
+    applicationCards.forEach(card => {
+        const applicationId = card.getAttribute('data-application-id');
+        
+        // Check if this interview belongs to this application
+        if (interview.application_id && interview.application_id === applicationId) {
+            // Update the interview information in this application card
+            updateApplicationCardInterviews(card, interview);
+        }
+    });
+}
+
+// Function to update interview information in an application card
+function updateApplicationCardInterviews(card, newInterview) {
+    // Find the interview information section
+    const interviewSection = card.querySelector('.interview-info');
+    
+    if (interviewSection) {
+        // Remove existing interview information
+        interviewSection.remove();
+    }
+    
+    // Create new interview information section
+    const newInterviewSection = createInterviewInfoSection([newInterview]);
+    
+    // Insert after the candidate info
+    const candidateInfo = card.querySelector('.candidate-info');
+    if (candidateInfo) {
+        candidateInfo.insertAdjacentElement('afterend', newInterviewSection);
+    }
+}
+
+// Function to create interview information section
+function createInterviewInfoSection(interviews) {
+    const section = document.createElement('div');
+    section.className = 'interview-info mt-2 space-y-1';
+    
+    interviews.forEach(interview => {
+        const scheduledAt = new Date(interview.scheduled_at);
+        const formattedDate = scheduledAt.toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+        });
+        
+        const statusClass = interview.status === 'scheduled' ? 'bg-blue-100 text-blue-800' :
+                           interview.status === 'completed' ? 'bg-green-100 text-green-800' :
+                           'bg-red-100 text-red-800';
+        
+        const statusText = interview.status.charAt(0).toUpperCase() + interview.status.slice(1);
+        
+        const interviewDiv = document.createElement('div');
+        interviewDiv.className = 'flex items-center space-x-2 text-xs';
+        interviewDiv.innerHTML = `
+            <div class="flex items-center space-x-1">
+                <svg class="w-3 h-3 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                </svg>
+                <span class="text-blue-600 font-medium">${formattedDate}</span>
+            </div>
+            <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium ${statusClass}">
+                ${statusText}
+            </span>
+            <span class="text-gray-500">${interview.mode.charAt(0).toUpperCase() + interview.mode.slice(1)}</span>
+        `;
+        
+        section.appendChild(interviewDiv);
+    });
+    
+    return section;
+}
 </script>

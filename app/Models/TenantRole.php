@@ -13,7 +13,7 @@ class TenantRole extends SpatieRole
     ];
 
     protected $casts = [
-        'tenant_id' => 'integer',
+        'tenant_id' => 'string',
     ];
 
     /**

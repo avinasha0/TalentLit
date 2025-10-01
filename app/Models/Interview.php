@@ -27,6 +27,7 @@ class Interview extends Model
         'created_by',
         'notes',
         'status',
+        'cancellation_reason',
     ];
 
     protected $casts = [

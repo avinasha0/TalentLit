@@ -141,7 +141,7 @@
                                     @if($interview->candidate->primary_phone)
                                         <p class="text-sm text-gray-600">{{ $interview->candidate->primary_phone }}</p>
                                     @endif
-                                    <a href="{{ route('tenant.candidates.show', ['tenant' => $tenantSlug, 'candidate' => $interview->candidate]) }}" 
+                                    <a href="{{ route('tenant.candidates.show', ['tenant' => $tenant, 'candidate' => $interview->candidate]) }}" 
                                        class="text-indigo-600 hover:text-indigo-800 text-sm font-medium">
                                         View Full Profile →
                                     </a>
@@ -164,13 +164,13 @@
 
                     <!-- Actions -->
                     <div class="mt-8 flex justify-end space-x-3">
-                        <a href="{{ route('tenant.interviews.index', ['tenant' => $tenantSlug]) }}" 
+                        <a href="{{ route('tenant.interviews.index', ['tenant' => $tenant]) }}" 
                            class="bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                             Back to Interviews
                         </a>
 
                         @can('update', $interview)
-                            <a href="{{ route('tenant.interviews.edit', ['tenant' => $tenantSlug, 'interview' => $interview]) }}" 
+                            <a href="{{ route('tenant.interviews.edit', ['tenant' => $tenant, 'interview' => $interview]) }}" 
                                class="bg-blue-600 py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                                 Edit Interview
                             </a>
@@ -178,7 +178,7 @@
 
                         @if($interview->status === 'scheduled')
                             @can('update', $interview)
-                                <form method="POST" action="{{ route('tenant.interviews.complete', ['tenant' => $tenantSlug, 'interview' => $interview]) }}" class="inline">
+                                <form method="POST" action="{{ route('tenant.interviews.complete', ['tenant' => $tenant, 'interview' => $interview]) }}" class="inline">
                                     @csrf
                                     @method('PATCH')
                                     <button type="submit" class="bg-blue-600 py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
@@ -187,7 +187,7 @@
                                     </button>
                                 </form>
 
-                                <form method="POST" action="{{ route('tenant.interviews.cancel', ['tenant' => $tenantSlug, 'interview' => $interview]) }}" class="inline">
+                                <form method="POST" action="{{ route('tenant.interviews.cancel', ['tenant' => $tenant, 'interview' => $interview]) }}" class="inline">
                                     @csrf
                                     @method('PATCH')
                                     <button type="submit" class="bg-blue-600 py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
@@ -199,7 +199,7 @@
                         @endif
 
                         @can('delete', $interview)
-                            <form method="POST" action="{{ route('tenant.interviews.destroy', ['tenant' => $tenantSlug, 'interview' => $interview]) }}" class="inline">
+                            <form method="POST" action="{{ route('tenant.interviews.destroy', ['tenant' => $tenant, 'interview' => $interview]) }}" class="inline">
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit" class="bg-blue-600 py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"

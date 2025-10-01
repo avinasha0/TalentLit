@@ -72,7 +72,7 @@ class InterviewController extends Controller
             $query->where('tenant_id', tenant_id());
         })->get();
 
-        return view('tenant.interviews.create', compact('candidate', 'jobs', 'users'));
+        return view('tenant.interviews.create', compact('candidate', 'jobs', 'users', 'tenant'));
     }
 
     public function store(Request $request, string $tenant, Candidate $candidate)
@@ -144,16 +144,16 @@ class InterviewController extends Controller
             ->with('success', 'Interview scheduled successfully');
     }
 
-    public function show(Interview $interview)
+    public function show(string $tenant, Interview $interview)
     {
         $this->authorize('view', $interview);
 
         $interview->load(['candidate', 'job', 'application', 'panelists', 'createdBy']);
 
-        return view('tenant.interviews.show', compact('interview'));
+        return view('tenant.interviews.show', compact('interview', 'tenant'));
     }
 
-    public function edit(Interview $interview)
+    public function edit(string $tenant, Interview $interview)
     {
         $this->authorize('update', $interview);
 
@@ -169,7 +169,7 @@ class InterviewController extends Controller
             $query->where('tenant_id', tenant_id());
         })->get();
 
-        return view('tenant.interviews.edit', compact('interview', 'jobs', 'users'));
+        return view('tenant.interviews.edit', compact('interview', 'jobs', 'users', 'tenant'));
     }
 
     public function update(Request $request, Interview $interview)
@@ -231,7 +231,13 @@ class InterviewController extends Controller
     {
         $this->authorize('update', $interview);
 
-        $interview->update(['status' => 'canceled']);
+        $interview->update([
+            'status' => 'canceled',
+            'cancellation_reason' => 'manual'
+        ]);
+
+        // Move application back to screen stage if it exists
+        $this->moveApplicationToScreenStage($interview);
 
         // Send cancellation notifications
         $this->sendInterviewNotifications($interview, 'canceled');
@@ -244,13 +250,13 @@ class InterviewController extends Controller
         if ($request->expectsJson()) {
             return response()->json([
                 'success' => true,
-                'message' => 'Interview canceled successfully'
+                'message' => 'Interview canceled successfully. Application has been moved to screen stage.'
             ]);
         }
 
         return redirect()
             ->route('tenant.interviews.index', ['tenant' => $request->route('tenant')])
-            ->with('success', 'Interview canceled successfully');
+            ->with('success', 'Interview canceled successfully. Application has been moved to screen stage.');
     }
 
     public function complete(Request $request, string $tenant, Interview $interview)
@@ -432,6 +438,87 @@ class InterviewController extends Controller
                 'success' => false,
                 'message' => 'Failed to schedule interview. Please try again.'
             ], 500);
+        }
+    }
+
+    private function moveApplicationToScreenStage(Interview $interview)
+    {
+        // Only proceed if the interview has an associated application
+        if (!$interview->application_id) {
+            return;
+        }
+
+        try {
+            $application = \App\Models\Application::find($interview->application_id);
+            if (!$application) {
+                return;
+            }
+
+            // Get the job opening to find the screen stage
+            $job = $application->jobOpening;
+            if (!$job) {
+                return;
+            }
+
+            // Find the screen stage for this job
+            $screenStage = $job->jobStages()
+                ->where('name', 'like', '%screen%')
+                ->orWhere('name', 'like', '%Screen%')
+                ->first();
+
+            if (!$screenStage) {
+                // If no screen stage found, look for the first stage after "Applied"
+                $screenStage = $job->jobStages()
+                    ->where('sort_order', '>', 0)
+                    ->orderBy('sort_order')
+                    ->first();
+            }
+
+            if (!$screenStage) {
+                Log::warning('No screen stage found for job', [
+                    'job_id' => $job->id,
+                    'application_id' => $application->id
+                ]);
+                return;
+            }
+
+            // Check if application is already in the screen stage
+            if ($application->current_stage_id === $screenStage->id) {
+                return;
+            }
+
+            // Move the application to the screen stage
+            $oldStageId = $application->current_stage_id;
+            $application->update([
+                'current_stage_id' => $screenStage->id,
+                'stage_position' => 0 // Move to top of the stage
+            ]);
+
+            // Create audit event for the stage change
+            \App\Models\ApplicationEvent::create([
+                'tenant_id' => $application->tenant_id,
+                'application_id' => $application->id,
+                'job_id' => $job->id,
+                'from_stage_id' => $oldStageId,
+                'to_stage_id' => $screenStage->id,
+                'user_id' => Auth::id(),
+                'note' => 'Application moved to screen stage due to interview cancellation',
+            ]);
+
+            Log::info('Application moved to screen stage due to interview cancellation', [
+                'application_id' => $application->id,
+                'interview_id' => $interview->id,
+                'from_stage_id' => $oldStageId,
+                'to_stage_id' => $screenStage->id,
+                'stage_name' => $screenStage->name
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to move application to screen stage', [
+                'interview_id' => $interview->id,
+                'application_id' => $interview->application_id,
+                'error' => $e->getMessage()
+            ]);
         }
     }
 }

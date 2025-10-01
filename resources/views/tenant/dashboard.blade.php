@@ -237,7 +237,7 @@
 
                 <div class="space-y-3">
                     <x-auth.for permission="create jobs">
-                        <a href="{{ route('tenant.jobs.index', $tenant->slug) }}" 
+                        <a href="{{ route('tenant.jobs.create', $tenant->slug) }}" 
                            class="flex items-center p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
                             <div class="flex-shrink-0">
                                 <div class="w-8 h-8 bg-primary-100 rounded-lg flex items-center justify-center">
@@ -254,7 +254,7 @@
                     </x-auth.for>
 
                     <x-auth.for permission="import candidates">
-                        <a href="{{ route('tenant.candidates.index', $tenant->slug) }}" 
+                        <a href="{{ route('tenant.candidates.import', $tenant->slug) }}" 
                            class="flex items-center p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
                             <div class="flex-shrink-0">
                                 <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
@@ -287,20 +287,39 @@
                         </a>
                     </x-auth.for>
 
-                    <a href="#" 
-                       class="flex items-center p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
-                        <div class="flex-shrink-0">
-                            <div class="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center">
-                                <svg class="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
-                                </svg>
+                    <x-auth.for permission="manage email templates">
+                        <a href="{{ route('tenant.email-templates.create', $tenant->slug) }}" 
+                           class="flex items-center p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
+                            <div class="flex-shrink-0">
+                                <div class="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center">
+                                    <svg class="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                                    </svg>
+                                </div>
                             </div>
-                        </div>
-                        <div class="ml-3">
-                            <p class="text-sm font-medium text-black">Create Email Template</p>
-                            <p class="text-sm text-black">Design communication templates</p>
-                    </div>
-                    </a>
+                            <div class="ml-3">
+                                <p class="text-sm font-medium text-black">Create Email Template</p>
+                                <p class="text-sm text-black">Design communication templates</p>
+                            </div>
+                        </a>
+                    </x-auth.for>
+
+                    <x-auth.for permission="manage users">
+                        <a href="{{ route('tenant.settings.team', $tenant->slug) }}" 
+                           class="flex items-center p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
+                            <div class="flex-shrink-0">
+                                <div class="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center">
+                                    <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
+                                    </svg>
+                                </div>
+                            </div>
+                            <div class="ml-3">
+                                <p class="text-sm font-medium text-black">Manage Team</p>
+                                <p class="text-sm text-black">Add users and assign roles</p>
+                            </div>
+                        </a>
+                    </x-auth.for>
                 </div>
             </x-card>
         </div>

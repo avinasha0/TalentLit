@@ -16,7 +16,7 @@
                         <p class="text-sm text-gray-500">{{ $candidate->primary_email }}</p>
                     </div>
 
-                    <form method="POST" action="{{ route('tenant.interviews.store', ['tenant' => $tenantSlug, 'candidate' => $candidate]) }}">
+                    <form method="POST" action="{{ route('tenant.interviews.store', ['tenant' => $tenant, 'candidate' => $candidate]) }}">
                         @csrf
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -146,7 +146,7 @@
 
                         <!-- Form Actions -->
                         <div class="mt-6 flex justify-end space-x-3">
-                            <a href="{{ route('tenant.candidates.show', ['tenant' => $tenantSlug, 'candidate' => $candidate]) }}" 
+                            <a href="{{ route('tenant.candidates.show', ['tenant' => $tenant, 'candidate' => $candidate]) }}" 
                                class="bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                                 Cancel
                             </a>

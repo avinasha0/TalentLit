@@ -3,7 +3,7 @@
 <head>
     @php
         $seoTitle = 'Privacy Policy — TalentLit';
-        $seoDescription = 'Learn MergeTest 2 TalentLit protects your privacy and handles your data. Our comprehensive privacy policy outlines our data collection, usage, and protection practices.';
+        $seoDescription = 'Learn How TalentLit protects your privacy and handles your data. Our comprehensive privacy policy outlines our data collection, usage, and protection practices.';
         $seoKeywords = 'privacy policy, data protection, GDPR, privacy, TalentLit, ATS, recruitment software';
         $seoAuthor = 'TalentLit';
         $seoImage = asset('logo-talentlit-small.svg');

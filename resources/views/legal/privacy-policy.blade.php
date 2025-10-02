@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     @php
-        $seoTitle = 'Privacy Policy — TalentLit ATS';
+        $seoTitle = 'Privacy Policy — TalentLit';
         $seoDescription = 'Learn how TalentLit protects your privacy and handles your data. Our comprehensive privacy policy outlines our data collection, usage, and protection practices.';
         $seoKeywords = 'privacy policy, data protection, GDPR, privacy, TalentLit, ATS, recruitment software';
         $seoAuthor = 'TalentLit';

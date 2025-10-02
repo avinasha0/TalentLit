@@ -61,6 +61,57 @@ Route::get('/features/hiring-analytics.html', [HomeController::class, 'hiringAna
 Route::get('/contact', [ContactController::class, 'index'])->name('contact');
 Route::post('/contact', [ContactController::class, 'store'])->name('contact.store');
 
+// Debug route for testing contact email (remove in production)
+Route::get('/test-contact-email', function () {
+    try {
+        \Log::info('Test contact email route accessed', [
+            'timestamp' => now(),
+            'ip' => request()->ip()
+        ]);
+        
+        $testData = [
+            'name' => 'Debug Test User',
+            'email' => 'debug@test.com',
+            'company' => 'Debug Company',
+            'phone' => '+1-555-999-0000',
+            'subject' => 'Debug Test - Contact Form',
+            'message' => 'This is a debug test message to verify email functionality.'
+        ];
+        
+        $adminEmail = env('MAIL_TO_EMAIL', config('mail.from.address'));
+        \Mail::to($adminEmail)->send(new \App\Mail\ContactMail($testData));
+        
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Test email sent successfully',
+            'config' => [
+                'mail_mailer' => config('mail.default'),
+                'mail_host' => config('mail.mailers.smtp.host'),
+                'mail_port' => config('mail.mailers.smtp.port'),
+                'mail_from_address' => config('mail.from.address'),
+                'mail_from_name' => config('mail.from.name')
+            ]
+        ]);
+    } catch (\Exception $e) {
+        \Log::error('Test contact email route failed', [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+        
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Test email failed: ' . $e->getMessage(),
+            'config' => [
+                'mail_mailer' => config('mail.default'),
+                'mail_host' => config('mail.mailers.smtp.host'),
+                'mail_port' => config('mail.mailers.smtp.port'),
+                'mail_from_address' => config('mail.from.address'),
+                'mail_from_name' => config('mail.from.name')
+            ]
+        ], 500);
+    }
+})->name('test.contact.email');
+
 // Newsletter routes
 Route::post('/newsletter/subscribe', [App\Http\Controllers\NewsletterController::class, 'subscribe'])->name('newsletter.subscribe');
 Route::post('/newsletter/verify-otp', [App\Http\Controllers\NewsletterController::class, 'verifyOtp'])->name('newsletter.verify-otp');

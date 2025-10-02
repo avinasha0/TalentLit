@@ -321,27 +321,27 @@
             <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
                 <div class="bg-white rounded-2xl p-8 text-center shadow-lg">
                     <div class="w-24 h-24 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-full mx-auto mb-6 flex items-center justify-center">
-                        <span class="text-2xl font-bold text-white">AS</span>
+                        <span class="text-2xl font-bold text-white">MA</span>
                     </div>
-                    <h3 class="text-xl font-semibold text-gray-900 mb-2">Alex Smith</h3>
+                    <h3 class="text-xl font-semibold text-gray-900 mb-2">Mahesh A</h3>
                     <p class="text-indigo-600 font-medium mb-4">CEO & Co-Founder</p>
-                    <p class="text-gray-600">Former VP of Engineering at Google, passionate about building products that scale.</p>
+                    <p class="text-gray-600">Former VP of IT Engineering, passionate about building products that scale.</p>
                 </div>
                 
                 <div class="bg-white rounded-2xl p-8 text-center shadow-lg">
                     <div class="w-24 h-24 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-full mx-auto mb-6 flex items-center justify-center">
-                        <span class="text-2xl font-bold text-white">MJ</span>
+                        <span class="text-2xl font-bold text-white">PT</span>
                     </div>
-                    <h3 class="text-xl font-semibold text-gray-900 mb-2">Maria Johnson</h3>
+                    <h3 class="text-xl font-semibold text-gray-900 mb-2">Prasanthi T</h3>
                     <p class="text-indigo-600 font-medium mb-4">CTO & Co-Founder</p>
                     <p class="text-gray-600">AI researcher with 15+ years experience in machine learning and data science.</p>
                 </div>
                 
                 <div class="bg-white rounded-2xl p-8 text-center shadow-lg">
                     <div class="w-24 h-24 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-full mx-auto mb-6 flex items-center justify-center">
-                        <span class="text-2xl font-bold text-white">DW</span>
+                        <span class="text-2xl font-bold text-white">RA</span>
                     </div>
-                    <h3 class="text-xl font-semibold text-gray-900 mb-2">David Wilson</h3>
+                    <h3 class="text-xl font-semibold text-gray-900 mb-2">Ravi A</h3>
                     <p class="text-indigo-600 font-medium mb-4">Head of Product</p>
                     <p class="text-gray-600">Former talent acquisition leader at Fortune 500 companies, now building the future.</p>
                 </div>

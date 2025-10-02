@@ -39,6 +39,12 @@ class ContactMail extends Mailable
      */
     public function build()
     {
+        // Debug: Log email building process
+        \Log::info('Building ContactMail email', [
+            'contact_data' => $this->contactData,
+            'timestamp' => now()
+        ]);
+
         $name = $this->contactData['name'] ?? '';
         $email = $this->contactData['email'] ?? '';
         $company = $this->contactData['company'] ?? 'Not provided';
@@ -64,6 +70,12 @@ class ContactMail extends Mailable
             <p>" . nl2br(htmlspecialchars($message)) . "</p>
         </body>
         </html>";
+        
+        // Debug: Log email content
+        \Log::info('ContactMail email content built', [
+            'html_content_length' => strlen($htmlContent),
+            'has_content' => !empty($htmlContent)
+        ]);
         
         return $this->html($htmlContent);
     }

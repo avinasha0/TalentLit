@@ -5,8 +5,8 @@
             <h3 class="text-2xl font-bold mb-2">Stay Updated</h3>
             <p class="text-indigo-100 mb-6">Get the latest updates on new features, tips, and best practices for recruitment.</p>
             
-            <form id="footer-newsletter-form" method="POST" action="{{ route('newsletter.redirect') }}" class="max-w-md mx-auto">
-                @csrf
+            <form id="footer-newsletter-form" method="POST" action="<?php echo e(route('newsletter.redirect')); ?>" class="max-w-md mx-auto">
+                <?php echo csrf_field(); ?>
                 
                 <div class="flex flex-col sm:flex-row gap-4">
                     <input type="email" 
@@ -74,3 +74,4 @@ function showNotification(message, type = 'info') {
     }, 3000);
 }
 </script>
+<?php /**PATH C:\xampp\htdocs\hirehub2\resources\views/components/newsletter-footer.blade.php ENDPATH**/ ?>

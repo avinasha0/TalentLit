@@ -235,8 +235,15 @@ Route::get('/newsletter-simple', function () {
 
 // Newsletter Subscription Routes
 Route::get('/newsletter/subscribe', function () {
-    return view('newsletter.subscribe');
+    $email = session('email');
+    return view('newsletter.subscribe', ['old_email' => $email]);
 })->name('newsletter.subscribe');
+
+// Home page newsletter redirect (no OTP generation)
+Route::post('/newsletter/redirect', function (\Illuminate\Http\Request $request) {
+    $email = $request->input('email');
+    return redirect()->route('newsletter.subscribe')->with('email', $email);
+})->name('newsletter.redirect');
 
 Route::post('/newsletter/subscribe', [App\Http\Controllers\NewsletterSubscriptionController::class, 'subscribe']);
 Route::post('/newsletter/verify-otp', [App\Http\Controllers\NewsletterSubscriptionController::class, 'verifyOtp'])->name('newsletter.verify-otp');

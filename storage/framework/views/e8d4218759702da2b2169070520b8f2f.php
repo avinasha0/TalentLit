@@ -255,6 +255,10 @@
                             document.getElementById('otp-email').value = email;
                             document.getElementById('newsletter-form').classList.add('hidden');
                             document.getElementById('otp-form').classList.remove('hidden');
+                            
+                            // Reset button state
+                            button.textContent = originalText;
+                            button.disabled = false;
                         } else {
                             showNotification(data.message || 'Something went wrong. Please try again.', 'error');
                             button.textContent = originalText;
@@ -306,6 +310,10 @@
                             document.getElementById('otp-form').classList.add('hidden');
                             document.getElementById('newsletter-email').value = '';
                             document.getElementById('otp-input').value = '';
+                            
+                            // Reset button state
+                            button.textContent = originalText;
+                            button.disabled = false;
                         } else {
                             showNotification(data.message || 'Invalid verification code. Please try again.', 'error');
                             button.textContent = originalText;

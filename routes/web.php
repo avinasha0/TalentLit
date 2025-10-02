@@ -223,6 +223,74 @@ Route::get('/test', function () {
     return view('test');
 })->name('test');
 
+// reCAPTCHA Test routes
+Route::get('/test-recaptcha', function () {
+    return view('test-recaptcha');
+})->name('test.recaptcha');
+
+// Simple Newsletter Form
+Route::get('/newsletter-simple', function () {
+    return view('newsletter-simple');
+})->name('newsletter.simple');
+
+// Newsletter Subscription Routes
+Route::get('/newsletter/subscribe', function () {
+    return view('newsletter.subscribe');
+})->name('newsletter.subscribe');
+
+Route::post('/newsletter/subscribe', [App\Http\Controllers\NewsletterSubscriptionController::class, 'subscribe']);
+Route::post('/newsletter/verify-otp', [App\Http\Controllers\NewsletterSubscriptionController::class, 'verifyOtp'])->name('newsletter.verify-otp');
+Route::post('/newsletter/resend-otp', [App\Http\Controllers\NewsletterSubscriptionController::class, 'resendOtp'])->name('newsletter.resend-otp');
+
+Route::post('/test-recaptcha', function (\Illuminate\Http\Request $request) {
+    // Simple reCAPTCHA test handler
+    $token = $request->input('g-recaptcha-response');
+    $secret = config('recaptcha.secret_key');
+    
+    // If reCAPTCHA is not configured, allow submission
+    if (empty($secret)) {
+        return response()->json([
+            'success' => true,
+            'message' => 'Form submitted successfully! (reCAPTCHA not configured)',
+            'email' => $request->input('email'),
+            'note' => 'Add RECAPTCHA_SECRET_KEY to .env to enable reCAPTCHA verification'
+        ]);
+    }
+    
+    // If reCAPTCHA is configured but token is missing
+    if (empty($token)) {
+        return response()->json([
+            'success' => false,
+            'message' => 'reCAPTCHA token is missing'
+        ], 422);
+    }
+    
+    // Verify with Google
+    $response = \Illuminate\Support\Facades\Http::asForm()->post('https://www.google.com/recaptcha/api/siteverify', [
+        'secret' => $secret,
+        'response' => $token,
+        'remoteip' => $request->ip(),
+    ]);
+    
+    $result = $response->json();
+    
+    if ($result['success'] ?? false) {
+        return response()->json([
+            'success' => true,
+            'message' => 'reCAPTCHA verification successful!',
+            'email' => $request->input('email'),
+            'token_length' => strlen($token)
+        ]);
+    } else {
+        return response()->json([
+            'success' => false,
+            'message' => 'reCAPTCHA verification failed',
+            'errors' => $result['error-codes'] ?? []
+        ], 422);
+    }
+})->name('test.recaptcha.submit');
+
+
 // Simple dashboard route
 Route::get('/simple-dashboard', function () {
     return view('simple-dashboard');

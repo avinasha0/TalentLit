@@ -369,6 +369,11 @@
                                 </div>
                             </div>
 
+                            <!-- reCAPTCHA -->
+                            <div class="flex justify-center">
+                                <x-recaptcha />
+                            </div>
+
                             <!-- Submit Button -->
                             <div class="flex flex-col sm:flex-row justify-end gap-4 pt-8">
                                 <a href="{{ route('careers.show', ['tenant' => $tenantModel->slug, 'job' => $job->slug]) }}" 

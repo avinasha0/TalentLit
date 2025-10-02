@@ -11,6 +11,27 @@
     @include('layouts.partials.head')
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>
+        .recaptcha-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 1rem;
+            border: 2px dashed #e5e7eb;
+            border-radius: 0.5rem;
+            background-color: #f9fafb;
+            margin: 1rem 0;
+        }
+        
+        .recaptcha-container .g-recaptcha {
+            transform: scale(1.1);
+        }
+        
+        .recaptcha-container .g-recaptcha iframe {
+            border-radius: 0.375rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+    </style>
 </head>
 <body class="bg-white">
     <!-- Navigation -->
@@ -192,7 +213,7 @@
                     </div>
                 @endif
 
-                <form action="{{ route('contact.store') }}" method="POST" class="space-y-6">
+                <form action="{{ route('contact.store') }}" method="POST" class="space-y-6" id="contactForm">
                     @csrf
                     
                     <div class="grid md:grid-cols-2 gap-6">
@@ -297,6 +318,20 @@
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                         @enderror
                     </div>
+
+                    <!-- reCAPTCHA -->
+                    <div class="flex justify-center">
+                        <x-recaptcha />
+                    </div>
+                    
+                    <!-- Error Message -->
+                    <div id="recaptcha-error" class="text-red-500 text-sm text-center" style="display:none;"></div>
+                    
+                    @error('g-recaptcha-response')
+                        <div class="text-center">
+                            <p class="text-sm text-red-600 bg-red-50 border border-red-200 px-4 py-2 rounded-lg">{{ $message }}</p>
+                        </div>
+                    @enderror
 
                     <!-- Submit Button -->
                     <div class="text-center">
@@ -484,5 +519,59 @@
             </div>
         </div>
     </footer>
+
+    <script>
+        // Enhanced reCAPTCHA feedback
+        function onRecaptchaSuccess(token) {
+            console.log('reCAPTCHA completed successfully');
+            // Remove any existing error styling
+            const recaptchaContainer = document.querySelector('.recaptcha-container');
+            if (recaptchaContainer) {
+                recaptchaContainer.style.borderColor = '#10b981';
+                recaptchaContainer.style.backgroundColor = '#f0fdf4';
+            }
+        }
+        
+        function onRecaptchaExpired() {
+            console.log('reCAPTCHA expired');
+            // Reset styling when expired
+            const recaptchaContainer = document.querySelector('.recaptcha-container');
+            if (recaptchaContainer) {
+                recaptchaContainer.style.borderColor = '#e5e7eb';
+                recaptchaContainer.style.backgroundColor = '#f9fafb';
+            }
+        }
+        
+        // Form submission validation
+        document.addEventListener('DOMContentLoaded', function() {
+            const contactForm = document.getElementById('contactForm');
+            if (contactForm) {
+                contactForm.addEventListener('submit', function(e) {
+                    const recaptchaResponse = document.querySelector('[name="g-recaptcha-response"]');
+                    if (recaptchaResponse && !recaptchaResponse.value) {
+                        e.preventDefault();
+                        
+                        // Show inline error message
+                        const errorDiv = document.getElementById('recaptcha-error');
+                        if (errorDiv) {
+                            errorDiv.textContent = 'Please complete the reCAPTCHA verification by clicking "I am not a robot".';
+                            errorDiv.style.display = 'block';
+                        }
+                        
+                        // Scroll to reCAPTCHA
+                        const recaptchaWidget = document.querySelector('.g-recaptcha');
+                        if (recaptchaWidget) {
+                            recaptchaWidget.scrollIntoView({behavior: 'smooth'});
+                        }
+                        
+                        return false;
+                    }
+                });
+            }
+        });
+    </script>
+
+    <!-- Newsletter Footer -->
+    <x-newsletter-footer />
 </body>
 </html>

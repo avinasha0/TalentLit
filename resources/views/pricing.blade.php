@@ -326,11 +326,17 @@
                 <div class="max-w-2xl mx-auto text-center">
                     <h3 class="text-2xl font-bold text-white mb-4">Stay Updated</h3>
                     <p class="text-gray-400 mb-6">Get the latest updates on new features, tips, and best practices for recruitment.</p>
-                    <form id="newsletter-form" class="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
-                        <input type="email" id="newsletter-email" placeholder="Enter your email" class="flex-1 px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent" required>
-                        <button type="submit" class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all duration-200">
-                            Subscribe
-                        </button>
+                    <form id="newsletter-form" class="space-y-4 max-w-md mx-auto">
+                        <div class="flex flex-col sm:flex-row gap-4">
+                            <input type="email" id="newsletter-email" placeholder="Enter your email" class="flex-1 px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent" required>
+                            <button type="submit" class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all duration-200">
+                                Subscribe
+                            </button>
+                        </div>
+                        <!-- reCAPTCHA -->
+                        <div class="flex justify-center">
+                            <x-recaptcha />
+                        </div>
                     </form>
                 </div>
             </div>
@@ -365,13 +371,26 @@
             button.disabled = true;
             
             try {
+                // Validate reCAPTCHA before proceeding
+                if (!window.validateRecaptcha()) {
+                    button.textContent = originalText;
+                    button.disabled = false;
+                    return;
+                }
+                
+                // Get reCAPTCHA response
+                const recaptchaResponse = window.getRecaptchaResponse();
+
                 const response = await fetch('/newsletter/subscribe', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
                     },
-                    body: JSON.stringify({ email: email })
+                    body: JSON.stringify({ 
+                        email: email,
+                        'g-recaptcha-response': recaptchaResponse
+                    })
                 });
                 
                 if (response.ok) {
@@ -393,5 +412,8 @@
             }
         });
     </script>
+
+    <!-- Newsletter Footer -->
+    <x-newsletter-footer />
 </body>
 </html>

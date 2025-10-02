@@ -8,6 +8,10 @@ class NewsletterSubscription extends Model
 {
     protected $fillable = [
         'email',
+        'is_verified',
+        'verified_at',
+        'ip_address',
+        'user_agent',
         'status',
         'subscribed_at',
         'unsubscribed_at',
@@ -16,6 +20,8 @@ class NewsletterSubscription extends Model
     ];
 
     protected $casts = [
+        'is_verified' => 'boolean',
+        'verified_at' => 'datetime',
         'subscribed_at' => 'datetime',
         'unsubscribed_at' => 'datetime',
         'metadata' => 'array',

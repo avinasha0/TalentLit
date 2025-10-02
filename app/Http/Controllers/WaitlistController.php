@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Waitlist;
 use App\Models\WaitlistOtp;
 use App\Mail\WaitlistOtpMail;
+use App\Rules\RecaptchaRule;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Mail;
@@ -159,6 +160,7 @@ class WaitlistController extends Controller
                 'plan_slug' => 'required|string|in:pro,enterprise',
                 'company' => 'nullable|string|max:255',
                 'message' => 'nullable|string|max:1000',
+                'g-recaptcha-response' => ['required', new RecaptchaRule(app(\App\Services\RecaptchaService::class), $request)],
             ]);
 
             if ($validator->fails()) {

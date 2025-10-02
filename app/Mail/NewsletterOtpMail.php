@@ -20,11 +20,11 @@ class NewsletterOtpMail extends Mailable
     /**
      * Create a new message instance.
      */
-    public function __construct(string $otp, string $email, $expiresAt)
+    public function __construct(string $otp, string $email, $expiresAt = null)
     {
         $this->otp = $otp;
         $this->email = $email;
-        $this->expiresAt = $expiresAt;
+        $this->expiresAt = $expiresAt ?? now()->addMinutes(10);
     }
 
     /**

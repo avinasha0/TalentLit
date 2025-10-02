@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Rules\RecaptchaRule;
 use Illuminate\Foundation\Http\FormRequest;
 
 class ApplyRequest extends FormRequest
@@ -31,6 +32,7 @@ class ApplyRequest extends FormRequest
                 'mimetypes:application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document',
             ],
             'consent' => ['required', 'accepted'],
+            'g-recaptcha-response' => ['required', new RecaptchaRule(app(\App\Services\RecaptchaService::class), $this)],
         ];
     }
 
@@ -49,6 +51,7 @@ class ApplyRequest extends FormRequest
             'resume.mimetypes' => 'Resume must be a PDF, DOC, or DOCX file.',
             'consent.required' => 'You must agree to the terms and conditions.',
             'consent.accepted' => 'You must agree to the terms and conditions.',
+            'g-recaptcha-response.required' => 'Please complete the reCAPTCHA verification.',
         ];
     }
 

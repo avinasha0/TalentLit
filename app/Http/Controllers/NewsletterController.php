@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\NewsletterSubscription;
 use App\Models\NewsletterOtp;
 use App\Mail\NewsletterOtpMail;
+use App\Rules\RecaptchaRule;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
@@ -17,9 +18,20 @@ class NewsletterController extends Controller
      */
     public function subscribe(Request $request)
     {
-        $validator = Validator::make($request->all(), [
+        // Check if reCAPTCHA is provided (optional for home page newsletter)
+        $recaptchaToken = $request->input('g-recaptcha-response');
+        $hasRecaptcha = !empty($recaptchaToken);
+        
+        $rules = [
             'email' => 'required|email|max:255',
-        ]);
+        ];
+        
+        // Only validate reCAPTCHA if token is provided
+        if ($hasRecaptcha) {
+            $rules['g-recaptcha-response'] = ['required', new RecaptchaRule(app(\App\Services\RecaptchaService::class), $request)];
+        }
+
+        $validator = Validator::make($request->all(), $rules);
 
         if ($validator->fails()) {
             return response()->json([

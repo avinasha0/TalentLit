@@ -133,6 +133,14 @@
                         @endif
                     </div>
 
+                    <!-- reCAPTCHA -->
+                    <div class="flex justify-center">
+                        <x-recaptcha />
+                    </div>
+                    
+                    <!-- Error Message -->
+                    <div id="recaptcha-error" class="text-red-500 text-sm text-center" style="display:none;"></div>
+
                     <!-- Submit Button -->
                     <div>
                         <button type="submit" 
@@ -182,5 +190,43 @@
             </div>
         </div>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.querySelector('form[action="{{ route('login') }}"]');
+            const errorDiv = document.getElementById('recaptcha-error');
+            
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    // Check if reCAPTCHA is configured
+                    const recaptchaWidget = document.querySelector('.g-recaptcha');
+                    if (!recaptchaWidget) {
+                        return true; // Allow submission if reCAPTCHA not configured
+                    }
+                    
+                    // Check if reCAPTCHA is completed
+                    const recaptchaResponse = document.querySelector('textarea[name="g-recaptcha-response"]');
+                    const token = recaptchaResponse ? recaptchaResponse.value.trim() : '';
+                    
+                    if (!token) {
+                        e.preventDefault();
+                        errorDiv.textContent = 'Please complete the reCAPTCHA verification by clicking "I am not a robot".';
+                        errorDiv.style.display = 'block';
+                        
+                        // Scroll to reCAPTCHA
+                        recaptchaWidget.scrollIntoView({behavior: 'smooth'});
+                        
+                        return false;
+                    }
+                    
+                    // Clear error if token exists
+                    errorDiv.style.display = 'none';
+                });
+            }
+        });
+    </script>
+
+    <!-- Newsletter Footer -->
+    <x-newsletter-footer />
 </body>
 </html>

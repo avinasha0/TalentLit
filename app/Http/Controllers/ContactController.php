@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Mail\ContactMail;
+use App\Rules\RecaptchaRule;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
@@ -37,6 +38,7 @@ class ContactController extends Controller
             'phone' => 'nullable|string|max:20',
             'subject' => 'required|string|max:255',
             'message' => 'required|string|max:2000',
+            'g-recaptcha-response' => ['required', new RecaptchaRule(app(\App\Services\RecaptchaService::class), $request)],
         ], [
             'name.required' => 'Please provide your name.',
             'email.required' => 'Please provide your email address.',
@@ -44,6 +46,7 @@ class ContactController extends Controller
             'subject.required' => 'Please provide a subject.',
             'message.required' => 'Please provide your message.',
             'message.max' => 'Your message is too long. Please keep it under 2000 characters.',
+            'g-recaptcha-response.required' => 'Please complete the reCAPTCHA verification.',
         ]);
 
         if ($validator->fails()) {

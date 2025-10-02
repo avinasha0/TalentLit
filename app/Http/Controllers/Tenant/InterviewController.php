@@ -55,7 +55,16 @@ class InterviewController extends Controller
             $query->where('tenant_id', $tenantModel->id);
         })->select('id', 'name')->get();
 
-        return view('tenant.interviews.index', compact('interviews', 'candidates', 'jobs', 'users', 'tenantModel'));
+        // Get subscription limit information
+        $currentPlan = $tenantModel->currentPlan();
+        $currentInterviewCount = $tenantModel->interviews()
+            ->whereMonth('created_at', now()->month)
+            ->whereYear('created_at', now()->year)
+            ->count();
+        $maxInterviews = $currentPlan ? $currentPlan->max_interviews_per_month : 0;
+        $canAddInterviews = $maxInterviews === -1 || $currentInterviewCount < $maxInterviews;
+
+        return view('tenant.interviews.index', compact('interviews', 'candidates', 'jobs', 'users', 'tenantModel', 'currentInterviewCount', 'maxInterviews', 'canAddInterviews'));
     }
 
     public function create(Request $request, string $tenant, Candidate $candidate)

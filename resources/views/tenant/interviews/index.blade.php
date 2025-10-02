@@ -19,15 +19,36 @@
                     <div>
                         <h1 class="text-2xl font-bold text-gray-900">Interviews</h1>
                         <p class="mt-1 text-sm text-gray-500">Schedule and manage candidate interviews</p>
+                        @if($maxInterviews !== -1)
+                            <div class="mt-2 flex items-center space-x-2">
+                                <span class="text-xs text-gray-600">
+                                    {{ $currentInterviewCount }} / {{ $maxInterviews }} interviews this month
+                                </span>
+                                <div class="w-20 bg-gray-200 rounded-full h-1.5">
+                                    <div class="bg-purple-600 h-1.5 rounded-full transition-all duration-300" 
+                                         style="width: {{ $maxInterviews > 0 ? min(100, ($currentInterviewCount / $maxInterviews) * 100) : 0 }}%"></div>
+                                </div>
+                            </div>
+                        @endif
                     </div>
                     @can('create', App\Models\Interview::class)
-                        <button onclick="openScheduleModal()" 
-                                class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200">
-                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                            </svg>
-                            Schedule Interview
-                        </button>
+                        @if($canAddInterviews)
+                            <button onclick="openScheduleModal()" 
+                                    class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200">
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                                </svg>
+                                Schedule Interview
+                            </button>
+                        @else
+                            <button onclick="showInterviewLimitReached()"
+                                    class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-gray-400 cursor-not-allowed opacity-75">
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                                </svg>
+                                Schedule Interview
+                            </button>
+                        @endif
                     @endcan
                 </div>
             </div>
@@ -864,4 +885,22 @@ window.addEventListener('interviewScheduled', function(e) {
         addInterviewToList(e.detail.interview);
     }
 });
+
+function showInterviewLimitReached() {
+    const currentCount = {{ $currentInterviewCount }};
+    const maxInterviews = {{ $maxInterviews === -1 ? 'Infinity' : $maxInterviews }};
+    
+    let message = `You've reached the interviews limit for your current plan this month. `;
+    if (maxInterviews !== Infinity) {
+        message += `You currently have ${currentCount} interviews scheduled this month out of ${maxInterviews} allowed. `;
+    }
+    message += `Please upgrade your subscription plan to schedule more interviews.`;
+    
+    alert(message);
+    
+    // Redirect to tenant-specific subscription page
+    if (confirm('Would you like to view available plans?')) {
+        window.location.href = '{{ route("subscription.show", $tenant->slug) }}';
+    }
+}
 </script>

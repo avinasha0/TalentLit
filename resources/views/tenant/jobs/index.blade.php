@@ -19,12 +19,30 @@
                     <div>
                         <h1 class="text-2xl font-bold text-black">Job Openings</h1>
                         <p class="mt-1 text-sm text-black">Manage job postings and applications</p>
+                        @if($maxJobs !== -1)
+                            <div class="mt-2 flex items-center space-x-2">
+                                <span class="text-xs text-gray-600">
+                                    {{ $currentJobCount }} / {{ $maxJobs }} jobs
+                                </span>
+                                <div class="w-20 bg-gray-200 rounded-full h-1.5">
+                                    <div class="bg-blue-600 h-1.5 rounded-full transition-all duration-300" 
+                                         style="width: {{ $maxJobs > 0 ? min(100, ($currentJobCount / $maxJobs) * 100) : 0 }}%"></div>
+                                </div>
+                            </div>
+                        @endif
                     </div>
                     <div>
-                        <a href="{{ route('tenant.jobs.create', $tenant->slug) }}"
-                           class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            Create Job
-                        </a>
+                        @if($canAddJobs)
+                            <a href="{{ route('tenant.jobs.create', $tenant->slug) }}"
+                               class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                Create Job
+                            </a>
+                        @else
+                            <button onclick="showJobLimitReached()"
+                                    class="bg-gray-400 text-white px-4 py-2 rounded-md cursor-not-allowed opacity-75">
+                                Create Job
+                            </button>
+                        @endif
                     </div>
                 </div>
             </div>
@@ -221,4 +239,24 @@
             @endif
         </x-card>
     </div>
+
+    <script>
+        function showJobLimitReached() {
+            const currentCount = {{ $currentJobCount }};
+            const maxJobs = {{ $maxJobs === -1 ? 'Infinity' : $maxJobs }};
+            
+            let message = `You've reached the job openings limit for your current plan. `;
+            if (maxJobs !== Infinity) {
+                message += `You currently have ${currentCount} job openings out of ${maxJobs} allowed. `;
+            }
+            message += `Please upgrade your subscription plan to create more job openings.`;
+            
+            alert(message);
+            
+            // Redirect to tenant-specific subscription page
+            if (confirm('Would you like to view available plans?')) {
+                window.location.href = '{{ route("subscription.show", $tenant->slug) }}';
+            }
+        }
+    </script>
 </x-app-layout>

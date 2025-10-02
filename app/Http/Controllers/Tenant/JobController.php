@@ -87,7 +87,14 @@ class JobController extends Controller
             ]);
         }
 
-        return view('tenant.jobs.index', compact('jobs', 'departments', 'locations', 'statuses'));
+        // Get subscription limit information
+        $tenantModel = tenant();
+        $currentPlan = $tenantModel->currentPlan();
+        $currentJobCount = $tenantModel->jobOpenings()->count();
+        $maxJobs = $currentPlan ? $currentPlan->max_job_openings : 0;
+        $canAddJobs = $maxJobs === -1 || $currentJobCount < $maxJobs;
+
+        return view('tenant.jobs.index', compact('jobs', 'departments', 'locations', 'statuses', 'currentJobCount', 'maxJobs', 'canAddJobs'));
     }
 
     public function create(string $tenant)

@@ -33,6 +33,7 @@ trait AssignsRolesToUsers
             'view jobs', 'create jobs', 'edit jobs', 'delete jobs', 'publish jobs', 'close jobs',
             'manage stages', 'view stages', 'create stages', 'edit stages', 'delete stages', 'reorder stages',
             'view candidates', 'create candidates', 'edit candidates', 'delete candidates', 'move candidates', 'import candidates',
+            'view interviews', 'create interviews', 'edit interviews', 'delete interviews',
             'view dashboard', 'manage users', 'manage settings'
         ];
         

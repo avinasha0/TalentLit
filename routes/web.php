@@ -29,9 +29,115 @@ use App\Http\Controllers\ProfileController;
 // Public route
 Route::get('/', [HomeController::class, 'index'])->name('home');
 
+// Features pages
+Route::get('/features', [HomeController::class, 'features'])->name('features');
+
+// Company pages
+Route::get('/about', function () {
+    return view('about');
+})->name('about');
+
+Route::get('/careers', function () {
+    return view('careers');
+})->name('careers');
+
+Route::get('/press', function () {
+    return view('press');
+})->name('press');
+
+Route::get('/blog', function () {
+    return view('blog');
+})->name('blog');
+Route::get('/features/candidate-sourcing.html', [HomeController::class, 'candidateSourcing'])->name('features.candidate-sourcing');
+Route::get('/features/hiring-pipeline.html', [HomeController::class, 'hiringPipeline'])->name('features.hiring-pipeline');
+Route::get('/features/career-site.html', [HomeController::class, 'careerSite'])->name('features.career-site');
+Route::get('/features/job-advertising.html', [HomeController::class, 'jobAdvertising'])->name('features.job-advertising');
+Route::get('/features/employee-referral.html', [HomeController::class, 'employeeReferral'])->name('features.employee-referral');
+Route::get('/features/resume-management.html', [HomeController::class, 'resumeManagement'])->name('features.resume-management');
+Route::get('/features/manage-submission.html', [HomeController::class, 'manageSubmission'])->name('features.manage-submission');
+Route::get('/features/hiring-analytics.html', [HomeController::class, 'hiringAnalytics'])->name('features.hiring-analytics');
+
 // Contact routes
 Route::get('/contact', [ContactController::class, 'index'])->name('contact');
 Route::post('/contact', [ContactController::class, 'store'])->name('contact.store');
+
+// Newsletter routes
+Route::post('/newsletter/subscribe', [App\Http\Controllers\NewsletterController::class, 'subscribe'])->name('newsletter.subscribe');
+Route::post('/newsletter/verify-otp', [App\Http\Controllers\NewsletterController::class, 'verifyOtp'])->name('newsletter.verify-otp');
+Route::post('/newsletter/resend-otp', [App\Http\Controllers\NewsletterController::class, 'resendOtp'])->name('newsletter.resend-otp');
+Route::post('/newsletter/unsubscribe', [App\Http\Controllers\NewsletterController::class, 'unsubscribe'])->name('newsletter.unsubscribe');
+Route::get('/newsletter/status', [App\Http\Controllers\NewsletterController::class, 'status'])->name('newsletter.status');
+
+// HTML Pages Routes
+Route::get('/features.html', function () {
+    return view('features');
+})->name('features.html');
+
+Route::get('/pricing.html', function () {
+    return view('pricing');
+})->name('pricing.html');
+
+Route::get('/help-center.html', function () {
+    return view('help-center');
+})->name('help-center.html');
+
+Route::get('/documentation.html', function () {
+    return view('documentation');
+})->name('documentation.html');
+
+Route::get('/community.html', function () {
+    return view('community');
+})->name('community.html');
+
+Route::get('/status.html', function () {
+    return view('status');
+})->name('status.html');
+
+Route::get('/security.html', function () {
+    return view('security');
+})->name('security.html');
+
+Route::get('/cookie-policy.html', function () {
+    return view('cookie-policy');
+})->name('cookie-policy.html');
+
+// Legal pages
+Route::get('/privacy-policy', function () {
+    return view('legal.privacy-policy');
+})->name('privacy-policy');
+
+Route::get('/privacy-policy.html', function () {
+    return view('legal.privacy-policy');
+})->name('privacy-policy.html');
+
+Route::get('/terms-of-service', function () {
+    return view('legal.terms-of-service');
+})->name('terms-of-service');
+
+Route::get('/terms-of-service.html', function () {
+    return view('legal.terms-of-service');
+})->name('terms-of-service.html');
+
+// Additional HTML routes for company pages
+Route::get('/about.html', function () {
+    return view('about');
+})->name('about.html');
+
+Route::get('/contact.html', function () {
+    return view('contact');
+})->name('contact.html');
+
+Route::get('/careers.html', function () {
+    return view('careers');
+})->name('careers.html');
+
+Route::get('/blog.html', function () {
+    return view('blog');
+})->name('blog.html');
+
+Route::get('/press.html', function () {
+    return view('press');
+})->name('press.html');
 
 // Invitation routes
 Route::get('/invitation/{token}', [InvitationController::class, 'show'])->name('invitation.show');
@@ -100,7 +206,7 @@ Route::prefix('{tenant}/careers')->middleware(['capture.tenant', 'tenant'])->gro
     Route::get('/', [CareerJobController::class, 'index'])->name('careers.index');
     Route::get('/{job:slug}', [CareerJobController::class, 'show'])->name('careers.show');
     Route::get('/{job:slug}/apply', [ApplyController::class, 'create'])->name('careers.apply.create');
-    Route::post('/{job:slug}/apply', [ApplyController::class, 'store'])->name('careers.apply.store');
+    Route::post('/{job:slug}/apply', [ApplyController::class, 'store'])->middleware('subscription.limit:max_applications_per_month')->name('careers.apply.store');
     Route::get('/{job:slug}/success', [ApplyController::class, 'success'])->name('careers.success');
 });
 
@@ -190,7 +296,7 @@ Route::middleware(['capture.tenant', 'tenant', 'auth'])->group(function () {
     // Candidate Import Routes - Owner, Admin, Recruiter
     Route::middleware('permission:import candidates')->group(function () {
         Route::get('/{tenant}/candidates/import', [App\Http\Controllers\Tenant\CandidateImportController::class, 'index'])->name('tenant.candidates.import');
-        Route::post('/{tenant}/candidates/import', [App\Http\Controllers\Tenant\CandidateImportController::class, 'store'])->name('tenant.candidates.import.store');
+        Route::post('/{tenant}/candidates/import', [App\Http\Controllers\Tenant\CandidateImportController::class, 'store'])->middleware('subscription.limit:max_candidates')->name('tenant.candidates.import.store');
         Route::get('/{tenant}/candidates/import/template', [App\Http\Controllers\Tenant\CandidateImportController::class, 'downloadTemplate'])->name('tenant.candidates.import.template');
     });
 

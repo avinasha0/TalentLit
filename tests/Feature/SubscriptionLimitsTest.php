@@ -169,6 +169,107 @@ class SubscriptionLimitsTest extends TestCase
         $response->assertSee($expectedRoute);
     }
 
+    public function test_job_openings_limit_enforcement()
+    {
+        $this->actingAs($this->owner);
+
+        // Create required departments and locations
+        $department = \App\Models\Department::factory()->create(['tenant_id' => $this->tenant->id]);
+        $location = \App\Models\Location::factory()->create(['tenant_id' => $this->tenant->id]);
+
+        // Free plan allows 3 job openings, create 2 more to reach limit
+        \App\Models\JobOpening::factory()->count(2)->create([
+            'tenant_id' => $this->tenant->id,
+            'department_id' => $department->id,
+            'location_id' => $location->id,
+        ]);
+
+        // Test that jobs page shows correct usage info
+        $response = $this->get("/{$this->tenant->slug}/jobs");
+        
+        // Debug the response if it's not 200
+        if ($response->status() !== 200) {
+            dump('Response status: ' . $response->status());
+            dump('Response content: ' . $response->getContent());
+        }
+        
+        $response->assertStatus(200);
+        $response->assertSee('3 / 3 jobs'); // Current count / max jobs
+
+        // Try to create another job (should fail)
+        $response = $this->post("/{$this->tenant->slug}/jobs", [
+            'title' => 'Test Job',
+            'department_id' => $department->id,
+            'location_id' => $location->id,
+            'employment_type' => 'full_time',
+            'status' => 'draft',
+            'openings_count' => 1,
+            'description' => 'Test job description',
+        ]);
+
+        // Should redirect to pricing page with error
+        $response->assertRedirect(route('subscription.pricing'));
+        $response->assertSessionHas('error');
+    }
+
+    public function test_candidates_limit_enforcement()
+    {
+        $this->actingAs($this->owner);
+
+        // Free plan allows 50 candidates, create 49 more to reach limit
+        \App\Models\Candidate::factory()->count(49)->create(['tenant_id' => $this->tenant->id]);
+
+        // Test that candidates page shows correct usage info
+        $response = $this->get("/{$this->tenant->slug}/candidates");
+        $response->assertStatus(200);
+        $response->assertSee('50 / 50 candidates'); // Current count / max candidates
+
+        // Try to import candidates (should fail)
+        $response = $this->post("/{$this->tenant->slug}/candidates/import", [
+            'file' => 'test.csv',
+        ]);
+
+        // Should redirect to pricing page with error
+        $response->assertRedirect(route('subscription.pricing'));
+        $response->assertSessionHas('error');
+    }
+
+    public function test_interviews_limit_enforcement()
+    {
+        $this->actingAs($this->owner);
+
+        // Create a candidate for the interview
+        $candidate = \App\Models\Candidate::factory()->create(['tenant_id' => $this->tenant->id]);
+
+        // Free plan allows 10 interviews per month, create 9 more to reach limit
+        \App\Models\Interview::factory()->count(9)->create([
+            'tenant_id' => $this->tenant->id,
+            'candidate_id' => $candidate->id,
+            'created_at' => now(),
+        ]);
+
+        // Test that interviews page shows correct usage info
+        $response = $this->get("/{$this->tenant->slug}/interviews");
+        $response->assertStatus(200);
+        $response->assertSee('9 / 10 interviews this month'); // Current count / max interviews
+
+        // Try to create another interview (should fail)
+        $response = $this->post("/{$this->tenant->slug}/candidates/{$candidate->id}/interviews", [
+            'candidate_id' => $candidate->id,
+            'job_id' => null,
+            'title' => 'Test Interview',
+            'scheduled_at' => now()->addDays(1)->format('Y-m-d H:i'),
+            'duration' => 60,
+            'mode' => 'online',
+            'location' => 'Zoom',
+            'notes' => 'Test interview',
+        ]);
+
+        // Should redirect to pricing page with error
+        $response->assertRedirect(route('subscription.pricing'));
+        $response->assertSessionHas('error');
+    }
+
     private function getRecruiterRoleId()
     {
         $recruiterRole = TenantRole::firstOrCreate([

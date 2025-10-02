@@ -86,7 +86,14 @@ class CandidateController extends Controller
         }
 
         $tenant = tenant();
-        return view('tenant.candidates.index', compact('candidates', 'sources', 'tags', 'tenant'));
+        
+        // Get subscription limit information
+        $currentPlan = $tenant->currentPlan();
+        $currentCandidateCount = $tenant->candidates()->count();
+        $maxCandidates = $currentPlan ? $currentPlan->max_candidates : 0;
+        $canAddCandidates = $maxCandidates === -1 || $currentCandidateCount < $maxCandidates;
+
+        return view('tenant.candidates.index', compact('candidates', 'sources', 'tags', 'tenant', 'currentCandidateCount', 'maxCandidates', 'canAddCandidates'));
     }
 
     public function show(string $tenant, Candidate $candidate)

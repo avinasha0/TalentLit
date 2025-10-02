@@ -42,14 +42,37 @@
                         Manage candidate profiles and applications
                     @endif
                 </p>
+                @if(!$isJobFiltered && $maxCandidates !== -1)
+                    <div class="mt-2 flex items-center space-x-2">
+                        <span class="text-xs text-gray-600">
+                            {{ $currentCandidateCount }} / {{ $maxCandidates }} candidates
+                        </span>
+                        <div class="w-20 bg-gray-200 rounded-full h-1.5">
+                            <div class="bg-green-600 h-1.5 rounded-full transition-all duration-300" 
+                                 style="width: {{ $maxCandidates > 0 ? min(100, ($currentCandidateCount / $maxCandidates) * 100) : 0 }}%"></div>
+                        </div>
+                    </div>
+                @endif
             </div>
             <div>
-                <x-button variant="primary">
-                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                    </svg>
-                    Add Candidate
-                </x-button>
+                @if(!$isJobFiltered)
+                    @if($canAddCandidates)
+                        <x-button variant="primary">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                            </svg>
+                            Add Candidate
+                        </x-button>
+                    @else
+                        <button onclick="showCandidateLimitReached()"
+                                class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gray-400 cursor-not-allowed opacity-75">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                            </svg>
+                            Add Candidate
+                        </button>
+                    @endif
+                @endif
             </div>
         </div>
 
@@ -187,4 +210,24 @@
             />
         @endif
     </div>
+
+    <script>
+        function showCandidateLimitReached() {
+            const currentCount = {{ $currentCandidateCount }};
+            const maxCandidates = {{ $maxCandidates === -1 ? 'Infinity' : $maxCandidates }};
+            
+            let message = `You've reached the candidates limit for your current plan. `;
+            if (maxCandidates !== Infinity) {
+                message += `You currently have ${currentCount} candidates out of ${maxCandidates} allowed. `;
+            }
+            message += `Please upgrade your subscription plan to add more candidates.`;
+            
+            alert(message);
+            
+            // Redirect to tenant-specific subscription page
+            if (confirm('Would you like to view available plans?')) {
+                window.location.href = '{{ route("subscription.show", $tenant->slug) }}';
+            }
+        }
+    </script>
 </x-app-layout>

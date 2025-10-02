@@ -12,6 +12,13 @@ class CareerJobController extends Controller
     public function index(Request $request)
     {
         $tenant = tenant();
+        
+        // Check if careers page is enabled
+        if (!$tenant->careers_enabled) {
+            $branding = $tenant->branding;
+            return view('careers.disabled', compact('tenant', 'branding'));
+        }
+        
         $branding = $tenant->branding;
         
         $query = JobOpening::with(['department', 'location'])
@@ -74,6 +81,12 @@ class CareerJobController extends Controller
     public function show(string $tenant, JobOpening $job)
     {
         $tenantModel = tenant();
+        
+        // Check if careers page is enabled
+        if (!$tenantModel->careers_enabled) {
+            $branding = $tenantModel->branding;
+            return view('careers.disabled', ['tenant' => $tenantModel, 'branding' => $branding]);
+        }
         
         // Ensure job belongs to the current tenant
         if ($job->tenant_id !== $tenantModel->id) {

@@ -51,6 +51,10 @@
                         <p class="text-xl md:text-2xl mb-8 opacity-90">
                             {{ $branding?->intro_subtitle }}
                         </p>
+                    @elseif($tenant->careers_intro)
+                        <p class="text-xl md:text-2xl mb-8 opacity-90">
+                            {{ $tenant->careers_intro }}
+                        </p>
                     @endif
                     
                     <a href="#jobs" 

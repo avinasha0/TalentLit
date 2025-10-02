@@ -392,143 +392,185 @@
                 </p>
             </div>
             
-            <div class="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-                <!-- Starter Plan -->
-                <div class="bg-white rounded-2xl p-8 border border-gray-200 relative">
-                    <div class="text-center">
-                        <h3 class="text-xl font-semibold text-gray-900 mb-2">Starter</h3>
-                        <div class="mb-4">
-                            <span class="text-4xl font-bold text-gray-900">Free</span>
-                            <span class="text-gray-600">/month</span>
-                        </div>
-                        <p class="text-gray-600 mb-6">Perfect for small teams getting started</p>
-                        <ul class="text-left space-y-3 mb-8">
-                            <li class="flex items-center text-gray-600">
-                                <svg class="w-5 h-5 text-green-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                </svg>
-                                Up to 3 job postings
-                            </li>
-                            <li class="flex items-center text-gray-600">
-                                <svg class="w-5 h-5 text-green-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                </svg>
-                                50 candidates per month
-                            </li>
-                            <li class="flex items-center text-gray-600">
-                                <svg class="w-5 h-5 text-green-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                </svg>
-                                Basic analytics
-                            </li>
-                            <li class="flex items-center text-gray-600">
-                                <svg class="w-5 h-5 text-green-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                </svg>
-                                Email support
-                            </li>
-                        </ul>
-                        <a href="{{ route('register') }}" 
-                           class="w-full bg-gray-900 text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-800 transition-colors">
-                            Get Started Free
-                        </a>
-                    </div>
-                </div>
-
-                <!-- Pro Plan -->
-                <div class="bg-gray-100 rounded-2xl p-8 border border-gray-300 relative opacity-60">
-                    <div class="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                        <span class="bg-gray-500 text-white px-4 py-1 rounded-full text-sm font-semibold">Coming Soon</span>
-                    </div>
-                    <div class="text-center">
-                        <h3 class="text-xl font-semibold text-gray-500 mb-2">Pro</h3>
-                        <div class="mb-4">
-                            <span class="text-4xl font-bold text-gray-500">--</span>
-                            <span class="text-gray-400">₹/month</span>
-                        </div>
-                        <p class="text-gray-400 mb-6">For growing teams and companies</p>
-                        <ul class="text-left space-y-3 mb-8">
-                            <li class="flex items-center text-gray-400">
-                                <svg class="w-5 h-5 text-gray-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                </svg>
-                                Unlimited job postings
-                            </li>
-                            <li class="flex items-center text-gray-400">
-                                <svg class="w-5 h-5 text-gray-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                </svg>
-                                Unlimited candidates
-                            </li>
-                            <li class="flex items-center text-gray-400">
-                                <svg class="w-5 h-5 text-gray-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                </svg>
-                                Advanced analytics
-                            </li>
-                            <li class="flex items-center text-gray-400">
-                                <svg class="w-5 h-5 text-gray-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                </svg>
-                                Team collaboration
-                            </li>
-                            <li class="flex items-center text-gray-400">
-                                <svg class="w-5 h-5 text-gray-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                </svg>
-                                Priority support
-                            </li>
-                        </ul>
-                        <button disabled 
-                           class="w-full bg-gray-400 text-gray-200 px-6 py-3 rounded-lg font-semibold cursor-not-allowed">
-                            Coming Soon
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Enterprise Plan -->
-                <div class="bg-white rounded-2xl p-8 border-2 border-indigo-600 relative">
+            <div class="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+                @foreach($plans as $plan)
+                <div class="bg-white rounded-2xl p-8 border border-gray-200 relative {{ $plan->is_popular ? 'border-2 border-indigo-600 shadow-xl' : '' }} hover:shadow-lg transition-all duration-300">
+                    @if($plan->is_popular)
                     <div class="absolute -top-4 left-1/2 transform -translate-x-1/2">
                         <span class="bg-indigo-600 text-white px-4 py-1 rounded-full text-sm font-semibold">Most Popular</span>
                     </div>
+                    @endif
+                    
                     <div class="text-center">
-                        <h3 class="text-xl font-semibold text-gray-900 mb-2">Enterprise</h3>
-                        <div class="mb-4">
-                            <span class="text-4xl font-bold text-gray-900">Custom</span>
+                        <h3 class="text-2xl font-bold text-gray-900 mb-2">{{ $plan->name }}</h3>
+                        <p class="text-gray-600 mb-6">{{ $plan->description }}</p>
+                        
+                        <div class="mb-6">
+                            @if($plan->requiresContactForPricing())
+                                <span class="text-4xl font-bold text-gray-900">Contact for Pricing</span>
+                            @else
+                                <span class="text-6xl font-bold text-gray-900">
+                                    @subscriptionPrice($plan->price, $plan->currency)
+                                </span>
+                                <span class="text-gray-600 text-lg">/{{ $plan->billing_cycle }}</span>
+                            @endif
                         </div>
-                        <p class="text-gray-600 mb-6">For large organizations</p>
-                        <ul class="text-left space-y-3 mb-8">
-                            <li class="flex items-center text-gray-600">
-                                <svg class="w-5 h-5 text-green-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                </svg>
-                                Everything in Pro
-                            </li>
-                            <li class="flex items-center text-gray-600">
-                                <svg class="w-5 h-5 text-green-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                </svg>
-                                Custom integrations
-                            </li>
-                            <li class="flex items-center text-gray-600">
-                                <svg class="w-5 h-5 text-green-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                </svg>
-                                Dedicated support
-                            </li>
-                            <li class="flex items-center text-gray-600">
-                                <svg class="w-5 h-5 text-green-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                </svg>
-                                On-premise deployment
-                            </li>
-                        </ul>
-                        <a href="#" 
-                           class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all duration-200">
-                            Contact Sales
-                        </a>
+                    </div>
+
+                    <!-- Features -->
+                    <div class="space-y-4 mb-8">
+                        <!-- Core Features -->
+                        <div class="space-y-3">
+                            @if($plan->slug === 'free')
+                                <div class="flex items-center text-gray-600">
+                                    <svg class="w-5 h-5 text-green-500 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                    <span class="text-sm">Up to 3 job postings</span>
+                                </div>
+                                <div class="flex items-center text-gray-600">
+                                    <svg class="w-5 h-5 text-green-500 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                    <span class="text-sm">50 candidates per month</span>
+                                </div>
+                                <div class="flex items-center text-gray-600">
+                                    <svg class="w-5 h-5 text-green-500 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                    <span class="text-sm">Basic analytics</span>
+                                </div>
+                                <div class="flex items-center text-gray-600">
+                                    <svg class="w-5 h-5 text-green-500 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                    <span class="text-sm">Email support</span>
+                                </div>
+                            @elseif($plan->slug === 'pro')
+                                <div class="flex items-center text-gray-600">
+                                    <svg class="w-5 h-5 text-green-500 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                    <span class="text-sm">Unlimited job postings</span>
+                                </div>
+                                <div class="flex items-center text-gray-600">
+                                    <svg class="w-5 h-5 text-green-500 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                    <span class="text-sm">Unlimited candidates</span>
+                                </div>
+                                <div class="flex items-center text-gray-600">
+                                    <svg class="w-5 h-5 text-green-500 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                    <span class="text-sm">Advanced analytics</span>
+                                </div>
+                                <div class="flex items-center text-gray-600">
+                                    <svg class="w-5 h-5 text-green-500 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                    <span class="text-sm">Team collaboration</span>
+                                </div>
+                                <div class="flex items-center text-gray-600">
+                                    <svg class="w-5 h-5 text-green-500 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                    <span class="text-sm">Priority support</span>
+                                </div>
+                            @elseif($plan->slug === 'enterprise')
+                                <div class="flex items-center text-gray-600">
+                                    <svg class="w-5 h-5 text-green-500 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                    <span class="text-sm">Everything in Pro</span>
+                                </div>
+                                <div class="flex items-center text-gray-600">
+                                    <svg class="w-5 h-5 text-green-500 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                    <span class="text-sm">Custom integrations</span>
+                                </div>
+                                <div class="flex items-center text-gray-600">
+                                    <svg class="w-5 h-5 text-green-500 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                    <span class="text-sm">Dedicated support</span>
+                                </div>
+                                <div class="flex items-center text-gray-600">
+                                    <svg class="w-5 h-5 text-green-500 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                    <span class="text-sm">On-premise deployment</span>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+
+                    <!-- CTA Button -->
+                    <div class="mt-auto">
+                        @if($plan->isFree())
+                            <a href="{{ route('register') }}" 
+                               class="w-full bg-gray-900 text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-800 transition-colors text-center block">
+                                Get Started Free
+                            </a>
+                        @elseif($plan->slug === 'pro')
+                            @if(config('razorpay.pro_plan_mode') === 'active' && config('razorpay.key_id'))
+                                @if(auth()->check())
+                                    @php
+                                        $user = auth()->user();
+                                        $tenant = $user->tenants->first();
+                                        $hasFreePlan = $tenant ? $tenant->hasFreePlan() : false;
+                                    @endphp
+                                    
+                                    @if($hasFreePlan)
+                                        <button onclick="initiatePayment('{{ $plan->id }}', '{{ $plan->name }}', {{ $plan->price }}, '{{ $plan->currency }}')" 
+                                                class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all duration-200">
+                                            Upgrade to Pro - ₹{{ number_format($plan->price, 0) }}/month
+                                        </button>
+                                    @else
+                                        <div class="w-full bg-gray-100 text-gray-600 px-6 py-3 rounded-lg font-semibold text-center">
+                                            Start with Free Plan First
+                                        </div>
+                                    @endif
+                                @else
+                                    <a href="{{ route('register') }}" 
+                                       class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 text-center block">
+                                        Get Started - ₹{{ number_format($plan->price, 0) }}/month
+                                    </a>
+                                @endif
+                            @else
+                                @if(auth()->check())
+                                    <button onclick="openWaitlistModal('pro')" 
+                                            class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all duration-200">
+                                        Join Waitlist
+                                    </button>
+                                @else
+                                    <a href="{{ route('login') }}" 
+                                       class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 text-center block">
+                                        Login to Join Waitlist
+                                    </a>
+                                @endif
+                            @endif
+                        @elseif($plan->slug === 'enterprise')
+                            <a href="{{ route('contact') }}" 
+                               class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 text-center block">
+                                Contact for Pricing
+                            </a>
+                        @endif
                     </div>
                 </div>
+                @endforeach
+            </div>
+            
+            <!-- View All Plans Link -->
+            <div class="text-center mt-12">
+                <a href="{{ route('subscription.pricing') }}" 
+                   class="inline-flex items-center text-indigo-600 hover:text-indigo-700 font-semibold">
+                    View detailed pricing
+                    <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                    </svg>
+                </a>
             </div>
         </div>
     </section>
@@ -605,5 +647,692 @@
             </div>
         </div>
     </footer>
+
+    <!-- Waitlist Modal -->
+    <div id="waitlistModal" class="fixed inset-0 bg-black bg-opacity-60 overflow-y-auto h-full w-full hidden z-50 backdrop-blur-sm">
+        <div class="relative top-10 mx-auto p-0 w-full max-w-md shadow-2xl rounded-2xl bg-white overflow-hidden">
+            <!-- Modal Header with Gradient Background -->
+            <div class="bg-gradient-to-r from-indigo-600 via-purple-600 to-purple-800 px-8 py-6 text-white relative overflow-hidden">
+                <!-- Background Pattern -->
+                <div class="absolute inset-0 opacity-20">
+                    <svg class="w-full h-full" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <pattern id="modalGrid" width="10" height="10" patternUnits="userSpaceOnUse">
+                                <path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="0.5"/>
+                            </pattern>
+                        </defs>
+                        <rect width="100%" height="100%" fill="url(#modalGrid)"/>
+                    </svg>
+                </div>
+                
+                <div class="relative flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold">Join the Waitlist</h3>
+                            <p class="text-indigo-100 text-sm">Be the first to access Pro features</p>
+                        </div>
+                    </div>
+                    <button onclick="closeWaitlistModal()" class="text-white/80 hover:text-white transition-colors p-2 hover:bg-white/10 rounded-lg">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Modal Body -->
+            <div class="px-8 py-6">
+                <!-- Step 1: Email Verification -->
+                <div id="waitlistStep1" class="space-y-6">
+                    <div class="text-center mb-6">
+                        <div class="w-16 h-16 bg-gradient-to-r from-indigo-100 to-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <svg class="w-8 h-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-semibold text-gray-900 mb-2">Verify Your Email</h3>
+                        <p class="text-sm text-gray-600">We'll send a verification code to your email address</p>
+                    </div>
+
+                    <form id="waitlistEmailForm" class="space-y-4">
+                        <div class="space-y-2">
+                            <label for="waitlistEmail" class="block text-sm font-semibold text-gray-900 flex items-center">
+                                <svg class="w-4 h-4 text-indigo-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207"></path>
+                                </svg>
+                                Email Address
+                                <span class="text-red-500 ml-1">*</span>
+                            </label>
+                            <input type="email" id="waitlistEmail" name="email" required 
+                                   placeholder="Enter your email address"
+                                   class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 hover:border-gray-300">
+                        </div>
+                        
+                        <button type="submit" id="waitlistEmailBtn"
+                                class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 px-6 rounded-xl font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 transform hover:-translate-y-0.5 shadow-lg hover:shadow-xl">
+                            <span class="flex items-center justify-center">
+                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                                </svg>
+                                Send Verification Code
+                            </span>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Step 2: OTP Verification -->
+                <div id="waitlistStep2" class="space-y-6 hidden">
+                    <div class="text-center mb-6">
+                        <div class="w-16 h-16 bg-gradient-to-r from-green-100 to-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-semibold text-gray-900 mb-2">Enter Verification Code</h3>
+                        <p class="text-sm text-gray-600">We sent a 6-digit code to <span id="waitlistEmailDisplay" class="font-semibold text-indigo-600"></span></p>
+                    </div>
+
+                    <form id="waitlistOtpForm" class="space-y-4">
+                        <div class="space-y-2">
+                            <label for="waitlistOtp" class="block text-sm font-semibold text-gray-900 flex items-center">
+                                <svg class="w-4 h-4 text-indigo-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                                </svg>
+                                Verification Code
+                                <span class="text-red-500 ml-1">*</span>
+                            </label>
+                            <input type="text" id="waitlistOtp" name="otp" required maxlength="6"
+                                   placeholder="Enter 6-digit code"
+                                   class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 hover:border-gray-300 text-center text-2xl font-mono tracking-widest">
+                        </div>
+                        
+                        <div class="flex space-x-3">
+                            <button type="button" id="waitlistResendBtn" 
+                                    class="flex-1 bg-gray-100 text-gray-700 py-3 px-6 rounded-xl font-semibold hover:bg-gray-200 transition-all duration-200">
+                                Resend Code
+                            </button>
+                            <button type="submit" id="waitlistVerifyBtn"
+                                    class="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 px-6 rounded-xl font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 transform hover:-translate-y-0.5 shadow-lg hover:shadow-xl">
+                                <span class="flex items-center justify-center">
+                                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                    Verify & Continue
+                                </span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Step 3: Complete Registration -->
+                <div id="waitlistStep3" class="space-y-6 hidden">
+                    <div class="text-center mb-6">
+                        <div class="w-16 h-16 bg-gradient-to-r from-blue-100 to-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-semibold text-gray-900 mb-2">Complete Your Profile</h3>
+                        <p class="text-sm text-gray-600">Tell us a bit about yourself to complete your waitlist registration</p>
+                    </div>
+
+                    <form id="waitlistForm" class="space-y-4">
+                        <!-- Name Field -->
+                        <div class="space-y-2">
+                            <label for="waitlistName" class="block text-sm font-semibold text-gray-900 flex items-center">
+                                <svg class="w-4 h-4 text-indigo-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                                </svg>
+                                Full Name
+                            </label>
+                            <input type="text" id="waitlistName" name="name" 
+                                   placeholder="Enter your full name"
+                                   class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 hover:border-gray-300">
+                        </div>
+                        
+                        <!-- Company Field -->
+                        <div class="space-y-2">
+                            <label for="waitlistCompany" class="block text-sm font-semibold text-gray-900 flex items-center">
+                                <svg class="w-4 h-4 text-indigo-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                                </svg>
+                                Company
+                            </label>
+                            <input type="text" id="waitlistCompany" name="company" 
+                                   placeholder="Enter your company name"
+                                   class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 hover:border-gray-300">
+                        </div>
+                        
+                        <!-- Message Field -->
+                        <div class="space-y-2">
+                            <label for="waitlistMessage" class="block text-sm font-semibold text-gray-900 flex items-center">
+                                <svg class="w-4 h-4 text-indigo-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                                </svg>
+                                Message
+                                <span class="text-gray-500 text-xs font-normal ml-1">(Optional)</span>
+                            </label>
+                            <textarea id="waitlistMessage" name="message" rows="3" 
+                                      placeholder="Tell us about your recruitment needs..."
+                                      class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 hover:border-gray-300 resize-none"></textarea>
+                        </div>
+                        
+                        <input type="hidden" id="waitlistPlanSlug" name="plan_slug" value="">
+                        <input type="hidden" id="waitlistVerifiedEmail" name="email" value="">
+                        
+                        <!-- Action Buttons -->
+                        <div class="flex space-x-4 pt-4">
+                            <button type="button" onclick="closeWaitlistModal()" 
+                                    class="flex-1 bg-gray-100 text-gray-700 py-3 px-6 rounded-xl font-semibold hover:bg-gray-200 transition-all duration-200 transform hover:-translate-y-0.5">
+                                Cancel
+                            </button>
+                            <button type="submit" id="waitlistSubmitBtn"
+                                    class="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 px-6 rounded-xl font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 transform hover:-translate-y-0.5 shadow-lg hover:shadow-xl">
+                                <span class="flex items-center justify-center">
+                                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                    </svg>
+                                    Join Waitlist
+                                </span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                
+                <!-- Success Message -->
+                <div id="waitlistMessage" class="mt-6 hidden">
+                    <div class="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl p-6">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <div class="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center">
+                                    <svg class="h-6 w-6 text-white" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                                    </svg>
+                                </div>
+                            </div>
+                            <div class="ml-4">
+                                <h4 class="text-lg font-semibold text-green-800">Welcome to the waitlist!</h4>
+                                <p class="text-sm text-green-700 mt-1" id="waitlistSuccessMessage">
+                                    Thank you! You've been added to our waitlist.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Trust Indicators -->
+                <div class="mt-6 pt-6 border-t border-gray-100">
+                    <div class="flex items-center justify-center space-x-6 text-sm text-gray-500">
+                        <div class="flex items-center">
+                            <svg class="w-4 h-4 text-green-500 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                            </svg>
+                            Secure & Private
+                        </div>
+                        <div class="flex items-center">
+                            <svg class="w-4 h-4 text-green-500 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            No Spam
+                        </div>
+                        <div class="flex items-center">
+                            <svg class="w-4 h-4 text-green-500 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                            </svg>
+                            Early Access
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    let currentStep = 1;
+    let verifiedEmail = '';
+
+    function openWaitlistModal(planSlug) {
+        document.getElementById('waitlistPlanSlug').value = planSlug;
+        document.getElementById('waitlistVerifiedEmail').value = '';
+        const modal = document.getElementById('waitlistModal');
+        modal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+        
+        // Reset to step 1
+        currentStep = 1;
+        showStep(1);
+        
+        // Add entrance animation
+        setTimeout(() => {
+            modal.querySelector('.relative').style.transform = 'scale(1)';
+            modal.querySelector('.relative').style.opacity = '1';
+        }, 10);
+    }
+
+    function closeWaitlistModal() {
+        const modal = document.getElementById('waitlistModal');
+        const modalContent = modal.querySelector('.relative');
+        
+        // Add exit animation
+        modalContent.style.transform = 'scale(0.95)';
+        modalContent.style.opacity = '0';
+        
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            document.body.style.overflow = 'auto';
+            
+            // Reset all forms
+            document.getElementById('waitlistEmailForm').reset();
+            document.getElementById('waitlistOtpForm').reset();
+            document.getElementById('waitlistForm').reset();
+            document.getElementById('waitlistMessage').classList.add('hidden');
+            
+            // Reset to step 1
+            currentStep = 1;
+            showStep(1);
+            
+            // Reset modal content styles
+            modalContent.style.transform = '';
+            modalContent.style.opacity = '';
+        }, 200);
+    }
+
+    function showStep(step) {
+        // Hide all steps
+        document.getElementById('waitlistStep1').classList.add('hidden');
+        document.getElementById('waitlistStep2').classList.add('hidden');
+        document.getElementById('waitlistStep3').classList.add('hidden');
+        
+        // Show current step
+        document.getElementById(`waitlistStep${step}`).classList.remove('hidden');
+        
+        // Add step transition animation
+        const stepElement = document.getElementById(`waitlistStep${step}`);
+        stepElement.style.transform = 'translateX(20px)';
+        stepElement.style.opacity = '0';
+        setTimeout(() => {
+            stepElement.style.transform = 'translateX(0)';
+            stepElement.style.opacity = '1';
+        }, 100);
+    }
+
+    // Waitlist form submission
+    document.getElementById('waitlistForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        const data = Object.fromEntries(formData);
+        data.plan_slug = currentPlanSlug;
+        
+        const submitBtn = document.getElementById('waitlistSubmitBtn');
+        const btnText = document.getElementById('waitlistBtnText');
+        const btnLoading = document.getElementById('waitlistBtnLoading');
+        
+        // Show loading state
+        submitBtn.disabled = true;
+        btnText.classList.add('hidden');
+        btnLoading.classList.remove('hidden');
+        
+        try {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]');
+            if (!csrfToken) {
+                throw new Error('CSRF token not found');
+            }
+            
+            const response = await fetch('{{ route("waitlist.store") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken.getAttribute('content'),
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                // Show success message
+                document.getElementById('waitlistForm').classList.add('hidden');
+                document.getElementById('waitlistSuccess').classList.remove('hidden');
+            } else {
+                showNotification(result.message || 'Something went wrong. Please try again.', 'error');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            showNotification('Something went wrong. Please try again.', 'error');
+        } finally {
+            // Reset button state
+            submitBtn.disabled = false;
+            btnText.classList.remove('hidden');
+            btnLoading.classList.add('hidden');
+        }
+    });
+
+    // Notification system
+    function showNotification(message, type = 'info') {
+        const notification = document.createElement('div');
+        notification.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg transform transition-all duration-300 translate-x-full`;
+        
+        const colors = {
+            success: 'bg-green-500 text-white',
+            error: 'bg-red-500 text-white',
+            info: 'bg-blue-500 text-white'
+        };
+        
+        notification.className += ` ${colors[type]}`;
+        notification.innerHTML = `
+            <div class="flex items-center">
+                <span>${message}</span>
+                <button onclick="this.parentElement.parentElement.remove()" class="ml-4 text-white hover:text-gray-200">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            notification.classList.remove('translate-x-full');
+        }, 100);
+        
+        setTimeout(() => {
+            notification.classList.add('translate-x-full');
+            setTimeout(() => notification.remove(), 300);
+        }, 3000);
+    }
+
+    // Resend OTP
+    document.getElementById('waitlistResendBtn').addEventListener('click', async function() {
+        const submitBtn = this;
+        const originalText = submitBtn.textContent;
+        
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Sending...';
+        
+        try {
+            const formData = new FormData();
+            formData.append('email', verifiedEmail);
+            
+            // const response = await fetch('#', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                showNotification('New verification code sent!', 'success');
+            } else {
+                showNotification(data.message || 'Failed to resend code. Please try again.', 'error');
+            }
+        } catch (error) {
+            showNotification('Something went wrong. Please try again.', 'error');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+        }
+    });
+
+    // Step 3: Complete registration
+    document.getElementById('waitlistForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const submitBtn = document.getElementById('waitlistSubmitBtn');
+        const submitBtnText = submitBtn.querySelector('span');
+        const originalText = submitBtnText.innerHTML;
+        const formData = new FormData(this);
+        
+        // Disable submit button and show loading state
+        submitBtn.disabled = true;
+        submitBtn.classList.add('opacity-75', 'cursor-not-allowed');
+        submitBtnText.innerHTML = `
+            <svg class="w-5 h-5 mr-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+            </svg>
+            Joining Waitlist...
+        `;
+        
+        try {
+            // const response = await fetch('#', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                // Show success message
+                document.getElementById('waitlistSuccessMessage').textContent = data.message;
+                document.getElementById('waitlistMessage').classList.remove('hidden');
+                this.reset();
+                
+                // Add success animation to the success message
+                const successDiv = document.getElementById('waitlistMessage');
+                successDiv.style.transform = 'translateY(-10px)';
+                successDiv.style.opacity = '0';
+                setTimeout(() => {
+                    successDiv.style.transform = 'translateY(0)';
+                    successDiv.style.opacity = '1';
+                }, 100);
+                
+                // Close modal after 3 seconds
+                setTimeout(() => {
+                    closeWaitlistModal();
+                }, 3000);
+            } else {
+                showNotification(data.message || 'Something went wrong. Please try again.', 'error');
+            }
+        } catch (error) {
+            showNotification('Something went wrong. Please try again.', 'error');
+        } finally {
+            // Re-enable submit button
+            submitBtn.disabled = false;
+            submitBtn.classList.remove('opacity-75', 'cursor-not-allowed');
+            submitBtnText.innerHTML = originalText;
+        }
+    });
+
+    // OTP input formatting
+    document.getElementById('waitlistOtp').addEventListener('input', function(e) {
+        // Only allow numbers
+        this.value = this.value.replace(/[^0-9]/g, '');
+        
+        // Auto-submit when 6 digits are entered
+        if (this.value.length === 6) {
+            document.getElementById('waitlistOtpForm').dispatchEvent(new Event('submit'));
+        }
+    });
+
+    // Close modal when clicking outside
+    document.getElementById('waitlistModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeWaitlistModal();
+        }
+    });
+
+    // Close modal with Escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && !document.getElementById('waitlistModal').classList.contains('hidden')) {
+            closeWaitlistModal();
+        }
+    });
+
+    // Add input focus animations
+    document.querySelectorAll('#waitlistEmailForm input, #waitlistOtpForm input, #waitlistForm input, #waitlistForm textarea').forEach(input => {
+        input.addEventListener('focus', function() {
+            this.parentElement.classList.add('transform', 'scale-105');
+        });
+        
+        input.addEventListener('blur', function() {
+            this.parentElement.classList.remove('transform', 'scale-105');
+        });
+    });
+
+    // Notification function
+    function showNotification(message, type = 'info') {
+        const notification = document.createElement('div');
+        notification.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg transform transition-all duration-300 ${
+            type === 'error' ? 'bg-red-500 text-white' : 
+            type === 'success' ? 'bg-green-500 text-white' : 
+            'bg-blue-500 text-white'
+        }`;
+        notification.textContent = message;
+        
+        document.body.appendChild(notification);
+        
+        // Animate in
+        setTimeout(() => {
+            notification.style.transform = 'translateX(0)';
+            notification.style.opacity = '1';
+        }, 100);
+        
+        // Remove after 4 seconds
+        setTimeout(() => {
+            notification.style.transform = 'translateX(100%)';
+            notification.style.opacity = '0';
+            setTimeout(() => {
+                if (document.body.contains(notification)) {
+                    document.body.removeChild(notification);
+                }
+            }, 300);
+        }, 4000);
+    }
+
+    // Add smooth transitions to modal content
+    document.addEventListener('DOMContentLoaded', function() {
+        const modalContent = document.querySelector('#waitlistModal .relative');
+        modalContent.style.transition = 'all 0.3s ease-out';
+        modalContent.style.transform = 'scale(0.95)';
+        modalContent.style.opacity = '0';
+        
+        // Add step transitions
+        document.querySelectorAll('[id^="waitlistStep"]').forEach(step => {
+            step.style.transition = 'all 0.3s ease-out';
+        });
+    });
+
+    // Payment functionality
+    async function initiatePayment(planId, planName, amount, currency) {
+        try {
+            // Show loading state
+            showNotification('Creating payment order...', 'info');
+            
+            // Create payment order
+            const response = await fetch('{{ route("payment.create-order") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                },
+                body: JSON.stringify({
+                    plan_id: planId
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (!data.success) {
+                showNotification(data.message || 'Failed to create payment order', 'error');
+                return;
+            }
+            
+            // Configure RazorPay options
+            const options = {
+                key: data.key_id,
+                amount: data.amount * 100, // Convert to paise
+                currency: data.currency,
+                name: data.name,
+                description: data.description,
+                order_id: data.order.id,
+                prefill: data.prefill,
+                theme: {
+                    color: '#4f46e5'
+                },
+                handler: function(response) {
+                    // Payment successful
+                    const form = document.createElement('form');
+                    form.method = 'GET';
+                    form.action = '{{ route("payment.success") }}';
+                    
+                    const paymentId = document.createElement('input');
+                    paymentId.type = 'hidden';
+                    paymentId.name = 'razorpay_payment_id';
+                    paymentId.value = response.razorpay_payment_id;
+                    form.appendChild(paymentId);
+                    
+                    const orderId = document.createElement('input');
+                    orderId.type = 'hidden';
+                    orderId.name = 'razorpay_order_id';
+                    orderId.value = response.razorpay_order_id;
+                    form.appendChild(orderId);
+                    
+                    const signature = document.createElement('input');
+                    signature.type = 'hidden';
+                    signature.name = 'razorpay_signature';
+                    signature.value = response.razorpay_signature;
+                    form.appendChild(signature);
+                    
+                    document.body.appendChild(form);
+                    form.submit();
+                },
+                modal: {
+                    ondismiss: function() {
+                        showNotification('Payment cancelled', 'info');
+                    }
+                }
+            };
+            
+            // Open RazorPay checkout
+            const rzp = new Razorpay(options);
+            rzp.open();
+            
+        } catch (error) {
+            console.error('Payment error:', error);
+            showNotification('Something went wrong. Please try again.', 'error');
+        }
+    }
+
+    // Load RazorPay script dynamically
+    function loadRazorPayScript() {
+        return new Promise((resolve, reject) => {
+            if (window.Razorpay) {
+                resolve();
+                return;
+            }
+            
+            const script = document.createElement('script');
+            script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+            script.onload = resolve;
+            script.onerror = reject;
+            document.head.appendChild(script);
+        });
+    }
+
+    // Initialize RazorPay when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        loadRazorPayScript().catch(error => {
+            console.error('Failed to load RazorPay script:', error);
+            showNotification('Payment system unavailable', 'error');
+        });
+    });
+    </script>
 </body>
 </html>

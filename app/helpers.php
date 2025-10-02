@@ -45,3 +45,46 @@ if (! function_exists('hasPermission')) {
         return $user ? $user->can($permission) : false;
     }
 }
+
+// Currency helper functions
+if (! function_exists('currency')) {
+    function currency($amount, $currency = null)
+    {
+        return \App\Services\CurrencyService::formatAmount($amount, $currency);
+    }
+}
+
+if (! function_exists('currencySymbol')) {
+    function currencySymbol($currency = null)
+    {
+        return \App\Services\CurrencyService::getCurrencySymbol($currency);
+    }
+}
+
+if (! function_exists('currencyCode')) {
+    function currencyCode($currency = null)
+    {
+        return \App\Services\CurrencyService::getCurrencyCode($currency);
+    }
+}
+
+if (! function_exists('currencyRange')) {
+    function currencyRange($minAmount, $maxAmount, $currency = null)
+    {
+        return \App\Services\CurrencyService::formatAmountRange($minAmount, $maxAmount, $currency);
+    }
+}
+
+if (! function_exists('currentCurrency')) {
+    function currentCurrency()
+    {
+        return \App\Services\CurrencyService::getCurrentCurrency();
+    }
+}
+
+if (! function_exists('subscriptionPrice')) {
+    function subscriptionPrice($price, $planCurrency = 'USD', $displayCurrency = null)
+    {
+        return \App\Services\CurrencyService::formatSubscriptionPrice($price, $planCurrency, $displayCurrency);
+    }
+}

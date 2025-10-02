@@ -14,6 +14,12 @@ class ApplyController extends Controller
     {
         $tenantModel = tenant();
         
+        // Check if careers page is enabled
+        if (!$tenantModel->careers_enabled) {
+            $branding = $tenantModel->branding;
+            return view('careers.disabled', ['tenant' => $tenantModel, 'branding' => $branding]);
+        }
+        
         // Ensure job belongs to the current tenant
         if ($job->tenant_id !== $tenantModel->id) {
             abort(404);
@@ -33,6 +39,12 @@ class ApplyController extends Controller
     public function store(ApplyRequest $request, string $tenant, JobOpening $job, UpsertCandidateAndApply $upsertAction)
     {
         $tenantModel = tenant();
+        
+        // Check if careers page is enabled
+        if (!$tenantModel->careers_enabled) {
+            $branding = $tenantModel->branding;
+            return view('careers.disabled', ['tenant' => $tenantModel, 'branding' => $branding]);
+        }
         
         // Ensure job belongs to the current tenant
         if ($job->tenant_id !== $tenantModel->id) {
@@ -107,8 +119,16 @@ class ApplyController extends Controller
 
     public function success(string $tenant, JobOpening $job)
     {
+        $tenantModel = tenant();
+        
+        // Check if careers page is enabled
+        if (!$tenantModel->careers_enabled) {
+            $branding = $tenantModel->branding;
+            return view('careers.disabled', ['tenant' => $tenantModel, 'branding' => $branding]);
+        }
+        
         // Ensure job belongs to the current tenant
-        if ($job->tenant_id !== tenant()->id) {
+        if ($job->tenant_id !== $tenantModel->id) {
             abort(404);
         }
 

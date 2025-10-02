@@ -2,7 +2,7 @@
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="h-full">
 <head>
     @php
-        $seoTitle = $pageTitle ?? 'TalentLit – Smarter Recruitment Platform';
+        $seoTitle = $pageTitle ?? (isset($title) ? $title . ' – TalentLit' : 'TalentLit – Smarter Recruitment Platform');
         $seoDescription = $pageDescription ?? 'TalentLit is a modern Applicant Tracking System (ATS) that helps organizations streamline recruitment, manage candidates, and hire top talent efficiently.';
         $tenant = $tenant ?? null;
     @endphp
@@ -32,7 +32,11 @@
 
     <!-- Main content -->
     <main>
-        {{ $slot }}
+        @isset($slot)
+            {{ $slot }}
+        @else
+            @yield('content')
+        @endisset
     </main>
 
     <!-- Footer -->

@@ -9,6 +9,7 @@ use App\Http\Controllers\ContactController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\SubscriptionController;
+use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\Tenant\CandidateController;
 use App\Http\Controllers\Tenant\CandidateNoteController;
 use App\Http\Controllers\Tenant\CandidateTagController;
@@ -38,6 +39,24 @@ Route::post('/invitation/{token}', [InvitationController::class, 'accept'])->nam
 
 // Subscription routes (public)
 Route::get('/pricing', [SubscriptionController::class, 'pricing'])->name('subscription.pricing');
+
+// Waitlist routes (authenticated users only)
+Route::middleware('auth')->group(function () {
+    Route::post('/waitlist', [App\Http\Controllers\WaitlistController::class, 'store'])->name('waitlist.store');
+    Route::get('/waitlist/check', [App\Http\Controllers\WaitlistController::class, 'check'])->name('waitlist.check');
+});
+
+// Payment routes (public)
+Route::middleware('auth')->group(function () {
+    Route::post('/payment/create-order', [PaymentController::class, 'createOrder'])->name('payment.create-order');
+    Route::get('/payment/success', [PaymentController::class, 'success'])->name('payment.success');
+    Route::get('/payment/failure', [PaymentController::class, 'failure'])->name('payment.failure');
+    Route::get('/payment/status', [PaymentController::class, 'status'])->name('payment.status');
+    Route::get('/payment/check-pro-plan', [PaymentController::class, 'checkProPlanAvailability'])->name('payment.check-pro-plan');
+});
+
+// Webhook routes (no auth required)
+Route::post('/webhook/razorpay', [PaymentController::class, 'webhook'])->name('payment.webhook');
 
 // SEO Routes
 Route::get('/sitemap.xml', [SitemapController::class, 'index'])->name('sitemap');
@@ -222,11 +241,14 @@ Route::middleware(['capture.tenant', 'tenant', 'auth'])->group(function () {
         // General Settings
         Route::get('/{tenant}/settings/general', [App\Http\Controllers\Tenant\GeneralSettingsController::class, 'edit'])->name('tenant.settings.general');
         Route::put('/{tenant}/settings/general', [App\Http\Controllers\Tenant\GeneralSettingsController::class, 'update'])->name('tenant.settings.general.update');
+        Route::put('/{tenant}/settings/general/smtp', [App\Http\Controllers\Tenant\GeneralSettingsController::class, 'updateSmtp'])->name('tenant.settings.general.smtp');
+        Route::post('/{tenant}/settings/general/test-email', [App\Http\Controllers\Tenant\GeneralSettingsController::class, 'testEmail'])->name('tenant.settings.general.test-email');
+        Route::post('/{tenant}/settings/general/get-password', [App\Http\Controllers\Tenant\GeneralSettingsController::class, 'getPassword'])->name('tenant.settings.general.get-password');
     });
 
     // User Management Routes - Owner, Admin only
     Route::middleware('role:Owner|Admin')->group(function () {
-        Route::post('/{tenant}/users', [App\Http\Controllers\Tenant\UserManagementController::class, 'store'])->name('tenant.users.store');
+        Route::post('/{tenant}/users', [App\Http\Controllers\Tenant\UserManagementController::class, 'store'])->middleware('subscription.limit:max_users')->name('tenant.users.store');
         Route::put('/{tenant}/users/{user}', [App\Http\Controllers\Tenant\UserManagementController::class, 'update'])->name('tenant.users.update');
         Route::delete('/{tenant}/users/{user}', [App\Http\Controllers\Tenant\UserManagementController::class, 'destroy'])->name('tenant.users.destroy');
         Route::post('/{tenant}/users/{user}/resend-invitation', [App\Http\Controllers\Tenant\UserManagementController::class, 'resendInvitation'])->name('tenant.users.resend-invitation');
@@ -257,12 +279,21 @@ Route::middleware(['capture.tenant', 'tenant', 'auth'])->group(function () {
         Route::delete('/{tenant}/email-templates/{template}', [App\Http\Controllers\Tenant\EmailTemplateController::class, 'destroy'])->name('tenant.email-templates.destroy');
         Route::get('/{tenant}/email-templates/{template}/preview', [App\Http\Controllers\Tenant\EmailTemplateController::class, 'preview'])->name('tenant.email-templates.preview');
         Route::post('/{tenant}/email-templates/{template}/duplicate', [App\Http\Controllers\Tenant\EmailTemplateController::class, 'duplicate'])->name('tenant.email-templates.duplicate');
+        Route::post('/{tenant}/email-templates/load-premade', [App\Http\Controllers\Tenant\EmailTemplateController::class, 'loadPremadeTemplate'])->name('tenant.email-templates.load-premade');
     });
+
+    // Currency Demo Route (for testing)
+    Route::get('/{tenant}/currency-demo', function ($tenant) {
+        return view('currency-demo');
+    })->name('tenant.currency-demo');
 
     // Account Routes
     Route::prefix('{tenant}/account')->group(function () {
         Route::view('/profile', 'tenant.account.profile')->name('account.profile');
-        Route::view('/settings', 'tenant.account.settings')->name('account.settings');
+        Route::get('/settings', [App\Http\Controllers\Tenant\AccountSettingsController::class, 'index'])->name('account.settings');
+        Route::put('/settings/notifications', [App\Http\Controllers\Tenant\AccountSettingsController::class, 'updateNotifications'])->name('account.settings.notifications');
+        Route::put('/settings/password', [App\Http\Controllers\Tenant\AccountSettingsController::class, 'updatePassword'])->name('account.settings.password');
+        Route::put('/settings/email', [App\Http\Controllers\Tenant\AccountSettingsController::class, 'updateEmail'])->name('account.settings.email');
     });
 });
 

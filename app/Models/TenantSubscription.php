@@ -16,6 +16,9 @@ class TenantSubscription extends Model
         'expires_at',
         'cancelled_at',
         'payment_method',
+        'payment_id',
+        'amount_paid',
+        'currency',
         'external_subscription_id',
         'metadata',
     ];
@@ -24,6 +27,7 @@ class TenantSubscription extends Model
         'starts_at' => 'datetime',
         'expires_at' => 'datetime',
         'cancelled_at' => 'datetime',
+        'amount_paid' => 'decimal:2',
         'metadata' => 'array',
     ];
 

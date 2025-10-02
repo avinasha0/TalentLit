@@ -30,6 +30,9 @@ class User extends Authenticatable
         'invitation_sent_at',
         'invitation_accepted_at',
         'is_invited',
+        'email_weekly_summaries',
+        'notify_new_applications',
+        'send_marketing_emails',
     ];
 
     /**
@@ -55,6 +58,9 @@ class User extends Authenticatable
             'invitation_sent_at' => 'datetime',
             'invitation_accepted_at' => 'datetime',
             'is_invited' => 'boolean',
+            'email_weekly_summaries' => 'boolean',
+            'notify_new_applications' => 'boolean',
+            'send_marketing_emails' => 'boolean',
         ];
     }
 

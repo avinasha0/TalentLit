@@ -25,6 +25,14 @@ class Tenant extends Model
         'consent_text',
         'timezone',
         'locale',
+        'currency',
+        'smtp_host',
+        'smtp_port',
+        'smtp_username',
+        'smtp_password',
+        'smtp_encryption',
+        'smtp_from_address',
+        'smtp_from_name',
     ];
 
     protected $keyType = 'string';
@@ -106,6 +114,15 @@ class Tenant extends Model
     public function currentPlan()
     {
         return $this->activeSubscription?->plan;
+    }
+
+    /**
+     * Check if tenant has Free plan.
+     */
+    public function hasFreePlan(): bool
+    {
+        $subscription = $this->activeSubscription;
+        return $subscription && $subscription->plan && $subscription->plan->slug === 'free';
     }
 
     /**

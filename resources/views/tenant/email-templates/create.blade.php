@@ -76,6 +76,35 @@
                         </div>
                     </x-card>
 
+                    <!-- Premade Templates -->
+                    @if(!empty($premadeTemplates))
+                    <x-card>
+                        <x-slot name="header">
+                            <h3 class="text-lg font-medium text-black">Choose a Premade Template</h3>
+                            <p class="text-sm text-gray-600 mt-1">Select a template to get started quickly, or create your own from scratch.</p>
+                        </x-slot>
+
+                        <div class="space-y-3">
+                            @foreach($premadeTemplates as $index => $template)
+                                <div class="border border-gray-200 rounded-lg p-4 hover:border-blue-300 hover:bg-blue-50 transition-colors cursor-pointer" 
+                                     onclick="loadPremadeTemplate({{ $index }})">
+                                    <div class="flex items-start justify-between">
+                                        <div class="flex-1">
+                                            <h4 class="text-sm font-medium text-gray-900">{{ $template['name'] }}</h4>
+                                            <p class="text-xs text-gray-600 mt-1">{{ Str::limit($template['subject'], 60) }}</p>
+                                            <p class="text-xs text-gray-500 mt-2">{{ Str::limit(strip_tags($template['body']), 100) }}</p>
+                                        </div>
+                                        <button type="button" 
+                                                class="ml-4 px-3 py-1 text-xs font-medium text-blue-600 bg-blue-100 rounded-md hover:bg-blue-200 transition-colors">
+                                            Use Template
+                                        </button>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </x-card>
+                    @endif
+
                     <!-- Email Content -->
                     <x-card>
                         <x-slot name="header">
@@ -89,7 +118,7 @@
                                        name="subject" 
                                        id="subject" 
                                        value="{{ old('subject') }}"
-                                       placeholder="e.g., Thank you for your application - {{ job_title }}"
+                                       placeholder="e.g., Thank you for your application - {!! '{{' !!} job_title {!! '}}' !!}"
                                        class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                                        required>
                                 @error('subject')
@@ -103,7 +132,7 @@
                                           id="body" 
                                           rows="15"
                                           class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                                          placeholder="Write your email content here. Use variables like {{ candidate_name }} to personalize the message."
+                                          placeholder="Write your email content here. Use variables like {!! '{{' !!} candidate_name {!! '}}' !!} to personalize the message."
                                           required>{{ old('body') }}</textarea>
                                 @error('body')
                                     <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
@@ -125,11 +154,11 @@
                             @foreach($variables as $key => $description)
                                 <div class="flex items-center justify-between p-2 bg-gray-50 rounded">
                                     <div>
-                                        <code class="text-sm font-mono text-blue-600">{{ $key }}</code>
+                                        <code class="text-sm font-mono text-blue-600">@{{ $key }}</code>
                                         <p class="text-xs text-gray-600">{{ $description }}</p>
                                     </div>
                                     <button type="button" 
-                                            onclick="insertVariable('{{ $key }}')"
+                                            onclick="insertVariable('@{{ $key }}')"
                                             class="text-blue-600 hover:text-blue-700 text-sm">
                                         Insert
                                     </button>
@@ -188,9 +217,10 @@
         function updateVariables() {
             const type = document.getElementById('type').value;
             
-            // This would typically make an AJAX call to get variables for the selected type
-            // For now, we'll use the initial variables
-            updateVariablesList(variables);
+            // Reload the page with the new type to get updated variables and premade templates
+            const url = new URL(window.location);
+            url.searchParams.set('type', type);
+            window.location.href = url.toString();
         }
 
         function updateVariablesList(vars) {
@@ -202,11 +232,11 @@
                 div.className = 'flex items-center justify-between p-2 bg-gray-50 rounded';
                 div.innerHTML = `
                     <div>
-                        <code class="text-sm font-mono text-blue-600">{{${key}}}</code>
+                        <code class="text-sm font-mono text-blue-600">{{` + key + `}}</code>
                         <p class="text-xs text-gray-600">${description}</p>
                     </div>
                     <button type="button" 
-                            onclick="insertVariable('{{${key}}}')"
+                            onclick="insertVariable('{{` + key + `}}')"
                             class="text-blue-600 hover:text-blue-700 text-sm">
                         Insert
                     </button>
@@ -227,46 +257,126 @@
         }
 
         function previewTemplate() {
-            const subject = document.getElementById('subject').value;
-            const body = document.getElementById('body').value;
-            
-            // Sample data for preview
-            const sampleData = {
-                'candidate_name': 'John Doe',
-                'candidate_email': 'john.doe@example.com',
-                'job_title': 'Senior Developer',
-                'company_name': '{{ $tenant->name ?? "Your Company" }}',
-                'application_date': '{{ now()->format("M j, Y") }}',
-                'stage_name': 'Interview',
-                'previous_stage': 'Screen',
-                'message': 'Thank you for your interest in this position.',
-                'interview_date': '{{ now()->addDays(7)->format("M j, Y") }}',
-                'interview_time': '2:00 PM',
-                'interview_location': 'Office or Video Call',
-                'interviewer_name': 'Jane Smith',
-                'interview_notes': 'Please bring your portfolio and be ready to discuss your experience.',
-                'cancellation_reason': 'Scheduling conflict',
-            };
+            try {
+                const subject = document.getElementById('subject').value || '';
+                const body = document.getElementById('body').value || '';
+                
+                // Sample data for preview
+                const sampleData = {
+                    'candidate_name': 'John Doe',
+                    'candidate_email': 'john.doe@example.com',
+                    'job_title': 'Senior Developer',
+                    'company_name': '{{ $tenant->name ?? "Your Company" }}',
+                    'application_date': '{{ now()->format("M j, Y") }}',
+                    'stage_name': 'Interview',
+                    'previous_stage': 'Screen',
+                    'message': 'Thank you for your interest in this position.',
+                    'interview_date': '{{ now()->addDays(7)->format("M j, Y") }}',
+                    'interview_time': '2:00 PM',
+                    'interview_location': 'Office or Video Call',
+                    'interviewer_name': 'Jane Smith',
+                    'interview_notes': 'Please bring your portfolio and be ready to discuss your experience.',
+                    'cancellation_reason': 'Scheduling conflict',
+                };
 
-            let previewSubject = subject;
-            let previewBody = body;
+                let previewSubject = subject;
+                let previewBody = body;
 
-            // Replace variables
-            Object.entries(sampleData).forEach(([key, value]) => {
-                const regex = new RegExp(`{{${key}}}`, 'g');
-                previewSubject = previewSubject.replace(regex, value);
-                previewBody = previewBody.replace(regex, value);
-            });
+                // Replace variables using simple string replacement
+                Object.entries(sampleData).forEach(([key, value]) => {
+                    const variablePattern = '{{' + key + '}}';
+                    previewSubject = previewSubject.replaceAll(variablePattern, value);
+                    previewBody = previewBody.replaceAll(variablePattern, value);
+                });
 
-            document.getElementById('preview-subject').textContent = previewSubject;
-            document.getElementById('preview-body').textContent = previewBody;
-            document.getElementById('preview-content').classList.remove('hidden');
+                // Update preview content
+                const previewSubjectEl = document.getElementById('preview-subject');
+                const previewBodyEl = document.getElementById('preview-body');
+                const previewContentEl = document.getElementById('preview-content');
+                
+                if (previewSubjectEl) {
+                    previewSubjectEl.textContent = previewSubject || '(No subject entered)';
+                }
+                
+                if (previewBodyEl) {
+                    previewBodyEl.textContent = previewBody || '(No body content entered)';
+                }
+                
+                if (previewContentEl) {
+                    previewContentEl.classList.remove('hidden');
+                }
+                
+                console.log('Preview updated:', { previewSubject, previewBody });
+            } catch (error) {
+                console.error('Preview error:', error);
+                alert('Error generating preview: ' + error.message);
+            }
         }
 
         // Update variables when type changes
         document.getElementById('type').addEventListener('change', function() {
             // In a real implementation, you'd fetch variables for the selected type
             // For now, we'll keep the current variables
+        });
+
+        // Load premade template
+        function loadPremadeTemplate(templateIndex) {
+            const type = document.getElementById('type').value;
+            
+            fetch('{{ route("tenant.email-templates.load-premade", $tenant->slug) }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                },
+                body: JSON.stringify({
+                    type: type,
+                    template_index: templateIndex
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert('Error loading template: ' + data.error);
+                    return;
+                }
+                
+                // Populate the form with the premade template
+                document.getElementById('name').value = data.name;
+                document.getElementById('subject').value = data.subject;
+                document.getElementById('body').value = data.body;
+                
+                // Scroll to the email content section
+                document.getElementById('body').scrollIntoView({ behavior: 'smooth' });
+                
+                // Show success message
+                const message = document.createElement('div');
+                message.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-md shadow-lg z-50';
+                message.textContent = 'Template loaded successfully!';
+                document.body.appendChild(message);
+                
+                setTimeout(() => {
+                    message.remove();
+                }, 3000);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error loading template. Please try again.');
+            });
+        }
+
+        // Debug: Test if preview button exists and is clickable
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM loaded, checking preview button...');
+            const previewBtn = document.querySelector('button[onclick="previewTemplate()"]');
+            if (previewBtn) {
+                console.log('Preview button found:', previewBtn);
+                previewBtn.addEventListener('click', function(e) {
+                    console.log('Preview button clicked!');
+                });
+            } else {
+                console.log('Preview button not found!');
+            }
         });
     </script>
 </x-app-layout>

@@ -50,7 +50,7 @@
                         @if($plan->isFree())
                             <span class="ml-1 text-green-600 font-semibold">(Free)</span>
                         @else
-                            <span class="ml-1 font-semibold">(${{ number_format($plan->price) }}/month)</span>
+                            <span class="ml-1 font-semibold">(@subscriptionPrice($plan->price, $plan->currency)/month)</span>
                         @endif
                     </div>
                 @endif
@@ -164,7 +164,7 @@
                                     @if($plan->isFree())
                                         <span class="text-green-600">(Free)</span>
                                     @else
-                                        <span class="text-gray-500">(${{ number_format($plan->price) }})</span>
+                                        <span class="text-gray-500">(@subscriptionPrice($plan->price, $plan->currency))</span>
                                     @endif
                                 </dd>
                             </dl>

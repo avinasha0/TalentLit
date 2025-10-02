@@ -17,14 +17,35 @@
                 <p class="mt-1 text-sm text-white">
                     Manage your team members and their roles within the organization.
                 </p>
+                @if($maxUsers !== -1)
+                    <div class="mt-2 flex items-center space-x-2">
+                        <span class="text-xs text-white/80">
+                            {{ $currentUserCount }} / {{ $maxUsers }} users
+                        </span>
+                        <div class="w-20 bg-white/20 rounded-full h-1.5">
+                            <div class="bg-white h-1.5 rounded-full transition-all duration-300" 
+                                 style="width: {{ $maxUsers > 0 ? min(100, ($currentUserCount / $maxUsers) * 100) : 0 }}%"></div>
+                        </div>
+                    </div>
+                @endif
             </div>
-                    <button onclick="openCreateUserModal()"
-                            class="inline-flex items-center px-6 py-3 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 transform hover:scale-105 hover:shadow-lg">
-                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                        </svg>
-                        Add Team Member
-                    </button>
+                    @if($canAddUsers)
+                        <button onclick="openCreateUserModal()"
+                                class="inline-flex items-center px-6 py-3 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 transform hover:scale-105 hover:shadow-lg">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                            </svg>
+                            Add Team Member
+                        </button>
+                    @else
+                        <button onclick="showUserLimitReached()"
+                                class="inline-flex items-center px-6 py-3 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-gray-400 to-gray-500 cursor-not-allowed opacity-75">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                            </svg>
+                            Add Team Member
+                        </button>
+                    @endif
         </div>
 
         <!-- Team Members List -->
@@ -109,7 +130,7 @@
                     title="No team members"
                     description="Add your first team member to get started."
                     actionText="Add Team Member"
-                    onclick="openCreateUserModal()"
+                    onclick="{{ $canAddUsers ? 'openCreateUserModal()' : 'showUserLimitReached()' }}"
                 />
             @endif
         </x-card>
@@ -490,6 +511,24 @@
                 form.appendChild(methodField);
                 document.body.appendChild(form);
                 form.submit();
+            }
+        }
+
+        function showUserLimitReached() {
+            const currentCount = {{ $currentUserCount }};
+            const maxUsers = {{ $maxUsers === -1 ? 'Infinity' : $maxUsers }};
+            
+            let message = `You've reached the user limit for your current plan. `;
+            if (maxUsers !== Infinity) {
+                message += `You currently have ${currentCount} users out of ${maxUsers} allowed. `;
+            }
+            message += `Please upgrade your subscription plan to add more team members.`;
+            
+            alert(message);
+            
+            // Redirect to tenant-specific subscription page
+            if (confirm('Would you like to view available plans?')) {
+                window.location.href = '{{ route("subscription.show", $tenantModel->slug) }}';
             }
         }
     </script>

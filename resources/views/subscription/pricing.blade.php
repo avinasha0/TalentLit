@@ -1,208 +1,1193 @@
-@extends('layouts.app')
+@extends('layouts.public')
 
-@section('title', 'Pricing Plans - HireHub')
+@section('title', 'Pricing Plans - TalentLit')
 
 @section('content')
-<div class="min-h-screen bg-gray-50 py-12">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <!-- Header -->
-        <div class="text-center mb-16">
-            <h1 class="text-4xl font-bold text-gray-900 sm:text-5xl">
-                Choose Your Plan
+<!-- Hero Section -->
+<section class="relative bg-gradient-to-br from-indigo-600 via-purple-600 to-purple-800 overflow-hidden">
+    <!-- Background Pattern -->
+    <div class="absolute inset-0">
+        <div class="absolute inset-0 bg-gradient-to-r from-indigo-600 to-purple-600 opacity-90"></div>
+        <svg class="absolute inset-0 w-full h-full" viewBox="0 0 1000 1000" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                    <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+                </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#grid)"/>
+        </svg>
+    </div>
+    
+    <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-32">
+        <div class="text-center text-white">
+            <h1 class="text-4xl md:text-6xl font-bold mb-6 leading-tight">
+                Simple, <span class="text-yellow-300">Transparent</span> Pricing
             </h1>
-            <p class="mt-4 text-xl text-gray-600 max-w-3xl mx-auto">
-                Start with our free plan and upgrade as your team grows. All plans include our core recruitment features.
+            <p class="text-xl md:text-2xl mb-8 text-indigo-100 leading-relaxed max-w-4xl mx-auto">
+                Choose the perfect plan for your team. Start free and scale as you grow. 
+                <span class="font-semibold text-white">No hidden fees, no surprises.</span>
+            </p>
+            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                <a href="#pricing" 
+                   class="bg-white text-indigo-600 px-8 py-4 rounded-lg text-lg font-semibold hover:bg-gray-50 transition-all duration-200 shadow-xl hover:shadow-2xl transform hover:-translate-y-1">
+                    View Plans
+                </a>
+                <a href="#features" 
+                   class="border-2 border-white text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-white hover:text-indigo-600 transition-all duration-200">
+                    See Features
+                </a>
+            </div>
+            <p class="text-sm text-indigo-200 mt-6">
+                ✨ 14-day free trial • No credit card required • Cancel anytime
             </p>
         </div>
+    </div>
+</section>
+
+<!-- Pricing Cards Section -->
+<section id="pricing" class="py-20 bg-gray-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
         <!-- Pricing Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-12">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-12 max-w-6xl mx-auto">
             @foreach($plans as $plan)
-            <div class="relative bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden {{ $plan->is_popular ? 'ring-2 ring-indigo-500 scale-105' : '' }}">
+            <div class="relative bg-white rounded-3xl shadow-2xl border border-gray-200 overflow-hidden hover:shadow-3xl transition-all duration-300 {{ $plan->is_popular ? 'ring-4 ring-indigo-500 scale-105 z-10' : 'hover:scale-105' }}">
                 @if($plan->is_popular)
-                <div class="absolute top-0 left-0 right-0 bg-indigo-500 text-white text-center py-2 text-sm font-semibold">
-                    Most Popular
+                <div class="absolute top-0 left-0 right-0 bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-center py-3 text-sm font-bold">
+                    ⭐ Most Popular
                 </div>
                 @endif
 
-                <div class="p-8 {{ $plan->is_popular ? 'pt-12' : '' }}">
+                <div class="p-8 {{ $plan->is_popular ? 'pt-16' : 'pt-8' }}">
                     <!-- Plan Header -->
                     <div class="text-center mb-8">
-                        <h3 class="text-2xl font-bold text-gray-900">{{ $plan->name }}</h3>
-                        <p class="mt-2 text-gray-600">{{ $plan->description }}</p>
+                        <div class="w-16 h-16 mx-auto mb-4 {{ $plan->is_popular ? 'bg-gradient-to-r from-indigo-600 to-purple-600' : 'bg-gradient-to-r from-gray-600 to-gray-700' }} rounded-2xl flex items-center justify-center">
+                            @if($plan->isFree())
+                                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                                </svg>
+                            @else
+                                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                                </svg>
+                            @endif
+                        </div>
+                        <h3 class="text-2xl font-bold text-gray-900 mb-2">{{ $plan->name }}</h3>
+                        <p class="text-gray-600 mb-6">{{ $plan->description }}</p>
                         
-                        <div class="mt-6">
-                            <span class="text-5xl font-bold text-gray-900">
-                                ${{ number_format($plan->price, 0) }}
-                            </span>
-                            <span class="text-gray-600">/{{ $plan->billing_cycle }}</span>
+                        <div class="mb-6">
+                            @if($plan->requiresContactForPricing())
+                                <span class="text-4xl font-bold text-gray-900">Contact for Pricing</span>
+                            @else
+                                <span class="text-6xl font-bold text-gray-900">
+                                    @subscriptionPrice($plan->price, $plan->currency)
+                                </span>
+                                <span class="text-gray-600 text-lg">/{{ $plan->billing_cycle }}</span>
+                            @endif
                         </div>
                     </div>
 
                     <!-- Features -->
                     <div class="space-y-4 mb-8">
-                        <div class="flex items-center">
-                            <svg class="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
-                            </svg>
-                            <span class="text-gray-700">
-                                {{ $plan->max_users == -1 ? 'Unlimited' : $plan->max_users }} Users
-                            </span>
+                        <!-- Core Features -->
+                        <div class="border-b border-gray-100 pb-4">
+                            <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Core Features</h4>
+                            
+                            <div class="space-y-3">
+                                <div class="flex items-center">
+                                    <div class="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                                        <svg class="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                                        </svg>
+                                    </div>
+                                    <span class="text-gray-700 font-medium">
+                                        {{ $plan->max_users == -1 ? 'Unlimited' : $plan->max_users }} Team Members
+                                    </span>
+                                </div>
+
+                                <div class="flex items-center">
+                                    <div class="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                                        <svg class="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                                        </svg>
+                                    </div>
+                                    <span class="text-gray-700 font-medium">
+                                        {{ $plan->max_job_openings == -1 ? 'Unlimited' : $plan->max_job_openings }} Job Postings
+                                    </span>
+                                </div>
+
+                                <div class="flex items-center">
+                                    <div class="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                                        <svg class="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                                        </svg>
+                                    </div>
+                                    <span class="text-gray-700 font-medium">
+                                        {{ $plan->max_candidates == -1 ? 'Unlimited' : number_format($plan->max_candidates) }} Candidates
+                                    </span>
+                                </div>
+
+                                <div class="flex items-center">
+                                    <div class="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                                        <svg class="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                                        </svg>
+                                    </div>
+                                    <span class="text-gray-700 font-medium">
+                                        {{ $plan->max_applications_per_month == -1 ? 'Unlimited' : number_format($plan->max_applications_per_month) }} Applications/Month
+                                    </span>
+                                </div>
+
+                                <div class="flex items-center">
+                                    <div class="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                                        <svg class="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                                        </svg>
+                                    </div>
+                                    <span class="text-gray-700 font-medium">
+                                        {{ $plan->max_interviews_per_month == -1 ? 'Unlimited' : number_format($plan->max_interviews_per_month) }} Interviews/Month
+                                    </span>
+                                </div>
+
+                                <div class="flex items-center">
+                                    <div class="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                                        <svg class="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                                        </svg>
+                                    </div>
+                                    <span class="text-gray-700 font-medium">
+                                        {{ $plan->max_storage_gb }}GB File Storage
+                                    </span>
+                                </div>
+                            </div>
                         </div>
 
-                        <div class="flex items-center">
-                            <svg class="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
-                            </svg>
-                            <span class="text-gray-700">
-                                {{ $plan->max_job_openings == -1 ? 'Unlimited' : $plan->max_job_openings }} Job Openings
-                            </span>
-                        </div>
+                        <!-- Advanced Features -->
+                        @if($plan->analytics_enabled || $plan->custom_branding || $plan->api_access || $plan->priority_support || $plan->white_label)
+                        <div>
+                            <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Advanced Features</h4>
+                            <div class="space-y-3">
+                                @if($plan->analytics_enabled)
+                                <div class="flex items-center">
+                                    <div class="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                                        <svg class="w-3 h-3 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                                        </svg>
+                                    </div>
+                                    <span class="text-gray-700 font-medium">Advanced Analytics & Reports</span>
+                                </div>
+                                @endif
 
-                        <div class="flex items-center">
-                            <svg class="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
-                            </svg>
-                            <span class="text-gray-700">
-                                {{ $plan->max_candidates == -1 ? 'Unlimited' : number_format($plan->max_candidates) }} Candidates
-                            </span>
-                        </div>
+                                @if($plan->custom_branding)
+                                <div class="flex items-center">
+                                    <div class="w-5 h-5 bg-purple-100 rounded-full flex items-center justify-center mr-3">
+                                        <svg class="w-3 h-3 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                                        </svg>
+                                    </div>
+                                    <span class="text-gray-700 font-medium">Custom Branding & White Label</span>
+                                </div>
+                                @endif
 
-                        <div class="flex items-center">
-                            <svg class="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
-                            </svg>
-                            <span class="text-gray-700">
-                                {{ $plan->max_applications_per_month == -1 ? 'Unlimited' : number_format($plan->max_applications_per_month) }} Applications/Month
-                            </span>
-                        </div>
+                                @if($plan->api_access)
+                                <div class="flex items-center">
+                                    <div class="w-5 h-5 bg-indigo-100 rounded-full flex items-center justify-center mr-3">
+                                        <svg class="w-3 h-3 text-indigo-600" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                                        </svg>
+                                    </div>
+                                    <span class="text-gray-700 font-medium">API Access & Integrations</span>
+                                </div>
+                                @endif
 
-                        <div class="flex items-center">
-                            <svg class="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
-                            </svg>
-                            <span class="text-gray-700">
-                                {{ $plan->max_interviews_per_month == -1 ? 'Unlimited' : number_format($plan->max_interviews_per_month) }} Interviews/Month
-                            </span>
-                        </div>
+                                @if($plan->priority_support)
+                                <div class="flex items-center">
+                                    <div class="w-5 h-5 bg-yellow-100 rounded-full flex items-center justify-center mr-3">
+                                        <svg class="w-3 h-3 text-yellow-600" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                                        </svg>
+                                    </div>
+                                    <span class="text-gray-700 font-medium">Priority Support</span>
+                                </div>
+                                @endif
 
-                        <div class="flex items-center">
-                            <svg class="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
-                            </svg>
-                            <span class="text-gray-700">
-                                {{ $plan->max_storage_gb }}GB Storage
-                            </span>
-                        </div>
-
-                        @if($plan->analytics_enabled)
-                        <div class="flex items-center">
-                            <svg class="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
-                            </svg>
-                            <span class="text-gray-700">Advanced Analytics</span>
-                        </div>
-                        @endif
-
-                        @if($plan->custom_branding)
-                        <div class="flex items-center">
-                            <svg class="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
-                            </svg>
-                            <span class="text-gray-700">Custom Branding</span>
-                        </div>
-                        @endif
-
-                        @if($plan->api_access)
-                        <div class="flex items-center">
-                            <svg class="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
-                            </svg>
-                            <span class="text-gray-700">API Access</span>
-                        </div>
-                        @endif
-
-                        @if($plan->priority_support)
-                        <div class="flex items-center">
-                            <svg class="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
-                            </svg>
-                            <span class="text-gray-700">Priority Support</span>
-                        </div>
-                        @endif
-
-                        @if($plan->white_label)
-                        <div class="flex items-center">
-                            <svg class="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
-                            </svg>
-                            <span class="text-gray-700">White Label</span>
+                                @if($plan->white_label)
+                                <div class="flex items-center">
+                                    <div class="w-5 h-5 bg-pink-100 rounded-full flex items-center justify-center mr-3">
+                                        <svg class="w-3 h-3 text-pink-600" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                                        </svg>
+                                    </div>
+                                    <span class="text-gray-700 font-medium">White Label Solution</span>
+                                </div>
+                                @endif
+                            </div>
                         </div>
                         @endif
                     </div>
 
                     <!-- CTA Button -->
-                    <form method="POST" action="{{ route('subscription.subscribe') }}" class="w-full">
-                        @csrf
-                        <input type="hidden" name="plan_id" value="{{ $plan->id }}">
-                        <button type="submit" 
-                                class="w-full {{ $plan->is_popular ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-gray-900 hover:bg-gray-800' }} text-white font-semibold py-3 px-6 rounded-lg transition duration-200">
-                            @if($plan->isFree())
-                                Get Started Free
+                    <div class="mt-auto">
+                        @if($plan->slug === 'pro')
+                            @if(config('razorpay.pro_plan_mode') === 'active' && config('razorpay.key_id'))
+                                <!-- Pro Plan - Payment Button -->
+                                @if(auth()->check())
+                                    @php
+                                        $user = auth()->user();
+                                        $tenant = $user->tenants->first();
+                                        $hasFreePlan = $tenant ? $tenant->hasFreePlan() : false;
+                                    @endphp
+                                    
+                                    @if($tenant)
+                                        @if($hasFreePlan)
+                                            <!-- User has Free plan, can upgrade to Pro -->
+                                            <button onclick="initiatePayment('{{ $plan->id }}', '{{ $plan->name }}', {{ $plan->price }}, '{{ $plan->currency }}')" 
+                                                    class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-4 px-6 rounded-xl transition-all duration-200 transform hover:-translate-y-1 shadow-lg hover:shadow-xl">
+                                                🔄 Upgrade to Pro - ₹{{ number_format($plan->price, 0) }}/month
+                                            </button>
+                                            <p class="text-center text-sm text-gray-500 mt-3">
+                                                Upgrade from your Free plan
+                                            </p>
+                                        @else
+                                            <!-- User doesn't have Free plan, need to start with Free first -->
+                                            <div class="w-full bg-gray-100 text-gray-600 font-bold py-4 px-6 rounded-xl text-center">
+                                                📋 Start with Free Plan First
+                                            </div>
+                                            <p class="text-center text-sm text-gray-500 mt-3">
+                                                Subscribe to Free plan to unlock Pro upgrade
+                                            </p>
+                                        @endif
+                                    @else
+                                        <!-- User authenticated but no tenant, redirect to onboarding -->
+                                        <a href="{{ route('onboarding.organization') }}" 
+                                           class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-4 px-6 rounded-xl transition-all duration-200 transform hover:-translate-y-1 block text-center shadow-lg hover:shadow-xl">
+                                            🚀 Get Started - ₹{{ number_format($plan->price, 0) }}/month
+                                        </a>
+                                        <p class="text-center text-sm text-gray-500 mt-3">
+                                            Create your organization first
+                                        </p>
+                                    @endif
+                                @else
+                                    <!-- User not authenticated, redirect to register -->
+                                    <a href="{{ route('register') }}" 
+                                       class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-4 px-6 rounded-xl transition-all duration-200 transform hover:-translate-y-1 block text-center shadow-lg hover:shadow-xl">
+                                        🚀 Get Started - ₹{{ number_format($plan->price, 0) }}/month
+                                    </a>
+                                    <p class="text-center text-sm text-gray-500 mt-3">
+                                        Sign up to subscribe
+                                    </p>
+                                @endif
                             @else
-                                Choose {{ $plan->name }}
+                                <!-- Pro Plan - Waitlist Button -->
+                                @if(auth()->check())
+                                    <button onclick="openWaitlistModal('{{ $plan->slug }}')" 
+                                            class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-4 px-6 rounded-xl transition-all duration-200 transform hover:-translate-y-1 shadow-lg hover:shadow-xl">
+                                        📋 Join Waitlist
+                                    </button>
+                                    <p class="text-center text-sm text-gray-500 mt-3">
+                                        Be the first to know when Pro plan launches
+                                    </p>
+                                @else
+                                    <a href="{{ route('login') }}" 
+                                       class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-4 px-6 rounded-xl transition-all duration-200 transform hover:-translate-y-1 block text-center shadow-lg hover:shadow-xl">
+                                        🔐 Login to Join Waitlist
+                                    </a>
+                                    <p class="text-center text-sm text-gray-500 mt-3">
+                                        Login required to join waitlist
+                                    </p>
+                                @endif
                             @endif
-                        </button>
-                    </form>
+                        @elseif($plan->requiresContactForPricing())
+                            <!-- Enterprise Plan - Contact for Pricing -->
+                            <a href="{{ route('contact') }}" 
+                               class="w-full bg-gradient-to-r from-gray-900 to-gray-800 hover:from-gray-800 hover:to-gray-700 text-white font-bold py-4 px-6 rounded-xl transition-all duration-200 transform hover:-translate-y-1 shadow-lg hover:shadow-xl block text-center">
+                                📞 Contact for Pricing
+                            </a>
+                            <p class="text-center text-sm text-gray-500 mt-3">
+                                Custom pricing for your organization
+                            </p>
+                        @else
+                            <!-- Free Plan - Regular CTA -->
+                            @if(auth()->check())
+                                @php
+                                    $user = auth()->user();
+                                    $tenant = $user->tenants->first();
+                                @endphp
+                                
+                                @if($tenant)
+                                    <!-- User has a tenant, can subscribe -->
+                                    <form method="POST" action="{{ route('subscription.subscribe', $tenant->slug) }}" class="w-full">
+                                        @csrf
+                                        <input type="hidden" name="plan_id" value="{{ $plan->id }}">
+                                        <button type="submit" 
+                                                class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-4 px-6 rounded-xl transition-all duration-200 transform hover:-translate-y-1 shadow-lg hover:shadow-xl">
+                                            🚀 Get Started Free
+                                        </button>
+                                    </form>
+                                @else
+                                    <!-- User authenticated but no tenant, redirect to onboarding -->
+                                    <a href="{{ route('onboarding.organization') }}" 
+                                       class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-4 px-6 rounded-xl transition-all duration-200 transform hover:-translate-y-1 block text-center shadow-lg hover:shadow-xl">
+                                        🚀 Get Started Free
+                                    </a>
+                                @endif
+                            @else
+                                <!-- User not authenticated, redirect to register -->
+                                <a href="{{ route('register') }}" 
+                                   class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-4 px-6 rounded-xl transition-all duration-200 transform hover:-translate-y-1 block text-center shadow-lg hover:shadow-xl">
+                                    🚀 Get Started Free
+                                </a>
+                            @endif
+                            
+                            <p class="text-center text-sm text-gray-500 mt-3">
+                                No credit card required
+                            </p>
+                        @endif
+                    </div>
                 </div>
             </div>
             @endforeach
         </div>
+    </div>
+</section>
 
-        <!-- FAQ Section -->
-        <div class="mt-20">
-            <h2 class="text-3xl font-bold text-center text-gray-900 mb-12">
+<!-- Features Showcase Section -->
+<section id="features" class="py-20 bg-white">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center mb-16">
+            <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+                Everything you need to hire better
+            </h2>
+            <p class="text-xl text-gray-600 max-w-3xl mx-auto">
+                Powerful features designed to streamline your recruitment process and help you find the perfect candidates faster.
+            </p>
+        </div>
+
+        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <!-- Feature 1 -->
+            <div class="bg-gradient-to-br from-indigo-50 to-purple-50 p-8 rounded-2xl border border-indigo-100 hover:shadow-xl transition-all duration-300">
+                <div class="w-12 h-12 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg flex items-center justify-center mb-6">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2-2v2m8 0V6a2 2 0 012 2v6a2 2 0 01-2 2H6a2 2 0 01-2-2V8a2 2 0 012-2V6"></path>
+                    </svg>
+                </div>
+                <h3 class="text-xl font-semibold text-gray-900 mb-3">Smart Job Management</h3>
+                <p class="text-gray-600">Create, publish, and manage job postings with our intuitive interface. Track applications and manage your entire hiring pipeline.</p>
+            </div>
+
+            <!-- Feature 2 -->
+            <div class="bg-gradient-to-br from-purple-50 to-pink-50 p-8 rounded-2xl border border-purple-100 hover:shadow-xl transition-all duration-300">
+                <div class="w-12 h-12 bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg flex items-center justify-center mb-6">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                    </svg>
+                </div>
+                <h3 class="text-xl font-semibold text-gray-900 mb-3">Visual Pipeline Management</h3>
+                <p class="text-gray-600">Drag-and-drop candidate management with real-time collaboration tools for your entire hiring team.</p>
+            </div>
+
+            <!-- Feature 3 -->
+            <div class="bg-gradient-to-br from-pink-50 to-red-50 p-8 rounded-2xl border border-pink-100 hover:shadow-xl transition-all duration-300">
+                <div class="w-12 h-12 bg-gradient-to-r from-pink-600 to-red-600 rounded-lg flex items-center justify-center mb-6">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                    </svg>
+                </div>
+                <h3 class="text-xl font-semibold text-gray-900 mb-3">Interview Scheduling</h3>
+                <p class="text-gray-600">Automated scheduling, video interviews, and powerful analytics to optimize your hiring process.</p>
+            </div>
+
+            <!-- Feature 4 -->
+            <div class="bg-gradient-to-br from-blue-50 to-indigo-50 p-8 rounded-2xl border border-blue-100 hover:shadow-xl transition-all duration-300">
+                <div class="w-12 h-12 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center mb-6">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                    </svg>
+                </div>
+                <h3 class="text-xl font-semibold text-gray-900 mb-3">Advanced Analytics</h3>
+                <p class="text-gray-600">Make data-driven hiring decisions with comprehensive analytics and reporting tools.</p>
+            </div>
+
+            <!-- Feature 5 -->
+            <div class="bg-gradient-to-br from-green-50 to-emerald-50 p-8 rounded-2xl border border-green-100 hover:shadow-xl transition-all duration-300">
+                <div class="w-12 h-12 bg-gradient-to-r from-green-600 to-emerald-600 rounded-lg flex items-center justify-center mb-6">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                    </svg>
+                </div>
+                <h3 class="text-xl font-semibold text-gray-900 mb-3">Team Collaboration</h3>
+                <p class="text-gray-600">Work together seamlessly with your team using real-time collaboration tools and shared workspaces.</p>
+            </div>
+
+            <!-- Feature 6 -->
+            <div class="bg-gradient-to-br from-yellow-50 to-orange-50 p-8 rounded-2xl border border-yellow-100 hover:shadow-xl transition-all duration-300">
+                <div class="w-12 h-12 bg-gradient-to-r from-yellow-600 to-orange-600 rounded-lg flex items-center justify-center mb-6">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    </svg>
+                </div>
+                <h3 class="text-xl font-semibold text-gray-900 mb-3">Custom Branding</h3>
+                <p class="text-gray-600">Customize the platform with your brand colors, logo, and domain for a professional look.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Testimonials Section -->
+<section class="py-20 bg-gray-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center mb-16">
+            <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+                What our customers say
+            </h2>
+            <p class="text-xl text-gray-600">
+                Join thousands of recruiters who have transformed their hiring process with TalentLit
+            </p>
+        </div>
+        
+        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <!-- Testimonial 1 -->
+            <div class="bg-white p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300">
+                <div class="flex items-center mb-4">
+                    <div class="w-12 h-12 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
+                        SM
+                    </div>
+                    <div class="ml-4">
+                        <h4 class="font-semibold text-gray-900">Sarah Mitchell</h4>
+                        <p class="text-sm text-gray-600">Head of Talent, TechCorp</p>
+                    </div>
+                </div>
+                <p class="text-gray-600 italic">
+                    "TalentLit has completely transformed our hiring process. We've reduced our time-to-hire by 60% and our team loves the intuitive interface."
+                </p>
+            </div>
+
+            <!-- Testimonial 2 -->
+            <div class="bg-white p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300">
+                <div class="flex items-center mb-4">
+                    <div class="w-12 h-12 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full flex items-center justify-center text-white font-bold">
+                        MJ
+                    </div>
+                    <div class="ml-4">
+                        <h4 class="font-semibold text-gray-900">Michael Johnson</h4>
+                        <p class="text-sm text-gray-600">Recruitment Manager, StartupXYZ</p>
+                    </div>
+                </div>
+                <p class="text-gray-600 italic">
+                    "The analytics dashboard gives us insights we never had before. We can now make data-driven decisions about our hiring strategy."
+                </p>
+            </div>
+
+            <!-- Testimonial 3 -->
+            <div class="bg-white p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300">
+                <div class="flex items-center mb-4">
+                    <div class="w-12 h-12 bg-gradient-to-r from-pink-600 to-red-600 rounded-full flex items-center justify-center text-white font-bold">
+                        AL
+                    </div>
+                    <div class="ml-4">
+                        <h4 class="font-semibold text-gray-900">Alex Lee</h4>
+                        <p class="text-sm text-gray-600">HR Director, GlobalTech</p>
+                    </div>
+                </div>
+                <p class="text-gray-600 italic">
+                    "Setting up was incredibly easy. Within a day, we had our entire hiring pipeline migrated and our team was already more productive."
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- FAQ Section -->
+<section class="py-20 bg-white">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center mb-16">
+            <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
                 Frequently Asked Questions
             </h2>
+            <p class="text-xl text-gray-600">
+                Everything you need to know about our pricing and features
+            </p>
+        </div>
             
-            <div class="max-w-3xl mx-auto space-y-8">
-                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-2">
-                        Can I change my plan later?
-                    </h3>
-                    <p class="text-gray-600">
-                        Yes! You can upgrade or downgrade your plan at any time. Changes take effect immediately, and we'll prorate any billing differences.
+        <div class="max-w-3xl mx-auto space-y-6">
+            <div class="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-2xl p-8 border border-indigo-100 hover:shadow-lg transition-all duration-300">
+                <h3 class="text-xl font-semibold text-gray-900 mb-3 flex items-center">
+                    <svg class="w-6 h-6 text-indigo-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    Can I change my plan later?
+                </h3>
+                <p class="text-gray-600 text-lg">
+                    Yes! You can upgrade or downgrade your plan at any time. Changes take effect immediately, and we'll prorate any billing differences.
+                </p>
+            </div>
+
+            <div class="bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl p-8 border border-purple-100 hover:shadow-lg transition-all duration-300">
+                <h3 class="text-xl font-semibold text-gray-900 mb-3 flex items-center">
+                    <svg class="w-6 h-6 text-purple-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                    </svg>
+                    What happens if I exceed my limits?
+                </h3>
+                <p class="text-gray-600 text-lg">
+                    We'll notify you when you're approaching your limits. You can upgrade your plan or contact us to discuss custom solutions for your needs.
+                </p>
+            </div>
+
+            <div class="bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-8 border border-green-100 hover:shadow-lg transition-all duration-300">
+                <h3 class="text-xl font-semibold text-gray-900 mb-3 flex items-center">
+                    <svg class="w-6 h-6 text-green-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    Is there a free trial?
+                </h3>
+                <p class="text-gray-600 text-lg">
+                    Our Free plan is always free with no time limits. You can use it indefinitely with the included features and limits.
+                </p>
+            </div>
+
+            <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-8 border border-blue-100 hover:shadow-lg transition-all duration-300">
+                <h3 class="text-xl font-semibold text-gray-900 mb-3 flex items-center">
+                    <svg class="w-6 h-6 text-blue-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                    </svg>
+                    Do you offer custom enterprise plans?
+                </h3>
+                <p class="text-gray-600 text-lg">
+                    Yes! Contact our sales team to discuss custom enterprise solutions with unlimited features and dedicated support.
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Final CTA Section -->
+<section class="py-20 bg-gradient-to-r from-indigo-600 to-purple-600">
+    <div class="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
+        <h2 class="text-3xl md:text-4xl font-bold text-white mb-6">
+            Ready to transform your hiring process?
+        </h2>
+        <p class="text-xl text-indigo-100 mb-8 max-w-2xl mx-auto">
+            Join thousands of companies already using TalentLit to find and hire the best talent. 
+            Start your free trial today and see the difference.
+        </p>
+        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+            <a href="{{ route('register') }}" 
+               class="inline-block bg-white text-indigo-600 px-8 py-4 rounded-lg text-lg font-semibold hover:bg-gray-50 transition-all duration-200 shadow-xl hover:shadow-2xl transform hover:-translate-y-1">
+                🚀 Get Started Free
+            </a>
+            <a href="{{ route('contact') }}" 
+               class="inline-block border-2 border-white text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-white hover:text-indigo-600 transition-all duration-200">
+                📞 Contact Sales
+            </a>
+        </div>
+        <p class="text-sm text-indigo-200 mt-6">
+            ✨ No credit card required • 14-day free trial • Setup in 5 minutes
+        </p>
+    </div>
+</section>
+
+<!-- Waitlist Modal -->
+<div id="waitlistModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 transform transition-all duration-300 scale-95 opacity-0" id="waitlistModalContent">
+            <!-- Modal Header -->
+            <div class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-6 rounded-t-2xl">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold">Join the Waitlist</h3>
+                            <p class="text-indigo-100 text-sm">Be the first to know when Pro plan launches</p>
+                        </div>
+                    </div>
+                    <button onclick="closeWaitlistModal()" class="text-white hover:text-indigo-200 transition-colors">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <!-- Modal Body -->
+            <div class="p-6">
+                <!-- User Info Display -->
+                @if(auth()->check())
+                <div class="mb-6 p-4 bg-gray-50 rounded-lg">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
+                            <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="font-semibold text-gray-900">{{ auth()->user()->name }}</p>
+                            <p class="text-sm text-gray-600">{{ auth()->user()->email }}</p>
+                        </div>
+                    </div>
+                </div>
+                @else
+                <div class="mb-6 p-4 bg-red-50 rounded-lg border border-red-200">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                            <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="font-semibold text-red-900">Login Required</p>
+                            <p class="text-sm text-red-700">You must be logged in to join the waitlist</p>
+                        </div>
+                    </div>
+                </div>
+                @endif
+
+                <!-- Waitlist Form -->
+                @if(auth()->check())
+                <form id="waitlistForm" class="space-y-4" action="{{ route('waitlist.store') }}" method="POST">
+                    @csrf
+                    <input type="hidden" name="plan_slug" id="plan_slug_input" value="">
+                    
+                    <div>
+                        <label for="company" class="block text-sm font-semibold text-gray-700 mb-2">
+                            Company (Optional)
+                        </label>
+                        <input type="text" id="company" name="company"
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
+                               placeholder="Enter your company name">
+                    </div>
+
+                    <div>
+                        <label for="message" class="block text-sm font-semibold text-gray-700 mb-2">
+                            Message (Optional)
+                        </label>
+                        <textarea id="message" name="message" rows="3"
+                                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
+                                  placeholder="Tell us about your hiring needs..."></textarea>
+                    </div>
+
+                    <button type="submit" id="waitlistSubmitBtn"
+                            class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-200 transform hover:-translate-y-1 shadow-lg hover:shadow-xl">
+                        <span id="waitlistBtnText">📋 Join Waitlist</span>
+                        <span id="waitlistBtnLoading" class="hidden">
+                            <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Joining...
+                        </span>
+                    </button>
+                </form>
+                @else
+                <div class="text-center">
+                    <a href="{{ route('login') }}" 
+                       class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-200 transform hover:-translate-y-1 shadow-lg hover:shadow-xl inline-block">
+                        🔐 Login to Join Waitlist
+                    </a>
+                    <p class="text-sm text-gray-500 mt-3">
+                        You need to be logged in to join our waitlist
                     </p>
                 </div>
+                @endif
 
-                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-2">
-                        What happens if I exceed my limits?
-                    </h3>
-                    <p class="text-gray-600">
-                        We'll notify you when you're approaching your limits. You can upgrade your plan or contact us to discuss custom solutions for your needs.
-                    </p>
-                </div>
-
-                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-2">
-                        Is there a free trial?
-                    </h3>
-                    <p class="text-gray-600">
-                        Our Free plan is always free with no time limits. You can use it indefinitely with the included features and limits.
-                    </p>
-                </div>
-
-                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-2">
-                        Do you offer custom enterprise plans?
-                    </h3>
-                    <p class="text-gray-600">
-                        Yes! Contact our sales team to discuss custom enterprise solutions with unlimited features and dedicated support.
-                    </p>
+                <!-- Success Message -->
+                <div id="waitlistSuccess" class="hidden text-center">
+                    <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-2">You're on the Waitlist!</h3>
+                    <p class="text-gray-600 mb-6">Thank you for joining. We'll notify you as soon as the Pro plan is available.</p>
+                    <button onclick="closeWaitlistModal()"
+                            class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-200">
+                        Close
+                    </button>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+// Waitlist functionality
+let currentPlanSlug = '';
+
+function openWaitlistModal(planSlug) {
+    currentPlanSlug = planSlug;
+    
+    // Set the plan_slug in the hidden input
+    const planSlugInput = document.getElementById('plan_slug_input');
+    if (planSlugInput) {
+        planSlugInput.value = planSlug;
+    }
+    
+    const modal = document.getElementById('waitlistModal');
+    const modalContent = document.getElementById('waitlistModalContent');
+    
+    modal.classList.remove('hidden');
+    setTimeout(() => {
+        modalContent.classList.remove('scale-95', 'opacity-0');
+        modalContent.classList.add('scale-100', 'opacity-100');
+    }, 10);
+}
+
+function closeWaitlistModal() {
+    const modal = document.getElementById('waitlistModal');
+    const modalContent = document.getElementById('waitlistModalContent');
+    
+    modalContent.classList.remove('scale-100', 'opacity-100');
+    modalContent.classList.add('scale-95', 'opacity-0');
+    
+    setTimeout(() => {
+        modal.classList.add('hidden');
+        resetWaitlistModal();
+    }, 300);
+}
+
+function resetWaitlistModal() {
+    document.getElementById('waitlistForm').classList.remove('hidden');
+    document.getElementById('waitlistSuccess').classList.add('hidden');
+    document.getElementById('waitlistForm').reset();
+}
+
+function closeWaitlistModal() {
+    const modal = document.getElementById('waitlistModal');
+    const modalContent = modal.querySelector('.relative');
+    
+    // Add exit animation
+    modalContent.style.transform = 'scale(0.95)';
+    modalContent.style.opacity = '0';
+    
+    setTimeout(() => {
+        modal.classList.add('hidden');
+        document.body.style.overflow = 'auto';
+        
+        // Reset waitlist form
+        if (document.getElementById('waitlistForm')) {
+            document.getElementById('waitlistForm').reset();
+        }
+        if (document.getElementById('waitlistSuccess')) {
+            document.getElementById('waitlistSuccess').classList.add('hidden');
+        }
+        
+        // Reset modal content styles
+        modalContent.style.transform = '';
+        modalContent.style.opacity = '';
+    }, 200);
+}
+
+function showStep(step) {
+    // Hide all steps
+    document.getElementById('waitlistStep1').classList.add('hidden');
+    document.getElementById('waitlistStep2').classList.add('hidden');
+    document.getElementById('waitlistStep3').classList.add('hidden');
+    
+    // Show current step
+    document.getElementById(`waitlistStep${step}`).classList.remove('hidden');
+    
+    // Add step transition animation
+    const stepElement = document.getElementById(`waitlistStep${step}`);
+    stepElement.style.transform = 'translateX(20px)';
+    stepElement.style.opacity = '0';
+    setTimeout(() => {
+        stepElement.style.transform = 'translateX(0)';
+        stepElement.style.opacity = '1';
+    }, 100);
+}
+
+// Waitlist form submission
+document.getElementById('waitlistForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const data = Object.fromEntries(formData);
+    data.plan_slug = currentPlanSlug;
+    
+    const submitBtn = document.getElementById('waitlistSubmitBtn');
+    const btnText = document.getElementById('waitlistBtnText');
+    const btnLoading = document.getElementById('waitlistBtnLoading');
+    
+    // Show loading state
+    submitBtn.disabled = true;
+    btnText.classList.add('hidden');
+    btnLoading.classList.remove('hidden');
+    
+    try {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]');
+        if (!csrfToken) {
+            throw new Error('CSRF token not found');
+        }
+        
+        const response = await fetch('{{ route("waitlist.store") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken.getAttribute('content'),
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            // Show success message
+            document.getElementById('waitlistForm').classList.add('hidden');
+            document.getElementById('waitlistSuccess').classList.remove('hidden');
+        } else {
+            showNotification(result.message || 'Something went wrong. Please try again.', 'error');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showNotification('Something went wrong. Please try again.', 'error');
+    } finally {
+        // Reset button state
+        submitBtn.disabled = false;
+        btnText.classList.remove('hidden');
+        btnLoading.classList.add('hidden');
+    }
+});
+
+// Step 2: OTP verification
+document.getElementById('waitlistOtpForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const otp = document.getElementById('waitlistOtp').value;
+    const submitBtn = document.getElementById('waitlistVerifyBtn');
+    const submitBtnText = submitBtn.querySelector('span');
+    const originalText = submitBtnText.innerHTML;
+    
+    // Disable submit button and show loading state
+    submitBtn.disabled = true;
+    submitBtn.classList.add('opacity-75', 'cursor-not-allowed');
+    submitBtnText.innerHTML = `
+        <svg class="w-5 h-5 mr-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+        </svg>
+        Verifying...
+    `;
+    
+    try {
+        const formData = new FormData();
+        formData.append('email', verifiedEmail);
+        formData.append('otp', otp);
+        formData.append('plan_slug', document.getElementById('waitlistPlanSlug').value);
+        
+        // const response = await fetch('#', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            currentStep = 3;
+            showStep(3);
+            showNotification('Email verified successfully!', 'success');
+        } else {
+            showNotification(data.message || 'Invalid verification code. Please try again.', 'error');
+        }
+    } catch (error) {
+        showNotification('Something went wrong. Please try again.', 'error');
+    } finally {
+        // Re-enable submit button
+        submitBtn.disabled = false;
+        submitBtn.classList.remove('opacity-75', 'cursor-not-allowed');
+        submitBtnText.innerHTML = originalText;
+    }
+});
+
+// Resend OTP
+document.getElementById('waitlistResendBtn').addEventListener('click', async function() {
+    const submitBtn = this;
+    const originalText = submitBtn.textContent;
+    
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Sending...';
+    
+    try {
+        const formData = new FormData();
+        formData.append('email', verifiedEmail);
+        
+        // const response = await fetch('#', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showNotification('New verification code sent!', 'success');
+        } else {
+            showNotification(data.message || 'Failed to resend code. Please try again.', 'error');
+        }
+    } catch (error) {
+        showNotification('Something went wrong. Please try again.', 'error');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+    }
+});
+
+// Step 3: Complete registration
+document.getElementById('waitlistForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const submitBtn = document.getElementById('waitlistSubmitBtn');
+    const submitBtnText = submitBtn.querySelector('span');
+    const originalText = submitBtnText.innerHTML;
+    const formData = new FormData(this);
+    
+    // Disable submit button and show loading state
+    submitBtn.disabled = true;
+    submitBtn.classList.add('opacity-75', 'cursor-not-allowed');
+    submitBtnText.innerHTML = `
+        <svg class="w-5 h-5 mr-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+        </svg>
+        Joining Waitlist...
+    `;
+    
+    try {
+        // const response = await fetch('#', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // Show success message
+            document.getElementById('waitlistSuccessMessage').textContent = data.message;
+            document.getElementById('waitlistMessage').classList.remove('hidden');
+            this.reset();
+            
+            // Add success animation to the success message
+            const successDiv = document.getElementById('waitlistMessage');
+            successDiv.style.transform = 'translateY(-10px)';
+            successDiv.style.opacity = '0';
+            setTimeout(() => {
+                successDiv.style.transform = 'translateY(0)';
+                successDiv.style.opacity = '1';
+            }, 100);
+            
+            // Close modal after 3 seconds
+            setTimeout(() => {
+                closeWaitlistModal();
+            }, 3000);
+        } else {
+            showNotification(data.message || 'Something went wrong. Please try again.', 'error');
+        }
+    } catch (error) {
+        showNotification('Something went wrong. Please try again.', 'error');
+    } finally {
+        // Re-enable submit button
+        submitBtn.disabled = false;
+        submitBtn.classList.remove('opacity-75', 'cursor-not-allowed');
+        submitBtnText.innerHTML = originalText;
+    }
+});
+
+// OTP input formatting
+document.getElementById('waitlistOtp').addEventListener('input', function(e) {
+    // Only allow numbers
+    this.value = this.value.replace(/[^0-9]/g, '');
+    
+    // Auto-submit when 6 digits are entered
+    if (this.value.length === 6) {
+        document.getElementById('waitlistOtpForm').dispatchEvent(new Event('submit'));
+    }
+});
+
+// Close modal when clicking outside
+document.getElementById('waitlistModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeWaitlistModal();
+    }
+});
+
+// Close modal with Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && !document.getElementById('waitlistModal').classList.contains('hidden')) {
+        closeWaitlistModal();
+    }
+});
+
+// Add input focus animations
+document.querySelectorAll('#waitlistEmailForm input, #waitlistOtpForm input, #waitlistForm input, #waitlistForm textarea').forEach(input => {
+    input.addEventListener('focus', function() {
+        this.parentElement.classList.add('transform', 'scale-105');
+    });
+    
+    input.addEventListener('blur', function() {
+        this.parentElement.classList.remove('transform', 'scale-105');
+    });
+});
+
+// Notification function
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg transform transition-all duration-300 ${
+        type === 'error' ? 'bg-red-500 text-white' : 
+        type === 'success' ? 'bg-green-500 text-white' : 
+        'bg-blue-500 text-white'
+    }`;
+    notification.textContent = message;
+    
+    document.body.appendChild(notification);
+    
+    // Animate in
+    setTimeout(() => {
+        notification.style.transform = 'translateX(0)';
+        notification.style.opacity = '1';
+    }, 100);
+    
+    // Remove after 4 seconds
+    setTimeout(() => {
+        notification.style.transform = 'translateX(100%)';
+        notification.style.opacity = '0';
+        setTimeout(() => {
+            if (document.body.contains(notification)) {
+                document.body.removeChild(notification);
+            }
+        }, 300);
+    }, 4000);
+}
+
+// Add smooth transitions to modal content
+document.addEventListener('DOMContentLoaded', function() {
+    const modalContent = document.querySelector('#waitlistModal .relative');
+    modalContent.style.transition = 'all 0.3s ease-out';
+    modalContent.style.transform = 'scale(0.95)';
+    modalContent.style.opacity = '0';
+    
+    // Add step transitions
+    document.querySelectorAll('[id^="waitlistStep"]').forEach(step => {
+        step.style.transition = 'all 0.3s ease-out';
+    });
+});
+
+// Payment functionality
+async function initiatePayment(planId, planName, amount, currency) {
+    try {
+        // Show loading state
+        showNotification('Creating payment order...', 'info');
+        
+        // Create payment order
+        const response = await fetch('{{ route("payment.create-order") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            },
+            body: JSON.stringify({
+                plan_id: planId
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (!data.success) {
+            showNotification(data.message || 'Failed to create payment order', 'error');
+            return;
+        }
+        
+        // Configure RazorPay options
+        const options = {
+            key: data.key_id,
+            amount: data.amount * 100, // Convert to paise
+            currency: data.currency,
+            name: data.name,
+            description: data.description,
+            order_id: data.order.id,
+            prefill: data.prefill,
+            theme: {
+                color: '#4f46e5'
+            },
+            handler: function(response) {
+                // Payment successful
+                const form = document.createElement('form');
+                form.method = 'GET';
+                form.action = '{{ route("payment.success") }}';
+                
+                const paymentId = document.createElement('input');
+                paymentId.type = 'hidden';
+                paymentId.name = 'razorpay_payment_id';
+                paymentId.value = response.razorpay_payment_id;
+                form.appendChild(paymentId);
+                
+                const orderId = document.createElement('input');
+                orderId.type = 'hidden';
+                orderId.name = 'razorpay_order_id';
+                orderId.value = response.razorpay_order_id;
+                form.appendChild(orderId);
+                
+                const signature = document.createElement('input');
+                signature.type = 'hidden';
+                signature.name = 'razorpay_signature';
+                signature.value = response.razorpay_signature;
+                form.appendChild(signature);
+                
+                document.body.appendChild(form);
+                form.submit();
+            },
+            modal: {
+                ondismiss: function() {
+                    showNotification('Payment cancelled', 'info');
+                }
+            }
+        };
+        
+        // Open RazorPay checkout
+        const rzp = new Razorpay(options);
+        rzp.open();
+        
+    } catch (error) {
+        console.error('Payment error:', error);
+        showNotification('Something went wrong. Please try again.', 'error');
+    }
+}
+
+// Load RazorPay script dynamically
+function loadRazorPayScript() {
+    return new Promise((resolve, reject) => {
+        if (window.Razorpay) {
+            resolve();
+            return;
+        }
+        
+        const script = document.createElement('script');
+        script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+    });
+}
+
+// Initialize RazorPay when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    loadRazorPayScript().catch(error => {
+        console.error('Failed to load RazorPay script:', error);
+        showNotification('Payment system unavailable', 'error');
+    });
+});
+</script>
 @endsection

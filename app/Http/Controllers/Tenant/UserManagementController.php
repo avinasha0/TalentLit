@@ -31,7 +31,13 @@ class UserManagementController extends Controller
         // Get available roles for this tenant
         $roles = TenantRole::forTenant($tenantModel->id)->get();
 
-        return view('tenant.settings.team', compact('users', 'roles', 'tenant', 'tenantModel'));
+        // Get subscription limit information
+        $currentPlan = $tenantModel->currentPlan();
+        $currentUserCount = $tenantModel->users()->count();
+        $maxUsers = $currentPlan ? $currentPlan->max_users : 0;
+        $canAddUsers = $maxUsers === -1 || $currentUserCount < $maxUsers;
+
+        return view('tenant.settings.team', compact('users', 'roles', 'tenant', 'tenantModel', 'currentUserCount', 'maxUsers', 'canAddUsers'));
     }
 
     public function store(Request $request, string $tenant)

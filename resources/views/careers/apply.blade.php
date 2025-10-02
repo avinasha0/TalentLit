@@ -360,7 +360,11 @@
                                 </div>
                                 <div class="ml-3">
                                     <label for="consent" class="text-sm font-medium text-gray-700">
-                                        I agree to the terms and conditions and consent to the processing of my personal data for recruitment purposes. <span class="text-red-500">*</span>
+                                        @if($tenantModel->consent_text)
+                                            {{ $tenantModel->consent_text }} <span class="text-red-500">*</span>
+                                        @else
+                                            I agree to the terms and conditions and consent to the processing of my personal data for recruitment purposes. <span class="text-red-500">*</span>
+                                        @endif
                                     </label>
                                 </div>
                             </div>

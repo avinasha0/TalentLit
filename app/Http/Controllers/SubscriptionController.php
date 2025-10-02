@@ -48,13 +48,28 @@ class SubscriptionController extends Controller
         $plan = SubscriptionPlan::findOrFail($request->plan_id);
 
         // Check if tenant already has an active subscription
-        if ($tenant->activeSubscription) {
-            return redirect()->back()->with('error', 'You already have an active subscription.');
+        $activeSubscription = $tenant->activeSubscription;
+        if ($activeSubscription) {
+            // If trying to subscribe to Pro plan, check if user has Free plan
+            if ($plan->slug === 'pro' && $activeSubscription->plan->slug !== 'free') {
+                return redirect()->back()->with('error', 'You already have an active subscription. Only Free plan users can upgrade to Pro.');
+            } elseif ($plan->slug === 'pro' && $activeSubscription->plan->slug === 'free') {
+                return redirect()->back()->with('error', 'You already have a Free plan. Please use the upgrade option to switch to Pro.');
+            } elseif ($plan->slug !== 'pro') {
+                return redirect()->back()->with('error', 'You already have an active subscription.');
+            }
         }
 
-        // Only allow free plans for now (no payment gateway)
+        // Check if plan requires payment
         if (!$plan->isFree()) {
-            return redirect()->back()->with('error', 'Payment gateway integration not implemented yet.');
+            // Check if Pro plan is in payment mode
+            if ($plan->slug === 'pro' && config('razorpay.pro_plan_mode') === 'active' && config('razorpay.key_id')) {
+                // Redirect to payment flow
+                return redirect()->route('payment.create-order')->with('plan_id', $plan->id);
+            } else {
+                // Plan not available for direct subscription
+                return redirect()->back()->with('error', 'This plan is not available for direct subscription. Please contact support.');
+            }
         }
 
         DB::transaction(function () use ($tenant, $plan) {

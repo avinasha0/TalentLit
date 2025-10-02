@@ -89,4 +89,12 @@ class SubscriptionPlan extends Model
     {
         return $this->price == 0;
     }
+
+    /**
+     * Check if plan requires contact for pricing.
+     */
+    public function requiresContactForPricing(): bool
+    {
+        return $this->price == -1;
+    }
 }

@@ -34,7 +34,7 @@
           @if($plan->isFree())
             <span class="ml-1 text-green-600">Free</span>
           @else
-            <span class="ml-1">${{ number_format($plan->price) }}</span>
+            <span class="ml-1">@subscriptionPrice($plan->price, $plan->currency)</span>
           @endif
         </div>
       @endif

@@ -241,6 +241,7 @@ class="fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 text-white transform lg:tran
   </nav>
 
         <!-- Footer -->
+        @if(Auth::check())
         <div class="border-t border-gray-700 p-4">
             <div class="flex items-center space-x-3 mb-4">
                 <div class="h-8 w-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
@@ -273,5 +274,6 @@ class="fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 text-white transform lg:tran
                 </form>
             </div>
         </div>
+        @endif
     </div>
 </div>

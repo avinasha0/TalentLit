@@ -12,8 +12,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('interview_user', function (Blueprint $table) {
-            $table->ulid('interview_id');
-            $table->ulid('user_id');
+            $table->uuid('interview_id');
+            $table->unsignedBigInteger('user_id');
             $table->timestamps();
 
             // Composite primary key

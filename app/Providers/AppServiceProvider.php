@@ -52,6 +52,7 @@ class AppServiceProvider extends ServiceProvider
             return Interview::findOrFail($value);
         });
 
+
         // Hard-disable @vite in testing environment (belt-and-suspenders safety)
         if (app()->environment('testing')) {
             Blade::directive('vite', fn () => ''); // hard-disable @vite in tests

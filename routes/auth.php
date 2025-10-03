@@ -26,7 +26,7 @@ Route::middleware('guest')->group(function () {
         ->name('verification.send');
 
     Route::post('verify-email/verify', [EmailVerificationController::class, 'verify'])
-        ->name('verification.verify');
+        ->name('verification.verify-otp');
 
     Route::post('verify-email/resend', [EmailVerificationController::class, 'resend'])
         ->name('verification.resend');

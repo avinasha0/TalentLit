@@ -155,6 +155,7 @@ class="fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 text-white transform lg:tran
                 Interviews
     </a>
 
+
             <!-- Analytics -->
             @can('view analytics')
     <a href="{{ route('tenant.analytics.index', $tenant->slug) }}"

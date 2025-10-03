@@ -6,6 +6,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Career\ApplyController;
 use App\Http\Controllers\Career\CareerJobController;
 use App\Http\Controllers\ContactController;
+use App\Http\Controllers\HelpController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\SubscriptionController;
@@ -28,6 +29,11 @@ use App\Http\Controllers\ProfileController;
 
 // Public route
 Route::get('/', [HomeController::class, 'index'])->name('home');
+
+// Help Center routes
+Route::get('/help-center.html', [HelpController::class, 'index'])->name('help.index');
+Route::get('/help/{page}', [HelpController::class, 'page'])->name('help.page')
+    ->where('page', 'register|login|onboarding|invite-team|dashboard|jobs|careers|candidates|applications|pipeline|interviews|notes-tags|analytics|settings|roles-permissions|integrations|troubleshooting|security|deploy|contact');
 
 // Features pages
 Route::get('/features', [HomeController::class, 'features'])->name('features');
@@ -128,9 +134,6 @@ Route::get('/pricing.html', function () {
     return view('pricing');
 })->name('pricing.html');
 
-Route::get('/help-center.html', function () {
-    return view('help-center');
-})->name('help-center.html');
 
 Route::get('/documentation.html', function () {
     return view('documentation');
@@ -570,3 +573,4 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/{tenant}/onboarding/setup', [App\Http\Controllers\Onboarding\SetupController::class, 'index'])->name('onboarding.setup');
     Route::post('/{tenant}/onboarding/setup', [App\Http\Controllers\Onboarding\SetupController::class, 'store'])->name('onboarding.setup.store');
 });
+

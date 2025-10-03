@@ -474,48 +474,14 @@
                 </a>
             </div>
             <p class="text-sm text-gray-500 mt-4">
-                ✨ No credit card required • 14-day free trial • Setup in 5 minutes
+                ✨ No credit card required • Forever Free Plan Available • Setup in 5 minutes
             </p>
         </div>
     </section>
 
-    <!-- Footer -->
-    <footer class="bg-gray-900 text-white py-12">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="grid md:grid-cols-4 gap-8">
-                <div>
-                    <img src="{{ asset('logo-talentlit-small.svg') }}" alt="TalentLit Logo" class="h-8 mb-4">
-                    <p class="text-gray-400">Modern ATS for smarter recruitment.</p>
-                </div>
-                <div>
-                    <h3 class="font-semibold mb-4">Product</h3>
-                    <ul class="space-y-2 text-gray-400">
-                        <li><a href="{{ route('features.candidate-sourcing') }}" class="hover:text-white">Candidate Sourcing</a></li>
-                        <li><a href="{{ route('features.hiring-pipeline') }}" class="hover:text-white">Hiring Pipeline</a></li>
-                        <li><a href="{{ route('subscription.pricing') }}" class="hover:text-white">Pricing</a></li>
-                    </ul>
-                </div>
-                <div>
-                    <h3 class="font-semibold mb-4">Company</h3>
-                    <ul class="space-y-2 text-gray-400">
-                        <li><a href="{{ route('contact') }}" class="hover:text-white">Contact</a></li>
-                        <li><a href="#" class="hover:text-white">About</a></li>
-                        <li><a href="#" class="hover:text-white">Blog</a></li>
-                    </ul>
-                </div>
-                <div>
-                    <h3 class="font-semibold mb-4">Support</h3>
-                    <ul class="space-y-2 text-gray-400">
-                        <li><a href="#" class="hover:text-white">Help Center</a></li>
-                        <li><a href="#" class="hover:text-white">Documentation</a></li>
-                        <li><a href="#" class="hover:text-white">Status</a></li>
-                    </ul>
-                </div>
-            </div>
-            <div class="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-                <p>&copy; 2024 TalentLit. All rights reserved.</p>
-            </div>
-        </div>
-    </footer>
+    <!-- Centralized Footer Component -->
+    <x-footer />
+
+
 </body>
 </html>

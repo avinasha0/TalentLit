@@ -228,5 +228,8 @@
 
     <!-- Newsletter Footer -->
     <x-newsletter-footer />
+    
+    <!-- Centralized Footer Component -->
+    <x-footer />
 </body>
 </html>

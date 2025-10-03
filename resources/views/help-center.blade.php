@@ -264,89 +264,9 @@
         </div>
     </section>
 
-    <!-- Footer -->
-    <footer class="bg-gray-900 text-white">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-            <!-- Main Footer Content -->
-            <div class="grid md:grid-cols-2 lg:grid-cols-5 gap-8 mb-12">
-                <!-- Brand Section -->
-                <div class="lg:col-span-2">
-                    <div class="flex items-center space-x-2 mb-6">
-                        <img src="/logo-talentlit-small.svg" alt="TalentLit Logo" class="h-10">
-                        <span class="text-xl font-bold">TalentLit</span>
-                    </div>
-                    <p class="text-gray-400 mb-6 max-w-md text-lg leading-relaxed">
-                        The modern ATS that helps you hire smarter, faster, and more efficiently. 
-                        Streamline your recruitment process today.
-                    </p>
-                </div>
-                
-                <!-- Product Section -->
-                <div>
-                    <h3 class="text-lg font-semibold mb-6 text-white">Product</h3>
-                    <ul class="space-y-3">
-                        <li><a href="/features.html" class="text-gray-400 hover:text-white transition-colors text-sm">Features</a></li>
-                        <li><a href="/pricing.html" class="text-gray-400 hover:text-white transition-colors text-sm">Pricing</a></li>
-                        <li><a href="/features/candidate-sourcing.html" class="text-gray-400 hover:text-white transition-colors text-sm">Candidate Sourcing</a></li>
-                        <li><a href="/features/hiring-pipeline.html" class="text-gray-400 hover:text-white transition-colors text-sm">Hiring Pipeline</a></li>
-                        <li><a href="/features/hiring-analytics.html" class="text-gray-400 hover:text-white transition-colors text-sm">Analytics</a></li>
-                    </ul>
-                </div>
-                
-                <!-- Company Section -->
-                <div>
-                    <h3 class="text-lg font-semibold mb-6 text-white">Company</h3>
-                    <ul class="space-y-3">
-                        <li><a href="/about.html" class="text-gray-400 hover:text-white transition-colors text-sm">About Us</a></li>
-                        <li><a href="/careers.html" class="text-gray-400 hover:text-white transition-colors text-sm">Careers</a></li>
-                        <li><a href="/blog.html" class="text-gray-400 hover:text-white transition-colors text-sm">Blog</a></li>
-                        <li><a href="/contact.html" class="text-gray-400 hover:text-white transition-colors text-sm">Contact</a></li>
-                        <li><a href="/press.html" class="text-gray-400 hover:text-white transition-colors text-sm">Press</a></li>
-                    </ul>
-                </div>
-                
-                <!-- Support Section -->
-                <div>
-                    <h3 class="text-lg font-semibold mb-6 text-white">Support</h3>
-                    <ul class="space-y-3">
-                        <li><a href="/help-center.html" class="text-gray-400 hover:text-white transition-colors text-sm">Help Center</a></li>
-                        <li><a href="/documentation.html" class="text-gray-400 hover:text-white transition-colors text-sm">Documentation</a></li>
-                        <li><a href="/community.html" class="text-gray-400 hover:text-white transition-colors text-sm">Community</a></li>
-                        <li><a href="/status.html" class="text-gray-400 hover:text-white transition-colors text-sm">Status</a></li>
-                        <li><a href="/security.html" class="text-gray-400 hover:text-white transition-colors text-sm">Security</a></li>
-                    </ul>
-                </div>
-            </div>
-            
-            <!-- Newsletter Signup -->
-            <div class="bg-gray-800 rounded-2xl p-8 mb-12">
-                <div class="max-w-2xl mx-auto text-center">
-                    <h3 class="text-2xl font-bold text-white mb-4">Stay Updated</h3>
-                    <p class="text-gray-400 mb-6">Get the latest updates on new features, tips, and best practices for recruitment.</p>
-                    <form id="newsletter-form" class="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
-                        <input type="email" id="newsletter-email" placeholder="Enter your email" class="flex-1 px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent" required>
-                        <button type="submit" class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all duration-200">
-                            Subscribe
-                        </button>
-                    </form>
-                </div>
-            </div>
-            
-            <!-- Bottom Footer -->
-            <div class="border-t border-gray-800 pt-8">
-                <div class="flex flex-col md:flex-row justify-between items-center">
-                    <p class="text-gray-400 text-sm mb-4 md:mb-0">
-                        © 2023 TalentLit. All rights reserved.
-                    </p>
-                    <div class="flex space-x-6">
-                        <a href="/privacy-policy.html" class="text-gray-400 hover:text-white transition-colors text-sm">Privacy Policy</a>
-                        <a href="/terms-of-service.html" class="text-gray-400 hover:text-white transition-colors text-sm">Terms of Service</a>
-                        <a href="/cookie-policy.html" class="text-gray-400 hover:text-white transition-colors text-sm">Cookie Policy</a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </footer>
+    <!-- Centralized Footer Component -->
+    <x-footer />
+
 
     <script>
         // Newsletter subscription

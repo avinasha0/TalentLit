@@ -367,8 +367,8 @@
         </div>
     </section>
 
-    <!-- Footer -->
-    <footer class="bg-gray-900 text-white">
+    <!-- Centralized Footer Component -->
+    <x-footer />
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
             <!-- Main Footer Content -->
             <div class="grid md:grid-cols-2 lg:grid-cols-5 gap-8 mb-12">

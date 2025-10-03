@@ -112,15 +112,9 @@
             </div>
         </main>
 
-        <!-- Footer -->
-        <footer class="bg-white border-t">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-                <div class="text-center text-gray-500 text-sm">
-                    <p>&copy; {{ date('Y') }} {{ $tenantModel->name }}. All rights reserved.</p>
-                    <p class="mt-1">Powered by TalentLit</p>
-                </div>
-            </div>
-        </footer>
+        <!-- Centralized Footer Component -->
+    <x-footer />
+
     </div>
 </body>
 </html>

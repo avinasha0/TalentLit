@@ -112,12 +112,12 @@ Route::get('/test-contact-email', function () {
     }
 })->name('test.contact.email');
 
-// Newsletter routes
-Route::post('/newsletter/subscribe', [App\Http\Controllers\NewsletterController::class, 'subscribe'])->name('newsletter.subscribe');
-Route::post('/newsletter/verify-otp', [App\Http\Controllers\NewsletterController::class, 'verifyOtp'])->name('newsletter.verify-otp');
-Route::post('/newsletter/resend-otp', [App\Http\Controllers\NewsletterController::class, 'resendOtp'])->name('newsletter.resend-otp');
-Route::post('/newsletter/unsubscribe', [App\Http\Controllers\NewsletterController::class, 'unsubscribe'])->name('newsletter.unsubscribe');
-Route::get('/newsletter/status', [App\Http\Controllers\NewsletterController::class, 'status'])->name('newsletter.status');
+// Newsletter routes - using NewsletterController (legacy)
+Route::post('/newsletter/subscribe-legacy', [App\Http\Controllers\NewsletterController::class, 'subscribe'])->name('newsletter.subscribe.legacy');
+Route::post('/newsletter/verify-otp-legacy', [App\Http\Controllers\NewsletterController::class, 'verifyOtp'])->name('newsletter.verify-otp.legacy');
+Route::post('/newsletter/resend-otp-legacy', [App\Http\Controllers\NewsletterController::class, 'resendOtp'])->name('newsletter.resend-otp.legacy');
+Route::post('/newsletter/unsubscribe-legacy', [App\Http\Controllers\NewsletterController::class, 'unsubscribe'])->name('newsletter.unsubscribe.legacy');
+Route::get('/newsletter/status-legacy', [App\Http\Controllers\NewsletterController::class, 'status'])->name('newsletter.status.legacy');
 
 // HTML Pages Routes
 Route::get('/features.html', function () {
@@ -151,6 +151,11 @@ Route::get('/security.html', function () {
 Route::get('/cookie-policy.html', function () {
     return view('cookie-policy');
 })->name('cookie-policy.html');
+
+// Test Footer Component
+Route::get('/test-footer', function () {
+    return view('test-footer');
+})->name('test-footer');
 
 // Legal pages
 Route::get('/privacy-policy', function () {
@@ -233,7 +238,7 @@ Route::get('/newsletter-simple', function () {
     return view('newsletter-simple');
 })->name('newsletter.simple');
 
-// Newsletter Subscription Routes
+// Newsletter Subscription Routes - Main routes (clean names)
 Route::get('/newsletter/subscribe', function () {
     $email = session('email');
     return view('newsletter.subscribe', ['old_email' => $email]);
@@ -245,9 +250,13 @@ Route::post('/newsletter/redirect', function (\Illuminate\Http\Request $request)
     return redirect()->route('newsletter.subscribe')->with('email', $email);
 })->name('newsletter.redirect');
 
-Route::post('/newsletter/subscribe', [App\Http\Controllers\NewsletterSubscriptionController::class, 'subscribe']);
-Route::post('/newsletter/verify-otp', [App\Http\Controllers\NewsletterSubscriptionController::class, 'verifyOtp'])->name('newsletter.verify-otp');
-Route::post('/newsletter/resend-otp', [App\Http\Controllers\NewsletterSubscriptionController::class, 'resendOtp'])->name('newsletter.resend-otp');
+// Newsletter POST actions (distinct names)
+Route::post('/newsletter/subscribe', [App\Http\Controllers\NewsletterSubscriptionController::class, 'subscribe'])
+    ->name('newsletter.subscribe.post');
+Route::post('/newsletter/verify-otp', [App\Http\Controllers\NewsletterSubscriptionController::class, 'verifyOtp'])
+    ->name('newsletter.verify-otp.post');
+Route::post('/newsletter/resend-otp', [App\Http\Controllers\NewsletterSubscriptionController::class, 'resendOtp'])
+    ->name('newsletter.resend-otp.post');
 
 Route::post('/test-recaptcha', function (\Illuminate\Http\Request $request) {
     // Simple reCAPTCHA test handler

@@ -21,13 +21,6 @@
                     </button>
                 </div>
                 
-                <!-- reCAPTCHA -->
-                <div class="flex justify-center mt-4">
-                    <div class="g-recaptcha" data-sitekey="{{ config('recaptcha.site_key') }}"></div>
-                </div>
-                
-                <!-- Error Message -->
-                <div id="footer-recapError-duplicate" class="text-red-200 text-sm mt-2 text-center" style="display:none;"></div>
             </form>
         </div>
     </div>
@@ -39,39 +32,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!footerFormDuplicate) return;
     
     footerFormDuplicate.addEventListener('submit', function(e) {
-        console.log('Footer newsletter form duplicate submitted - checking reCAPTCHA...');
-        
-        // Check if reCAPTCHA is completed
-        const recaptchaTextarea = document.querySelector('textarea[name="g-recaptcha-response"]');
-        const recaptchaToken = recaptchaTextarea ? recaptchaTextarea.value.trim() : '';
-        
-        if (!recaptchaToken) {
-            console.log('reCAPTCHA not completed - redirecting to newsletter page');
-            e.preventDefault();
-            e.stopPropagation();
-            
-            // Show error message
-            const errorDiv = document.getElementById('footer-recapError-duplicate');
-            if (errorDiv) {
-                errorDiv.textContent = 'Please complete the reCAPTCHA verification. Redirecting to newsletter page...';
-                errorDiv.style.display = 'block';
-            }
-            
-            // Redirect to newsletter page after a short delay
-            setTimeout(() => {
-                window.location.href = '{{ route("newsletter.subscribe") }}';
-            }, 1500);
-            
-            return false;
-        }
-        
-        console.log('reCAPTCHA completed - proceeding with subscription');
-        
-        // Clear error if token exists
-        const errorDiv = document.getElementById('footer-recapError-duplicate');
-        if (errorDiv) {
-            errorDiv.style.display = 'none';
-        }
+        console.log('Footer newsletter form duplicate submitted - redirecting to newsletter page');
         
         // Submit via AJAX (NO PAGE RELOAD)
         const formData = new FormData(this);
@@ -99,10 +60,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 showNotificationDuplicate(data.message || 'Successfully subscribed!', 'success');
                 // Reset form
                 document.getElementById('footer-newsletter-email-duplicate').value = '';
-                // Reset reCAPTCHA
-                if (typeof grecaptcha !== 'undefined') {
-                    grecaptcha.reset();
-                }
             } else {
                 showNotificationDuplicate(data.message || 'Something went wrong. Please try again.', 'error');
             }

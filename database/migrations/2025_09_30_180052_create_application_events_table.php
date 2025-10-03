@@ -18,7 +18,7 @@ return new class extends Migration
             $table->uuid('job_id');
             $table->uuid('from_stage_id')->nullable();
             $table->uuid('to_stage_id')->nullable();
-            $table->uuid('user_id');
+            $table->foreignId('user_id');
             $table->text('note')->nullable();
             $table->timestamps();
 

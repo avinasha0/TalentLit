@@ -19,7 +19,7 @@ Route::middleware('guest')->group(function () {
     Route::post('register', [RegisteredUserController::class, 'store']);
 
     // Email verification routes
-    Route::get('verify-email', [EmailVerificationController::class, 'show'])
+    Route::get('verify-email-otp', [EmailVerificationController::class, 'show'])
         ->name('verification.show');
 
     Route::post('verify-email/send', [EmailVerificationController::class, 'sendOtp'])

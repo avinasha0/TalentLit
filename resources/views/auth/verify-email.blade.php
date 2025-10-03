@@ -52,7 +52,7 @@
                 </div>
             @endif
 
-            <form class="mt-8 space-y-6" action="{{ route('verification.verify') }}" method="POST">
+            <form class="mt-8 space-y-6" action="{{ route('verification.verify-otp') }}" method="POST">
                 @csrf
                 <input type="hidden" name="email" value="{{ $email }}">
                 

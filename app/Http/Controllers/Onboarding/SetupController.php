@@ -11,18 +11,16 @@ class SetupController extends Controller
 {
     public function index($tenant)
     {
-        $tenant = Tenant::where('slug', $tenant)->firstOrFail();
+        // Tenant is already resolved by the ResolveTenantFromPath middleware
+        $tenant = tenant();
         
-        // Set tenant context
-        session(['current_tenant_id' => $tenant->id]);
-        session(['last_tenant_slug' => $tenant->slug]);
-
         return view('onboarding.setup', compact('tenant'));
     }
 
     public function store(Request $request, $tenant)
     {
-        $tenant = Tenant::where('slug', $tenant)->firstOrFail();
+        // Tenant is already resolved by the ResolveTenantFromPath middleware
+        $tenant = tenant();
         
         $request->validate([
             'logo' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif', 'max:2048'],

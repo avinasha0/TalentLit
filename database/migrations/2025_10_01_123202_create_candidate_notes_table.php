@@ -13,9 +13,9 @@ return new class extends Migration
     {
         Schema::create('candidate_notes', function (Blueprint $table) {
             $table->ulid('id')->primary();
-            $table->ulid('tenant_id');
-            $table->ulid('candidate_id');
-            $table->ulid('user_id');
+            $table->uuid('tenant_id');
+            $table->uuid('candidate_id');
+            $table->unsignedBigInteger('user_id');
             $table->text('body');
             $table->timestamps();
             

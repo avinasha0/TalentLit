@@ -1,14 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    @php
+    <?php
         $seoTitle = 'Verify Email - TalentLit ATS';
         $seoDescription = 'Verify your email address to complete your TalentLit account setup and start using our modern ATS platform.';
         $seoKeywords = 'TalentLit, email verification, ATS, account setup, recruitment';
         $seoAuthor = 'TalentLit';
         $seoImage = asset('logo-talentlit-small.svg');
-    @endphp
-    @include('layouts.partials.head')
+    ?>
+    <?php echo $__env->make('layouts.partials.head', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
@@ -19,11 +19,11 @@
             <div class="flex justify-between h-16">
                 <div class="flex items-center">
                     <a href="/" class="flex items-center space-x-2">
-                        <img src="{{ asset('logo-talentlit-small.svg') }}" alt="TalentLit Logo" class="h-8">
+                        <img src="<?php echo e(asset('logo-talentlit-small.svg')); ?>" alt="TalentLit Logo" class="h-8">
                     </a>
                 </div>
                 <div class="flex items-center space-x-4">
-                    <a href="{{ route('login') }}" class="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium">
+                    <a href="<?php echo e(route('login')); ?>" class="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium">
                         Sign In
                     </a>
                     <a href="/" class="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium">
@@ -35,11 +35,11 @@
     </nav>
 
     <div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-        <div class="w-full max-w-md mx-auto space-y-8">
+        <div class="max-w-md w-full space-y-8">
             <!-- Header -->
             <div class="text-center">
                 <div class="flex justify-center mb-6">
-                    <img src="{{ asset('logo-talentlit-small.svg') }}" alt="TalentLit Logo" class="h-12">
+                    <img src="<?php echo e(asset('logo-talentlit-small.svg')); ?>" alt="TalentLit Logo" class="h-12">
                 </div>
                 <h2 class="text-3xl font-bold text-gray-900 mb-2">
                     Verify Your Email
@@ -48,13 +48,14 @@
                     We've sent a verification code to
                 </p>
                 <p class="text-lg font-semibold text-indigo-600 bg-indigo-50 px-4 py-2 rounded-lg inline-block">
-                    {{ $email }}
+                    <?php echo e($email); ?>
+
                 </p>
             </div>
 
             <!-- Verification Form -->
-            <div class="bg-white rounded-2xl shadow-xl p-6 sm:p-8 border border-gray-100">
-                @if (session('success'))
+            <div class="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
+                <?php if(session('success')): ?>
                     <div class="rounded-lg bg-green-50 p-4 mb-6">
                         <div class="flex">
                             <div class="flex-shrink-0">
@@ -64,14 +65,15 @@
                             </div>
                             <div class="ml-3">
                                 <p class="text-sm font-medium text-green-800">
-                                    {{ session('success') }}
+                                    <?php echo e(session('success')); ?>
+
                                 </p>
                             </div>
                         </div>
                     </div>
-                @endif
+                <?php endif; ?>
 
-                @if (session('error'))
+                <?php if(session('error')): ?>
                     <div class="rounded-lg bg-red-50 p-4 mb-6">
                         <div class="flex">
                             <div class="flex-shrink-0">
@@ -81,16 +83,17 @@
                             </div>
                             <div class="ml-3">
                                 <p class="text-sm font-medium text-red-800">
-                                    {{ session('error') }}
+                                    <?php echo e(session('error')); ?>
+
                                 </p>
                             </div>
                         </div>
                     </div>
-                @endif
+                <?php endif; ?>
 
-                <form class="space-y-6" action="{{ route('verification.verify-otp') }}" method="POST">
-                    @csrf
-                    <input type="hidden" name="email" value="{{ $email }}">
+                <form class="space-y-6" action="<?php echo e(route('verification.verify-otp')); ?>" method="POST">
+                    <?php echo csrf_field(); ?>
+                    <input type="hidden" name="email" value="<?php echo e($email); ?>">
                     
                     <!-- OTP Input -->
                     <div>
@@ -140,8 +143,8 @@
                             </p>
                         </div>
                         <div class="text-sm">
-                            <form action="{{ route('verification.resend') }}" method="POST" class="inline">
-                                @csrf
+                            <form action="<?php echo e(route('verification.resend')); ?>" method="POST" class="inline">
+                                <?php echo csrf_field(); ?>
                                 <button 
                                     type="submit" 
                                     class="font-semibold text-indigo-600 hover:text-indigo-500 focus:outline-none focus:underline transition-colors"
@@ -165,10 +168,10 @@
                     </div>
                 </div>
 
-                <div class="mt-6 px-4">
-                    <p class="text-sm text-gray-600 leading-relaxed">
+                <div class="mt-6">
+                    <p class="text-sm text-gray-600">
                         If you're having trouble receiving the verification code, please check your spam folder or 
-                        <a href="{{ route('register') }}" class="font-semibold text-indigo-600 hover:text-indigo-500 transition-colors">
+                        <a href="<?php echo e(route('register')); ?>" class="font-semibold text-indigo-600 hover:text-indigo-500 transition-colors">
                             try registering again
                         </a>.
                     </p>
@@ -177,6 +180,49 @@
         </div>
     </div>
 
+    <!-- Newsletter Footer -->
+    <?php if (isset($component)) { $__componentOriginalbe61f003454811ea4143c6927cef8ffd = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginalbe61f003454811ea4143c6927cef8ffd = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.newsletter-footer','data' => []] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('newsletter-footer'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes([]); ?>
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginalbe61f003454811ea4143c6927cef8ffd)): ?>
+<?php $attributes = $__attributesOriginalbe61f003454811ea4143c6927cef8ffd; ?>
+<?php unset($__attributesOriginalbe61f003454811ea4143c6927cef8ffd); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginalbe61f003454811ea4143c6927cef8ffd)): ?>
+<?php $component = $__componentOriginalbe61f003454811ea4143c6927cef8ffd; ?>
+<?php unset($__componentOriginalbe61f003454811ea4143c6927cef8ffd); ?>
+<?php endif; ?>
+    
+    <!-- Centralized Footer Component -->
+    <?php if (isset($component)) { $__componentOriginal8a8716efb3c62a45938aca52e78e0322 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal8a8716efb3c62a45938aca52e78e0322 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.footer','data' => []] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('footer'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes([]); ?>
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal8a8716efb3c62a45938aca52e78e0322)): ?>
+<?php $attributes = $__attributesOriginal8a8716efb3c62a45938aca52e78e0322; ?>
+<?php unset($__attributesOriginal8a8716efb3c62a45938aca52e78e0322); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal8a8716efb3c62a45938aca52e78e0322)): ?>
+<?php $component = $__componentOriginal8a8716efb3c62a45938aca52e78e0322; ?>
+<?php unset($__componentOriginal8a8716efb3c62a45938aca52e78e0322); ?>
+<?php endif; ?>
 
     <script>
         // Auto-focus on OTP input
@@ -203,4 +249,4 @@
         });
     </script>
 </body>
-</html>
+</html><?php /**PATH C:\xampp\htdocs\hirehub2\resources\views/auth/verify-email.blade.php ENDPATH**/ ?>

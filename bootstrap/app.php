@@ -19,6 +19,15 @@ return Application::configure(basePath: dirname(__DIR__))
             'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
             'subscription.limit' => \App\Http\Middleware\CheckSubscriptionLimits::class,
         ]);
+        
+        // Disable problematic middleware that can cause 500 errors
+        $middleware->web(remove: [
+            \Illuminate\Http\Middleware\ValidatePathEncoding::class,
+        ]);
+        
+        $middleware->api(remove: [
+            \Illuminate\Http\Middleware\ValidatePathEncoding::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

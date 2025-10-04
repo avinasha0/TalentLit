@@ -69,15 +69,23 @@ try {
                     ->first();
                     
                 if (!$ownerRole) {
-                    $ownerRole = TenantRole::create([
-                        'name' => 'Owner',
-                        'guard_name' => 'web',
-                        'tenant_id' => $tenant->id,
-                    ]);
+                    // Use updateOrCreate to avoid duplicate role errors
+                    $ownerRole = TenantRole::updateOrCreate(
+                        [
+                            'name' => 'Owner',
+                            'guard_name' => 'web',
+                            'tenant_id' => $tenant->id,
+                        ],
+                        [
+                            'name' => 'Owner',
+                            'guard_name' => 'web',
+                            'tenant_id' => $tenant->id,
+                        ]
+                    );
                     
                     // Give Owner role all permissions
                     $ownerRole->syncPermissions(Permission::all());
-                    echo "         ✅ Created Owner role for tenant\n";
+                    echo "         ✅ Created/Updated Owner role for tenant\n";
                 }
                 
                 // Assign role to user
@@ -129,11 +137,18 @@ try {
                     ->first();
                     
                 if (!$ownerRole) {
-                    $ownerRole = TenantRole::create([
-                        'name' => 'Owner',
-                        'guard_name' => 'web',
-                        'tenant_id' => $testtestTenant->id,
-                    ]);
+                    $ownerRole = TenantRole::updateOrCreate(
+                        [
+                            'name' => 'Owner',
+                            'guard_name' => 'web',
+                            'tenant_id' => $testtestTenant->id,
+                        ],
+                        [
+                            'name' => 'Owner',
+                            'guard_name' => 'web',
+                            'tenant_id' => $testtestTenant->id,
+                        ]
+                    );
                     $ownerRole->syncPermissions(Permission::all());
                 }
                 

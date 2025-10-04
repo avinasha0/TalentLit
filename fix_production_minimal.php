@@ -136,11 +136,18 @@ try {
                     ->first();
                     
                 if (!$ownerRole) {
-                    $ownerRole = \App\Models\TenantRole::create([
-                        'name' => 'Owner',
-                        'guard_name' => 'web',
-                        'tenant_id' => $firstTenant->id,
-                    ]);
+                    $ownerRole = \App\Models\TenantRole::updateOrCreate(
+                        [
+                            'name' => 'Owner',
+                            'guard_name' => 'web',
+                            'tenant_id' => $firstTenant->id,
+                        ],
+                        [
+                            'name' => 'Owner',
+                            'guard_name' => 'web',
+                            'tenant_id' => $firstTenant->id,
+                        ]
+                    );
                     // Give Owner role all permissions
                     $ownerRole->syncPermissions(Permission::all());
                 }

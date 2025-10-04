@@ -16,49 +16,90 @@ class OrganizationController extends Controller
 {
     public function create()
     {
-        return view('onboarding.organization');
+        try {
+            // Check if user is authenticated
+            if (!auth()->check()) {
+                return redirect()->route('login');
+            }
+
+            // Check if user already has tenants
+            $user = auth()->user();
+            if ($user->tenants()->count() > 0) {
+                // User already has a tenant, redirect to dashboard
+                $firstTenant = $user->tenants()->first();
+                return redirect()->route('tenant.dashboard', $firstTenant->slug);
+            }
+
+            return view('onboarding.organization');
+        } catch (\Exception $e) {
+            \Log::error('Error in onboarding organization create method', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->view('errors.500', [
+                'message' => 'An error occurred while loading the organization creation page. Please try again.'
+            ], 500);
+        }
     }
 
     public function store(Request $request)
     {
-        $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'slug' => ['required', 'string', 'max:255', 'unique:tenants,slug', 'regex:/^[a-z0-9-]+$/'],
-            'website' => ['nullable', 'url', 'max:255'],
-            'location' => ['nullable', 'string', 'max:255'],
-            'company_size' => ['nullable', 'string', 'max:255'],
-        ]);
+        try {
+            $request->validate([
+                'name' => ['required', 'string', 'max:255'],
+                'slug' => ['required', 'string', 'max:255', 'unique:tenants,slug', 'regex:/^[a-z0-9-]+$/'],
+                'website' => ['nullable', 'url', 'max:255'],
+                'location' => ['nullable', 'string', 'max:255'],
+                'company_size' => ['nullable', 'string', 'max:255'],
+            ]);
 
-        // Create the tenant
-        $tenant = Tenant::create([
-            'name' => $request->name,
-            'slug' => $request->slug,
-            'website' => $request->website,
-            'location' => $request->location,
-            'company_size' => $request->company_size,
-        ]);
+            // Check if free subscription plan exists
+            $freePlan = SubscriptionPlan::where('slug', 'free')->first();
+            if (!$freePlan) {
+                \Log::error('Free subscription plan not found during organization creation');
+                return back()->withErrors(['error' => 'System configuration error. Please contact support.'])->withInput();
+            }
 
-        // Add current user to tenant
-        $user = auth()->user();
-        $user->tenants()->attach($tenant->id);
+            // Create the tenant
+            $tenant = Tenant::create([
+                'name' => $request->name,
+                'slug' => $request->slug,
+                'website' => $request->website,
+                'location' => $request->location,
+                'company_size' => $request->company_size,
+            ]);
 
-        // Create roles and permissions for this tenant
-        $this->createRolesForTenant($tenant);
+            // Add current user to tenant
+            $user = auth()->user();
+            $user->tenants()->attach($tenant->id);
 
-        // Assign Owner role to the user
-        $ownerRole = TenantRole::where('tenant_id', $tenant->id)->where('name', 'Owner')->first();
-        if ($ownerRole) {
-            $user->assignRole($ownerRole);
+            // Create roles and permissions for this tenant
+            $this->createRolesForTenant($tenant);
+
+            // Assign Owner role to the user
+            $ownerRole = TenantRole::where('tenant_id', $tenant->id)->where('name', 'Owner')->first();
+            if ($ownerRole) {
+                $user->assignRole($ownerRole);
+            }
+
+            // Assign free subscription to the new tenant
+            $this->assignFreeSubscription($tenant);
+
+            // Set session data
+            session(['current_tenant_id' => $tenant->id]);
+            session(['last_tenant_slug' => $tenant->slug]);
+
+            return redirect()->route('onboarding.setup', $tenant->slug);
+        } catch (\Exception $e) {
+            \Log::error('Error in onboarding organization store method', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'request_data' => $request->all()
+            ]);
+            
+            return back()->withErrors(['error' => 'An error occurred while creating your organization. Please try again.'])->withInput();
         }
-
-        // Assign free subscription to the new tenant
-        $this->assignFreeSubscription($tenant);
-
-        // Set session data
-        session(['current_tenant_id' => $tenant->id]);
-        session(['last_tenant_slug' => $tenant->slug]);
-
-        return redirect()->route('onboarding.setup', $tenant->slug);
     }
 
     private function createRolesForTenant(Tenant $tenant): void

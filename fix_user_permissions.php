@@ -145,7 +145,7 @@ try {
 
         foreach ($tenantUsers as $user) {
             // Check if user has any roles for this tenant
-            $userRoles = $user->roles()->where('tenant_id', $tenant->id)->get();
+            $userRoles = $user->roles()->where('roles.tenant_id', $tenant->id)->get();
             
             if ($userRoles->count() === 0) {
                 // User has no roles, assign Owner role

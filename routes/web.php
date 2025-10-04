@@ -462,7 +462,7 @@ Route::middleware(['capture.tenant', 'tenant', 'auth'])->group(function () {
     });
 
     // Analytics Routes - Owner, Admin, Recruiter, Hiring Manager
-    Route::middleware('permission:view analytics')->group(function () {
+    Route::middleware(['capture.tenant', 'tenant', 'permission:view analytics'])->group(function () {
         Route::get('/{tenant}/analytics', [App\Http\Controllers\Tenant\AnalyticsController::class, 'index'])->name('tenant.analytics.index');
         Route::get('/{tenant}/analytics/data', [App\Http\Controllers\Tenant\AnalyticsController::class, 'data'])->name('tenant.analytics.data');
         Route::get('/{tenant}/analytics/export', [App\Http\Controllers\Tenant\AnalyticsController::class, 'export'])->name('tenant.analytics.export');

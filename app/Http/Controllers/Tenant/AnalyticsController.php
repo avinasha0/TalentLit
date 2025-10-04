@@ -109,10 +109,10 @@ class AnalyticsController extends Controller
         } else {
             // For longer ranges, group by week
             return DB::table('applications')
-                ->select(DB::raw('strftime("%Y-%W", applied_at) as date'), DB::raw('COUNT(*) as applications_count'))
+                ->select(DB::raw('YEARWEEK(applied_at) as date'), DB::raw('COUNT(*) as applications_count'))
                 ->where('tenant_id', $tenantId)
                 ->whereBetween('applied_at', [$fromDate, $toDate])
-                ->groupBy(DB::raw('strftime("%Y-%W", applied_at)'))
+                ->groupBy(DB::raw('YEARWEEK(applied_at)'))
                 ->orderBy('date')
                 ->get()
                 ->map(function ($item) {
@@ -148,11 +148,11 @@ class AnalyticsController extends Controller
             // For longer ranges, group by week
             return DB::table('applications')
                 ->join('job_stages', 'applications.current_stage_id', '=', 'job_stages.id')
-                ->select(DB::raw('strftime("%Y-%W", applied_at) as date'), DB::raw('COUNT(*) as hires_count'))
+                ->select(DB::raw('YEARWEEK(applied_at) as date'), DB::raw('COUNT(*) as hires_count'))
                 ->where('applications.tenant_id', $tenantId)
                 ->where('job_stages.name', 'like', '%Hired%')
                 ->whereBetween('applications.applied_at', [$fromDate, $toDate])
-                ->groupBy(DB::raw('strftime("%Y-%W", applied_at)'))
+                ->groupBy(DB::raw('YEARWEEK(applied_at)'))
                 ->orderBy('date')
                 ->get()
                 ->map(function ($item) {

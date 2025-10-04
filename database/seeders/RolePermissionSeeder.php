@@ -56,6 +56,7 @@ class RolePermissionSeeder extends Seeder
             // Admin permissions
             'manage users',
             'manage settings',
+            'manage email templates',
         ];
 
         // Create permissions
@@ -115,6 +116,7 @@ class RolePermissionSeeder extends Seeder
             'view candidates', 'create candidates', 'edit candidates', 'delete candidates', 'move candidates', 'import candidates',
             'view dashboard', 'view analytics',
             'view interviews', 'create interviews', 'edit interviews', 'delete interviews',
+            'manage email templates',
         ]);
 
         // Recruiter - Job and candidate management
@@ -130,6 +132,7 @@ class RolePermissionSeeder extends Seeder
             'view candidates', 'create candidates', 'edit candidates', 'move candidates',
             'view dashboard', 'view analytics',
             'view interviews', 'create interviews', 'edit interviews', 'delete interviews',
+            'manage email templates',
         ]);
 
         // Hiring Manager - View only

@@ -70,7 +70,51 @@
 
 <!-- Scripts -->
 <?php if (! (app()->environment('testing'))): ?>
-    <?php echo app('Illuminate\Foundation\Vite')(['resources/css/app.css', 'resources/js/app.js']); ?>
+    <?php if(file_exists(public_path('build/manifest.json'))): ?>
+        <?php echo app('Illuminate\Foundation\Vite')(['resources/css/app.css', 'resources/js/app.js']); ?>
+    <?php else: ?>
+        <!-- Fallback for production without Vite build -->
+        <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.4.0/dist/tailwind.min.css" rel="stylesheet">
+        <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+        <style>
+            /* Custom styles from app.css */
+            @media (max-width: 1023px) {
+                .mobile-open {
+                    transform: translateX(0) !important;
+                }
+            }
+            .collapsed {
+                width: 4rem !important;
+            }
+            .collapsed .sidebar-text {
+                display: none;
+            }
+            .collapsed .sidebar-submenu {
+                display: none !important;
+            }
+            .collapsed .sidebar-user-info {
+                display: none;
+            }
+            .collapsed .sidebar-footer {
+                padding: 1rem 0.5rem;
+            }
+            #sidebar {
+                transition: width 0.3s ease-in-out, transform 0.3s ease-in-out;
+                z-index: 40;
+            }
+            .sidebar-overlay {
+                z-index: 30;
+            }
+            .main-content {
+                transition: margin-left 0.3s ease-in-out;
+            }
+            @media (prefers-color-scheme: dark) {
+                .collapsed {
+                    background-color: rgb(31 41 55);
+                }
+            }
+        </style>
+    <?php endif; ?>
 <?php endif; ?>
 
 <?php /**PATH C:\xampp\htdocs\hirehub2\resources\views/layouts/partials/head.blade.php ENDPATH**/ ?>

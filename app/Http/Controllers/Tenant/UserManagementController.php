@@ -56,6 +56,18 @@ class UserManagementController extends Controller
                         ->first();
                     if (!$role) {
                         $fail('The selected role is not valid for this tenant.');
+                        return;
+                    }
+                    
+                    // Check if there are no owners and trying to create a non-owner
+                    $ownerCount = User::whereHas('tenants', function ($query) use ($tenantModel) {
+                        $query->where('tenants.id', $tenantModel->id);
+                    })->whereHas('roles', function ($query) use ($tenantModel) {
+                        $query->where('roles.name', 'Owner')->where('roles.tenant_id', $tenantModel->id);
+                    })->count();
+                    
+                    if ($ownerCount === 0 && $role->name !== 'Owner') {
+                        $fail('The first user must be assigned the Owner role.');
                     }
                 },
             ],
@@ -118,12 +130,18 @@ class UserManagementController extends Controller
             'role' => [
                 'required',
                 'exists:roles,id',
-                function ($attribute, $value, $fail) use ($tenantModel) {
+                function ($attribute, $value, $fail) use ($tenantModel, $user) {
                     $role = TenantRole::where('id', $value)
                         ->where('tenant_id', $tenantModel->id)
                         ->first();
                     if (!$role) {
                         $fail('The selected role is not valid for this tenant.');
+                        return;
+                    }
+                    
+                    // Check if trying to change the last owner's role
+                    if ($user->hasRole('Owner') && $this->isLastOwner($user, $tenantModel) && $role->name !== 'Owner') {
+                        $fail('Cannot change the role of the last owner. There must be at least one owner in the organization.');
                     }
                 },
             ],

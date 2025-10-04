@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Onboarding;
 
 use App\Http\Controllers\Controller;
+use App\Models\SubscriptionPlan;
 use App\Models\Tenant;
 use App\Models\TenantRole;
+use App\Models\TenantSubscription;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -49,6 +51,9 @@ class OrganizationController extends Controller
             $user->assignRole($ownerRole);
         }
 
+        // Assign free subscription to the new tenant
+        $this->assignFreeSubscription($tenant);
+
         // Set session data
         session(['current_tenant_id' => $tenant->id]);
         session(['last_tenant_slug' => $tenant->slug]);
@@ -91,7 +96,7 @@ class OrganizationController extends Controller
             'view jobs', 'create jobs', 'edit jobs', 'delete jobs', 'publish jobs', 'close jobs',
             'manage stages', 'view stages', 'create stages', 'edit stages', 'delete stages', 'reorder stages',
             'view candidates', 'create candidates', 'edit candidates', 'delete candidates', 'move candidates', 'import candidates',
-            'view dashboard', 'manage users', 'manage settings'
+            'view dashboard', 'manage users', 'manage settings', 'manage email templates'
         ];
 
         foreach ($permissions as $permission) {
@@ -121,6 +126,49 @@ class OrganizationController extends Controller
 
         $hiringManagerRole->syncPermissions([
             'view jobs', 'view stages', 'view candidates', 'view dashboard'
+        ]);
+    }
+
+    /**
+     * Assign free subscription to the new tenant
+     */
+    private function assignFreeSubscription(Tenant $tenant): void
+    {
+        // Get the free subscription plan
+        $freePlan = SubscriptionPlan::where('slug', 'free')->first();
+        
+        if (!$freePlan) {
+            \Log::error('Free subscription plan not found when creating tenant', [
+                'tenant_id' => $tenant->id,
+                'tenant_slug' => $tenant->slug
+            ]);
+            return;
+        }
+
+        // Check if tenant already has a subscription
+        $existingSubscription = TenantSubscription::where('tenant_id', $tenant->id)->first();
+        if ($existingSubscription) {
+            \Log::info('Tenant already has a subscription, skipping free plan assignment', [
+                'tenant_id' => $tenant->id,
+                'existing_plan' => $existingSubscription->plan->name
+            ]);
+            return;
+        }
+
+        // Create free subscription
+        TenantSubscription::create([
+            'tenant_id' => $tenant->id,
+            'subscription_plan_id' => $freePlan->id,
+            'status' => 'active',
+            'starts_at' => now(),
+            'expires_at' => null, // Free plans don't expire
+            'payment_method' => 'free',
+        ]);
+
+        \Log::info('Assigned free subscription to new tenant', [
+            'tenant_id' => $tenant->id,
+            'tenant_slug' => $tenant->slug,
+            'subscription_plan' => 'free'
         ]);
     }
 }

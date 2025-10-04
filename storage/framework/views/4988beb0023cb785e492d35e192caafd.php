@@ -1,13 +1,41 @@
-<x-app-layout :tenant="$tenant">
-    <x-slot name="breadcrumbs">
-        @php
+<?php if (isset($component)) { $__componentOriginal9ac128a9029c0e4701924bd2d73d7f54 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal9ac128a9029c0e4701924bd2d73d7f54 = $attributes; } ?>
+<?php $component = App\View\Components\AppLayout::resolve([] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('app-layout'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\App\View\Components\AppLayout::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['tenant' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($tenant)]); ?>
+     <?php $__env->slot('breadcrumbs', null, []); ?> 
+        <?php
             $breadcrumbs = [
                 ['label' => 'Settings', 'url' => null],
                 ['label' => 'Team Management', 'url' => null]
             ];
-        @endphp
-        <x-breadcrumbs :items="$breadcrumbs" />
-    </x-slot>
+        ?>
+        <?php if (isset($component)) { $__componentOriginal360d002b1b676b6f84d43220f22129e2 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal360d002b1b676b6f84d43220f22129e2 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.breadcrumbs','data' => ['items' => $breadcrumbs]] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('breadcrumbs'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['items' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($breadcrumbs)]); ?>
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal360d002b1b676b6f84d43220f22129e2)): ?>
+<?php $attributes = $__attributesOriginal360d002b1b676b6f84d43220f22129e2; ?>
+<?php unset($__attributesOriginal360d002b1b676b6f84d43220f22129e2); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal360d002b1b676b6f84d43220f22129e2)): ?>
+<?php $component = $__componentOriginal360d002b1b676b6f84d43220f22129e2; ?>
+<?php unset($__componentOriginal360d002b1b676b6f84d43220f22129e2); ?>
+<?php endif; ?>
+     <?php $__env->endSlot(); ?>
 
     <div class="space-y-6">
         <!-- Page header -->
@@ -27,19 +55,19 @@
                         </div>
                     </div>
                 </div>
-                @if($maxUsers !== -1)
+                <?php if($maxUsers !== -1): ?>
                     <div class="mt-2 flex items-center space-x-2">
                         <span class="text-xs text-white/80">
-                            {{ $currentUserCount }} / {{ $maxUsers }} users
+                            <?php echo e($currentUserCount); ?> / <?php echo e($maxUsers); ?> users
                         </span>
                         <div class="w-20 bg-white/20 rounded-full h-1.5">
                             <div class="bg-white h-1.5 rounded-full transition-all duration-300" 
-                                 style="width: {{ $maxUsers > 0 ? min(100, ($currentUserCount / $maxUsers) * 100) : 0 }}%"></div>
+                                 style="width: <?php echo e($maxUsers > 0 ? min(100, ($currentUserCount / $maxUsers) * 100) : 0); ?>%"></div>
                         </div>
                     </div>
-                @endif
+                <?php endif; ?>
             </div>
-                    @if($canAddUsers)
+                    <?php if($canAddUsers): ?>
                         <button onclick="openCreateUserModal()"
                                 class="inline-flex items-center px-6 py-3 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 transform hover:scale-105 hover:shadow-lg">
                             <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -47,7 +75,7 @@
                             </svg>
                             Add Team Member
                         </button>
-                    @else
+                    <?php else: ?>
                         <button onclick="showUserLimitReached()"
                                 class="inline-flex items-center px-6 py-3 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-gray-400 to-gray-500 cursor-not-allowed opacity-75">
                             <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -55,16 +83,25 @@
                             </svg>
                             Add Team Member
                         </button>
-                    @endif
+                    <?php endif; ?>
         </div>
 
         <!-- Team Members List -->
-        <x-card>
-            <x-slot name="header">
+        <?php if (isset($component)) { $__componentOriginal53747ceb358d30c0105769f8471417f6 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal53747ceb358d30c0105769f8471417f6 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.card','data' => []] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('card'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes([]); ?>
+             <?php $__env->slot('header', null, []); ?> 
                 <h3 class="text-lg font-medium text-black">Team Members</h3>
-            </x-slot>
+             <?php $__env->endSlot(); ?>
 
-            @if($users->count() > 0)
+            <?php if($users->count() > 0): ?>
                 <div class="overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
@@ -77,25 +114,26 @@
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
-                            @foreach($users as $user)
+                            <?php $__currentLoopData = $users; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $user): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                                 <tr>
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <div class="flex items-center">
                                             <div class="flex-shrink-0 h-10 w-10">
                                                 <div class="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
                                                     <span class="text-sm font-medium text-gray-700">
-                                                        {{ strtoupper(substr($user->name, 0, 2)) }}
+                                                        <?php echo e(strtoupper(substr($user->name, 0, 2))); ?>
+
                                                     </span>
                                                 </div>
                                             </div>
                                             <div class="ml-4">
-                                                <div class="text-sm font-medium text-gray-900">{{ $user->name }}</div>
+                                                <div class="text-sm font-medium text-gray-900"><?php echo e($user->name); ?></div>
                                             </div>
                                         </div>
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ $user->email }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><?php echo e($user->email); ?></td>
                                     <td class="px-6 py-4 whitespace-nowrap">
-                                        @php
+                                        <?php
                                             $userRole = $user->tenant_roles->first();
                                             $roleColors = [
                                                 'Owner' => 'bg-purple-100 text-purple-800',
@@ -105,17 +143,18 @@
                                             ];
                                             $roleColor = $roleColors[$userRole->name ?? ''] ?? 'bg-gray-100 text-gray-800';
                                             $isLastOwner = $user->hasRole('Owner') && $users->where('tenant_roles.0.name', 'Owner')->count() <= 1;
-                                        @endphp
+                                        ?>
                                         <div class="flex items-center space-x-2">
-                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $roleColor }}">
-                                                {{ $userRole->name ?? 'No Role' }}
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium <?php echo e($roleColor); ?>">
+                                                <?php echo e($userRole->name ?? 'No Role'); ?>
+
                                             </span>
-                                            @if($isLastOwner)
+                                            <?php if($isLastOwner): ?>
                                                 <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800" 
                                                       title="This is the last owner. Cannot be removed or have role changed.">
                                                     Last Owner
                                                 </span>
-                                            @endif
+                                            <?php endif; ?>
                                         </div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
@@ -124,35 +163,58 @@
                                         </span>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                                        <button onclick="openEditUserModal({{ $user->id }}, '{{ $user->name }}', '{{ $user->email }}', '{{ $userRole->id ?? '' }}', {{ $user->hasRole('Owner') ? 'true' : 'false' }})" 
+                                        <button onclick="openEditUserModal(<?php echo e($user->id); ?>, '<?php echo e($user->name); ?>', '<?php echo e($user->email); ?>', '<?php echo e($userRole->id ?? ''); ?>', <?php echo e($user->hasRole('Owner') ? 'true' : 'false'); ?>)" 
                                                 class="text-blue-600 hover:text-blue-900">Edit</button>
-                                        <button onclick="resendInvitation({{ $user->id }})" 
+                                        <button onclick="resendInvitation(<?php echo e($user->id); ?>)" 
                                                 class="text-green-600 hover:text-green-900">Resend Invite</button>
-                                        @if(!$user->hasRole('Owner') || $users->where('tenant_roles.0.name', 'Owner')->count() > 1)
-                                            <button onclick="confirmDelete({{ $user->id }}, '{{ $user->name }}', {{ $user->hasRole('Owner') ? 'true' : 'false' }})" 
+                                        <?php if(!$user->hasRole('Owner') || $users->where('tenant_roles.0.name', 'Owner')->count() > 1): ?>
+                                            <button onclick="confirmDelete(<?php echo e($user->id); ?>, '<?php echo e($user->name); ?>', <?php echo e($user->hasRole('Owner') ? 'true' : 'false'); ?>)" 
                                                     class="text-red-600 hover:text-red-900">Remove</button>
-                                        @endif
+                                        <?php endif; ?>
                                     </td>
                                 </tr>
-                            @endforeach
+                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                         </tbody>
                     </table>
                 </div>
 
                 <!-- Pagination -->
                 <div class="mt-6">
-                    {{ $users->links() }}
+                    <?php echo e($users->links()); ?>
+
                 </div>
-            @else
-                <x-empty 
-                    icon="user-group"
-                    title="No team members"
-                    description="Add your first team member to get started."
-                    actionText="Add Team Member"
-                    onclick="{{ $canAddUsers ? 'openCreateUserModal()' : 'showUserLimitReached()' }}"
-                />
-            @endif
-        </x-card>
+            <?php else: ?>
+                <?php if (isset($component)) { $__componentOriginal4f22a152e0729cd34293e65bd200d933 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal4f22a152e0729cd34293e65bd200d933 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.empty','data' => ['icon' => 'user-group','title' => 'No team members','description' => 'Add your first team member to get started.','actionText' => 'Add Team Member','onclick' => ''.e($canAddUsers ? 'openCreateUserModal()' : 'showUserLimitReached()').'']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('empty'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['icon' => 'user-group','title' => 'No team members','description' => 'Add your first team member to get started.','actionText' => 'Add Team Member','onclick' => ''.e($canAddUsers ? 'openCreateUserModal()' : 'showUserLimitReached()').'']); ?>
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal4f22a152e0729cd34293e65bd200d933)): ?>
+<?php $attributes = $__attributesOriginal4f22a152e0729cd34293e65bd200d933; ?>
+<?php unset($__attributesOriginal4f22a152e0729cd34293e65bd200d933); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal4f22a152e0729cd34293e65bd200d933)): ?>
+<?php $component = $__componentOriginal4f22a152e0729cd34293e65bd200d933; ?>
+<?php unset($__componentOriginal4f22a152e0729cd34293e65bd200d933); ?>
+<?php endif; ?>
+            <?php endif; ?>
+         <?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal53747ceb358d30c0105769f8471417f6)): ?>
+<?php $attributes = $__attributesOriginal53747ceb358d30c0105769f8471417f6; ?>
+<?php unset($__attributesOriginal53747ceb358d30c0105769f8471417f6); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal53747ceb358d30c0105769f8471417f6)): ?>
+<?php $component = $__componentOriginal53747ceb358d30c0105769f8471417f6; ?>
+<?php unset($__componentOriginal53747ceb358d30c0105769f8471417f6); ?>
+<?php endif; ?>
     </div>
 
     <!-- Create User Modal -->
@@ -184,11 +246,11 @@
                 </div>
                 
                 <!-- Modal Body -->
-                <form action="{{ route('tenant.users.store', $tenantModel->slug) }}" method="POST" class="px-6 py-6">
-                    @csrf
+                <form action="<?php echo e(route('tenant.users.store', $tenantModel->slug)); ?>" method="POST" class="px-6 py-6">
+                    <?php echo csrf_field(); ?>
                     
                     <!-- Display validation errors -->
-                    @if ($errors->any())
+                    <?php if($errors->any()): ?>
                         <div class="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
                             <div class="flex">
                                 <div class="flex-shrink-0">
@@ -200,15 +262,15 @@
                                     <h3 class="text-sm font-medium text-red-800">Please correct the following errors:</h3>
                                     <div class="mt-2 text-sm text-red-700">
                                         <ul class="list-disc list-inside space-y-1">
-                                            @foreach ($errors->all() as $error)
-                                                <li>{{ $error }}</li>
-                                            @endforeach
+                                            <?php $__currentLoopData = $errors->all(); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $error): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                                <li><?php echo e($error); ?></li>
+                                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                                         </ul>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    @endif
+                    <?php endif; ?>
                     
                     <div class="space-y-6">
                         <!-- Full Name Field -->
@@ -227,8 +289,8 @@
                                        id="name" 
                                        required
                                        placeholder="Enter full name"
-                                       value="{{ old('name') }}"
-                                       class="block w-full pl-10 pr-3 py-3 border {{ $errors->has('name') ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500' }} rounded-lg shadow-sm placeholder-gray-400 focus:outline-none transition-colors duration-200">
+                                       value="<?php echo e(old('name')); ?>"
+                                       class="block w-full pl-10 pr-3 py-3 border <?php echo e($errors->has('name') ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'); ?> rounded-lg shadow-sm placeholder-gray-400 focus:outline-none transition-colors duration-200">
                             </div>
                         </div>
 
@@ -248,8 +310,8 @@
                                        id="email" 
                                        required
                                        placeholder="Enter email address"
-                                       value="{{ old('email') }}"
-                                       class="block w-full pl-10 pr-3 py-3 border {{ $errors->has('email') ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500' }} rounded-lg shadow-sm placeholder-gray-400 focus:outline-none transition-colors duration-200">
+                                       value="<?php echo e(old('email')); ?>"
+                                       class="block w-full pl-10 pr-3 py-3 border <?php echo e($errors->has('email') ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'); ?> rounded-lg shadow-sm placeholder-gray-400 focus:outline-none transition-colors duration-200">
                             </div>
                         </div>
 
@@ -267,11 +329,11 @@
                                 <select name="role" 
                                         id="role" 
                                         required
-                                        class="block w-full pl-10 pr-10 py-3 border {{ $errors->has('role') ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500' }} rounded-lg shadow-sm focus:outline-none transition-colors duration-200 appearance-none bg-white">
+                                        class="block w-full pl-10 pr-10 py-3 border <?php echo e($errors->has('role') ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'); ?> rounded-lg shadow-sm focus:outline-none transition-colors duration-200 appearance-none bg-white">
                                     <option value="">Select a role</option>
-                                    @foreach($roles as $role)
-                                        <option value="{{ $role->id }}" {{ old('role') == $role->id ? 'selected' : '' }}>{{ $role->name }}</option>
-                                    @endforeach
+                                    <?php $__currentLoopData = $roles; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $role): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                        <option value="<?php echo e($role->id); ?>" <?php echo e(old('role') == $role->id ? 'selected' : ''); ?>><?php echo e($role->name); ?></option>
+                                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                                 </select>
                                 <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
                                     <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -288,7 +350,8 @@
                                        name="send_invitation" 
                                        id="send_invitation" 
                                        value="1"
-                                       {{ old('send_invitation', true) ? 'checked' : '' }}
+                                       <?php echo e(old('send_invitation', true) ? 'checked' : ''); ?>
+
                                        class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded transition-colors duration-200">
                             </div>
                             <div class="text-sm">
@@ -338,8 +401,8 @@
                 </div>
                 
                 <form id="edit-user-form" method="POST">
-                    @csrf
-                    @method('PUT')
+                    <?php echo csrf_field(); ?>
+                    <?php echo method_field('PUT'); ?>
                     <div class="space-y-4">
                         <div>
                             <label for="edit_name" class="block text-sm font-medium text-black">Full Name</label>
@@ -366,9 +429,9 @@
                                     required
                                     class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
                                 <option value="">Select a role</option>
-                                @foreach($roles as $role)
-                                    <option value="{{ $role->id }}">{{ $role->name }}</option>
-                                @endforeach
+                                <?php $__currentLoopData = $roles; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $role): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                    <option value="<?php echo e($role->id); ?>"><?php echo e($role->name); ?></option>
+                                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                             </select>
                         </div>
                     </div>
@@ -471,10 +534,10 @@
             document.getElementById('edit_name').value = name;
             document.getElementById('edit_email').value = email;
             document.getElementById('edit_role').value = roleId;
-            document.getElementById('edit-user-form').action = `/{{ $tenantModel->slug }}/users/${userId}`;
+            document.getElementById('edit-user-form').action = `/<?php echo e($tenantModel->slug); ?>/users/${userId}`;
             
             // Check if this is the last owner
-            const ownerCount = {{ $users->where('tenant_roles.0.name', 'Owner')->count() }};
+            const ownerCount = <?php echo e($users->where('tenant_roles.0.name', 'Owner')->count()); ?>;
             const roleSelect = document.getElementById('edit_role');
             
             if (isOwner && ownerCount <= 1) {
@@ -495,7 +558,7 @@
 
         function resendInvitation(userId) {
             if (confirm('Send invitation email to this user?')) {
-                fetch(`/{{ $tenantModel->slug }}/users/${userId}/resend-invitation`, {
+                fetch(`/<?php echo e($tenantModel->slug); ?>/users/${userId}/resend-invitation`, {
                     method: 'POST',
                     headers: {
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
@@ -526,7 +589,7 @@
 
         function confirmDelete(userId, userName, isOwner = false) {
             // Check if this is the last owner
-            const ownerCount = {{ $users->where('tenant_roles.0.name', 'Owner')->count() }};
+            const ownerCount = <?php echo e($users->where('tenant_roles.0.name', 'Owner')->count()); ?>;
             
             if (isOwner && ownerCount <= 1) {
                 alert('Cannot remove the last owner of the organization. There must be at least one owner.');
@@ -536,7 +599,7 @@
             if (confirm(`Are you sure you want to remove ${userName} from the team?`)) {
                 const form = document.createElement('form');
                 form.method = 'POST';
-                form.action = `/{{ $tenantModel->slug }}/users/${userId}`;
+                form.action = `/<?php echo e($tenantModel->slug); ?>/users/${userId}`;
                 
                 const csrfToken = document.createElement('input');
                 csrfToken.type = 'hidden';
@@ -556,8 +619,8 @@
         }
 
         function showUserLimitReached() {
-            const currentCount = {{ $currentUserCount }};
-            const maxUsers = {{ $maxUsers === -1 ? 'Infinity' : $maxUsers }};
+            const currentCount = <?php echo e($currentUserCount); ?>;
+            const maxUsers = <?php echo e($maxUsers === -1 ? 'Infinity' : $maxUsers); ?>;
             
             let message = `You've reached the user limit for your current plan. `;
             if (maxUsers !== Infinity) {
@@ -569,8 +632,18 @@
             
             // Redirect to tenant-specific subscription page
             if (confirm('Would you like to view available plans?')) {
-                window.location.href = '{{ route("subscription.show", $tenantModel->slug) }}';
+                window.location.href = '<?php echo e(route("subscription.show", $tenantModel->slug)); ?>';
             }
         }
     </script>
-</x-app-layout>
+ <?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal9ac128a9029c0e4701924bd2d73d7f54)): ?>
+<?php $attributes = $__attributesOriginal9ac128a9029c0e4701924bd2d73d7f54; ?>
+<?php unset($__attributesOriginal9ac128a9029c0e4701924bd2d73d7f54); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal9ac128a9029c0e4701924bd2d73d7f54)): ?>
+<?php $component = $__componentOriginal9ac128a9029c0e4701924bd2d73d7f54; ?>
+<?php unset($__componentOriginal9ac128a9029c0e4701924bd2d73d7f54); ?>
+<?php endif; ?>
+<?php /**PATH C:\xampp\htdocs\hirehub2\resources\views/tenant/settings/team.blade.php ENDPATH**/ ?>

@@ -57,11 +57,18 @@ try {
         echo "   Processing tenant: {$tenant->name} ({$tenant->slug})\n";
         
         // Step 3: Get or create Owner role for this tenant
-        $ownerRole = TenantRole::firstOrCreate([
-            'name' => 'Owner',
-            'guard_name' => 'web',
-            'tenant_id' => $tenant->id,
-        ]);
+        $ownerRole = TenantRole::where('name', 'Owner')
+            ->where('guard_name', 'web')
+            ->where('tenant_id', $tenant->id)
+            ->first();
+            
+        if (!$ownerRole) {
+            $ownerRole = TenantRole::create([
+                'name' => 'Owner',
+                'guard_name' => 'web',
+                'tenant_id' => $tenant->id,
+            ]);
+        }
         echo "     ✅ Owner role exists\n";
         
         // Step 4: Add analytics permission to Owner role
@@ -73,11 +80,18 @@ try {
         }
         
         // Step 5: Get or create Admin role for this tenant
-        $adminRole = TenantRole::firstOrCreate([
-            'name' => 'Admin',
-            'guard_name' => 'web',
-            'tenant_id' => $tenant->id,
-        ]);
+        $adminRole = TenantRole::where('name', 'Admin')
+            ->where('guard_name', 'web')
+            ->where('tenant_id', $tenant->id)
+            ->first();
+            
+        if (!$adminRole) {
+            $adminRole = TenantRole::create([
+                'name' => 'Admin',
+                'guard_name' => 'web',
+                'tenant_id' => $tenant->id,
+            ]);
+        }
         echo "     ✅ Admin role exists\n";
         
         // Step 6: Add analytics permission to Admin role

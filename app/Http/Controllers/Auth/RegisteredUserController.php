@@ -49,27 +49,13 @@ class RegisteredUserController extends Controller
         // Store email in session for verification
         $request->session()->put('pending_verification_email', $request->email);
 
-        // Generate and send OTP
-        $otpRecord = \App\Models\EmailVerificationOtp::generateForEmail($request->email);
+        \Log::info('New user registration - redirecting to OTP verification', [
+            'user_id' => $user->id,
+            'user_email' => $user->email
+        ]);
         
-        try {
-            \Mail::to($request->email)->send(new \App\Mail\EmailVerificationOtpMail($otpRecord->otp, $request->email));
-            
-            \Log::info('New user registration - OTP sent for verification', [
-                'user_id' => $user->id,
-                'user_email' => $user->email
-            ]);
-            
-            return redirect()->route('verification.show')
-                ->with('success', 'Registration successful! Please check your email for the verification code.');
-        } catch (\Exception $e) {
-            \Log::error('Failed to send OTP email during registration: ' . $e->getMessage());
-            
-            // If email sending fails, delete the user and show error
-            $user->delete();
-            
-            return back()->with('error', 'Registration failed. Please try again.');
-        }
+        return redirect()->route('verification.show')
+            ->with('success', 'Registration successful! Please verify your email address.');
     }
     
     /**

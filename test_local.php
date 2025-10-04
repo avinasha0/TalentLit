@@ -1,51 +1,71 @@
 <?php
 
-require 'vendor/autoload.php';
+require_once __DIR__ . '/vendor/autoload.php';
 
-$app = require 'bootstrap/app.php';
-$app->make('Illuminate\Contracts\Console\Kernel')->bootstrap();
+use Illuminate\Foundation\Application;
+use Illuminate\Foundation\Configuration\Exceptions;
+use Illuminate\Foundation\Configuration\Middleware;
 
-echo "🧪 Testing Local Environment\n";
+// Bootstrap Laravel
+$app = Application::configure(basePath: __DIR__)
+    ->withRouting(
+        web: __DIR__ . '/routes/web.php',
+        api: __DIR__ . '/routes/api.php',
+        commands: __DIR__ . '/routes/console.php',
+        health: '/up',
+    )
+    ->withMiddleware(function (Middleware $middleware) {
+        //
+    })
+    ->withExceptions(function (Exceptions $exceptions) {
+        //
+    })
+    ->create();
+
+$app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+
+use App\Models\User;
+use App\Models\Tenant;
+
+echo "Testing Localhost Permissions\n";
 echo "============================\n\n";
 
 try {
-    // Test 1: Check users
-    $users = App\Models\User::all();
-    echo "👥 Found {$users->count()} users\n\n";
+    $user = User::first();
+    if (!$user) {
+        echo "❌ No users found\n";
+        exit(1);
+    }
     
-    foreach ($users as $user) {
-        echo "User: {$user->name} ({$user->email})\n";
-        echo "  Roles: " . $user->roles->count() . "\n";
-        echo "  First role: " . ($user->roles->first() ? $user->roles->first()->name : 'No Role') . "\n";
-        echo "  Tenants: " . $user->tenants->count() . "\n";
+    echo "User: {$user->name} ({$user->email})\n";
+    echo "Has 'view dashboard' permission: " . ($user->hasPermissionTo('view dashboard') ? 'YES' : 'NO') . "\n";
+    echo "Has 'Owner' role: " . ($user->hasRole('Owner') ? 'YES' : 'NO') . "\n";
+    
+    echo "\nRoles:\n";
+    foreach ($user->roles as $role) {
+        echo "  - {$role->name} (tenant: {$role->tenant_id})\n";
+    }
+    
+    echo "\nPermissions:\n";
+    foreach ($user->getAllPermissions() as $permission) {
+        echo "  - {$permission->name}\n";
+    }
+    
+    echo "\nTenants:\n";
+    foreach ($user->tenants as $tenant) {
+        echo "  - {$tenant->name} ({$tenant->slug})\n";
+    }
+    
+    // Test with tenant context
+    $firstTenant = $user->tenants()->first();
+    if ($firstTenant) {
+        echo "\nTesting with tenant context: {$firstTenant->name}\n";
+        app()->instance('currentTenantId', $firstTenant->id);
         
-        foreach ($user->tenants as $tenant) {
-            echo "    - {$tenant->name} ({$tenant->slug})\n";
-            $userRoles = $user->roles()->where('roles.tenant_id', $tenant->id)->get();
-            echo "      Tenant roles: " . $userRoles->count() . "\n";
-            foreach ($userRoles as $role) {
-                echo "        - {$role->name}\n";
-            }
-        }
-        echo "\n";
+        echo "Has 'view dashboard' with tenant context: " . ($user->hasPermissionTo('view dashboard') ? 'YES' : 'NO') . "\n";
+        echo "Has 'Owner' role with tenant context: " . ($user->hasRole('Owner') ? 'YES' : 'NO') . "\n";
     }
-    
-    // Test 2: Check tenants
-    $tenants = App\Models\Tenant::all();
-    echo "🏢 Found {$tenants->count()} tenants\n\n";
-    
-    foreach ($tenants as $tenant) {
-        echo "Tenant: {$tenant->name} ({$tenant->slug})\n";
-        $tenantRoles = App\Models\TenantRole::where('tenant_id', $tenant->id)->get();
-        echo "  Roles: " . $tenantRoles->count() . "\n";
-        foreach ($tenantRoles as $role) {
-            echo "    - {$role->name}\n";
-        }
-        echo "\n";
-    }
-    
-    echo "✅ Local test completed!\n";
-    
+
 } catch (Exception $e) {
     echo "❌ Error: " . $e->getMessage() . "\n";
     echo "Stack trace:\n" . $e->getTraceAsString() . "\n";

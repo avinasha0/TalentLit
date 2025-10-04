@@ -86,11 +86,17 @@ class EmailVerificationController extends Controller
 
         $user->update(['email_verified_at' => now()]);
 
+        // Log the user in first
+        Auth::login($user);
+        
         // Clear session
         $request->session()->forget('pending_verification_email');
-
-        // Log the user in
-        Auth::login($user);
+        
+        // Set flag to indicate user just verified email (for onboarding flow)
+        $request->session()->put('just_verified_email', true);
+        
+        // Regenerate session ID for security
+        $request->session()->regenerate();
 
         // Log the successful verification
         \Log::info('User email verified successfully', [

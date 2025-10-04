@@ -25,9 +25,14 @@ class OrganizationController extends Controller
             // Check if user already has tenants
             $user = auth()->user();
             if ($user->tenants()->count() > 0) {
-                // User already has a tenant, redirect to dashboard
-                $firstTenant = $user->tenants()->first();
-                return redirect()->route('tenant.dashboard', $firstTenant->slug);
+                // Check if this is a new registration (user just verified email)
+                $isNewRegistration = session()->has('just_verified_email');
+                
+                if (!$isNewRegistration) {
+                    // User already has a tenant and this is not a new registration, redirect to dashboard
+                    $firstTenant = $user->tenants()->first();
+                    return redirect()->route('tenant.dashboard', $firstTenant->slug);
+                }
             }
 
             return view('onboarding.organization');
@@ -89,6 +94,9 @@ class OrganizationController extends Controller
             // Set session data
             session(['current_tenant_id' => $tenant->id]);
             session(['last_tenant_slug' => $tenant->slug]);
+            
+            // Clear the just_verified_email flag since onboarding is starting
+            session()->forget('just_verified_email');
 
             return redirect()->route('onboarding.setup', $tenant->slug);
         } catch (\Exception $e) {

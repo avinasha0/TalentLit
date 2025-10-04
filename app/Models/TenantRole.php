@@ -21,7 +21,7 @@ class TenantRole extends SpatieRole
      */
     public function scopeForTenant($query, $tenantId)
     {
-        return $query->where('tenant_id', $tenantId);
+        return $query->where('roles.tenant_id', $tenantId);
     }
 
     /**
@@ -32,4 +32,5 @@ class TenantRole extends SpatieRole
         $attributes['tenant_id'] = $tenantId;
         return static::create($attributes);
     }
+
 }

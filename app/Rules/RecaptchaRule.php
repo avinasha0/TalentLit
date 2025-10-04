@@ -36,6 +36,13 @@ class RecaptchaRule implements ValidationRule
             return;
         }
 
+        // Skip validation for localhost development
+        $host = $this->request->getHost();
+        if (in_array($host, ['localhost', '127.0.0.1', '0.0.0.0']) || strpos($host, 'localhost') !== false) {
+            \Log::info('reCAPTCHA validation skipped for localhost development', ['host' => $host]);
+            return;
+        }
+
         if (empty($value)) {
             $fail('Please complete the reCAPTCHA verification by clicking "I am not a robot".');
             return;

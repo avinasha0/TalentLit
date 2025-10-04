@@ -28,6 +28,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->api(remove: [
             \Illuminate\Http\Middleware\ValidatePathEncoding::class,
         ]);
+        
+        // Also remove from global middleware
+        $middleware->removeFromGroup('web', \Illuminate\Http\Middleware\ValidatePathEncoding::class);
+        $middleware->removeFromGroup('api', \Illuminate\Http\Middleware\ValidatePathEncoding::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

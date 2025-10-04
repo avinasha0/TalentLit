@@ -96,7 +96,7 @@ class OrganizationController extends Controller
             'view jobs', 'create jobs', 'edit jobs', 'delete jobs', 'publish jobs', 'close jobs',
             'manage stages', 'view stages', 'create stages', 'edit stages', 'delete stages', 'reorder stages',
             'view candidates', 'create candidates', 'edit candidates', 'delete candidates', 'move candidates', 'import candidates',
-            'view dashboard', 'manage users', 'manage settings', 'manage email templates'
+            'view dashboard', 'view analytics', 'manage users', 'manage settings', 'manage email templates'
         ];
 
         foreach ($permissions as $permission) {

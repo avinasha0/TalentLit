@@ -87,9 +87,11 @@ try {
                 if (is_null($roleAssignment->tenant_id)) {
                     echo "         ❌ Role '{$roleAssignment->role_name}' missing tenant_id\n";
                     
-                    // Fix it by updating the tenant_id
+                    // Fix it by updating the tenant_id using composite key
                     DB::table('model_has_roles')
-                        ->where('id', $roleAssignment->id)
+                        ->where('role_id', $roleAssignment->role_id)
+                        ->where('model_id', $roleAssignment->model_id)
+                        ->where('model_type', $roleAssignment->model_type)
                         ->update(['tenant_id' => $tenant->id]);
                     
                     echo "         ✅ Fixed tenant_id for role '{$roleAssignment->role_name}'\n";

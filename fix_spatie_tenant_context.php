@@ -72,9 +72,11 @@ try {
             ->first();
         
         if ($role && $role->tenant_id) {
-            // Update the assignment with the correct tenant_id
+            // Update the assignment with the correct tenant_id using composite key
             DB::table('model_has_roles')
-                ->where('id', $assignment->id)
+                ->where('role_id', $assignment->role_id)
+                ->where('model_id', $assignment->model_id)
+                ->where('model_type', $assignment->model_type)
                 ->update(['tenant_id' => $role->tenant_id]);
             
             echo "   ✅ Fixed assignment for role '{$role->name}' (tenant: {$role->tenant_id})\n";

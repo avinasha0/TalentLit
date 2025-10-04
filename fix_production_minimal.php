@@ -101,8 +101,8 @@ try {
     }
     echo "   ✅ Essential permissions created\n";
 
-    // Step 4: Quick fix for users without permissions
-    echo "\n👥 Step 4: Quick user permission fix...\n";
+    // Step 4: Quick fix for users without permissions and roles
+    echo "\n👥 Step 4: Quick user permission and role fix...\n";
     $users = User::all();
     echo "   Found {$users->count()} users\n";
     
@@ -116,6 +116,38 @@ try {
         if (!$user->hasPermissionTo('view analytics')) {
             $user->givePermissionTo('view analytics');
             echo "   ✅ Added analytics permission to user: {$user->name}\n";
+        }
+        
+        if (!$user->hasPermissionTo('manage settings')) {
+            $user->givePermissionTo('manage settings');
+            echo "   ✅ Added settings permission to user: {$user->name}\n";
+        }
+        
+        // Check if user has any roles for any tenant
+        $userRoles = $user->roles()->count();
+        if ($userRoles === 0) {
+            // User has no roles, give them Owner role for their first tenant
+            $firstTenant = $user->tenants()->first();
+            if ($firstTenant) {
+                // Create Owner role for this tenant if it doesn't exist
+                $ownerRole = \App\Models\TenantRole::where('name', 'Owner')
+                    ->where('guard_name', 'web')
+                    ->where('tenant_id', $firstTenant->id)
+                    ->first();
+                    
+                if (!$ownerRole) {
+                    $ownerRole = \App\Models\TenantRole::create([
+                        'name' => 'Owner',
+                        'guard_name' => 'web',
+                        'tenant_id' => $firstTenant->id,
+                    ]);
+                    // Give Owner role all permissions
+                    $ownerRole->syncPermissions(Permission::all());
+                }
+                
+                $user->assignRole($ownerRole);
+                echo "   ✅ Assigned Owner role to user: {$user->name} for tenant: {$firstTenant->name}\n";
+            }
         }
     }
 

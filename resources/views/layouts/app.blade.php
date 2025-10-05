@@ -8,7 +8,14 @@
         @endphp
         @include('layouts.partials.head')
     </head>
-    <body class="font-sans antialiased" x-data x-init="$store.sidebar = { open: false }">
+    <body class="font-sans antialiased" x-data x-init="
+        if (!$store.sidebar) {
+            $store.sidebar = { 
+                open: window.innerWidth >= 1024,
+                toggle() { this.open = !this.open }
+            };
+        }
+    ">
         <div class="min-h-screen bg-gray-100 flex">
             <!-- Sidebar -->
             <x-sidebar />

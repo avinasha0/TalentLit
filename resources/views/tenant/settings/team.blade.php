@@ -103,12 +103,31 @@
                                                 'Recruiter' => 'bg-green-100 text-green-800',
                                                 'Hiring Manager' => 'bg-yellow-100 text-yellow-800',
                                             ];
-                                            $roleColor = $roleColors[$userRole->name ?? ''] ?? 'bg-gray-100 text-gray-800';
-                                            $isLastOwner = $user->hasRole('Owner') && $users->where('tenant_roles.0.name', 'Owner')->count() <= 1;
+                                            
+                                            // Safe access to role name
+                                            $roleName = null;
+                                            if ($userRole && is_object($userRole) && isset($userRole->name)) {
+                                                $roleName = $userRole->name;
+                                            }
+                                            
+                                            $roleColor = $roleColors[$roleName ?? ''] ?? 'bg-gray-100 text-gray-800';
+                                            $userCustomRole = \DB::table('custom_user_roles')
+                                                ->where('user_id', $user->id)
+                                                ->where('tenant_id', $tenantModel->id)
+                                                ->value('role_name');
+                                            
+                                            // Count owners by checking each user's tenant_roles
+                                            $ownerCount = 0;
+                                            foreach ($users as $u) {
+                                                if ($u->tenant_roles->isNotEmpty() && $u->tenant_roles->first()->name === 'Owner') {
+                                                    $ownerCount++;
+                                                }
+                                            }
+                                            $isLastOwner = $userCustomRole === 'Owner' && $ownerCount <= 1;
                                         @endphp
                                         <div class="flex items-center space-x-2">
                                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $roleColor }}">
-                                                {{ $userRole->name ?? 'No Role' }}
+                                                {{ $roleName ?? 'No Role' }}
                                             </span>
                                             @if($isLastOwner)
                                                 <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800" 
@@ -124,12 +143,12 @@
                                         </span>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                                        <button onclick="openEditUserModal({{ $user->id }}, '{{ $user->name }}', '{{ $user->email }}', '{{ $userRole->id ?? '' }}', {{ $user->hasRole('Owner') ? 'true' : 'false' }})" 
+                                        <button onclick="openEditUserModal({{ $user->id }}, '{{ $user->name }}', '{{ $user->email }}', '{{ $roleName ?? '' }}', {{ $userCustomRole === 'Owner' ? 'true' : 'false' }})" 
                                                 class="text-blue-600 hover:text-blue-900">Edit</button>
                                         <button onclick="resendInvitation({{ $user->id }})" 
                                                 class="text-green-600 hover:text-green-900">Resend Invite</button>
-                                        @if(!$user->hasRole('Owner') || $users->where('tenant_roles.0.name', 'Owner')->count() > 1)
-                                            <button onclick="confirmDelete({{ $user->id }}, '{{ $user->name }}', {{ $user->hasRole('Owner') ? 'true' : 'false' }})" 
+                                        @if($userCustomRole !== 'Owner' || $ownerCount > 1)
+                                            <button onclick="confirmDelete({{ $user->id }}, '{{ $user->name }}', {{ $userCustomRole === 'Owner' ? 'true' : 'false' }})" 
                                                     class="text-red-600 hover:text-red-900">Remove</button>
                                         @endif
                                     </td>

@@ -1,6 +1,7 @@
 import './bootstrap';
 import './theme';
 import './mobile-menu';
+import './navigation-fix';
 
 import Alpine from 'alpinejs';
 import Chart from 'chart.js/auto';

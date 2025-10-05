@@ -11,6 +11,7 @@ use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
 use Illuminate\View\View;
@@ -39,19 +40,19 @@ class RegisteredUserController extends Controller
             'g-recaptcha-response' => ['required', new RecaptchaRule(app(\App\Services\RecaptchaService::class), $request)],
         ]);
 
-        $user = User::create([
+        // Store user data temporarily in session instead of creating user immediately
+        $request->session()->put('pending_registration', [
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
-            'email_verified_at' => null, // Ensure email is not verified initially
+            'created_at' => now(),
         ]);
 
         // Store email in session for verification
         $request->session()->put('pending_verification_email', $request->email);
 
-        \Log::info('New user registration - redirecting to OTP verification', [
-            'user_id' => $user->id,
-            'user_email' => $user->email
+        \Log::info('New user registration - storing data temporarily, redirecting to OTP verification', [
+            'user_email' => $request->email
         ]);
         
         return redirect()->route('verification.show')
@@ -59,33 +60,88 @@ class RegisteredUserController extends Controller
     }
     
     /**
-     * Ensure roles exist for a tenant
+     * Ensure roles exist for a tenant using custom permission system
      */
     private function ensureRolesExistForTenant(Tenant $tenant): void
     {
-        // Create Owner role if it doesn't exist
-        $ownerRole = TenantRole::firstOrCreate([
-            'name' => 'Owner',
-            'guard_name' => 'web',
-            'tenant_id' => $tenant->id,
-        ]);
-        
-        // Create basic permissions if they don't exist
-        $permissions = [
-            'view jobs', 'create jobs', 'edit jobs', 'delete jobs', 'publish jobs', 'close jobs',
-            'manage stages', 'view stages', 'create stages', 'edit stages', 'delete stages', 'reorder stages',
-            'view candidates', 'create candidates', 'edit candidates', 'delete candidates', 'move candidates', 'import candidates',
-            'view dashboard', 'view analytics', 'manage users', 'manage settings', 'manage email templates'
-        ];
-        
-        foreach ($permissions as $permission) {
-            \Spatie\Permission\Models\Permission::firstOrCreate([
-                'name' => $permission,
-                'guard_name' => 'web'
-            ]);
+        // Create custom roles for this tenant if they don't exist
+        $this->createCustomRolesForTenant($tenant);
+    }
+    
+    /**
+     * Create custom roles for tenant
+     */
+    private function createCustomRolesForTenant(Tenant $tenant): void
+    {
+        // Ensure custom tables exist
+        if (!DB::getSchemaBuilder()->hasTable('custom_tenant_roles')) {
+            DB::statement('
+                CREATE TABLE custom_tenant_roles (
+                    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                    tenant_id VARCHAR(36) NOT NULL,
+                    name VARCHAR(255) NOT NULL,
+                    permissions JSON,
+                    created_at TIMESTAMP NULL,
+                    updated_at TIMESTAMP NULL,
+                    UNIQUE KEY unique_tenant_role (tenant_id, name),
+                    INDEX idx_tenant_id (tenant_id)
+                )
+            ');
         }
         
-        // Assign all permissions to Owner role
-        $ownerRole->syncPermissions(\Spatie\Permission\Models\Permission::all());
+        // Create Owner role
+        DB::table('custom_tenant_roles')->insertOrIgnore([
+            'tenant_id' => $tenant->id,
+            'name' => 'Owner',
+            'permissions' => json_encode([
+                'view_dashboard', 'view_jobs', 'create_jobs', 'edit_jobs', 'delete_jobs', 'publish_jobs', 'close_jobs',
+                'manage_stages', 'view_stages', 'create_stages', 'edit_stages', 'delete_stages', 'reorder_stages',
+                'view_candidates', 'create_candidates', 'edit_candidates', 'delete_candidates', 'move_candidates', 'import_candidates',
+                'view_interviews', 'create_interviews', 'edit_interviews', 'delete_interviews',
+                'view_analytics', 'manage_users', 'manage_settings', 'manage_email_templates'
+            ]),
+            'created_at' => now(),
+            'updated_at' => now()
+        ]);
+        
+        // Create Admin role
+        DB::table('custom_tenant_roles')->insertOrIgnore([
+            'tenant_id' => $tenant->id,
+            'name' => 'Admin',
+            'permissions' => json_encode([
+                'view_dashboard', 'view_jobs', 'create_jobs', 'edit_jobs', 'delete_jobs', 'publish_jobs', 'close_jobs',
+                'manage_stages', 'view_stages', 'create_stages', 'edit_stages', 'delete_stages', 'reorder_stages',
+                'view_candidates', 'create_candidates', 'edit_candidates', 'delete_candidates', 'move_candidates', 'import_candidates',
+                'view_interviews', 'create_interviews', 'edit_interviews', 'delete_interviews',
+                'view_analytics', 'manage_settings'
+            ]),
+            'created_at' => now(),
+            'updated_at' => now()
+        ]);
+        
+        // Create Recruiter role
+        DB::table('custom_tenant_roles')->insertOrIgnore([
+            'tenant_id' => $tenant->id,
+            'name' => 'Recruiter',
+            'permissions' => json_encode([
+                'view_dashboard', 'view_jobs', 'create_jobs', 'edit_jobs', 'publish_jobs', 'close_jobs',
+                'view_candidates', 'create_candidates', 'edit_candidates', 'move_candidates',
+                'view_interviews', 'create_interviews', 'edit_interviews', 'delete_interviews'
+            ]),
+            'created_at' => now(),
+            'updated_at' => now()
+        ]);
+        
+        // Create Hiring Manager role
+        DB::table('custom_tenant_roles')->insertOrIgnore([
+            'tenant_id' => $tenant->id,
+            'name' => 'Hiring Manager',
+            'permissions' => json_encode([
+                'view_dashboard', 'view_jobs', 'view_candidates', 'create_candidates', 'edit_candidates', 'move_candidates',
+                'view_interviews', 'create_interviews', 'edit_interviews', 'delete_interviews'
+            ]),
+            'created_at' => now(),
+            'updated_at' => now()
+        ]);
     }
 }

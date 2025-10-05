@@ -205,48 +205,70 @@
 
 
     <script>
-        // Check if OTP was sent (success message contains "sent" or "code")
-        const successMessage = document.querySelector('.bg-green-50 p');
-        const hasOtpSent = successMessage && (
-            successMessage.textContent.includes('sent') || 
-            successMessage.textContent.includes('code') ||
-            successMessage.textContent.includes('verification')
-        );
-
-        // Show OTP form if OTP was already sent
-        if (hasOtpSent) {
-            document.getElementById('send-otp-section').style.display = 'none';
-            document.getElementById('otp-form-section').style.display = 'block';
-            
-            // Auto-focus on OTP input
-            const otpInput = document.getElementById('otp');
-            if (otpInput) {
-                otpInput.focus();
-
-                // Auto-submit when 6 digits are entered
-                otpInput.addEventListener('input', function(e) {
-                    const value = e.target.value.replace(/\D/g, ''); // Remove non-digits
-                    e.target.value = value;
-                    
-                    if (value.length === 6) {
-                        // Small delay to show the complete code
-                        setTimeout(() => {
-                            e.target.form.submit();
-                        }, 100);
-                    }
-                });
-
-                // Only allow digits
-                otpInput.addEventListener('keypress', function(e) {
-                    if (!/\d/.test(e.key)) {
-                        e.preventDefault();
-                    }
-                });
-            }
-        }
-
-        // Handle Send OTP button click
         document.addEventListener('DOMContentLoaded', function() {
+            // Check if OTP was sent (success message contains "sent" or "code")
+            const successMessage = document.querySelector('.bg-green-50 p');
+            const hasOtpSent = successMessage && (
+                successMessage.textContent.includes('sent') || 
+                successMessage.textContent.includes('code') ||
+                successMessage.textContent.includes('verification')
+            );
+
+            // Show OTP form if OTP was already sent
+            if (hasOtpSent) {
+                document.getElementById('send-otp-section').style.display = 'none';
+                document.getElementById('otp-form-section').style.display = 'block';
+                
+                // Auto-focus on OTP input
+                const otpInput = document.getElementById('otp');
+                if (otpInput) {
+                    otpInput.focus();
+
+                    // Auto-submit when 6 digits are entered
+                    otpInput.addEventListener('input', function(e) {
+                        const value = e.target.value.replace(/\D/g, ''); // Remove non-digits
+                        e.target.value = value;
+                        
+                        if (value.length === 6) {
+                            // Show loading state
+                            const submitButton = e.target.form.querySelector('button[type="submit"]');
+                            if (submitButton) {
+                                const originalText = submitButton.innerHTML;
+                                submitButton.innerHTML = '<svg class="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Verifying...';
+                                submitButton.disabled = true;
+                            }
+                            
+                            // Small delay to show the complete code, then submit
+                            setTimeout(() => {
+                                e.target.form.submit();
+                            }, 500);
+                        }
+                    });
+
+                    // Only allow digits
+                    otpInput.addEventListener('keypress', function(e) {
+                        if (!/\d/.test(e.key)) {
+                            e.preventDefault();
+                        }
+                    });
+
+                    // Handle Enter key
+                    otpInput.addEventListener('keydown', function(e) {
+                        if (e.key === 'Enter' && e.target.value.length === 6) {
+                            e.preventDefault();
+                            const submitButton = e.target.form.querySelector('button[type="submit"]');
+                            if (submitButton) {
+                                const originalText = submitButton.innerHTML;
+                                submitButton.innerHTML = '<svg class="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Verifying...';
+                                submitButton.disabled = true;
+                                e.target.form.submit();
+                            }
+                        }
+                    });
+                }
+            }
+
+            // Handle Send OTP button click
             const sendOtpForm = document.querySelector('form[action="{{ route('verification.send') }}"]');
             if (sendOtpForm) {
                 sendOtpForm.addEventListener('submit', function(e) {
@@ -255,6 +277,27 @@
                     const originalText = button.innerHTML;
                     button.innerHTML = '<svg class="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Sending...';
                     button.disabled = true;
+                });
+            }
+
+            // Handle OTP form submission
+            const otpForm = document.querySelector('form[action="{{ route('verification.verify-otp') }}"]');
+            if (otpForm) {
+                otpForm.addEventListener('submit', function(e) {
+                    const otpInput = this.querySelector('input[name="otp"]');
+                    if (otpInput && otpInput.value.length !== 6) {
+                        e.preventDefault();
+                        alert('Please enter a 6-digit verification code.');
+                        return false;
+                    }
+                    
+                    // Show loading state
+                    const button = this.querySelector('button[type="submit"]');
+                    if (button) {
+                        const originalText = button.innerHTML;
+                        button.innerHTML = '<svg class="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Verifying...';
+                        button.disabled = true;
+                    }
                 });
             }
         });

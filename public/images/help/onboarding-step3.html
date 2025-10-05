@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 0; 
+            padding: 20px; 
+            background: #f8fafc;
+            width: 800px;
+            height: 600px;
+        }
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 40px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .logo { 
+            font-size: 24px; 
+            font-weight: bold; 
+            color: #4f46e5; 
+            margin-bottom: 30px;
+        }
+        .form-container {
+            width: 100%;
+            max-width: 500px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #374151;
+        }
+        input, textarea, select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 16px;
+        }
+        textarea {
+            height: 100px;
+            resize: vertical;
+        }
+        .btn {
+            background: #4f46e5;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            width: 100%;
+        }
+        .step-indicator {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: #4f46e5;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+        }
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        .job-preview {
+            background: #f8fafc;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .job-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #111827;
+            margin-bottom: 10px;
+        }
+        .job-meta {
+            display: flex;
+            gap: 20px;
+            color: #6b7280;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+        .job-description {
+            color: #374151;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="step-indicator">Step 3 of 3</div>
+    <div class="container">
+        <div class="logo">TalentLit ATS</div>
+        <div class="form-container">
+            <h2 style="text-align: center; margin-bottom: 30px; color: #111827;">Create Your First Job</h2>
+            <p style="text-align: center; color: #6b7280; margin-bottom: 30px;">
+                Post your first job opening to get started with recruitment
+            </p>
+            <div class="form-group">
+                <label>Job Title *</label>
+                <input type="text" placeholder="e.g., Senior Software Engineer" value="Senior Software Engineer">
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Department *</label>
+                    <select>
+                        <option selected>Engineering</option>
+                        <option>Marketing</option>
+                        <option>Sales</option>
+                        <option>HR</option>
+                        <option>Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Employment Type *</label>
+                    <select>
+                        <option selected>Full-time</option>
+                        <option>Part-time</option>
+                        <option>Contract</option>
+                        <option>Internship</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Job Description *</label>
+                <textarea placeholder="Describe the role, responsibilities, and requirements...">We are looking for a Senior Software Engineer to join our team. You will be responsible for developing and maintaining our web applications, working with modern technologies like React, Node.js, and cloud services.</textarea>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Location</label>
+                    <input type="text" placeholder="e.g., San Francisco, CA" value="San Francisco, CA">
+                </div>
+                <div class="form-group">
+                    <label>Salary Range</label>
+                    <input type="text" placeholder="e.g., $80,000 - $120,000" value="$80,000 - $120,000">
+                </div>
+            </div>
+            <div class="job-preview">
+                <div class="job-title">Senior Software Engineer</div>
+                <div class="job-meta">
+                    <span>📍 San Francisco, CA</span>
+                    <span>💰 $80,000 - $120,000</span>
+                    <span>⏰ Full-time</span>
+                </div>
+                <div class="job-description">
+                    We are looking for a Senior Software Engineer to join our team. You will be responsible for developing and maintaining our web applications...
+                </div>
+            </div>
+            <button class="btn">Post Job & Complete Setup</button>
+        </div>
+    </div>
+</body>
+</html>

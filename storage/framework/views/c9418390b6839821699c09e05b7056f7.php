@@ -16,7 +16,8 @@
 
     <div class="flex items-center gap-2">
       
-      <?php if(isset($tenant) && auth()->user()->hasRole('Owner') && $tenant->activeSubscription): ?>
+      <?php if(isset($tenant) && $tenant->activeSubscription): ?>
+        <?php if (app('App\Support\CustomPermissionChecker')->check('manage_users', $tenant)): ?>
         <?php
           $plan = $tenant->activeSubscription->plan;
           $planColors = [
@@ -38,6 +39,7 @@
             <span class="ml-1"><?php echo subscriptionPrice($plan->price, $plan->currency); ?></span>
           <?php endif; ?>
         </div>
+        <?php endif; ?>
       <?php endif; ?>
 
       

@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 0; 
+            padding: 20px; 
+            background: #f8fafc;
+            width: 800px;
+            height: 600px;
+        }
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 40px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .logo { 
+            font-size: 24px; 
+            font-weight: bold; 
+            color: #4f46e5; 
+            margin-bottom: 30px;
+        }
+        .form-container {
+            width: 100%;
+            max-width: 400px;
+        }
+        .step-indicator {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: #4f46e5;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+        }
+        .success-message {
+            background: #d1fae5;
+            border: 1px solid #a7f3d0;
+            color: #065f46;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .dashboard-preview {
+            background: #f8fafc;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .dashboard-nav {
+            display: flex;
+            gap: 20px;
+        }
+        .nav-item {
+            color: #6b7280;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .nav-item.active {
+            color: #4f46e5;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+        }
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #e5e7eb;
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #111827;
+        }
+        .stat-label {
+            font-size: 14px;
+            color: #6b7280;
+        }
+    </style>
+</head>
+<body>
+    <div class="step-indicator">Step 2 of 2</div>
+    <div class="container">
+        <div class="logo">TalentLit ATS</div>
+        <div class="form-container">
+            <div class="success-message">
+                ✓ Successfully signed in! Welcome to your dashboard.
+            </div>
+            <h2 style="text-align: center; margin-bottom: 30px; color: #111827;">Dashboard Overview</h2>
+            <div class="dashboard-preview">
+                <div class="dashboard-header">
+                    <h3 style="margin: 0; color: #111827;">Dashboard</h3>
+                    <div class="dashboard-nav">
+                        <a href="#" class="nav-item active">Dashboard</a>
+                        <a href="#" class="nav-item">Jobs</a>
+                        <a href="#" class="nav-item">Candidates</a>
+                        <a href="#" class="nav-item">Analytics</a>
+                    </div>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-number">12</div>
+                        <div class="stat-label">Active Jobs</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">45</div>
+                        <div class="stat-label">New Applications</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">8</div>
+                        <div class="stat-label">Interviews Today</div>
+                    </div>
+                </div>
+            </div>
+            <p style="text-align: center; color: #6b7280; font-size: 14px;">
+                You're now ready to start managing your recruitment process!
+            </p>
+        </div>
+    </div>
+</body>
+</html>

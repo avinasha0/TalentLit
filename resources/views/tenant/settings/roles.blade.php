@@ -103,12 +103,12 @@
                     <tbody class="bg-white divide-y divide-gray-200">
                         @php
                             $permissionCategories = [
-                                'Jobs' => ['view jobs', 'create jobs', 'edit jobs', 'delete jobs', 'publish jobs', 'close jobs'],
-                                'Job Stages' => ['manage stages', 'view stages', 'create stages', 'edit stages', 'delete stages', 'reorder stages'],
-                                'Candidates' => ['view candidates', 'create candidates', 'edit candidates', 'delete candidates', 'move candidates', 'import candidates'],
-                                'Interviews' => ['view interviews', 'create interviews', 'edit interviews', 'delete interviews'],
-                                'Analytics' => ['view analytics'],
-                                'System' => ['view dashboard', 'manage users', 'manage settings', 'manage email templates'],
+                                'Jobs' => ['view_jobs', 'create_jobs', 'edit_jobs', 'delete_jobs', 'publish_jobs', 'close_jobs'],
+                                'Job Stages' => ['manage_stages', 'view_stages', 'create_stages', 'edit_stages', 'delete_stages', 'reorder_stages'],
+                                'Candidates' => ['view_candidates', 'create_candidates', 'edit_candidates', 'delete_candidates', 'move_candidates', 'import_candidates'],
+                                'Interviews' => ['view_interviews', 'create_interviews', 'edit_interviews', 'delete_interviews'],
+                                'Analytics' => ['view_analytics'],
+                                'System' => ['view_dashboard', 'manage_users', 'manage_settings', 'manage_email_templates'],
                             ];
                         @endphp
 

@@ -33,7 +33,7 @@ Route::get('/', [HomeController::class, 'index'])->name('home');
 // Help Center routes
 Route::get('/help-center.html', [HelpController::class, 'index'])->name('help.index');
 Route::get('/help/{page}', [HelpController::class, 'page'])->name('help.page')
-    ->where('page', 'register|login|onboarding|invite-team|dashboard|jobs|careers|candidates|applications|pipeline|interviews|notes-tags|analytics|settings|roles-permissions|integrations|troubleshooting|security|deploy|contact');
+    ->where('page', 'register|login|onboarding|invite-team|dashboard|jobs|careers|candidates|applications|pipeline|interviews|notes-tags|analytics|settings|roles-permissions|integrations|troubleshooting|security|deploy|contact|faq');
 
 // Features pages
 Route::get('/features', [HomeController::class, 'features'])->name('features');
@@ -351,48 +351,48 @@ Route::prefix('{tenant}/careers')->middleware(['capture.tenant', 'tenant'])->gro
 // Internal Tenant Management Routes (require authentication)
 Route::middleware(['capture.tenant', 'tenant', 'auth'])->group(function () {
     // Dashboard - accessible by all authenticated users with view dashboard permission
-    Route::middleware('permission:view dashboard')->group(function () {
+    Route::middleware('custom.permission:view_dashboard')->group(function () {
         Route::get('/{tenant}/dashboard', [DashboardController::class, 'index'])->name('tenant.dashboard');
         Route::get('/{tenant}/dashboard.json', [DashboardController::class, 'json'])->name('tenant.dashboard.json');
     });
 
     // Job Management Routes - Owner, Admin, Recruiter
-    Route::middleware('permission:view jobs')->group(function () {
+    Route::middleware('custom.permission:view_jobs')->group(function () {
         Route::get('/{tenant}/jobs', [JobController::class, 'index'])->name('tenant.jobs.index');
     });
 
-    Route::middleware(['permission:create jobs', 'subscription.limit:max_job_openings'])->group(function () {
+    Route::middleware(['custom.permission:create_jobs', 'subscription.limit:max_job_openings'])->group(function () {
         Route::get('/{tenant}/jobs/create', [JobController::class, 'create'])->name('tenant.jobs.create');
         Route::post('/{tenant}/jobs', [JobController::class, 'store'])->name('tenant.jobs.store');
     });
 
-    Route::middleware('permission:view jobs')->group(function () {
+    Route::middleware('custom.permission:view_jobs')->group(function () {
         Route::get('/{tenant}/jobs/{job}', [JobController::class, 'show'])->name('tenant.jobs.show');
     });
 
-    Route::middleware('permission:edit jobs')->group(function () {
+    Route::middleware('custom.permission:edit_jobs')->group(function () {
         Route::get('/{tenant}/jobs/{job}/edit', [JobController::class, 'edit'])->name('tenant.jobs.edit');
         Route::put('/{tenant}/jobs/{job}', [JobController::class, 'update'])->name('tenant.jobs.update');
     });
 
-    Route::middleware('permission:publish jobs')->group(function () {
+    Route::middleware('custom.permission:publish_jobs')->group(function () {
         Route::patch('/{tenant}/jobs/{job}/publish', [JobController::class, 'publish'])->name('tenant.jobs.publish');
     });
 
-    Route::middleware('permission:close jobs')->group(function () {
+    Route::middleware('custom.permission:close_jobs')->group(function () {
         Route::patch('/{tenant}/jobs/{job}/close', [JobController::class, 'close'])->name('tenant.jobs.close');
     });
 
-    Route::middleware('permission:delete jobs')->group(function () {
+    Route::middleware('custom.permission:delete_jobs')->group(function () {
         Route::delete('/{tenant}/jobs/{job}', [JobController::class, 'destroy'])->name('tenant.jobs.destroy');
     });
 
     // Job Stage Management Routes - Owner, Admin, Recruiter
-    Route::middleware('permission:view stages')->group(function () {
+    Route::middleware('custom.permission:view_stages')->group(function () {
         Route::get('/{tenant}/jobs/{job}/stages', [JobStageController::class, 'index'])->name('tenant.jobs.stages.index');
     });
 
-    Route::middleware('permission:manage stages')->group(function () {
+    Route::middleware('custom.permission:manage_stages')->group(function () {
         Route::post('/{tenant}/jobs/{job}/stages', [JobStageController::class, 'store'])->name('tenant.jobs.stages.store');
         Route::put('/{tenant}/jobs/{job}/stages/{stage}', [JobStageController::class, 'update'])->name('tenant.jobs.stages.update');
         Route::delete('/{tenant}/jobs/{job}/stages/{stage}', [JobStageController::class, 'destroy'])->name('tenant.jobs.stages.destroy');
@@ -400,17 +400,17 @@ Route::middleware(['capture.tenant', 'tenant', 'auth'])->group(function () {
     });
 
     // Pipeline Management Routes - Owner, Admin, Recruiter, Hiring Manager
-    Route::middleware('permission:view jobs')->group(function () {
+    Route::middleware('custom.permission:view_jobs')->group(function () {
         Route::get('/{tenant}/jobs/{job}/pipeline', [PipelineController::class, 'index'])->name('tenant.jobs.pipeline');
         Route::get('/{tenant}/jobs/{job}/pipeline.json', [PipelineController::class, 'json'])->name('tenant.jobs.pipeline.json');
     });
 
-    Route::middleware('permission:edit jobs')->group(function () {
+    Route::middleware('custom.permission:edit_jobs')->group(function () {
         Route::post('/{tenant}/jobs/{job}/pipeline/move', [PipelineController::class, 'move'])->name('tenant.jobs.pipeline.move');
     });
 
     // Candidate Management Routes - All authenticated users with view candidates permission
-    Route::middleware('permission:view candidates')->group(function () {
+    Route::middleware('custom.permission:view_candidates')->group(function () {
         Route::get('/{tenant}/candidates', [CandidateController::class, 'index'])->name('tenant.candidates.index');
         Route::get('/{tenant}/candidates/job/{job}', [CandidateController::class, 'index'])->name('tenant.candidates.index.job');
         Route::get('/{tenant}/candidates/{candidate}', [CandidateController::class, 'show'])->name('tenant.candidates.show');
@@ -432,44 +432,44 @@ Route::middleware(['capture.tenant', 'tenant', 'auth'])->group(function () {
     });
 
     // Candidate Import Routes - Owner, Admin, Recruiter
-    Route::middleware('permission:import candidates')->group(function () {
+    Route::middleware('custom.permission:import_candidates')->group(function () {
         Route::get('/{tenant}/candidates/import', [App\Http\Controllers\Tenant\CandidateImportController::class, 'index'])->name('tenant.candidates.import');
         Route::post('/{tenant}/candidates/import', [App\Http\Controllers\Tenant\CandidateImportController::class, 'store'])->middleware('subscription.limit:max_candidates')->name('tenant.candidates.import.store');
         Route::get('/{tenant}/candidates/import/template', [App\Http\Controllers\Tenant\CandidateImportController::class, 'downloadTemplate'])->name('tenant.candidates.import.template');
     });
 
     // Interview Management Routes - Owner, Admin, Recruiter, Hiring Manager
-    Route::middleware('permission:view interviews')->group(function () {
+    Route::middleware('custom.permission:view_interviews')->group(function () {
         Route::get('/{tenant}/interviews', [InterviewController::class, 'index'])->name('tenant.interviews.index');
         Route::get('/{tenant}/interviews/{interview}', [InterviewController::class, 'show'])->name('tenant.interviews.show');
     });
 
-    Route::middleware(['permission:create interviews', 'subscription.limit:max_interviews_per_month'])->group(function () {
+    Route::middleware(['custom.permission:create_interviews', 'subscription.limit:max_interviews_per_month'])->group(function () {
         Route::get('/{tenant}/candidates/{candidate}/interviews/create', [InterviewController::class, 'create'])->name('tenant.interviews.create');
         Route::post('/{tenant}/candidates/{candidate}/interviews', [InterviewController::class, 'store'])->name('tenant.interviews.store');
         Route::post('/{tenant}/interviews/schedule', [InterviewController::class, 'storeDirect'])->name('tenant.interviews.store-direct');
     });
 
-    Route::middleware('permission:edit interviews')->group(function () {
+    Route::middleware('custom.permission:edit_interviews')->group(function () {
         Route::get('/{tenant}/interviews/{interview}/edit', [InterviewController::class, 'edit'])->name('tenant.interviews.edit');
         Route::put('/{tenant}/interviews/{interview}', [InterviewController::class, 'update'])->name('tenant.interviews.update');
         Route::patch('/{tenant}/interviews/{interview}/cancel', [InterviewController::class, 'cancel'])->name('tenant.interviews.cancel');
         Route::patch('/{tenant}/interviews/{interview}/complete', [InterviewController::class, 'complete'])->name('tenant.interviews.complete');
     });
 
-    Route::middleware('permission:delete interviews')->group(function () {
+    Route::middleware('custom.permission:delete_interviews')->group(function () {
         Route::delete('/{tenant}/interviews/{interview}', [InterviewController::class, 'destroy'])->name('tenant.interviews.destroy');
     });
 
     // Analytics Routes - Owner, Admin, Recruiter, Hiring Manager
-    Route::middleware(['capture.tenant', 'tenant', 'permission:view analytics'])->group(function () {
+    Route::middleware(['capture.tenant', 'tenant', 'custom.permission:view_analytics'])->group(function () {
         Route::get('/{tenant}/analytics', [App\Http\Controllers\Tenant\AnalyticsController::class, 'index'])->name('tenant.analytics.index');
         Route::get('/{tenant}/analytics/data', [App\Http\Controllers\Tenant\AnalyticsController::class, 'data'])->name('tenant.analytics.data');
         Route::get('/{tenant}/analytics/export', [App\Http\Controllers\Tenant\AnalyticsController::class, 'export'])->name('tenant.analytics.export');
     });
 
-    // Settings Routes - Owner, Admin only
-    Route::middleware('role:Owner|Admin')->group(function () {
+    // Settings Routes - Users with manage_settings permission
+    Route::middleware('custom.permission:manage_settings')->group(function () {
         // Careers Settings
         Route::get('/{tenant}/settings/careers', [CareersSettingsController::class, 'edit'])->name('tenant.settings.careers');
         Route::put('/{tenant}/settings/careers', [CareersSettingsController::class, 'update'])->name('tenant.settings.careers.update');
@@ -490,8 +490,8 @@ Route::middleware(['capture.tenant', 'tenant', 'auth'])->group(function () {
         Route::post('/{tenant}/settings/general/get-password', [App\Http\Controllers\Tenant\GeneralSettingsController::class, 'getPassword'])->name('tenant.settings.general.get-password');
     });
 
-    // User Management Routes - Owner, Admin only
-    Route::middleware('role:Owner|Admin')->group(function () {
+    // User Management Routes - Users with manage_users permission
+    Route::middleware('custom.permission:manage_users')->group(function () {
         Route::post('/{tenant}/users', [App\Http\Controllers\Tenant\UserManagementController::class, 'store'])->middleware('subscription.limit:max_users')->name('tenant.users.store');
         Route::put('/{tenant}/users/{user}', [App\Http\Controllers\Tenant\UserManagementController::class, 'update'])->name('tenant.users.update');
         Route::delete('/{tenant}/users/{user}', [App\Http\Controllers\Tenant\UserManagementController::class, 'destroy'])->name('tenant.users.destroy');
@@ -499,21 +499,21 @@ Route::middleware(['capture.tenant', 'tenant', 'auth'])->group(function () {
         Route::patch('/{tenant}/users/{user}/toggle-status', [App\Http\Controllers\Tenant\UserManagementController::class, 'toggleStatus'])->name('tenant.users.toggle-status');
     });
 
-    // Subscription Management Routes - Owner only
-    Route::middleware('role:Owner')->group(function () {
+    // Subscription Management Routes - Users with manage_users permission
+    Route::middleware('custom.permission:manage_users')->group(function () {
         Route::get('/{tenant}/subscription', [SubscriptionController::class, 'show'])->name('subscription.show');
         Route::post('/{tenant}/subscription/subscribe', [SubscriptionController::class, 'subscribe'])->name('subscription.subscribe');
         Route::post('/{tenant}/subscription/cancel', [SubscriptionController::class, 'cancel'])->name('subscription.cancel');
     });
 
     // Job Questions Routes - Owner, Admin, Recruiter
-    Route::middleware('permission:edit jobs')->group(function () {
+    Route::middleware('custom.permission:edit_jobs')->group(function () {
         Route::get('/{tenant}/jobs/{job}/questions', [JobQuestionsController::class, 'edit'])->name('tenant.jobs.questions');
         Route::put('/{tenant}/jobs/{job}/questions', [JobQuestionsController::class, 'update'])->name('tenant.jobs.questions.update');
     });
 
     // Email Template Routes - Owner, Admin, Recruiter
-    Route::middleware('permission:manage email templates')->group(function () {
+    Route::middleware('custom.permission:manage_email_templates')->group(function () {
         Route::get('/{tenant}/email-templates', [App\Http\Controllers\Tenant\EmailTemplateController::class, 'index'])->name('tenant.email-templates.index');
         Route::get('/{tenant}/email-templates/create', [App\Http\Controllers\Tenant\EmailTemplateController::class, 'create'])->name('tenant.email-templates.create');
         Route::post('/{tenant}/email-templates', [App\Http\Controllers\Tenant\EmailTemplateController::class, 'store'])->name('tenant.email-templates.store');
@@ -533,7 +533,14 @@ Route::middleware(['capture.tenant', 'tenant', 'auth'])->group(function () {
 
     // Account Routes
     Route::prefix('{tenant}/account')->group(function () {
-        Route::view('/profile', 'tenant.account.profile')->name('account.profile');
+        // Profile routes
+        Route::get('/profile', [App\Http\Controllers\Tenant\ProfileController::class, 'index'])->name('account.profile');
+        Route::put('/profile', [App\Http\Controllers\Tenant\ProfileController::class, 'update'])->name('account.profile.update');
+        Route::put('/profile/password', [App\Http\Controllers\Tenant\ProfileController::class, 'updatePassword'])->name('account.profile.password');
+        Route::put('/profile/email', [App\Http\Controllers\Tenant\ProfileController::class, 'updateEmail'])->name('account.profile.email');
+        Route::put('/profile/notifications', [App\Http\Controllers\Tenant\ProfileController::class, 'updateNotifications'])->name('account.profile.notifications');
+        
+        // Settings routes (keeping for backward compatibility)
         Route::get('/settings', [App\Http\Controllers\Tenant\AccountSettingsController::class, 'index'])->name('account.settings');
         Route::put('/settings/notifications', [App\Http\Controllers\Tenant\AccountSettingsController::class, 'updateNotifications'])->name('account.settings.notifications');
         Route::put('/settings/password', [App\Http\Controllers\Tenant\AccountSettingsController::class, 'updatePassword'])->name('account.settings.password');
@@ -568,8 +575,8 @@ Route::get('/logout', function() {
 
 // Onboarding routes (global, not tenant-scoped)
 Route::middleware(['auth'])->group(function () {
-    Route::get('/onboarding/organization', [App\Http\Controllers\Onboarding\OrganizationController::class, 'create'])->name('onboarding.organization');
-    Route::post('/onboarding/organization', [App\Http\Controllers\Onboarding\OrganizationController::class, 'store'])->name('onboarding.organization.store');
+    Route::get('/onboarding/organization', [App\Http\Controllers\Onboarding\CustomOrganizationController::class, 'create'])->name('onboarding.organization');
+    Route::post('/onboarding/organization', [App\Http\Controllers\Onboarding\CustomOrganizationController::class, 'store'])->name('onboarding.organization.store');
 });
 
 // Onboarding setup routes (tenant-scoped)

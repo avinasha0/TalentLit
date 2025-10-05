@@ -15,11 +15,20 @@ class VerifyEmailController extends Controller
     public function __invoke(EmailVerificationRequest $request): RedirectResponse
     {
         if ($request->user()->hasVerifiedEmail()) {
+            // Check if user has tenants, if not redirect to onboarding
+            if ($request->user()->tenants->count() === 0) {
+                return redirect()->route('onboarding.organization');
+            }
             return redirect()->intended(route('dashboard', absolute: false).'?verified=1');
         }
 
         if ($request->user()->markEmailAsVerified()) {
             event(new Verified($request->user()));
+        }
+
+        // Check if user has tenants, if not redirect to onboarding
+        if ($request->user()->tenants->count() === 0) {
+            return redirect()->route('onboarding.organization');
         }
 
         return redirect()->intended(route('dashboard', absolute: false).'?verified=1');

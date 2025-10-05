@@ -17,18 +17,22 @@ class AnalyticsController extends Controller
 {
     public function index()
     {
-        if (!auth()->user()->can('view analytics')) {
+        $tenant = tenant();
+        
+        // Check permission using our custom system
+        if (!app('App\\Support\\CustomPermissionChecker')->check('view_analytics', $tenant)) {
             abort(403, 'Unauthorized');
         }
-        
-        $tenant = tenant();
         
         return view('tenant.analytics.index', compact('tenant'));
     }
 
     public function data(Request $request)
     {
-        if (!auth()->user()->can('view analytics')) {
+        $tenant = tenant();
+        
+        // Check permission using our custom system
+        if (!app('App\\Support\\CustomPermissionChecker')->check('view_analytics', $tenant)) {
             abort(403, 'Unauthorized');
         }
         
@@ -46,7 +50,10 @@ class AnalyticsController extends Controller
 
     public function export(Request $request)
     {
-        if (!auth()->user()->can('view analytics')) {
+        $tenant = tenant();
+        
+        // Check permission using our custom system
+        if (!app('App\\Support\\CustomPermissionChecker')->check('view_analytics', $tenant)) {
             abort(403, 'Unauthorized');
         }
         

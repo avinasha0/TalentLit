@@ -26,7 +26,8 @@ x-transition:leave-start="translate-x-0"
 x-transition:leave-end="-translate-x-full"
 class="fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 text-white transform lg:translate-x-0 lg:static lg:inset-0"
 :class="{ 'translate-x-0': sidebarOpen, '-translate-x-full': !sidebarOpen }"
-@click.away="if (window.innerWidth < 1024) $store.sidebar.toggle()">
+@click.away="if (window.innerWidth < 1024) $store.sidebar.toggle()"
+@click.stop>
     
     <!-- Mobile overlay -->
     <div class="fixed inset-0 bg-gray-600 bg-opacity-75 lg:hidden" 
@@ -98,7 +99,7 @@ class="fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 text-white transform lg:tran
                         </svg>
                         All Jobs
                     </a>
-                    <?php if (app(\Illuminate\Contracts\Auth\Access\Gate::class)->check('create jobs')): ?>
+                    <?php if (app('App\Support\CustomPermissionChecker')->check('create_jobs', $tenant)): ?>
                     <a href="<?php echo e(route('tenant.jobs.create', $tenant->slug)); ?>" 
                        class="flex items-center px-3 py-2 text-sm text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors duration-200 <?php echo e($currentRoute === 'tenant.jobs.create' ? 'bg-gray-700 text-white' : ''); ?>">
                         <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -157,7 +158,7 @@ class="fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 text-white transform lg:tran
 
 
             <!-- Analytics -->
-            <?php if (app(\Illuminate\Contracts\Auth\Access\Gate::class)->check('view analytics')): ?>
+            <?php if (app('App\Support\CustomPermissionChecker')->check('view_analytics', $tenant)): ?>
     <a href="<?php echo e(route('tenant.analytics.index', $tenant->slug)); ?>"
                class="flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors duration-200 <?php echo e($isAnalytics ? 'bg-purple-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'); ?>">
                 <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -181,7 +182,7 @@ class="fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 text-white transform lg:tran
             </a>
 
             <!-- Settings (Owner/Admin only) -->
-            <?php if (\Illuminate\Support\Facades\Blade::check('role', ['Owner', 'Admin'])): ?>
+            <?php if (app('App\Support\CustomPermissionChecker')->check('manage_settings', $tenant)): ?>
             <div>
                 <button @click="settingsOpen = !settingsOpen" 
                         class="flex items-center justify-between w-full px-3 py-2 text-sm font-medium text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors duration-200">
@@ -218,7 +219,7 @@ class="fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 text-white transform lg:tran
                         </svg>
                         Roles & Permissions
                     </a>
-                    <?php if (\Illuminate\Support\Facades\Blade::check('role', 'Owner')): ?>
+                    <?php if (app('App\Support\CustomPermissionChecker')->check('manage_users', $tenant)): ?>
                     <a href="<?php echo e(route('subscription.show', $tenant->slug)); ?>" 
                        class="flex items-center px-3 py-2 text-sm text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors duration-200 <?php echo e(str_starts_with($currentRoute, 'subscription') ? 'bg-gray-700 text-white' : ''); ?>">
                         <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">

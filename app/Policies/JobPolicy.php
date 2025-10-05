@@ -4,15 +4,49 @@ namespace App\Policies;
 
 use App\Models\JobOpening;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 
 class JobPolicy
 {
+    /**
+     * Check if user has custom permission
+     */
+    private function hasCustomPermission(string $permission): bool
+    {
+        $tenant = tenant();
+        if (!$tenant || !Auth::check()) {
+            return false;
+        }
+
+        $userRole = DB::table('custom_user_roles')
+            ->where('user_id', Auth::id())
+            ->where('tenant_id', $tenant->id)
+            ->value('role_name');
+
+        if (!$userRole) {
+            return false;
+        }
+
+        $rolePermissions = DB::table('custom_tenant_roles')
+            ->where('tenant_id', $tenant->id)
+            ->where('name', $userRole)
+            ->value('permissions');
+
+        if (!$rolePermissions) {
+            return false;
+        }
+
+        $permissions = json_decode($rolePermissions, true);
+        return in_array($permission, $permissions);
+    }
+
     /**
      * Determine whether the user can view any models.
      */
     public function viewAny(User $user): bool
     {
-        return $user->can('view jobs');
+        return $this->hasCustomPermission('view_jobs');
     }
 
     /**
@@ -20,7 +54,7 @@ class JobPolicy
      */
     public function view(User $user, JobOpening $jobOpening): bool
     {
-        return $user->can('view jobs');
+        return $this->hasCustomPermission('view_jobs');
     }
 
     /**
@@ -28,7 +62,7 @@ class JobPolicy
      */
     public function create(User $user): bool
     {
-        return $user->can('create jobs');
+        return $this->hasCustomPermission('create_jobs');
     }
 
     /**
@@ -36,7 +70,7 @@ class JobPolicy
      */
     public function update(User $user, JobOpening $jobOpening): bool
     {
-        return $user->can('edit jobs');
+        return $this->hasCustomPermission('edit_jobs');
     }
 
     /**
@@ -44,7 +78,7 @@ class JobPolicy
      */
     public function delete(User $user, JobOpening $jobOpening): bool
     {
-        return $user->can('delete jobs');
+        return $this->hasCustomPermission('delete_jobs');
     }
 
     /**
@@ -52,7 +86,7 @@ class JobPolicy
      */
     public function publish(User $user, JobOpening $jobOpening): bool
     {
-        return $user->can('publish jobs');
+        return $this->hasCustomPermission('publish_jobs');
     }
 
     /**
@@ -60,7 +94,7 @@ class JobPolicy
      */
     public function close(User $user, JobOpening $jobOpening): bool
     {
-        return $user->can('close jobs');
+        return $this->hasCustomPermission('close_jobs');
     }
 
     /**
@@ -68,6 +102,6 @@ class JobPolicy
      */
     public function manageStages(User $user, JobOpening $jobOpening): bool
     {
-        return $user->can('manage stages');
+        return $this->hasCustomPermission('manage_stages');
     }
 }

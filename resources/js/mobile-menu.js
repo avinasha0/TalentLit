@@ -49,6 +49,7 @@ function closeMenu() {
 openers.forEach(button => {
   button.addEventListener('click', (e) => {
     e.preventDefault();
+    e.stopPropagation();
     console.log('Toggle button clicked');
     if (isOpen) {
       closeMenu();

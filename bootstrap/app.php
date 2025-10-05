@@ -15,8 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'tenant' => \App\Http\Middleware\ResolveTenantFromPath::class,
             'capture.tenant' => \App\Http\Middleware\CaptureLastTenant::class,
-            'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
-            'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
+            'custom.permission' => \App\Http\Middleware\CustomPermissionMiddleware::class,
             'subscription.limit' => \App\Http\Middleware\CheckSubscriptionLimits::class,
         ]);
         

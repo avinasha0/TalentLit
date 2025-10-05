@@ -12,7 +12,7 @@ class CandidateTagPolicy
      */
     public function create(User $user): bool
     {
-        return $user->hasAnyRole(['Owner', 'Admin', 'Recruiter']);
+        return app('App\\Support\\CustomPermissionChecker')->check('edit_candidates', tenant());
     }
 
     /**
@@ -20,6 +20,6 @@ class CandidateTagPolicy
      */
     public function attach(User $user): bool
     {
-        return $user->hasAnyRole(['Owner', 'Admin', 'Recruiter']);
+        return app('App\\Support\\CustomPermissionChecker')->check('edit_candidates', tenant());
     }
 }

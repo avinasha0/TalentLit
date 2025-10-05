@@ -12,6 +12,6 @@ class AnalyticsPolicy
      */
     public function view(User $user, string $ability): bool
     {
-        return $user->hasPermissionTo('view analytics');
+        return app('App\\Support\\CustomPermissionChecker')->check('view_analytics', tenant());
     }
 }

@@ -4,11 +4,7 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Blade;
-use Illuminate\Support\Facades\Route;
-use App\Models\Candidate;
-use App\Models\CandidateNote;
-use App\Models\Interview;
-use App\Models\Tag;
+use Illuminate\Support\Facades\DB;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -17,7 +13,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Register the custom permission checker
+        $this->app->singleton('App\\Support\\CustomPermissionChecker', function ($app) {
+            return new \App\Support\CustomPermissionChecker();
+        });
     }
 
     /**
@@ -25,37 +24,13 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Register layout components
-        $this->loadViewComponentsAs('', [
-            'app-layout' => \App\View\Components\AppLayout::class,
-            'guest-layout' => \App\View\Components\GuestLayout::class,
-            'public-layout' => \App\View\Components\PublicLayout::class,
-        ]);
-
-        // Route model binding for candidates (without tenant scoping - handled in controller)
-        Route::bind('candidate', function ($value) {
-            return Candidate::findOrFail($value);
+        // Custom permission directive for our custom role system
+        Blade::directive('customCan', function ($expression) {
+            return "<?php if (app('App\\Support\\CustomPermissionChecker')->check($expression)): ?>";
         });
 
-        // Route model binding for notes (tenant scoping handled in controller)
-        Route::bind('note', function ($value) {
-            return CandidateNote::findOrFail($value);
+        Blade::directive('endcustomCan', function () {
+            return "<?php endif; ?>";
         });
-
-        // Route model binding for tags (tenant scoping handled in controller)
-        Route::bind('tag', function ($value) {
-            return Tag::findOrFail($value);
-        });
-
-        // Route model binding for interviews (tenant scoping handled in controller)
-        Route::bind('interview', function ($value) {
-            return Interview::findOrFail($value);
-        });
-
-
-        // Hard-disable @vite in testing environment (belt-and-suspenders safety)
-        if (app()->environment('testing')) {
-            Blade::directive('vite', fn () => ''); // hard-disable @vite in tests
-        }
     }
 }

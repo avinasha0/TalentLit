@@ -28,9 +28,9 @@
                 </button>
                 <div data-mobile-jobs-content class="ml-4 space-y-1 hidden">
                     <a href="{{ route('tenant.jobs.index', ['tenant' => $tenant->slug ?? tenant()->slug]) }}" class="block py-1 text-gray-700 hover:text-blue-600">All Jobs</a>
-                    @can('create jobs')
+                    @customCan('create_jobs', $tenant ?? tenant())
                     <a href="{{ route('tenant.jobs.create', ['tenant' => $tenant->slug ?? tenant()->slug]) }}" class="block py-1 text-gray-700 hover:text-blue-600">Create Job</a>
-                    @endcan
+                    @endcustomCan
                 </div>
             </div>
 
@@ -53,13 +53,13 @@
 
             <a href="{{ route('tenant.interviews.index', ['tenant' => $tenant->slug ?? tenant()->slug]) }}" class="block py-2 text-gray-700 hover:text-blue-600">Interviews</a>
 
-            @can('view analytics')
+            @customCan('view_analytics', $tenant ?? tenant())
             <a href="{{ route('tenant.analytics.index', ['tenant' => $tenant->slug ?? tenant()->slug]) }}" class="block py-2 text-gray-700 hover:text-blue-600">Analytics</a>
-            @endcan
+            @endcustomCan
 
             <a href="{{ route('careers.index', ['tenant' => $tenant->slug ?? tenant()->slug]) }}" target="_blank" class="block py-2 text-gray-700 hover:text-blue-600">Careers Site</a>
 
-            @role(['Owner', 'Admin'])
+            @customCan('manage_settings', $tenant ?? tenant())
             {{-- Settings Section --}}
             <div class="mt-4">
                 <button data-mobile-settings-toggle class="flex items-center justify-between w-full text-left text-sm font-semibold text-gray-500 mb-2 hover:text-gray-700">
@@ -73,12 +73,12 @@
                     <a href="{{ route('tenant.settings.team', ['tenant' => $tenant->slug ?? tenant()->slug]) }}" class="block py-1 text-gray-700 hover:text-blue-600">Team Management</a>
                     <a href="{{ route('tenant.settings.roles', ['tenant' => $tenant->slug ?? tenant()->slug]) }}" class="block py-1 text-gray-700 hover:text-blue-600">Roles & Permissions</a>
                     <a href="{{ route('tenant.settings.general', ['tenant' => $tenant->slug ?? tenant()->slug]) }}" class="block py-1 text-gray-700 hover:text-blue-600">General Settings</a>
-                    @role('Owner')
+                    @customCan('manage_users', $tenant ?? tenant())
                     <a href="{{ route('subscription.show', ['tenant' => $tenant->slug ?? tenant()->slug]) }}" class="block py-1 text-gray-700 hover:text-blue-600">Subscription</a>
-                    @endrole
+                    @endcustomCan
                 </div>
             </div>
-            @endrole
+            @endcustomCan
         </div>
         @endif
     </nav>

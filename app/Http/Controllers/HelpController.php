@@ -23,7 +23,7 @@ class HelpController extends Controller
             'register', 'login', 'onboarding', 'invite-team', 'dashboard', 'jobs', 
             'careers', 'candidates', 'applications', 'pipeline', 'interviews', 
             'notes-tags', 'analytics', 'settings', 'roles-permissions', 
-            'integrations', 'troubleshooting', 'security', 'deploy', 'contact'
+            'integrations', 'troubleshooting', 'security', 'deploy', 'contact', 'faq'
         ];
 
         if (!in_array($slug, $allowedPages)) {

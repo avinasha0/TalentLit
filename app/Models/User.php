@@ -7,14 +7,14 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
-use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, HasRoles, Notifiable;
+    use HasFactory, Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -90,15 +90,27 @@ class User extends Authenticatable
     }
 
     /**
-     * Get roles for a specific tenant
+     * Get roles for a specific tenant using custom permission system
      */
     public function getRolesForTenant($tenantId)
     {
-        return \App\Models\TenantRole::where('tenant_id', $tenantId)
-            ->whereHas('users', function ($query) {
-                $query->where('model_id', $this->id);
-            })
-            ->get();
+        $roleName = \DB::table('custom_user_roles')
+            ->where('user_id', $this->id)
+            ->where('tenant_id', $tenantId)
+            ->value('role_name');
+        
+        if (!$roleName) {
+            return collect();
+        }
+        
+        // Return a collection with a single role object that mimics the old structure
+        return collect([
+            (object) [
+                'name' => $roleName,
+                'tenant_id' => $tenantId,
+                'id' => $roleName . '_' . $tenantId // Create a unique ID
+            ]
+        ]);
     }
 
     /**

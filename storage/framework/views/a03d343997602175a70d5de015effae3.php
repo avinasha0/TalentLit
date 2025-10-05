@@ -47,21 +47,27 @@
             <!-- User Role and Subscription Information -->
             <div class="mt-3 flex flex-wrap items-center gap-3">
                 <!-- User Role -->
+                <?php
+                    $userRole = \DB::table('custom_user_roles')
+                        ->where('user_id', auth()->id())
+                        ->where('tenant_id', $tenant->id)
+                        ->value('role_name');
+                ?>
                 <div class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium
-                    <?php if(auth()->user()->hasRole('Owner')): ?> bg-purple-100 text-purple-800
-                    <?php elseif(auth()->user()->hasRole('Admin')): ?> bg-blue-100 text-blue-800
-                    <?php elseif(auth()->user()->hasRole('Recruiter')): ?> bg-green-100 text-green-800
-                    <?php elseif(auth()->user()->hasRole('Hiring Manager')): ?> bg-yellow-100 text-yellow-800
+                    <?php if($userRole === 'Owner'): ?> bg-purple-100 text-purple-800
+                    <?php elseif($userRole === 'Admin'): ?> bg-blue-100 text-blue-800
+                    <?php elseif($userRole === 'Recruiter'): ?> bg-green-100 text-green-800
+                    <?php elseif($userRole === 'Hiring Manager'): ?> bg-yellow-100 text-yellow-800
                     <?php else: ?> bg-gray-100 text-gray-800 <?php endif; ?>">
                     <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
                         <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
                     </svg>
-                    <?php echo e(auth()->user()->roles->first()->name ?? 'No Role'); ?>
+                    <?php echo e($userRole ?? 'No Role'); ?>
 
                 </div>
 
                 <!-- Subscription Plan (for Owners only) -->
-                <?php if(auth()->user()->hasRole('Owner') && $tenant->activeSubscription): ?>
+                <?php if($userRole === 'Owner' && $tenant->activeSubscription): ?>
                     <?php
                         $plan = $tenant->activeSubscription->plan;
                         $planColors = [
@@ -238,7 +244,8 @@
 <?php endif; ?>
 
             <!-- Subscription Status (for Owners only) -->
-            <?php if(auth()->user()->hasRole('Owner') && $tenant->activeSubscription): ?>
+            <?php if (app('App\Support\CustomPermissionChecker')->check('manage_users', $tenant)): ?>
+                <?php if($tenant->activeSubscription): ?>
                 <?php
                     $plan = $tenant->activeSubscription->plan;
                     $planColors = [
@@ -291,6 +298,7 @@
 <?php $component = $__componentOriginal53747ceb358d30c0105769f8471417f6; ?>
 <?php unset($__componentOriginal53747ceb358d30c0105769f8471417f6); ?>
 <?php endif; ?>
+                <?php endif; ?>
             <?php endif; ?>
         </div>
 

@@ -28,7 +28,7 @@
                 </button>
                 <div data-mobile-jobs-content class="ml-4 space-y-1 hidden">
                     <a href="<?php echo e(route('tenant.jobs.index', ['tenant' => $tenant->slug ?? tenant()->slug])); ?>" class="block py-1 text-gray-700 hover:text-blue-600">All Jobs</a>
-                    <?php if (app(\Illuminate\Contracts\Auth\Access\Gate::class)->check('create jobs')): ?>
+                    <?php if (app('App\Support\CustomPermissionChecker')->check('create_jobs', $tenant ?? tenant())): ?>
                     <a href="<?php echo e(route('tenant.jobs.create', ['tenant' => $tenant->slug ?? tenant()->slug])); ?>" class="block py-1 text-gray-700 hover:text-blue-600">Create Job</a>
                     <?php endif; ?>
                 </div>
@@ -53,13 +53,13 @@
 
             <a href="<?php echo e(route('tenant.interviews.index', ['tenant' => $tenant->slug ?? tenant()->slug])); ?>" class="block py-2 text-gray-700 hover:text-blue-600">Interviews</a>
 
-            <?php if (app(\Illuminate\Contracts\Auth\Access\Gate::class)->check('view analytics')): ?>
+            <?php if (app('App\Support\CustomPermissionChecker')->check('view_analytics', $tenant ?? tenant())): ?>
             <a href="<?php echo e(route('tenant.analytics.index', ['tenant' => $tenant->slug ?? tenant()->slug])); ?>" class="block py-2 text-gray-700 hover:text-blue-600">Analytics</a>
             <?php endif; ?>
 
             <a href="<?php echo e(route('careers.index', ['tenant' => $tenant->slug ?? tenant()->slug])); ?>" target="_blank" class="block py-2 text-gray-700 hover:text-blue-600">Careers Site</a>
 
-            <?php if (\Illuminate\Support\Facades\Blade::check('role', ['Owner', 'Admin'])): ?>
+            <?php if (app('App\Support\CustomPermissionChecker')->check('manage_settings', $tenant ?? tenant())): ?>
             
             <div class="mt-4">
                 <button data-mobile-settings-toggle class="flex items-center justify-between w-full text-left text-sm font-semibold text-gray-500 mb-2 hover:text-gray-700">
@@ -73,7 +73,7 @@
                     <a href="<?php echo e(route('tenant.settings.team', ['tenant' => $tenant->slug ?? tenant()->slug])); ?>" class="block py-1 text-gray-700 hover:text-blue-600">Team Management</a>
                     <a href="<?php echo e(route('tenant.settings.roles', ['tenant' => $tenant->slug ?? tenant()->slug])); ?>" class="block py-1 text-gray-700 hover:text-blue-600">Roles & Permissions</a>
                     <a href="<?php echo e(route('tenant.settings.general', ['tenant' => $tenant->slug ?? tenant()->slug])); ?>" class="block py-1 text-gray-700 hover:text-blue-600">General Settings</a>
-                    <?php if (\Illuminate\Support\Facades\Blade::check('role', 'Owner')): ?>
+                    <?php if (app('App\Support\CustomPermissionChecker')->check('manage_users', $tenant ?? tenant())): ?>
                     <a href="<?php echo e(route('subscription.show', ['tenant' => $tenant->slug ?? tenant()->slug])); ?>" class="block py-1 text-gray-700 hover:text-blue-600">Subscription</a>
                     <?php endif; ?>
                 </div>

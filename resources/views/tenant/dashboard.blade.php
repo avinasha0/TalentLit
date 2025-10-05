@@ -19,20 +19,26 @@
             <!-- User Role and Subscription Information -->
             <div class="mt-3 flex flex-wrap items-center gap-3">
                 <!-- User Role -->
+                @php
+                    $userRole = \DB::table('custom_user_roles')
+                        ->where('user_id', auth()->id())
+                        ->where('tenant_id', $tenant->id)
+                        ->value('role_name');
+                @endphp
                 <div class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium
-                    @if(auth()->user()->hasRole('Owner')) bg-purple-100 text-purple-800
-                    @elseif(auth()->user()->hasRole('Admin')) bg-blue-100 text-blue-800
-                    @elseif(auth()->user()->hasRole('Recruiter')) bg-green-100 text-green-800
-                    @elseif(auth()->user()->hasRole('Hiring Manager')) bg-yellow-100 text-yellow-800
+                    @if($userRole === 'Owner') bg-purple-100 text-purple-800
+                    @elseif($userRole === 'Admin') bg-blue-100 text-blue-800
+                    @elseif($userRole === 'Recruiter') bg-green-100 text-green-800
+                    @elseif($userRole === 'Hiring Manager') bg-yellow-100 text-yellow-800
                     @else bg-gray-100 text-gray-800 @endif">
                     <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
                         <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
                     </svg>
-                    {{ auth()->user()->roles->first()->name ?? 'No Role' }}
+                    {{ $userRole ?? 'No Role' }}
                 </div>
 
                 <!-- Subscription Plan (for Owners only) -->
-                @if(auth()->user()->hasRole('Owner') && $tenant->activeSubscription)
+                @if($userRole === 'Owner' && $tenant->activeSubscription)
                     @php
                         $plan = $tenant->activeSubscription->plan;
                         $planColors = [
@@ -137,7 +143,8 @@
             </x-card>
 
             <!-- Subscription Status (for Owners only) -->
-            @if(auth()->user()->hasRole('Owner') && $tenant->activeSubscription)
+            @customCan('manage_users', $tenant)
+                @if($tenant->activeSubscription)
                 @php
                     $plan = $tenant->activeSubscription->plan;
                     $planColors = [
@@ -171,7 +178,8 @@
                         </div>
                     </div>
                 </x-card>
-            @endif
+                @endif
+            @endcustomCan
         </div>
 
         <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">

@@ -4,15 +4,49 @@ namespace App\Policies;
 
 use App\Models\Interview;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 
 class InterviewPolicy
 {
+    /**
+     * Check if user has custom permission
+     */
+    private function hasCustomPermission(string $permission): bool
+    {
+        $tenant = tenant();
+        if (!$tenant || !Auth::check()) {
+            return false;
+        }
+
+        $userRole = DB::table('custom_user_roles')
+            ->where('user_id', Auth::id())
+            ->where('tenant_id', $tenant->id)
+            ->value('role_name');
+
+        if (!$userRole) {
+            return false;
+        }
+
+        $rolePermissions = DB::table('custom_tenant_roles')
+            ->where('tenant_id', $tenant->id)
+            ->where('name', $userRole)
+            ->value('permissions');
+
+        if (!$rolePermissions) {
+            return false;
+        }
+
+        $permissions = json_decode($rolePermissions, true);
+        return in_array($permission, $permissions);
+    }
+
     /**
      * Determine whether the user can view any interviews.
      */
     public function viewAny(User $user): bool
     {
-        return $user->hasAnyRole(['Owner', 'Admin', 'Recruiter', 'Hiring Manager']);
+        return $this->hasCustomPermission('view_interviews');
     }
 
     /**
@@ -20,7 +54,7 @@ class InterviewPolicy
      */
     public function view(User $user, Interview $interview): bool
     {
-        return $user->hasAnyRole(['Owner', 'Admin', 'Recruiter', 'Hiring Manager']);
+        return $this->hasCustomPermission('view_interviews');
     }
 
     /**
@@ -28,7 +62,7 @@ class InterviewPolicy
      */
     public function create(User $user): bool
     {
-        return $user->hasAnyRole(['Owner', 'Admin', 'Recruiter']);
+        return $this->hasCustomPermission('create_interviews');
     }
 
     /**
@@ -36,7 +70,7 @@ class InterviewPolicy
      */
     public function update(User $user, Interview $interview): bool
     {
-        return $user->hasAnyRole(['Owner', 'Admin', 'Recruiter']);
+        return $this->hasCustomPermission('edit_interviews');
     }
 
     /**
@@ -44,7 +78,7 @@ class InterviewPolicy
      */
     public function delete(User $user, Interview $interview): bool
     {
-        return $user->hasAnyRole(['Owner', 'Admin', 'Recruiter']);
+        return $this->hasCustomPermission('delete_interviews');
     }
 
     /**
@@ -52,7 +86,7 @@ class InterviewPolicy
      */
     public function cancel(User $user, Interview $interview): bool
     {
-        return $user->hasAnyRole(['Owner', 'Admin', 'Recruiter']);
+        return $this->hasCustomPermission('edit_interviews');
     }
 
     /**
@@ -60,6 +94,6 @@ class InterviewPolicy
      */
     public function complete(User $user, Interview $interview): bool
     {
-        return $user->hasAnyRole(['Owner', 'Admin', 'Recruiter']);
+        return $this->hasCustomPermission('edit_interviews');
     }
 }

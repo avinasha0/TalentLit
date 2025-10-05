@@ -38,7 +38,7 @@ class EmailVerificationOtp extends Model
         return self::create([
             'email' => $email,
             'otp' => $otp,
-            'expires_at' => now()->addMinutes(15), // OTP expires in 15 minutes
+            'expires_at' => now()->addMinutes(10), // OTP expires in 10 minutes
         ]);
     }
 

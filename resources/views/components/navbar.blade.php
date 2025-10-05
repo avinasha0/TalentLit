@@ -16,7 +16,8 @@
 
     <div class="flex items-center gap-2">
       {{-- Subscription Plan Indicator (for Owners only) --}}
-      @if(isset($tenant) && auth()->user()->hasRole('Owner') && $tenant->activeSubscription)
+      @if(isset($tenant) && $tenant->activeSubscription)
+        @customCan('manage_users', $tenant)
         @php
           $plan = $tenant->activeSubscription->plan;
           $planColors = [
@@ -37,6 +38,7 @@
             <span class="ml-1">@subscriptionPrice($plan->price, $plan->currency)</span>
           @endif
         </div>
+        @endcustomCan
       @endif
 
       {{-- (Optional) Search placeholder --}}

@@ -29,12 +29,18 @@ foreach ($attributes->all() as $__key => $__value) {
 unset($__defined_vars, $__key, $__value); ?>
 
 <?php if($role): ?>
-    <?php if(auth()->user()->hasRole($role)): ?>
+    <?php
+        $userRole = \DB::table('custom_user_roles')
+            ->where('user_id', auth()->id())
+            ->where('tenant_id', $tenant->id ?? '')
+            ->value('role_name');
+    ?>
+    <?php if($userRole === $role): ?>
         <?php echo e($slot); ?>
 
     <?php endif; ?>
 <?php elseif($permission): ?>
-    <?php if(auth()->user()->can($permission)): ?>
+    <?php if (app('App\Support\CustomPermissionChecker')->check($permission, $tenant ?? tenant())): ?>
         <?php echo e($slot); ?>
 
     <?php endif; ?>

@@ -12,6 +12,6 @@ class CandidateNotePolicy
      */
     public function delete(User $user, CandidateNote $note): bool
     {
-        return $note->user_id === $user->id || $user->hasAnyRole(['Owner', 'Admin']);
+        return $note->user_id === $user->id || app('App\\Support\\CustomPermissionChecker')->check('edit_candidates', tenant());
     }
 }

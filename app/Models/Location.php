@@ -13,6 +13,7 @@ class Location extends Model
     use HasFactory, HasUuids, TenantScoped;
 
     protected $fillable = [
+        'tenant_id',
         'name',
         'city',
         'country',

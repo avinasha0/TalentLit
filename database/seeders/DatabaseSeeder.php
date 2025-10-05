@@ -19,8 +19,7 @@ class DatabaseSeeder extends Seeder
             TenantSubscriptionSeeder::class,
             TenantRoleSeeder::class,
             TenantBrandingSeeder::class,
-            DepartmentSeeder::class,
-            LocationSeeder::class,
+            DepartmentLocationSeeder::class, // Combined seeder for departments and locations with Indian data
             JobStageSeeder::class,
             JobRequisitionSeeder::class,
             JobOpeningSeeder::class,

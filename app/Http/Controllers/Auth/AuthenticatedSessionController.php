@@ -29,22 +29,23 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
+        $user = auth()->user();
+
         // Get the last visited tenant from session
         $lastTenantSlug = session('last_tenant_slug');
         
-        // If we have a last tenant, redirect there
+        // If we have a last tenant, check if user has access to it
         if ($lastTenantSlug) {
             $tenant = Tenant::where('slug', $lastTenantSlug)->first();
-            if ($tenant) {
+            if ($tenant && $user->tenants->contains($tenant)) {
                 return redirect()->route('tenant.dashboard', $tenant->slug);
             }
         }
         
-        // Try to find a default tenant for the user
-        // For now, we'll use the first tenant available
-        $defaultTenant = Tenant::first();
-        if ($defaultTenant) {
-            return redirect()->route('tenant.dashboard', $defaultTenant->slug);
+        // Try to find a tenant that the user has access to
+        $userTenant = $user->tenants->first();
+        if ($userTenant) {
+            return redirect()->route('tenant.dashboard', $userTenant->slug);
         }
         
         // In tests, Breeze expects redirect to global dashboard
@@ -52,8 +53,8 @@ class AuthenticatedSessionController extends Controller
             return redirect()->route('dashboard');
         }
 
-        // Fallback to home page
-        return redirect('/');
+        // If user has no tenants, redirect to onboarding
+        return redirect()->route('onboarding.organization');
     }
 
     /**
@@ -66,6 +67,10 @@ class AuthenticatedSessionController extends Controller
         $request->session()->invalidate();
 
         $request->session()->regenerateToken();
+        
+        // Clear tenant-specific session data
+        $request->session()->forget('last_tenant_slug');
+        $request->session()->forget('current_tenant_id');
 
         return redirect('/');
     }

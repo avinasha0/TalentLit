@@ -325,6 +325,17 @@ Route::middleware('auth')->group(function () {
         // Redirect authenticated users to their tenant dashboard
         if (auth()->check()) {
             $user = auth()->user();
+            
+            // Check if user was trying to access a specific tenant
+            $lastTenantSlug = session('last_tenant_slug');
+            if ($lastTenantSlug) {
+                $tenant = \App\Models\Tenant::where('slug', $lastTenantSlug)->first();
+                if ($tenant && $user->tenants->contains($tenant)) {
+                    return redirect()->route('tenant.dashboard', $tenant->slug);
+                }
+            }
+            
+            // Fallback to first available tenant
             if ($user->tenants->count() > 0) {
                 $tenant = $user->tenants->first();
                 return redirect()->route('tenant.dashboard', $tenant->slug);
@@ -570,6 +581,9 @@ Route::get('/logout', function() {
     auth()->logout();
     request()->session()->invalidate();
     request()->session()->regenerateToken();
+    // Clear tenant-specific session data
+    request()->session()->forget('last_tenant_slug');
+    request()->session()->forget('current_tenant_id');
     return redirect('/');
 })->name('logout.get');
 

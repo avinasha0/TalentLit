@@ -12,8 +12,19 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // Check if custom_tenant_roles table exists
+        if (!Schema::hasTable('custom_tenant_roles')) {
+            $this->command->warn('custom_tenant_roles table does not exist. Skipping permission updates.');
+            return;
+        }
+
         // Get all tenants
         $tenants = DB::table('tenants')->get();
+        
+        if ($tenants->isEmpty()) {
+            $this->command->info('No tenants found. Skipping permission updates.');
+            return;
+        }
         
         foreach ($tenants as $tenant) {
             // Update Owner role

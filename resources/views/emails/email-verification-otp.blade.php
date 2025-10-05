@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Email Verification - HireHub</title>
+    <title>Email Verification - TalentLit</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
@@ -82,13 +82,13 @@
 <body>
     <div class="container">
         <div class="header">
-            <div class="logo">HireHub</div>
+            <div class="logo">TalentLit</div>
             <h1>Verify Your Email Address</h1>
         </div>
 
         <p>Hello!</p>
         
-        <p>Thank you for registering with HireHub. To complete your registration and activate your account, please verify your email address using the OTP code below:</p>
+        <p>Thank you for registering with TalentLit. To complete your registration and activate your account, please verify your email address using the OTP code below:</p>
 
         <div class="otp-container">
             <div class="otp-label">Your verification code is:</div>
@@ -99,7 +99,7 @@
             <strong>Important:</strong> This code will expire in 15 minutes for security reasons.
         </div>
 
-        <p>If you didn't create an account with HireHub, please ignore this email.</p>
+        <p>If you didn't create an account with TalentLit, please ignore this email.</p>
 
         <p>Once verified, you'll have access to:</p>
         <ul>
@@ -112,7 +112,7 @@
         <div class="footer">
             <p>This email was sent to {{ $email }}</p>
             <p>If you have any questions, please contact our support team.</p>
-            <p>&copy; {{ date('Y') }} HireHub. All rights reserved.</p>
+            <p>&copy; {{ date('Y') }} TalentLit. All rights reserved.</p>
         </div>
     </div>
 </body>

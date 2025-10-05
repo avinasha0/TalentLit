@@ -4,7 +4,7 @@
     <div class="flex items-center gap-2">
       {{-- Brand --}}
       <a href="{{ route('home') }}" class="font-semibold text-xl text-gray-900">
-        HireHub
+        TalentLit
       </a>
     </div>
 

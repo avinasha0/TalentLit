@@ -105,7 +105,7 @@ class EmailVerificationController extends Controller
         ]);
 
         return redirect()->route('onboarding.organization')
-            ->with('success', 'Email verified successfully! Welcome to HireHub.');
+            ->with('success', 'Email verified successfully! Welcome to TalentLit.');
     }
 
     /**

@@ -14,6 +14,13 @@ class SetupController extends Controller
         // Tenant is already resolved by the ResolveTenantFromPath middleware
         $tenant = tenant();
         
+        \Log::info('Setup page accessed', [
+            'tenant_slug' => $tenant->slug,
+            'user_agent' => request()->userAgent(),
+            'is_mobile' => request()->isMobile(),
+            'ip' => request()->ip()
+        ]);
+        
         return view('onboarding.setup', compact('tenant'));
     }
 

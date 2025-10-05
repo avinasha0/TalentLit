@@ -31,7 +31,7 @@ class EmailVerificationOtpMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Verify Your Email Address - HireHub',
+            subject: 'Verify Your Email Address - TalentLit',
         );
     }
 

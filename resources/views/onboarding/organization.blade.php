@@ -9,7 +9,9 @@
             <label for="name" class="block text-sm font-medium text-gray-200">Organization Name</label>
             <input id="name" name="name" type="text" required
                 class="mt-1 block w-full rounded-lg border-gray-600 bg-gray-900/50 text-white placeholder-gray-400 focus:border-blue-500 focus:ring-blue-500 sm:text-sm px-3 py-2"
-                placeholder="Acme Corporation" />
+                placeholder="Acme Corporation" 
+                style="min-height: 44px; -webkit-appearance: none;"
+                autocomplete="organization" />
             @error('name')
                 <p class="mt-2 text-sm text-red-400">{{ $message }}</p>
             @enderror
@@ -23,7 +25,9 @@
                 </span>
                 <input id="slug" name="slug" type="text" required
                     class="flex-1 min-w-0 block w-full rounded-none rounded-r-lg border-gray-600 bg-gray-900/50 text-white placeholder-gray-400 focus:border-blue-500 focus:ring-blue-500 sm:text-sm px-3 py-2"
-                    placeholder="acme-corp" />
+                    placeholder="acme-corp" 
+                    style="min-height: 44px; -webkit-appearance: none;"
+                    autocomplete="off" />
             </div>
             <p class="mt-1 text-xs text-gray-400">This will be your organization's unique URL</p>
             @error('slug')
@@ -35,7 +39,9 @@
             <label for="website" class="block text-sm font-medium text-gray-200">Website (Optional)</label>
             <input id="website" name="website" type="url"
                 class="mt-1 block w-full rounded-lg border-gray-600 bg-gray-900/50 text-white placeholder-gray-400 focus:border-blue-500 focus:ring-blue-500 sm:text-sm px-3 py-2"
-                placeholder="https://acme.com" />
+                placeholder="https://acme.com" 
+                style="min-height: 44px; -webkit-appearance: none;"
+                autocomplete="url" />
             @error('website')
                 <p class="mt-2 text-sm text-red-400">{{ $message }}</p>
             @enderror
@@ -45,7 +51,9 @@
             <label for="location" class="block text-sm font-medium text-gray-200">Location (Optional)</label>
             <input id="location" name="location" type="text"
                 class="mt-1 block w-full rounded-lg border-gray-600 bg-gray-900/50 text-white placeholder-gray-400 focus:border-blue-500 focus:ring-blue-500 sm:text-sm px-3 py-2"
-                placeholder="New York, NY" />
+                placeholder="New York, NY" 
+                style="min-height: 44px; -webkit-appearance: none;"
+                autocomplete="address-level2" />
             @error('location')
                 <p class="mt-2 text-sm text-red-400">{{ $message }}</p>
             @enderror
@@ -54,7 +62,8 @@
         <div>
             <label for="company_size" class="block text-sm font-medium text-gray-200">Company Size (Optional)</label>
             <select id="company_size" name="company_size"
-                class="mt-1 block w-full rounded-lg border-gray-600 bg-gray-900/50 text-white placeholder-gray-400 focus:border-blue-500 focus:ring-blue-500 sm:text-sm px-3 py-2">
+                class="mt-1 block w-full rounded-lg border-gray-600 bg-gray-900/50 text-white placeholder-gray-400 focus:border-blue-500 focus:ring-blue-500 sm:text-sm px-3 py-2"
+                style="min-height: 44px; -webkit-appearance: none;">
                 <option value="">Select company size</option>
                 <option value="1-10">1–10</option>
                 <option value="11-50">11–50</option>
@@ -69,9 +78,43 @@
 
         <div>
             <button type="submit"
-                class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 touch-manipulation"
+                style="min-height: 44px; -webkit-tap-highlight-color: transparent;">
                 Create Organization
             </button>
         </div>
     </form>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.querySelector('form');
+            const submitBtn = document.querySelector('button[type="submit"]');
+            
+            if (form && submitBtn) {
+                form.addEventListener('submit', function(e) {
+                    console.log('Form submission started on mobile:', navigator.userAgent);
+                    
+                    // Show loading state
+                    const originalText = submitBtn.textContent;
+                    submitBtn.textContent = 'Creating Organization...';
+                    submitBtn.disabled = true;
+                    
+                    // Add a small delay to ensure the loading state is visible
+                    setTimeout(() => {
+                        // Let the form submit naturally
+                        console.log('Form submitting...');
+                    }, 100);
+                });
+                
+                // Add touch event handling for better mobile experience
+                submitBtn.addEventListener('touchstart', function(e) {
+                    console.log('Touch start on submit button');
+                });
+                
+                submitBtn.addEventListener('touchend', function(e) {
+                    console.log('Touch end on submit button');
+                });
+            }
+        });
+    </script>
 </x-onboarding-layout>

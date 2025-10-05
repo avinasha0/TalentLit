@@ -5,7 +5,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
-        <title>{{ config('app.name', 'HireHub') }}</title>
+        <title>{{ config('app.name', 'TalentLit') }}</title>
 
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">
@@ -27,7 +27,7 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2-2v2m8 0V6a2 2 0 012 2v6a2 2 0 01-2 2H6a2 2 0 01-2-2V8a2 2 0 012-2V6"></path>
                                 </svg>
                             </div>
-                            <span class="text-2xl font-bold text-white">HireHub</span>
+                            <span class="text-2xl font-bold text-white">TalentLit</span>
                         </a>
                     </div>
                     <h2 class="mt-6 text-3xl font-extrabold text-white">

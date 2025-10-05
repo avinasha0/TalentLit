@@ -11,7 +11,7 @@
         </svg>
       </button>
       
-      <a href="<?php echo e(route('home')); ?>" class="font-semibold text-gray-900 dark:text-white">HireHub</a>
+      <a href="<?php echo e(route('home')); ?>" class="font-semibold text-gray-900 dark:text-white">TalentLit</a>
     </div>
 
     <div class="flex items-center gap-2">

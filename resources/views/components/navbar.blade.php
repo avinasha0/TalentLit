@@ -11,7 +11,7 @@
         </svg>
       </button>
       {{-- Brand (visible even without sidebar) --}}
-      <a href="{{ route('home') }}" class="font-semibold text-gray-900 dark:text-white">HireHub</a>
+      <a href="{{ route('home') }}" class="font-semibold text-gray-900 dark:text-white">TalentLit</a>
     </div>
 
     <div class="flex items-center gap-2">

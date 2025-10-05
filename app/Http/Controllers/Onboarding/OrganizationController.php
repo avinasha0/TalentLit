@@ -51,6 +51,14 @@ class OrganizationController extends Controller
     public function store(Request $request)
     {
         try {
+            // Log the request data for debugging
+            \Log::info('Organization form submission', [
+                'request_data' => $request->all(),
+                'user_agent' => $request->userAgent(),
+                'is_mobile' => $request->isMobile(),
+                'ip' => $request->ip()
+            ]);
+
             $request->validate([
                 'name' => ['required', 'string', 'max:255'],
                 'slug' => ['required', 'string', 'max:255', 'unique:tenants,slug', 'regex:/^[a-z0-9-]+$/'],
@@ -97,6 +105,11 @@ class OrganizationController extends Controller
             
             // Clear the just_verified_email flag since onboarding is starting
             session()->forget('just_verified_email');
+
+            \Log::info('Organization created successfully, redirecting to setup', [
+                'tenant_slug' => $tenant->slug,
+                'redirect_url' => route('onboarding.setup', $tenant->slug)
+            ]);
 
             return redirect()->route('onboarding.setup', $tenant->slug);
         } catch (\Exception $e) {

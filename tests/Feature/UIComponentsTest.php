@@ -11,7 +11,7 @@ class UIComponentsTest extends TestCase
         $response = $this->get('/');
 
         $response->assertStatus(200);
-        $response->assertSee('HireHub —');
+        $response->assertSee('TalentLit —');
         $response->assertSee('Modern ATS for Growing Teams');
         $response->assertSee('View Careers');
         $response->assertSee('Sign In');

@@ -1,4 +1,4 @@
-# HireHub
+# TalentLit
 
 A Laravel 11 application with path-based tenancy for hiring and recruitment management.
 
@@ -74,7 +74,7 @@ A Laravel 11 application with path-based tenancy for hiring and recruitment mana
 ## Usage
 
 ### Public Routes
-- `GET /` - Returns "HireHub is running"
+- `GET /` - Returns "TalentLit is running"
 
 ### Tenant Routes
 - `GET /{tenant}/dashboard` - Tenant dashboard (e.g., `/acme/dashboard`)

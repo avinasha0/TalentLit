@@ -21,20 +21,28 @@ class CareerJobController extends Controller
         
         $branding = $tenant->branding;
         
-        $query = JobOpening::with(['department', 'location'])
+        $query = JobOpening::with(['department', 'location', 'globalDepartment', 'globalLocation'])
             ->where('status', 'published')
             ->orderBy('published_at', 'desc');
 
         // Apply filters
         if ($request->filled('location')) {
-            $query->whereHas('location', function ($q) use ($request) {
-                $q->where('name', 'like', '%'.$request->location.'%');
+            $query->where(function ($q) use ($request) {
+                $q->whereHas('location', function ($subQ) use ($request) {
+                    $subQ->where('name', 'like', '%'.$request->location.'%');
+                })->orWhereHas('globalLocation', function ($subQ) use ($request) {
+                    $subQ->where('name', 'like', '%'.$request->location.'%');
+                });
             });
         }
 
         if ($request->filled('department')) {
-            $query->whereHas('department', function ($q) use ($request) {
-                $q->where('name', 'like', '%'.$request->department.'%');
+            $query->where(function ($q) use ($request) {
+                $q->whereHas('department', function ($subQ) use ($request) {
+                    $subQ->where('name', 'like', '%'.$request->department.'%');
+                })->orWhereHas('globalDepartment', function ($subQ) use ($request) {
+                    $subQ->where('name', 'like', '%'.$request->department.'%');
+                });
             });
         }
 
@@ -52,22 +60,42 @@ class CareerJobController extends Controller
 
         $jobs = $query->paginate(12);
 
-        // Get filter options
-        $departments = JobOpening::where('status', 'published')
+        // Get filter options - combine both tenant and global departments/locations
+        $tenantDepartments = JobOpening::where('status', 'published')
             ->with('department')
             ->get()
             ->pluck('department.name')
+            ->filter()
             ->unique()
-            ->sort()
             ->values();
 
-        $locations = JobOpening::where('status', 'published')
+        $globalDepartments = JobOpening::where('status', 'published')
+            ->with('globalDepartment')
+            ->get()
+            ->pluck('globalDepartment.name')
+            ->filter()
+            ->unique()
+            ->values();
+
+        $departments = $tenantDepartments->merge($globalDepartments)->unique()->sort()->values();
+
+        $tenantLocations = JobOpening::where('status', 'published')
             ->with('location')
             ->get()
             ->pluck('location.name')
+            ->filter()
             ->unique()
-            ->sort()
             ->values();
+
+        $globalLocations = JobOpening::where('status', 'published')
+            ->with('globalLocation')
+            ->get()
+            ->pluck('globalLocation.name')
+            ->filter()
+            ->unique()
+            ->values();
+
+        $locations = $tenantLocations->merge($globalLocations)->unique()->sort()->values();
 
         $employmentTypes = JobOpening::where('status', 'published')
             ->pluck('employment_type')
@@ -99,7 +127,7 @@ class CareerJobController extends Controller
         }
 
         $branding = $tenantModel->branding;
-        $job->load(['department', 'location', 'jobStages', 'applicationQuestions']);
+        $job->load(['department', 'location', 'globalDepartment', 'globalLocation', 'jobStages', 'applicationQuestions']);
 
         return view('careers.show', compact('job', 'tenantModel', 'branding'));
     }

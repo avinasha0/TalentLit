@@ -474,7 +474,7 @@
                 </a>
             </div>
             <p class="text-sm text-gray-500 mt-4">
-                ✨ No credit card required • Forever Free Plan Available • Setup in 5 minutes
+                ✨ No credit card required • Forever Free Plan • Setup in 5 minutes
             </p>
         </div>
     </section>

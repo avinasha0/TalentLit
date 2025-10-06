@@ -237,13 +237,42 @@ unset($__errorArgs, $__bag); ?>
 
                 <!-- Description -->
                 <div>
-                    <label for="description" class="block text-sm font-medium text-black mb-1">Job Description *</label>
+                    <div class="flex items-center justify-between mb-2">
+                        <label for="description" class="block text-sm font-medium text-black">Job Description *</label>
+                        <button type="button" 
+                                id="ai-generate-btn"
+                                class="inline-flex items-center px-3 py-1.5 text-xs font-medium text-white bg-gradient-to-r from-purple-600 to-indigo-600 rounded-lg hover:from-purple-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-all duration-200 shadow-sm hover:shadow-md">
+                            <svg class="w-3 h-3 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                            </svg>
+                            Write With AI
+                        </button>
+                    </div>
+                    
+                    <!-- AI Generation Status -->
+                    <div id="ai-status" class="hidden mb-2">
+                        <div class="flex items-center text-sm text-blue-600">
+                            <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            AI is generating your job description...
+                        </div>
+                    </div>
+                    
                     <textarea name="description"
                               id="description"
                               rows="10"
                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              placeholder="Describe the role, responsibilities, requirements, and benefits..."
+                              placeholder="Describe the role, responsibilities, requirements, and benefits... Or click 'Write With AI' to generate automatically."
                               required><?php echo e(old('description')); ?></textarea>
+                    
+                    <!-- Word count indicator -->
+                    <div class="mt-1 flex justify-between items-center text-xs text-gray-500">
+                        <span id="word-count">0 words</span>
+                        <span id="ai-indicator" class="hidden text-purple-600 font-medium">✨ AI Generated</span>
+                    </div>
+                    
                     <?php $__errorArgs = ['description'];
 $__bag = $errors->getBag($__errorArgs[1] ?? 'default');
 if ($__bag->has($__errorArgs[0])) :
@@ -279,6 +308,152 @@ unset($__errorArgs, $__bag); ?>
 <?php unset($__componentOriginal53747ceb358d30c0105769f8471417f6); ?>
 <?php endif; ?>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const aiGenerateBtn = document.getElementById('ai-generate-btn');
+            const descriptionTextarea = document.getElementById('description');
+            const aiStatus = document.getElementById('ai-status');
+            const wordCount = document.getElementById('word-count');
+            const aiIndicator = document.getElementById('ai-indicator');
+            const titleInput = document.getElementById('title');
+
+            // Word count functionality
+            function updateWordCount() {
+                const text = descriptionTextarea.value;
+                const words = text.trim().split(/\s+/).filter(word => word.length > 0);
+                wordCount.textContent = `${words.length} words`;
+                
+                // Show minimum word warning if less than 150 words
+                if (words.length > 0 && words.length < 150) {
+                    wordCount.className = 'text-orange-600 font-medium';
+                } else if (words.length >= 150) {
+                    wordCount.className = 'text-green-600 font-medium';
+                } else {
+                    wordCount.className = 'text-gray-500';
+                }
+            }
+
+            // Update word count on input
+            descriptionTextarea.addEventListener('input', updateWordCount);
+            updateWordCount(); // Initial count
+
+            // AI Generation functionality
+            aiGenerateBtn.addEventListener('click', async function() {
+                const jobTitle = titleInput.value.trim();
+                
+                if (!jobTitle) {
+                    alert('Please enter a job title first to generate a description.');
+                    titleInput.focus();
+                    return;
+                }
+
+                // Show loading state
+                aiStatus.classList.remove('hidden');
+                aiGenerateBtn.disabled = true;
+                aiGenerateBtn.innerHTML = `
+                    <svg class="animate-spin -ml-1 mr-1.5 h-3 w-3 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Generating...
+                `;
+
+                try {
+                    const response = await fetch('<?php echo e(route("tenant.jobs.ai-generate-description", $tenant->slug)); ?>', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            job_title: jobTitle
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        // Set the generated description
+                        descriptionTextarea.value = data.description;
+                        updateWordCount();
+                        
+                        // Show AI indicator
+                        aiIndicator.classList.remove('hidden');
+                        
+                        // Focus on the textarea so user can edit
+                        descriptionTextarea.focus();
+                        
+                        // Show success message
+                        showNotification('Job description generated successfully! You can edit it as needed.', 'success');
+                    } else {
+                        throw new Error(data.message || 'Failed to generate description');
+                    }
+                } catch (error) {
+                    console.error('AI Generation Error:', error);
+                    showNotification('Failed to generate job description. Please try again or write manually.', 'error');
+                } finally {
+                    // Reset button state
+                    aiStatus.classList.add('hidden');
+                    aiGenerateBtn.disabled = false;
+                    aiGenerateBtn.innerHTML = `
+                        <svg class="w-3 h-3 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                        </svg>
+                        Write With AI
+                    `;
+                }
+            });
+
+            // Hide AI indicator when user starts editing
+            descriptionTextarea.addEventListener('input', function() {
+                if (aiIndicator.classList.contains('hidden') === false) {
+                    // Check if user is actually editing (not just AI setting the value)
+                    setTimeout(() => {
+                        if (descriptionTextarea.value.length > 0) {
+                            aiIndicator.classList.add('hidden');
+                        }
+                    }, 100);
+                }
+            });
+
+            // Notification system
+            function showNotification(message, type = 'info') {
+                const notification = document.createElement('div');
+                notification.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg transform transition-all duration-300 translate-x-full`;
+                
+                const colors = {
+                    success: 'bg-green-500 text-white',
+                    error: 'bg-red-500 text-white',
+                    info: 'bg-blue-500 text-white'
+                };
+                
+                notification.className += ` ${colors[type]}`;
+                notification.innerHTML = `
+                    <div class="flex items-center">
+                        <span>${message}</span>
+                        <button onclick="this.parentElement.parentElement.remove()" class="ml-4 text-white hover:text-gray-200">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+                `;
+                
+                document.body.appendChild(notification);
+                
+                setTimeout(() => {
+                    notification.classList.remove('translate-x-full');
+                }, 100);
+                
+                setTimeout(() => {
+                    notification.classList.add('translate-x-full');
+                    setTimeout(() => notification.remove(), 300);
+                }, 5000);
+            }
+        });
+    </script>
  <?php echo $__env->renderComponent(); ?>
 <?php endif; ?>
 <?php if (isset($__attributesOriginal9ac128a9029c0e4701924bd2d73d7f54)): ?>

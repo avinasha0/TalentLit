@@ -116,15 +116,18 @@ class AnalyticsController extends Controller
         } else {
             // For longer ranges, group by week
             return DB::table('applications')
-                ->select(DB::raw('YEARWEEK(applied_at) as date'), DB::raw('COUNT(*) as applications_count'))
+                ->select(DB::raw('YEARWEEK(applied_at) as yearweek'), DB::raw('COUNT(*) as applications_count'))
                 ->where('tenant_id', $tenantId)
                 ->whereBetween('applied_at', [$fromDate, $toDate])
                 ->groupBy(DB::raw('YEARWEEK(applied_at)'))
-                ->orderBy('date')
+                ->orderBy('yearweek')
                 ->get()
                 ->map(function ($item) {
+                    // Convert YEARWEEK format (202540) to YYYY-WW format (2025-W40)
+                    $year = substr($item->yearweek, 0, 4);
+                    $week = substr($item->yearweek, 4, 2);
                     return [
-                        'date' => $item->date,
+                        'date' => $year . '-W' . $week,
                         'applications_count' => (int) $item->applications_count
                     ];
                 })
@@ -155,16 +158,19 @@ class AnalyticsController extends Controller
             // For longer ranges, group by week
             return DB::table('applications')
                 ->join('job_stages', 'applications.current_stage_id', '=', 'job_stages.id')
-                ->select(DB::raw('YEARWEEK(applied_at) as date'), DB::raw('COUNT(*) as hires_count'))
+                ->select(DB::raw('YEARWEEK(applied_at) as yearweek'), DB::raw('COUNT(*) as hires_count'))
                 ->where('applications.tenant_id', $tenantId)
                 ->where('job_stages.name', 'like', '%Hired%')
                 ->whereBetween('applications.applied_at', [$fromDate, $toDate])
                 ->groupBy(DB::raw('YEARWEEK(applied_at)'))
-                ->orderBy('date')
+                ->orderBy('yearweek')
                 ->get()
                 ->map(function ($item) {
+                    // Convert YEARWEEK format (202540) to YYYY-WW format (2025-W40)
+                    $year = substr($item->yearweek, 0, 4);
+                    $week = substr($item->yearweek, 4, 2);
                     return [
-                        'date' => $item->date,
+                        'date' => $year . '-W' . $week,
                         'hires_count' => (int) $item->hires_count
                     ];
                 })
@@ -290,7 +296,7 @@ class AnalyticsController extends Controller
             ->join('job_stages', 'applications.current_stage_id', '=', 'job_stages.id')
             ->select('job_stages.name as stage', DB::raw('COUNT(*) as in_stage_count'))
             ->where('applications.tenant_id', $tenantId)
-            ->whereIn('applications.status', ['applied', 'screening', 'interviewing', 'offered'])
+            ->whereIn('applications.status', ['applied', 'screening', 'interviewing', 'offered', 'active'])
             ->groupBy('job_stages.id', 'job_stages.name', 'job_stages.sort_order')
             ->orderBy('job_stages.sort_order')
             ->get()

@@ -21,6 +21,8 @@ class JobOpening extends Model
         'slug',
         'department_id',
         'location_id',
+        'global_department_id',
+        'global_location_id',
         'employment_type',
         'status',
         'openings_count',
@@ -47,6 +49,16 @@ class JobOpening extends Model
     public function location(): BelongsTo
     {
         return $this->belongsTo(Location::class);
+    }
+
+    public function globalDepartment(): BelongsTo
+    {
+        return $this->belongsTo(GlobalDepartment::class);
+    }
+
+    public function globalLocation(): BelongsTo
+    {
+        return $this->belongsTo(GlobalLocation::class);
     }
 
     public function jobStages(): HasMany

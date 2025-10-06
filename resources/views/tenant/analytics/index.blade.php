@@ -206,5 +206,5 @@
         </div>
     </div>
 
-    @vite('resources/js/analytics.js')
+    @vite(['resources/js/app.js', 'resources/js/analytics.js'])
 </x-app-layout>

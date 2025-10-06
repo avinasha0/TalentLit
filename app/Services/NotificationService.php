@@ -14,15 +14,15 @@ class NotificationService
      */
     public static function getUsersWithRoles(Tenant $tenant, array $roleNames): Collection
     {
-        $roleIds = TenantRole::forTenant($tenant->id)
-            ->whereIn('name', $roleNames)
-            ->pluck('id');
-
         return User::whereHas('tenants', function ($query) use ($tenant) {
                 $query->where('tenant_id', $tenant->id);
             })
-            ->whereHas('roles', function ($query) use ($roleIds) {
-                $query->whereIn('id', $roleIds);
+            ->whereExists(function ($query) use ($tenant, $roleNames) {
+                $query->select(\DB::raw(1))
+                    ->from('custom_user_roles')
+                    ->whereColumn('custom_user_roles.user_id', 'users.id')
+                    ->where('custom_user_roles.tenant_id', $tenant->id)
+                    ->whereIn('custom_user_roles.role_name', $roleNames);
             })
             ->get();
     }

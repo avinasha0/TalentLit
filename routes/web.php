@@ -375,6 +375,7 @@ Route::middleware(['capture.tenant', 'tenant', 'auth'])->group(function () {
     Route::middleware(['custom.permission:create_jobs', 'subscription.limit:max_job_openings'])->group(function () {
         Route::get('/{tenant}/jobs/create', [JobController::class, 'create'])->name('tenant.jobs.create');
         Route::post('/{tenant}/jobs', [JobController::class, 'store'])->name('tenant.jobs.store');
+        Route::post('/{tenant}/jobs/ai-generate-description', [JobController::class, 'aiGenerateDescription'])->name('tenant.jobs.ai-generate-description');
     });
 
     Route::middleware('custom.permission:view_jobs')->group(function () {

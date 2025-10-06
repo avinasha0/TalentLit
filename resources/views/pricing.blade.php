@@ -239,7 +239,7 @@
                 
                 <div class="bg-white rounded-2xl p-8">
                     <h3 class="text-xl font-semibold text-gray-900 mb-4">Is there a free trial?</h3>
-                    <p class="text-gray-600">Yes! All paid plans come with Forever Free Plan Available. No credit card required to get started.</p>
+                    <p class="text-gray-600">Yes! All paid plans come with Forever Free Plan. No credit card required to get started.</p>
                 </div>
                 
                 <div class="bg-white rounded-2xl p-8">

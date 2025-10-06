@@ -16,6 +16,8 @@ class JobRequisition extends Model
     protected $fillable = [
         'department_id',
         'location_id',
+        'global_department_id',
+        'global_location_id',
         'title',
         'headcount',
         'status',
@@ -34,6 +36,16 @@ class JobRequisition extends Model
     public function location(): BelongsTo
     {
         return $this->belongsTo(Location::class);
+    }
+
+    public function globalDepartment(): BelongsTo
+    {
+        return $this->belongsTo(GlobalDepartment::class);
+    }
+
+    public function globalLocation(): BelongsTo
+    {
+        return $this->belongsTo(GlobalLocation::class);
     }
 
     public function jobOpenings(): HasMany

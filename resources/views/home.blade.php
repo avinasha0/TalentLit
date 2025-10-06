@@ -165,11 +165,11 @@
                         </a>
                         <a href="{{ route('register') }}" 
                            class="border-2 border-white text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-white hover:text-indigo-600 transition-all duration-200">
-                            Free Account Available
+                            Choose Plan
                         </a>
                     </div>
                     <p class="text-sm text-indigo-200 mt-4">
-                        ✨ No credit card required • Free Forever Available • Setup in 5 minutes
+                        ✨ No credit card required • Forever Free Plan • Setup in 5 minutes
                     </p>
                 </div>
                 
@@ -426,11 +426,11 @@
                 <div class="bg-gray-50 p-8 rounded-2xl">
                     <div class="flex items-center mb-4">
                         <div class="w-12 h-12 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
-                            SM
+                            PS
                         </div>
                         <div class="ml-4">
-                            <h4 class="font-semibold text-gray-900">Sarah Mitchell</h4>
-                            <p class="text-sm text-gray-600">Head of Talent, TechCorp</p>
+                            <h4 class="font-semibold text-gray-900">Priya Sharma</h4>
+                            <p class="text-sm text-gray-600">Head of Talent, TechCorp India</p>
                         </div>
                     </div>
                     <p class="text-gray-600 italic">
@@ -442,11 +442,11 @@
                 <div class="bg-gray-50 p-8 rounded-2xl">
                     <div class="flex items-center mb-4">
                         <div class="w-12 h-12 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full flex items-center justify-center text-white font-bold">
-                            MJ
+                            RK
                         </div>
                         <div class="ml-4">
-                            <h4 class="font-semibold text-gray-900">Michael Johnson</h4>
-                            <p class="text-sm text-gray-600">Recruitment Manager, StartupXYZ</p>
+                            <h4 class="font-semibold text-gray-900">Rajesh Kumar</h4>
+                            <p class="text-sm text-gray-600">Recruitment Manager, TechStart India</p>
                         </div>
                     </div>
                     <p class="text-gray-600 italic">
@@ -458,13 +458,13 @@
                 <div class="bg-gray-50 p-8 rounded-2xl">
                     <div class="flex items-center mb-4">
                         <div class="w-12 h-12 bg-gradient-to-r from-pink-600 to-red-600 rounded-full flex items-center justify-center text-white font-bold">
-                            AL
+                            AS
                         </div>
                         <div class="ml-4">
-                            <h4 class="font-semibold text-gray-900">Alex Lee</h4>
-                            <p class="text-sm text-gray-600">HR Director, GlobalTech</p>
+                            <h4 class="font-semibold text-gray-900">Anita Singh</h4>
+                            <p class="text-sm text-gray-600">HR Director, GlobalTech India</p>
                         </div>
-                </div>
+                    </div>
                     <p class="text-gray-600 italic">
                         "Setting up was incredibly easy. Within a day, we had our entire hiring pipeline migrated and our team was already more productive."
                     </p>

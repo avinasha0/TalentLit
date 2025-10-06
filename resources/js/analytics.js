@@ -104,7 +104,14 @@ document.addEventListener('DOMContentLoaded', function() {
         // Update KPI displays
         document.getElementById('kpi-total-applications').textContent = totalApplications.toLocaleString();
         document.getElementById('kpi-hires').textContent = totalHires.toLocaleString();
-        document.getElementById('kpi-median-time').textContent = data.time_to_hire_summary.median_days + ' days';
+        
+        // Check if time_to_hire_summary exists and has median_days
+        if (data.time_to_hire_summary && data.time_to_hire_summary.median_days !== undefined) {
+            document.getElementById('kpi-median-time').textContent = data.time_to_hire_summary.median_days + ' days';
+        } else {
+            document.getElementById('kpi-median-time').textContent = 'N/A';
+        }
+        
         document.getElementById('kpi-active-pipeline').textContent = activePipeline.toLocaleString();
     }
     
@@ -310,6 +317,12 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function formatDate(dateStr) {
+        // Ensure dateStr is a string
+        if (typeof dateStr !== 'string') {
+            console.warn('formatDate received non-string value:', dateStr, typeof dateStr);
+            dateStr = String(dateStr);
+        }
+        
         // Handle both YYYY-MM-DD and YYYY-WW formats
         if (dateStr.includes('-W')) {
             const [year, week] = dateStr.split('-W');

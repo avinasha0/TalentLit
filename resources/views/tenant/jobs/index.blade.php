@@ -34,12 +34,12 @@
                     <div>
                         @if($canAddJobs)
                             <a href="{{ route('tenant.jobs.create', $tenant->slug) }}"
-                               class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                               class="bg-blue-600 text-black px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
                                 Create Job
                             </a>
                         @else
                             <button onclick="showJobLimitReached()"
-                                    class="bg-gray-400 text-white px-4 py-2 rounded-md cursor-not-allowed opacity-75">
+                                    class="bg-gray-400 text-black px-4 py-2 rounded-md cursor-not-allowed opacity-75">
                                 Create Job
                             </button>
                         @endif
@@ -59,14 +59,14 @@
                                id="keyword"
                                value="{{ request('keyword') }}"
                                placeholder="Job title or keywords..."
-                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-black">
                     </div>
 
                     <div>
                         <label for="status" class="block text-sm font-medium text-black mb-1">Status</label>
                         <select name="status" 
                                 id="status"
-                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-black">
                             <option value="">All Statuses</option>
                             @foreach($statuses as $status)
                                 <option value="{{ $status }}" {{ request('status') == $status ? 'selected' : '' }}>
@@ -80,7 +80,7 @@
                         <label for="department" class="block text-sm font-medium text-black mb-1">Department</label>
                         <select name="department" 
                                 id="department"
-                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-black">
                             <option value="">All Departments</option>
                             @foreach($departments as $dept)
                                 <option value="{{ $dept }}" {{ request('department') == $dept ? 'selected' : '' }}>
@@ -94,7 +94,7 @@
                         <label for="location" class="block text-sm font-medium text-black mb-1">Location</label>
                         <select name="location" 
                                 id="location"
-                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-black">
                             <option value="">All Locations</option>
                             @foreach($locations as $loc)
                                 <option value="{{ $loc }}" {{ request('location') == $loc ? 'selected' : '' }}>
@@ -106,7 +106,7 @@
 
                     <div class="flex items-end">
                         <button type="submit" 
-                                class="w-full bg-blue-600 text-white px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                class="w-full bg-blue-600 text-black px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                             Filter Jobs
                         </button>
                     </div>
@@ -155,13 +155,13 @@
                                             <span class="truncate">{{ $job->location->name }}</span>
                                         </div>
                                         <div class="flex items-center justify-between">
-                                            <span class="px-2 py-1 bg-blue-600 text-white rounded-full text-xs">
+                                            <span class="px-2 py-1 bg-blue-600 text-black rounded-full text-xs">
                                                 {{ ucfirst(str_replace('_', ' ', $job->employment_type)) }}
                                             </span>
                                             <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full
-                                                @if($job->status === 'published') bg-green-600 text-white
-                                                @elseif($job->status === 'draft') bg-yellow-600 text-white
-                                                @else bg-red-600 text-white
+                                                @if($job->status === 'published') bg-green-600 text-black
+                                                @elseif($job->status === 'draft') bg-yellow-600 text-black
+                                                @else bg-red-600 text-black
                                                 @endif">
                                                 {{ ucfirst($job->status) }}
                                             </span>
@@ -258,7 +258,7 @@
                                                     </svg>
                                                     {{ $job->location->name }}
                                                 </span>
-                                                <span class="px-2 py-1 bg-blue-600 text-white rounded-full text-xs">
+                                                <span class="px-2 py-1 bg-blue-600 text-black rounded-full text-xs">
                                                     {{ ucfirst(str_replace('_', ' ', $job->employment_type)) }}
                                                 </span>
                                             </div>
@@ -274,9 +274,9 @@
                                             </div>
                                             <div class="flex flex-col items-end space-y-2">
                                                 <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full
-                                                    @if($job->status === 'published') bg-green-600 text-white
-                                                    @elseif($job->status === 'draft') bg-yellow-600 text-white
-                                                    @else bg-red-600 text-white
+                                                    @if($job->status === 'published') bg-green-600 text-black
+                                                    @elseif($job->status === 'draft') bg-yellow-600 text-black
+                                                    @else bg-red-600 text-black
                                                     @endif">
                                                     {{ ucfirst($job->status) }}
                                                 </span>
@@ -339,7 +339,7 @@
                 </div>
             @else
                 <div class="text-center py-12">
-                    <svg class="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="mx-auto h-12 w-12 text-gray-600 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2-2v2m8 0V6a2 2 0 012 2v6a2 2 0 01-2 2H6a2 2 0 01-2-2V8a2 2 0 012-2V6"></path>
                     </svg>
                     <h3 class="mt-2 text-sm font-medium text-black">No jobs found</h3>

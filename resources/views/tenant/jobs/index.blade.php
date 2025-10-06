@@ -123,7 +123,116 @@
             </div>
 
             @if($jobs->count() > 0)
-                <ul class="divide-y divide-gray-200 dark:divide-gray-700">
+                <!-- Mobile: Horizontal scroll container -->
+                <div class="block lg:hidden overflow-x-auto">
+                    <div class="min-w-full">
+                        @foreach($jobs as $job)
+                            <div class="border-b border-gray-200 dark:border-gray-700 p-4 min-w-[320px]">
+                                <!-- Mobile Job Card -->
+                                <div class="space-y-3">
+                                    <!-- Job Title -->
+                                    <div>
+                                        <h4 class="text-lg font-medium text-black">
+                                            <a href="{{ route('tenant.jobs.show', ['tenant' => $tenant->slug, 'job' => $job->id]) }}" class="hover:text-blue-600">
+                                                {{ $job->title }}
+                                            </a>
+                                        </h4>
+                                    </div>
+                                    
+                                    <!-- Job Details -->
+                                    <div class="space-y-2">
+                                        <div class="flex items-center text-sm text-black">
+                                            <svg class="w-4 h-4 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                                            </svg>
+                                            <span class="truncate">{{ $job->department->name }}</span>
+                                        </div>
+                                        <div class="flex items-center text-sm text-black">
+                                            <svg class="w-4 h-4 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                            </svg>
+                                            <span class="truncate">{{ $job->location->name }}</span>
+                                        </div>
+                                        <div class="flex items-center justify-between">
+                                            <span class="px-2 py-1 bg-blue-600 text-white rounded-full text-xs">
+                                                {{ ucfirst(str_replace('_', ' ', $job->employment_type)) }}
+                                            </span>
+                                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full
+                                                @if($job->status === 'published') bg-green-600 text-white
+                                                @elseif($job->status === 'draft') bg-yellow-600 text-white
+                                                @else bg-red-600 text-white
+                                                @endif">
+                                                {{ ucfirst($job->status) }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Stats and Actions -->
+                                    <div class="flex items-center justify-between pt-2 border-t border-gray-100">
+                                        <div class="text-sm text-black">
+                                            <div>{{ $job->openings_count }} opening{{ $job->openings_count !== 1 ? 's' : '' }}</div>
+                                            <div>{{ $job->applications->count() }} application{{ $job->applications->count() !== 1 ? 's' : '' }}</div>
+                                        </div>
+                                        <div class="flex items-center space-x-2">
+                                            <a href="{{ route('tenant.jobs.show', ['tenant' => $tenant->slug, 'job' => $job->id]) }}"
+                                               class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                                                View
+                                            </a>
+                                            <a href="{{ route('tenant.jobs.edit', ['tenant' => $tenant->slug, 'job' => $job->id]) }}"
+                                               class="text-gray-600 hover:text-gray-800 text-sm font-medium">
+                                                Edit
+                                            </a>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Additional Actions -->
+                                    <div class="flex items-center justify-between">
+                                        @if($job->published_at)
+                                            <div class="text-xs text-black">
+                                                Published {{ $job->published_at->format('M j, Y') }}
+                                            </div>
+                                        @else
+                                            <div></div>
+                                        @endif
+                                        
+                                        <div class="flex items-center space-x-2">
+                                            @if($job->status === 'draft')
+                                                <form method="POST" action="{{ route('tenant.jobs.publish', ['tenant' => $tenant->slug, 'job' => $job->id]) }}" class="inline">
+                                                    @csrf
+                                                    @method('PATCH')
+                                                    <button type="submit" class="text-green-600 hover:text-green-800 text-sm font-medium">
+                                                        Publish
+                                                    </button>
+                                                </form>
+                                            @elseif($job->status === 'published')
+                                                <form method="POST" action="{{ route('tenant.jobs.close', ['tenant' => $tenant->slug, 'job' => $job->id]) }}" class="inline">
+                                                    @csrf
+                                                    @method('PATCH')
+                                                    <button type="submit" class="text-red-600 hover:text-red-800 text-sm font-medium">
+                                                        Close
+                                                    </button>
+                                                </form>
+                                            @endif
+                                            
+                                            <form method="POST" action="{{ route('tenant.jobs.destroy', ['tenant' => $tenant->slug, 'job' => $job->id]) }}" class="inline"
+                                                  onsubmit="return confirm('Are you sure you want to delete this job?')">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="text-red-600 hover:text-red-800 text-sm font-medium">
+                                                    Delete
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+
+                <!-- Desktop: Original table layout -->
+                <ul class="hidden lg:block divide-y divide-gray-200 dark:divide-gray-700">
                     @foreach($jobs as $job)
                         <li class="px-4 py-4">
                             <div class="flex items-center justify-between">

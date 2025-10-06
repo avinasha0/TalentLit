@@ -245,50 +245,8 @@
                 </x-slot>
 
                 <div class="space-y-3">
-                    <!-- Debug info for mobile -->
-                    <div class="lg:hidden bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
-                        <p class="text-xs text-yellow-800">
-                            <strong>Debug:</strong> Quick Actions should be visible below. 
-                            If you don't see any items, check your permissions.
-                        </p>
-                        @php
-                            $userRole = \DB::table('custom_user_roles')
-                                ->where('user_id', auth()->id())
-                                ->where('tenant_id', $tenant->id)
-                                ->value('role_name');
-                            
-                            $rolePermissions = \DB::table('custom_tenant_roles')
-                                ->where('tenant_id', $tenant->id)
-                                ->where('name', $userRole)
-                                ->value('permissions');
-                            
-                            $permissions = $rolePermissions ? json_decode($rolePermissions, true) : [];
-                        @endphp
-                        <div class="mt-2 text-xs">
-                            <p><strong>Role:</strong> {{ $userRole ?? 'No Role' }}</p>
-                            <p><strong>Permissions:</strong> {{ implode(', ', $permissions) }}</p>
-                        </div>
-                    </div>
                     
-                    <!-- Always visible test action -->
-                    <div class="lg:hidden">
-                        <a href="#" 
-                           class="flex items-center p-3 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 transition-colors">
-                            <div class="flex-shrink-0">
-                                <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                                    <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                    </svg>
-                                </div>
-                            </div>
-                            <div class="ml-3">
-                                <p class="text-sm font-medium text-blue-800">Test Action (Mobile Only)</p>
-                                <p class="text-sm text-blue-600">This should always be visible on mobile</p>
-                            </div>
-                        </a>
-                    </div>
-                    
-                    <x-auth.for permission="create jobs">
+                    <x-auth.for permission="create_jobs">
                         <a href="{{ route('tenant.jobs.create', $tenant->slug) }}" 
                            class="flex items-center p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
                             <div class="flex-shrink-0">
@@ -305,7 +263,7 @@
                         </a>
                     </x-auth.for>
 
-                    <x-auth.for permission="import candidates">
+                    <x-auth.for permission="import_candidates">
                         <a href="{{ route('tenant.candidates.import', $tenant->slug) }}" 
                            class="flex items-center p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
                             <div class="flex-shrink-0">
@@ -322,7 +280,7 @@
                         </a>
                     </x-auth.for>
 
-                    <x-auth.for permission="view analytics">
+                    <x-auth.for permission="view_analytics">
                         <a href="{{ route('tenant.analytics.index', $tenant->slug) }}" 
                            class="flex items-center p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
                             <div class="flex-shrink-0">
@@ -339,7 +297,7 @@
                         </a>
                     </x-auth.for>
 
-                    <x-auth.for permission="manage email templates">
+                    <x-auth.for permission="manage_email_templates">
                         <a href="{{ route('tenant.email-templates.create', $tenant->slug) }}" 
                            class="flex items-center p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
                             <div class="flex-shrink-0">
@@ -356,7 +314,7 @@
                         </a>
                     </x-auth.for>
 
-                    <x-auth.for permission="manage users">
+                    <x-auth.for permission="manage_users">
                         <a href="{{ route('tenant.settings.team', $tenant->slug) }}" 
                            class="flex items-center p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
                             <div class="flex-shrink-0">

@@ -14,7 +14,7 @@
 </head>
 <body class="bg-gradient-to-br from-indigo-50 via-white to-purple-50 min-h-screen">
     <!-- Navigation -->
-    <nav class="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200 sticky top-0 z-50">
+    <nav class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50" x-data="{ mobileMenuOpen: false }">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16">
                 <div class="flex items-center">
@@ -22,12 +22,111 @@
                         <img src="<?php echo e(asset('logo-talentlit-small.svg')); ?>" alt="TalentLit Logo" class="h-8">
                     </a>
                 </div>
-                <div class="flex items-center space-x-4">
+                
+                <!-- Desktop Navigation -->
+                <div class="hidden md:flex items-center space-x-4">
+                    <!-- Features Dropdown -->
+                    <div class="relative group" x-data="{ open: false }">
+                        <button @click="open = !open" @click.away="open = false" class="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium flex items-center gap-1">
+                            Features
+                            <svg class="w-4 h-4 transition-transform duration-200" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </button>
+                        
+                        <!-- Dropdown Menu -->
+                        <div x-show="open" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95" class="absolute top-full left-0 mt-2 w-96 bg-white rounded-lg shadow-lg border border-gray-200 py-4 z-50">
+                            <div class="grid grid-cols-2 gap-8 px-4">
+                                <!-- Source Submenu -->
+                                <div>
+                                    <div class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Source</div>
+                                    <div class="space-y-1">
+                                        <a href="<?php echo e(route('features.candidate-sourcing')); ?>" class="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-600 rounded-md transition-colors duration-200">
+                                            <div class="font-medium whitespace-nowrap">Candidate Sourcing</div>
+                                        </a>
+                                        <a href="<?php echo e(route('features.career-site')); ?>" class="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-600 rounded-md transition-colors duration-200">
+                                            <div class="font-medium whitespace-nowrap">Career Site</div>
+                                        </a>
+                                        <a href="<?php echo e(route('features.job-advertising')); ?>" class="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-600 rounded-md transition-colors duration-200">
+                                            <div class="font-medium whitespace-nowrap">Job Advertising</div>
+                                        </a>
+                                        <a href="<?php echo e(route('features.employee-referral')); ?>" class="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-600 rounded-md transition-colors duration-200">
+                                            <div class="font-medium whitespace-nowrap">Employee Referral</div>
+                                        </a>
+                                    </div>
+                                </div>
+                                
+                                <!-- Track Submenu -->
+                                <div>
+                                    <div class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Track</div>
+                                    <div class="space-y-1">
+                                        <a href="<?php echo e(route('features.hiring-pipeline')); ?>" class="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-600 rounded-md transition-colors duration-200">
+                                            <div class="font-medium whitespace-nowrap">Hiring Pipeline</div>
+                                        </a>
+                                        <a href="<?php echo e(route('features.resume-management')); ?>" class="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-600 rounded-md transition-colors duration-200">
+                                            <div class="font-medium whitespace-nowrap">Resume Management</div>
+                                        </a>
+                                        <a href="<?php echo e(route('features.manage-submission')); ?>" class="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-600 rounded-md transition-colors duration-200">
+                                            <div class="font-medium whitespace-nowrap">Manage Submission</div>
+                                        </a>
+                                        <a href="<?php echo e(route('features.hiring-analytics')); ?>" class="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-600 rounded-md transition-colors duration-200">
+                                            <div class="font-medium whitespace-nowrap">Hiring Analytics</div>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <a href="<?php echo e(route('subscription.pricing')); ?>" class="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium">
+                        Pricing
+                    </a>
                     <a href="<?php echo e(route('login')); ?>" class="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium">
                         Sign In
                     </a>
-                    <a href="/" class="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium">
-                        Home
+                    <a href="<?php echo e(route('register')); ?>" class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-lg">
+                        Get Started Free
+                    </a>
+                </div>
+                
+                <!-- Mobile menu button -->
+                <div class="md:hidden flex items-center">
+                    <button @click="mobileMenuOpen = !mobileMenuOpen" class="text-gray-500 hover:text-gray-700 p-2">
+                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path x-show="!mobileMenuOpen" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                            <path x-show="mobileMenuOpen" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Mobile Navigation Menu -->
+            <div x-show="mobileMenuOpen" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95" class="md:hidden">
+                <div class="px-2 pt-2 pb-3 space-y-1 bg-white border-t border-gray-200">
+                    <!-- Features Section -->
+                    <div class="px-3 py-2">
+                        <div class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Features</div>
+                        <div class="space-y-1">
+                            <a href="<?php echo e(route('features.candidate-sourcing')); ?>" class="block px-3 py-2 text-base text-gray-700 hover:text-indigo-600 hover:bg-gray-50 rounded-md">
+                                Candidate Sourcing
+                            </a>
+                            <a href="<?php echo e(route('features.hiring-pipeline')); ?>" class="block px-3 py-2 text-base text-gray-700 hover:text-indigo-600 hover:bg-gray-50 rounded-md">
+                                Hiring Pipeline
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <div class="border-t border-gray-200"></div>
+                    
+                    <!-- Other Links -->
+                    <a href="<?php echo e(route('subscription.pricing')); ?>" class="block px-3 py-2 text-base text-gray-700 hover:text-indigo-600 hover:bg-gray-50 rounded-md">
+                        Pricing
+                    </a>
+                    <a href="<?php echo e(route('login')); ?>" class="block px-3 py-2 text-base text-gray-700 hover:text-indigo-600 hover:bg-gray-50 rounded-md">
+                        Sign In
+                    </a>
+                    <a href="<?php echo e(route('register')); ?>" class="block px-3 py-2 text-base bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 rounded-md">
+                        Get Started Free
                     </a>
                 </div>
             </div>
@@ -41,10 +140,10 @@
                 <div class="flex justify-center mb-6">
                     <img src="<?php echo e(asset('logo-talentlit-small.svg')); ?>" alt="TalentLit Logo" class="h-12">
                 </div>
-                <h2 class="text-3xl font-bold text-gray-900 mb-2">
+                <h2 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
                     Verify Your Email
                 </h2>
-                <p class="text-lg text-gray-600 mb-4">
+                <p class="text-base sm:text-lg text-gray-600 mb-4">
                     We've sent a verification code to
                 </p>
                 <p class="text-lg font-semibold text-indigo-600 bg-indigo-50 px-4 py-2 rounded-lg inline-block">
@@ -54,7 +153,7 @@
             </div>
 
             <!-- Verification Form -->
-            <div class="bg-white rounded-2xl shadow-xl p-6 sm:p-8 border border-gray-100">
+            <div class="bg-white rounded-2xl shadow-xl p-4 sm:p-8 border border-gray-100">
                 <?php if(session('success')): ?>
                     <div class="rounded-lg bg-green-50 p-4 mb-6">
                         <div class="flex">
@@ -137,7 +236,8 @@
                                     type="text" 
                                     required 
                                     maxlength="6"
-                                    class="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors text-center text-2xl font-mono tracking-widest"
+                                    inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code"
+                                    class="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors text-center text-xl sm:text-2xl font-mono tracking-widest"
                                     placeholder="000000"
                                     autocomplete="off"
                                 >
@@ -187,7 +287,7 @@
             <div class="mt-8 text-center">
                 <div class="relative">
                     <div class="absolute inset-0 flex items-center">
-                        <div class="w-full border-t border-gray-300" />
+                        <div class="w-full border-t border-gray-300"></div>
                     </div>
                     <div class="relative flex justify-center text-sm">
                         <span class="px-2 bg-gradient-to-br from-indigo-50 via-white to-purple-50 text-gray-500">Need help?</span>
@@ -305,5 +405,27 @@
             }
         });
     </script>
+
+    <!-- Centralized Footer Component -->
+    <?php if (isset($component)) { $__componentOriginal8a8716efb3c62a45938aca52e78e0322 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal8a8716efb3c62a45938aca52e78e0322 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.footer','data' => []] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('footer'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes([]); ?>
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal8a8716efb3c62a45938aca52e78e0322)): ?>
+<?php $attributes = $__attributesOriginal8a8716efb3c62a45938aca52e78e0322; ?>
+<?php unset($__attributesOriginal8a8716efb3c62a45938aca52e78e0322); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal8a8716efb3c62a45938aca52e78e0322)): ?>
+<?php $component = $__componentOriginal8a8716efb3c62a45938aca52e78e0322; ?>
+<?php unset($__componentOriginal8a8716efb3c62a45938aca52e78e0322); ?>
+<?php endif; ?>
 </body>
 </html><?php /**PATH C:\xampp\htdocs\hirehub2\resources\views/auth/verify-email.blade.php ENDPATH**/ ?>

@@ -1,30 +1,55 @@
 <?php
 
-namespace Database\Seeders;
+namespace App\Console\Commands;
 
 use App\Models\Tenant;
 use App\Models\User;
-use Illuminate\Database\Seeder;
+use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
 
-class TenantSeeder extends Seeder
+class CreateTestTenant extends Command
 {
     /**
-     * Run the database seeds.
+     * The name and signature of the console command.
+     *
+     * @var string
      */
-    public function run(): void
+    protected $signature = 'tenant:create-test {slug=testsix}';
+
+    /**
+     * The console command description.
+     *
+     * @var string
+     */
+    protected $description = 'Create a test tenant for testing purposes';
+
+    /**
+     * Execute the console command.
+     */
+    public function handle()
     {
-        // Create Acme tenant
+        $slug = $this->argument('slug');
+        
+        // Check if tenant already exists
+        $tenant = Tenant::where('slug', $slug)->first();
+        if ($tenant) {
+            $this->info("Tenant '{$slug}' already exists: {$tenant->name}");
+            return;
+        }
+
+        // Create tenant
         $tenant = Tenant::create([
-            'name' => 'Acme',
-            'slug' => 'acme',
+            'name' => ucfirst($slug),
+            'slug' => $slug,
         ]);
 
-        // Create admin user for Acme
+        $this->info("Created tenant: {$tenant->slug} - {$tenant->name}");
+
+        // Create admin user
         $admin = User::create([
-            'name' => 'Acme Admin',
-            'email' => 'admin@acme.com',
+            'name' => ucfirst($slug) . ' Admin',
+            'email' => "admin@{$slug}.com",
             'password' => Hash::make('password'),
             'email_verified_at' => now(),
         ]);
@@ -35,8 +60,11 @@ class TenantSeeder extends Seeder
         // Create custom roles for tenant
         $this->createCustomRolesForTenant($tenant);
 
-        // Assign Owner role to admin using custom system
+        // Assign Owner role to admin
         $this->assignCustomOwnerRole($admin, $tenant);
+
+        $this->info("Created admin user: admin@{$slug}.com (password: password)");
+        $this->info("Tenant setup complete!");
     }
 
     private function createCustomRolesForTenant(Tenant $tenant): void

@@ -425,13 +425,13 @@ Route::middleware(['capture.tenant', 'tenant', 'auth'])->group(function () {
     Route::middleware('custom.permission:view_candidates')->group(function () {
         Route::get('/{tenant}/candidates', [CandidateController::class, 'index'])->name('tenant.candidates.index');
         Route::get('/{tenant}/candidates/job/{job}', [CandidateController::class, 'index'])->name('tenant.candidates.index.job');
-        Route::get('/{tenant}/candidates/{candidate}', [CandidateController::class, 'show'])->name('tenant.candidates.show');
-        Route::get('/{tenant}/candidates/{candidate}/edit', [CandidateController::class, 'edit'])->name('tenant.candidates.edit');
-        Route::put('/{tenant}/candidates/{candidate}', [CandidateController::class, 'update'])->name('tenant.candidates.update');
+        Route::get('/{tenant}/candidates/{candidate}', [CandidateController::class, 'show'])->whereNumber('candidate')->name('tenant.candidates.show');
+        Route::get('/{tenant}/candidates/{candidate}/edit', [CandidateController::class, 'edit'])->whereNumber('candidate')->name('tenant.candidates.edit');
+        Route::put('/{tenant}/candidates/{candidate}', [CandidateController::class, 'update'])->whereNumber('candidate')->name('tenant.candidates.update');
         
         // Candidate Notes Routes
-        Route::post('/{tenant}/candidates/{candidate}/notes', [CandidateNoteController::class, 'store'])->name('tenant.candidates.notes.store');
-        Route::delete('/{tenant}/candidates/{candidate}/notes/{note}', [CandidateNoteController::class, 'destroy'])->name('tenant.candidates.notes.destroy');
+        Route::post('/{tenant}/candidates/{candidate}/notes', [CandidateNoteController::class, 'store'])->whereNumber('candidate')->name('tenant.candidates.notes.store');
+        Route::delete('/{tenant}/candidates/{candidate}/notes/{note}', [CandidateNoteController::class, 'destroy'])->whereNumber('candidate')->name('tenant.candidates.notes.destroy');
         
         // Candidate Tags Routes
         Route::get('/{tenant}/tags.json', [CandidateTagController::class, 'index'])->name('tenant.tags.index');
@@ -439,15 +439,16 @@ Route::middleware(['capture.tenant', 'tenant', 'auth'])->group(function () {
         Route::delete('/{tenant}/candidates/{candidate}/tags/{tag}', [CandidateTagController::class, 'destroy'])->name('tenant.candidates.tags.destroy');
         
         // Candidate Resume Routes
-        Route::post('/{tenant}/candidates/{candidate}/resumes', [CandidateController::class, 'storeResume'])->name('tenant.candidates.resumes.store');
-        Route::delete('/{tenant}/candidates/{candidate}/resumes/{resume}', [CandidateController::class, 'destroyResume'])->name('tenant.candidates.resumes.destroy');
+        Route::post('/{tenant}/candidates/{candidate}/resumes', [CandidateController::class, 'storeResume'])->whereNumber('candidate')->name('tenant.candidates.resumes.store');
+        Route::delete('/{tenant}/candidates/{candidate}/resumes/{resume}', [CandidateController::class, 'destroyResume'])->whereNumber('candidate')->name('tenant.candidates.resumes.destroy');
     });
 
     // Candidate Import Routes - Owner, Admin, Recruiter
     Route::middleware('custom.permission:import_candidates')->group(function () {
-        Route::get('/{tenant}/candidates/import', [App\Http\Controllers\Tenant\CandidateImportController::class, 'index'])->name('tenant.candidates.import');
-        Route::post('/{tenant}/candidates/import', [App\Http\Controllers\Tenant\CandidateImportController::class, 'store'])->middleware('subscription.limit:max_candidates')->name('tenant.candidates.import.store');
-        Route::get('/{tenant}/candidates/import/template', [App\Http\Controllers\Tenant\CandidateImportController::class, 'downloadTemplate'])->name('tenant.candidates.import.template');
+        // Narrow route constraints first to avoid '{candidate}' swallowing 'import'
+        Route::get('/{tenant}/candidates/import', [App\Http\Controllers\Tenant\CandidateImportController::class, 'index'])->where('tenant', '[A-Za-z0-9\-]+')->name('tenant.candidates.import');
+        Route::post('/{tenant}/candidates/import', [App\Http\Controllers\Tenant\CandidateImportController::class, 'store'])->where('tenant', '[A-Za-z0-9\-]+')->middleware('subscription.limit:max_candidates')->name('tenant.candidates.import.store');
+        Route::get('/{tenant}/candidates/import/template', [App\Http\Controllers\Tenant\CandidateImportController::class, 'downloadTemplate'])->where('tenant', '[A-Za-z0-9\-]+')->name('tenant.candidates.import.template');
     });
 
     // Interview Management Routes - Owner, Admin, Recruiter, Hiring Manager

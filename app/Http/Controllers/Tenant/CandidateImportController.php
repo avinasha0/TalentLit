@@ -23,13 +23,24 @@ class CandidateImportController extends Controller
 {
     public function index(string $tenant)
     {
+        if (config('app.debug')) {
+            \Log::info('CandidateImportController@index', ['tenant' => $tenant, 'user_id' => optional(auth()->user())->id]);
+        }
         return view('tenant.candidates.import', compact('tenant'));
     }
 
     public function store(Request $request, string $tenant)
     {
         $request->validate([
-            'file' => 'required|file|mimes:csv,xlsx,xls|max:10240', // 10MB max
+            'file' => [
+                'required',
+                'file',
+                // Accept common CSV/XLSX/XLS MIME types across browsers/OSes
+                'mimetypes:text/plain,text/csv,application/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel.sheet.macroEnabled.12',
+                // Fall back to extension-based check as well
+                'mimes:csv,txt,xlsx,xls',
+                'max:10240', // 10MB max
+            ],
             'source' => 'nullable|string|max:255',
         ]);
 
@@ -39,22 +50,59 @@ class CandidateImportController extends Controller
             Excel::import($import, $request->file('file'));
 
             $importedCount = $import->getRowCount();
-            $errors = $import->getErrors();
+            // Collect row-level failures (if any)
+            $failures = method_exists($import, 'failures') ? $import->failures() : [];
+            $formattedFailures = [];
+            foreach ($failures as $failure) {
+                $formattedFailures[] = [
+                    'row' => method_exists($failure, 'row') ? $failure->row() : null,
+                    'errors' => method_exists($failure, 'errors') ? $failure->errors() : [(string)$failure],
+                    'attribute' => method_exists($failure, 'attribute') ? $failure->attribute() : null,
+                    'values' => method_exists($failure, 'values') ? $failure->values() : null,
+                ];
+            }
 
-            if ($importedCount > 0) {
+            // Build flash messages
+            if ($importedCount > 0 && count($formattedFailures) === 0) {
                 return redirect()
                     ->route('tenant.candidates.index', $tenant)
                     ->with('success', "Successfully imported {$importedCount} candidates.");
-            } else {
-                return redirect()
-                    ->back()
-                    ->with('error', 'No candidates were imported. Please check your file format and try again.');
             }
 
-        } catch (\Exception $e) {
+            if ($importedCount > 0 && count($formattedFailures) > 0) {
+                return redirect()
+                    ->back()
+                    ->with('success', "Imported {$importedCount} candidates. Some rows could not be imported.")
+                    ->with('import_failures', $formattedFailures);
+            }
+
+            // No successful rows
             return redirect()
                 ->back()
-                ->with('error', 'Import failed: ' . $e->getMessage())
+                ->with('error', 'No candidates were imported. Please verify the file follows the template and try again.')
+                ->with('import_failures', $formattedFailures);
+
+        } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
+            $failures = $e->failures();
+            $formattedFailures = [];
+            foreach ($failures as $failure) {
+                $formattedFailures[] = [
+                    'row' => $failure->row(),
+                    'errors' => $failure->errors(),
+                    'attribute' => $failure->attribute(),
+                    'values' => $failure->values(),
+                ];
+            }
+            return redirect()
+                ->back()
+                ->with('error', 'The file contains invalid rows. Please fix the highlighted issues and try again.')
+                ->with('import_failures', $formattedFailures)
+                ->withInput();
+        } catch (\Throwable $e) {
+            return redirect()
+                ->back()
+                ->with('error', 'Import failed. Please ensure the file is a valid CSV/XLSX and matches the template.')
+                ->with('exception_message', app()->hasDebugModeEnabled() && config('app.debug') ? $e->getMessage() : null)
                 ->withInput();
         }
     }

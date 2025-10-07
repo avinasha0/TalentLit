@@ -136,23 +136,23 @@
     </nav>
 
     <!-- Main Content -->
-    <div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-        <div class="w-full max-w-2xl mx-auto space-y-8">
+    <div class="min-h-screen flex items-center justify-center py-10 px-4 sm:px-6 lg:px-8">
+        <div class="w-full max-w-xl sm:max-w-2xl mx-auto space-y-8">
             <!-- Header -->
             <div class="text-center">
                 <div class="flex justify-center mb-6">
                     <img src="{{ asset('logo-talentlit-small.svg') }}" alt="TalentLit Logo" class="h-12">
                 </div>
-                <h2 class="text-3xl font-bold text-gray-900 mb-2">
+                <h2 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
                     Create Organization
                 </h2>
-                <p class="text-lg text-gray-600 mb-4">
+                <p class="text-base sm:text-lg text-gray-600 mb-4">
                     Set up your organization to get started with TalentLit
                 </p>
             </div>
 
             <!-- Organization Form -->
-            <div class="bg-white rounded-2xl shadow-xl p-6 sm:p-8 border border-gray-100">
+            <div class="bg-white rounded-2xl shadow-xl p-4 sm:p-8 border border-gray-100">
     <form class="space-y-6" action="{{ route('onboarding.organization.store') }}" method="POST">
         @csrf
         
@@ -168,13 +168,13 @@
 
         <div>
                         <label for="slug" class="block text-sm font-semibold text-gray-900 mb-2">Organization URL</label>
-                        <div class="flex rounded-xl shadow-sm">
-                            <span class="inline-flex items-center px-4 rounded-l-xl border-2 border-r-0 border-gray-200 bg-gray-50 text-gray-600 text-sm font-medium">
+                        <div class="flex flex-col sm:flex-row rounded-xl shadow-sm overflow-hidden">
+                            <span class="inline-flex items-center px-3 sm:px-4 py-2 sm:py-0 sm:rounded-l-xl border-2 sm:border-r-0 border-gray-200 bg-gray-50 text-gray-600 text-sm font-medium break-all">
                     {{ config('app.url') }}/
                 </span>
                 <input id="slug" name="slug" type="text" required
-                                class="flex-1 min-w-0 block w-full rounded-none rounded-r-xl border-2 border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 hover:border-gray-300 px-4 py-3"
-                    placeholder="acme-corp" />
+                                class="flex-1 min-w-0 block w-full sm:rounded-none sm:rounded-r-xl border-2 border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 hover:border-gray-300 px-4 py-3"
+                    placeholder="DigitalXBrand" />
             </div>
                         <p class="mt-2 text-sm text-gray-500">This will be your organization's unique URL</p>
             @error('slug')
@@ -231,7 +231,7 @@
             <div class="mt-8 text-center">
                 <div class="relative">
                     <div class="absolute inset-0 flex items-center">
-                        <div class="w-full border-t border-gray-300" />
+                        <div class="w-full border-t border-gray-300"></div>
                     </div>
                     <div class="relative flex justify-center text-sm">
                         <span class="px-2 bg-gradient-to-br from-indigo-50 via-white to-purple-50 text-gray-500">Need help?</span>

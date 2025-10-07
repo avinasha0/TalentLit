@@ -140,10 +140,10 @@
                 <div class="flex justify-center mb-6">
                     <img src="{{ asset('logo-talentlit-small.svg') }}" alt="TalentLit Logo" class="h-12">
                 </div>
-                <h2 class="text-3xl font-bold text-gray-900 mb-2">
+                <h2 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
                     Verify Your Email
                 </h2>
-                <p class="text-lg text-gray-600 mb-4">
+                <p class="text-base sm:text-lg text-gray-600 mb-4">
                     We've sent a verification code to
                 </p>
                 <p class="text-lg font-semibold text-indigo-600 bg-indigo-50 px-4 py-2 rounded-lg inline-block">
@@ -152,7 +152,7 @@
             </div>
 
             <!-- Verification Form -->
-            <div class="bg-white rounded-2xl shadow-xl p-6 sm:p-8 border border-gray-100">
+            <div class="bg-white rounded-2xl shadow-xl p-4 sm:p-8 border border-gray-100">
                 @if (session('success'))
                     <div class="rounded-lg bg-green-50 p-4 mb-6">
                         <div class="flex">
@@ -233,7 +233,8 @@
                                     type="text" 
                                     required 
                                     maxlength="6"
-                                    class="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors text-center text-2xl font-mono tracking-widest"
+                                    inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code"
+                                    class="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors text-center text-xl sm:text-2xl font-mono tracking-widest"
                                     placeholder="000000"
                                     autocomplete="off"
                                 >
@@ -283,7 +284,7 @@
             <div class="mt-8 text-center">
                 <div class="relative">
                     <div class="absolute inset-0 flex items-center">
-                        <div class="w-full border-t border-gray-300" />
+                        <div class="w-full border-t border-gray-300"></div>
                     </div>
                     <div class="relative flex justify-center text-sm">
                         <span class="px-2 bg-gradient-to-br from-indigo-50 via-white to-purple-50 text-gray-500">Need help?</span>

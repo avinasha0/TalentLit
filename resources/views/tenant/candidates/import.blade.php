@@ -1,3 +1,7 @@
+@php
+    $tenant = tenant();
+@endphp
+
 <x-app-layout :tenant="$tenant">
     <x-slot name="breadcrumbs">
         @php
@@ -10,6 +14,44 @@
     </x-slot>
 
     <div class="space-y-6">
+        @if (session('success'))
+            <div class="rounded-md bg-green-50 p-4">
+                <div class="flex">
+                    <div class="ml-3">
+                        <p class="text-sm font-medium text-green-800">{{ session('success') }}</p>
+                    </div>
+                </div>
+            </div>
+        @endif
+
+        @if (session('error'))
+            <div class="rounded-md bg-red-50 p-4">
+                <div class="flex">
+                    <div class="ml-3">
+                        <p class="text-sm font-medium text-red-800">{{ session('error') }}</p>
+                        @if (session('exception_message'))
+                            <p class="mt-1 text-xs text-red-600">{{ session('exception_message') }}</p>
+                        @endif
+                    </div>
+                </div>
+            </div>
+        @endif
+
+        @if (session('import_failures'))
+            <x-card>
+                <x-slot name="header">
+                    <h3 class="text-lg font-medium text-black">Rows with issues</h3>
+                </x-slot>
+                <div class="space-y-2">
+                    @foreach (session('import_failures') as $failure)
+                        <div class="text-sm text-gray-700">
+                            <span class="font-semibold">Row {{ $failure['row'] ?? '?' }}:</span>
+                            <span class="text-red-600">{{ implode('; ', (array)($failure['errors'] ?? [])) }}</span>
+                        </div>
+                    @endforeach
+                </div>
+            </x-card>
+        @endif
         <!-- Page header -->
         <div>
             <h1 class="text-2xl font-bold text-white">Import Candidates</h1>
@@ -37,19 +79,17 @@
                             <label for="file" class="block text-sm font-medium text-black mb-2">
                                 Select File
                             </label>
-                            <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg hover:border-gray-400 transition-colors">
+                            <div id="dropzone" class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg hover:border-gray-400 transition-colors">
                                 <div class="space-y-1 text-center">
                                     <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
                                         <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                                     </svg>
-                                    <div class="flex text-sm text-gray-600">
-                                        <label for="file" class="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500">
-                                            <span>Upload a file</span>
-                                            <input id="file" name="file" type="file" class="sr-only" accept=".csv,.xlsx,.xls" required>
-                                        </label>
-                                        <p class="pl-1">or drag and drop</p>
+                                    <div class="flex flex-col items-center text-sm text-gray-600">
+                                        <input id="file" name="file" type="file" accept=".csv,.xlsx,.xls" required class="block w-full text-sm text-gray-700" />
+                                        <p class="mt-2">or drag and drop</p>
+                                        <p id="fileHelp" class="mt-2 text-xs text-gray-500">CSV, XLSX, XLS up to 10MB</p>
+                                        <p id="fileSelected" class="mt-2 text-xs text-gray-600">No file chosen</p>
                                     </div>
-                                    <p class="text-xs text-gray-500">CSV, XLSX, XLS up to 10MB</p>
                                 </div>
                             </div>
                             @error('file')
@@ -148,26 +188,59 @@
     </div>
 
     <script>
-        // File upload preview
+        // Prevent submitting without a file
+        (function() {
+            const form = document.querySelector('form[action*="candidates/import"]');
+            const fileInput = document.getElementById('file');
+            if (!form || !fileInput) return;
+
+            form.addEventListener('submit', function(e) {
+                if (!fileInput.files || fileInput.files.length === 0) {
+                    e.preventDefault();
+                    alert('Please choose a CSV/XLSX/XLS file to import.');
+                }
+            });
+        })();
+
+        // Drag & drop handling
+        (function() {
+            const dropzone = document.getElementById('dropzone');
+            const fileInput = document.getElementById('file');
+            if (!dropzone || !fileInput) return;
+
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropzone.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                });
+            });
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropzone.addEventListener(eventName, () => dropzone.classList.add('border-blue-500'));
+            });
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropzone.addEventListener(eventName, () => dropzone.classList.remove('border-blue-500'));
+            });
+
+            dropzone.addEventListener('drop', (e) => {
+                const dt = e.dataTransfer;
+                if (!dt || !dt.files || dt.files.length === 0) return;
+                fileInput.files = dt.files;
+                const changeEvent = new Event('change');
+                fileInput.dispatchEvent(changeEvent);
+            });
+        })();
+
+        // File upload preview (without removing input)
         document.getElementById('file').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (file) {
                 const fileName = file.name;
                 const fileSize = (file.size / 1024 / 1024).toFixed(2);
-                
-                // Update the upload area to show selected file
-                const uploadArea = document.querySelector('.border-dashed');
-                uploadArea.innerHTML = `
-                    <div class="space-y-1 text-center">
-                        <svg class="mx-auto h-12 w-12 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 48 48">
-                            <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                        </svg>
-                        <div class="text-sm text-gray-600">
-                            <p class="font-medium text-green-600">${fileName}</p>
-                            <p class="text-gray-500">${fileSize} MB</p>
-                        </div>
-                    </div>
-                `;
+                const selected = document.getElementById('fileSelected');
+                if (selected) {
+                    selected.innerHTML = `<span class="text-green-700">${fileName}</span> <span class="text-gray-500">(${fileSize} MB)</span>`;
+                }
             }
         });
     </script>

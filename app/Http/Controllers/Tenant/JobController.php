@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Tenant;
 use App\Http\Controllers\Controller;
 use App\Models\JobOpening;
 use App\Models\Department;
-use App\Models\Location;
 use App\Models\GlobalDepartment;
 use App\Models\GlobalLocation;
 use App\Models\City;
@@ -131,13 +130,12 @@ class JobController extends Controller
         Gate::authorize('create', JobOpening::class);
         
         $departments = Department::orderBy('name')->get();
-        $locations = Location::orderBy('name')->get();
         $globalDepartments = GlobalDepartment::active()->orderBy('name')->get();
         $globalLocations = GlobalLocation::active()->orderBy('name')->get();
         $cities = City::active()->orderBy('state')->orderBy('name')->get();
         $employmentTypes = ['full_time', 'part_time', 'contract', 'internship'];
 
-        return view('tenant.jobs.create', compact('departments', 'locations', 'globalDepartments', 'globalLocations', 'cities', 'employmentTypes'));
+        return view('tenant.jobs.create', compact('departments', 'globalDepartments', 'globalLocations', 'cities', 'employmentTypes'));
     }
 
     public function store(Request $request, string $tenant)

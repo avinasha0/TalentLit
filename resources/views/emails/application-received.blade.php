@@ -29,7 +29,7 @@
             <ul>
                 <li><strong>Position:</strong> {{ $job->title }}</li>
                 <li><strong>Department:</strong> {{ $job->department->name }}</li>
-                <li><strong>Location:</strong> {{ $job->location->name }}</li>
+                <li><strong>Location:</strong> {{ $job->globalLocation?->name ?? $job->city?->formatted_location ?? 'No location specified' }}</li>
                 <li><strong>Employment Type:</strong> {{ ucfirst(str_replace('_', ' ', $job->employment_type)) }}</li>
                 <li><strong>Application ID:</strong> {{ $application->id }}</li>
                 <li><strong>Applied On:</strong> {{ $application->applied_at->format('F j, Y \a\t g:i A') }}</li>

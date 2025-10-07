@@ -7,7 +7,7 @@
             ? Str::limit(strip_tags($job->description), 150) 
             : 'Join ' . $tenantModel->name . ' as a ' . $job->title . '. Apply now to be part of our team.';
         $seoDescription = $job->title . ' position at ' . $tenantModel->name . '. ' . $jobDescSummary;
-        $seoKeywords = $job->title . ', ' . $tenantModel->name . ', ' . $job->department->name . ', ' . $job->location->name . ', careers, jobs, hiring, employment, TalentLit';
+        $seoKeywords = $job->title . ', ' . $tenantModel->name . ', ' . $job->department->name . ', ' . ($job->globalLocation?->name ?? $job->city?->formatted_location ?? 'Location') . ', careers, jobs, hiring, employment, TalentLit';
         $seoAuthor = $tenantModel->name;
         $seoImage = ($branding && $branding->logo_path) 
             ? asset('storage/' . $branding->logo_path) 
@@ -92,7 +92,7 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
                             </svg>
-                            <span><?php echo e($job->location->name); ?></span>
+                            <span><?php echo e($job->globalLocation?->name ?? $job->city?->formatted_location ?? 'No location specified'); ?></span>
                         </div>
                         <div class="flex items-center space-x-2">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -162,7 +162,7 @@
                                 </div>
                                 <div>
                                     <h3 class="text-lg font-semibold text-gray-900">Location</h3>
-                                    <p class="text-gray-600"><?php echo e($job->location->name); ?></p>
+                                    <p class="text-gray-600"><?php echo e($job->globalLocation?->name ?? $job->city?->formatted_location ?? 'No location specified'); ?></p>
                                 </div>
                             </div>
                         </div>

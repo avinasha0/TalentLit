@@ -24,6 +24,7 @@ class Location extends Model
         'is_active' => 'boolean',
     ];
 
+
     public function jobOpenings(): HasMany
     {
         return $this->hasMany(JobOpening::class);

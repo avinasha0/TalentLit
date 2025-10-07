@@ -8,6 +8,7 @@ use App\Models\Department;
 use App\Models\Location;
 use App\Models\GlobalDepartment;
 use App\Models\GlobalLocation;
+use App\Models\City;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -17,7 +18,7 @@ class JobController extends Controller
 {
     public function index(Request $request, string $tenant)
     {
-        $query = JobOpening::with(['department', 'location', 'globalDepartment', 'globalLocation', 'jobStages'])
+        $query = JobOpening::with(['department', 'globalDepartment', 'globalLocation', 'city', 'jobStages'])
             ->orderBy('created_at', 'desc');
 
         // Apply filters
@@ -37,9 +38,9 @@ class JobController extends Controller
 
         if ($request->filled('location')) {
             $query->where(function ($q) use ($request) {
-                $q->whereHas('location', function ($subQ) use ($request) {
+                $q->whereHas('globalLocation', function ($subQ) use ($request) {
                     $subQ->where('name', 'like', '%'.$request->location.'%');
-                })->orWhereHas('globalLocation', function ($subQ) use ($request) {
+                })->orWhereHas('city', function ($subQ) use ($request) {
                     $subQ->where('name', 'like', '%'.$request->location.'%');
                 });
             });
@@ -72,13 +73,6 @@ class JobController extends Controller
 
         $departments = $tenantDepartments->merge($globalDepartments)->unique()->sort()->values();
 
-        $tenantLocations = JobOpening::with('location')
-            ->get()
-            ->pluck('location.name')
-            ->filter()
-            ->unique()
-            ->values();
-
         $globalLocations = JobOpening::with('globalLocation')
             ->get()
             ->pluck('globalLocation.name')
@@ -86,7 +80,14 @@ class JobController extends Controller
             ->unique()
             ->values();
 
-        $locations = $tenantLocations->merge($globalLocations)->unique()->sort()->values();
+        $cities = JobOpening::with('city')
+            ->get()
+            ->pluck('city.formatted_location')
+            ->filter()
+            ->unique()
+            ->values();
+
+        $locations = $globalLocations->merge($cities)->unique()->sort()->values();
 
         $statuses = ['draft', 'published', 'closed'];
 
@@ -98,7 +99,7 @@ class JobController extends Controller
                         'title' => $job->title,
                         'slug' => $job->slug,
                         'department' => $job->department?->name ?? $job->globalDepartment?->name,
-                        'location' => $job->location?->name ?? $job->globalLocation?->name,
+                        'location' => $job->globalLocation?->name ?? $job->city?->formatted_location,
                         'employment_type' => $job->employment_type,
                         'status' => $job->status,
                         'openings_count' => $job->openings_count,
@@ -133,9 +134,10 @@ class JobController extends Controller
         $locations = Location::orderBy('name')->get();
         $globalDepartments = GlobalDepartment::active()->orderBy('name')->get();
         $globalLocations = GlobalLocation::active()->orderBy('name')->get();
+        $cities = City::active()->orderBy('state')->orderBy('name')->get();
         $employmentTypes = ['full_time', 'part_time', 'contract', 'internship'];
 
-        return view('tenant.jobs.create', compact('departments', 'locations', 'globalDepartments', 'globalLocations', 'employmentTypes'));
+        return view('tenant.jobs.create', compact('departments', 'locations', 'globalDepartments', 'globalLocations', 'cities', 'employmentTypes'));
     }
 
     public function store(Request $request, string $tenant)
@@ -146,9 +148,8 @@ class JobController extends Controller
             'title' => 'required|string|max:255',
             'slug' => 'nullable|string|max:255|unique:job_openings,slug,NULL,id,tenant_id,' . tenant_id(),
             'department_id' => 'nullable|exists:departments,id',
-            'location_id' => 'nullable|exists:locations,id',
             'global_department_id' => 'nullable|exists:global_departments,id',
-            'global_location_id' => 'nullable|exists:global_locations,id',
+            'city_id' => 'required|exists:indian_cities,id',
             'employment_type' => 'required|in:full_time,part_time,contract,internship',
             'status' => 'required|in:draft,published,closed',
             'openings_count' => 'required|integer|min:1',
@@ -158,9 +159,6 @@ class JobController extends Controller
         // Ensure at least one department and location is selected
         if (!$validated['department_id'] && !$validated['global_department_id']) {
             return back()->withErrors(['department_id' => 'Please select a department.']);
-        }
-        if (!$validated['location_id'] && !$validated['global_location_id']) {
-            return back()->withErrors(['location_id' => 'Please select a location.']);
         }
 
         // Generate slug if not provided
@@ -193,7 +191,7 @@ class JobController extends Controller
 
     public function show(string $tenant, JobOpening $job)
     {
-        $job->load(['department', 'location', 'jobStages', 'applications.candidate']);
+        $job->load(['department', 'globalLocation', 'city', 'jobStages', 'applications.candidate']);
 
         return view('tenant.jobs.show', compact('job'));
     }
@@ -203,12 +201,11 @@ class JobController extends Controller
         Gate::authorize('update', $job);
         
         $departments = Department::orderBy('name')->get();
-        $locations = Location::orderBy('name')->get();
         $globalDepartments = GlobalDepartment::active()->orderBy('name')->get();
-        $globalLocations = GlobalLocation::active()->orderBy('name')->get();
+        $cities = City::active()->orderBy('state')->orderBy('name')->get();
         $employmentTypes = ['full_time', 'part_time', 'contract', 'internship'];
 
-        return view('tenant.jobs.edit', compact('job', 'departments', 'locations', 'globalDepartments', 'globalLocations', 'employmentTypes'));
+        return view('tenant.jobs.edit', compact('job', 'departments', 'globalDepartments', 'cities', 'employmentTypes'));
     }
 
     public function update(Request $request, string $tenant, JobOpening $job)
@@ -226,9 +223,8 @@ class JobController extends Controller
                     ->where('tenant_id', tenant_id())
             ],
             'department_id' => 'nullable|exists:departments,id',
-            'location_id' => 'nullable|exists:locations,id',
             'global_department_id' => 'nullable|exists:global_departments,id',
-            'global_location_id' => 'nullable|exists:global_locations,id',
+            'city_id' => 'required|exists:indian_cities,id',
             'employment_type' => 'required|in:full_time,part_time,contract,internship',
             'status' => 'required|in:draft,published,closed',
             'openings_count' => 'required|integer|min:1',
@@ -238,9 +234,6 @@ class JobController extends Controller
         // Ensure at least one department and location is selected
         if (!$validated['department_id'] && !$validated['global_department_id']) {
             return back()->withErrors(['department_id' => 'Please select a department.']);
-        }
-        if (!$validated['location_id'] && !$validated['global_location_id']) {
-            return back()->withErrors(['location_id' => 'Please select a location.']);
         }
 
         // Generate slug if not provided

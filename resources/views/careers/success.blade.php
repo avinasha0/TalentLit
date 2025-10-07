@@ -111,7 +111,7 @@
                                 </div>
                                 <div>
                                     <p class="text-sm text-gray-600">Location</p>
-                                    <p class="font-semibold text-gray-900">{{ $job->location->name }}</p>
+                                    <p class="font-semibold text-gray-900">{{ $job->globalLocation?->name ?? $job->city?->formatted_location ?? 'No location specified' }}</p>
                                 </div>
                             </div>
                             

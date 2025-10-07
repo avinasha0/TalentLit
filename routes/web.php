@@ -481,6 +481,15 @@ Route::middleware(['capture.tenant', 'tenant', 'auth'])->group(function () {
         Route::get('/{tenant}/analytics/export', [App\Http\Controllers\Tenant\AnalyticsController::class, 'export'])->name('tenant.analytics.export');
     });
 
+    // Department Routes - use existing job permissions
+    Route::middleware('custom.permission:view_jobs')->group(function () {
+        Route::get('/{tenant}/departments', [App\Http\Controllers\Tenant\DepartmentController::class, 'index'])->name('tenant.departments.index');
+    });
+    Route::middleware('custom.permission:edit_jobs')->group(function () {
+        Route::get('/{tenant}/departments/create', [App\Http\Controllers\Tenant\DepartmentController::class, 'create'])->name('tenant.departments.create');
+        Route::post('/{tenant}/departments', [App\Http\Controllers\Tenant\DepartmentController::class, 'store'])->name('tenant.departments.store');
+    });
+
     // Settings Routes - Users with manage_settings permission
     Route::middleware('custom.permission:manage_settings')->group(function () {
         // Careers Settings

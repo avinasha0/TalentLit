@@ -6,7 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\Tenant;
 use App\Models\TenantRole;
 use App\Models\User;
+use App\Mail\EmailActivationMail;
 use App\Rules\RecaptchaRule;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -40,23 +43,47 @@ class RegisteredUserController extends Controller
             'g-recaptcha-response' => ['required', new RecaptchaRule(app(\App\Services\RecaptchaService::class), $request)],
         ]);
 
-        // Store user data temporarily in session instead of creating user immediately
-        $request->session()->put('pending_registration', [
+        // Create user account but mark as unverified
+        $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
-            'created_at' => now(),
+            'email_verified_at' => null, // Not verified yet
         ]);
 
-        // Store email in session for verification
-        $request->session()->put('pending_verification_email', $request->email);
+        // Generate activation token
+        $activationToken = Str::random(60);
+        $user->activation_token = $activationToken;
+        $user->save();
 
-        \Log::info('New user registration - storing data temporarily, redirecting to OTP verification', [
-            'user_email' => $request->email
-        ]);
-        
-        return redirect()->route('verification.show')
-            ->with('success', 'Registration successful! Please verify your email address.');
+        // Generate activation URL
+        $activationUrl = route('auth.activate', ['token' => $activationToken]);
+
+        // Send activation email
+        try {
+            Mail::to($user->email)->send(new EmailActivationMail([
+                'name' => $user->name,
+                'email' => $user->email,
+            ], $activationUrl));
+
+            \Log::info('User registered successfully, activation email sent', [
+                'user_id' => $user->id,
+                'user_email' => $user->email
+            ]);
+
+            return redirect()->route('login')
+                ->with('success', '🎉 Registration successful! Please check your email inbox and click the activation link to complete your account setup. If you don\'t see the email, check your spam folder.');
+        } catch (\Exception $e) {
+            \Log::error('Failed to send activation email', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage()
+            ]);
+
+            // Delete the user if email sending fails
+            $user->delete();
+
+            return back()->with('error', 'Failed to send activation email. Please try again.');
+        }
     }
     
     /**

@@ -26,6 +26,7 @@ class User extends Authenticatable
         'email',
         'password',
         'email_verified_at',
+        'activation_token',
         'invitation_token',
         'invitation_sent_at',
         'invitation_accepted_at',

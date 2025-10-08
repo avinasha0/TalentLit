@@ -268,15 +268,12 @@
                                 </p>
                             </div>
                             <div class="text-sm">
-                                <form action="<?php echo e(route('verification.resend')); ?>" method="POST" class="inline">
-                                    <?php echo csrf_field(); ?>
-                                    <button 
-                                        type="submit" 
-                                        class="font-semibold text-indigo-600 hover:text-indigo-500 focus:outline-none focus:underline transition-colors"
-                                    >
-                                        Resend Code
-                                    </button>
-                                </form>
+                                <a 
+                                    href="<?php echo e(route('register')); ?>"
+                                    class="font-semibold text-indigo-600 hover:text-indigo-500 focus:outline-none focus:underline transition-colors cursor-pointer"
+                                >
+                                    Register Again
+                                </a>
                             </div>
                         </div>
                     </form>
@@ -309,6 +306,72 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+
+            // Function to show OTP form
+            function showOtpForm() {
+                const sendOtpSection = document.getElementById('send-otp-section');
+                const otpFormSection = document.getElementById('otp-form-section');
+                
+                if (sendOtpSection && otpFormSection) {
+                    sendOtpSection.style.display = 'none';
+                    otpFormSection.style.display = 'block';
+                    
+                    // No need to initialize resend button - it's now a simple link
+                    
+                    // Auto-focus on OTP input
+                    const otpInput = document.getElementById('otp');
+                    if (otpInput) {
+                        otpInput.focus();
+                        setupOtpInputHandlers(otpInput);
+                    }
+                }
+            }
+
+            // Function to setup OTP input handlers
+            function setupOtpInputHandlers(otpInput) {
+                // Auto-submit when 6 digits are entered
+                otpInput.addEventListener('input', function(e) {
+                    const value = e.target.value.replace(/\D/g, ''); // Remove non-digits
+                    e.target.value = value;
+                    
+                    if (value.length === 6) {
+                        // Show loading state
+                        const submitButton = e.target.form.querySelector('button[type="submit"]');
+                        if (submitButton) {
+                            const originalText = submitButton.innerHTML;
+                            submitButton.innerHTML = '<svg class="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Verifying...';
+                            submitButton.disabled = true;
+                        }
+                        
+                        // Small delay to show the complete code, then submit
+                        setTimeout(() => {
+                            e.target.form.submit();
+                        }, 500);
+                    }
+                });
+
+                // Only allow digits
+                otpInput.addEventListener('keypress', function(e) {
+                    if (!/\d/.test(e.key)) {
+                        e.preventDefault();
+                    }
+                });
+
+                // Handle Enter key
+                otpInput.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter' && e.target.value.length === 6) {
+                        e.preventDefault();
+                        const submitButton = e.target.form.querySelector('button[type="submit"]');
+                        if (submitButton) {
+                            const originalText = submitButton.innerHTML;
+                            submitButton.innerHTML = '<svg class="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Verifying...';
+                            submitButton.disabled = true;
+                            e.target.form.submit();
+                        }
+                    }
+                });
+            }
+
             // Check if OTP was sent (success message contains "sent" or "code")
             const successMessage = document.querySelector('.bg-green-50 p');
             const hasOtpSent = successMessage && (
@@ -319,56 +382,7 @@
 
             // Show OTP form if OTP was already sent
             if (hasOtpSent) {
-                document.getElementById('send-otp-section').style.display = 'none';
-                document.getElementById('otp-form-section').style.display = 'block';
-                
-                // Auto-focus on OTP input
-                const otpInput = document.getElementById('otp');
-                if (otpInput) {
-                    otpInput.focus();
-
-                    // Auto-submit when 6 digits are entered
-                    otpInput.addEventListener('input', function(e) {
-                        const value = e.target.value.replace(/\D/g, ''); // Remove non-digits
-                        e.target.value = value;
-                        
-                        if (value.length === 6) {
-                            // Show loading state
-                            const submitButton = e.target.form.querySelector('button[type="submit"]');
-                            if (submitButton) {
-                                const originalText = submitButton.innerHTML;
-                                submitButton.innerHTML = '<svg class="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Verifying...';
-                                submitButton.disabled = true;
-                            }
-                            
-                            // Small delay to show the complete code, then submit
-                            setTimeout(() => {
-                                e.target.form.submit();
-                            }, 500);
-                        }
-                    });
-
-                    // Only allow digits
-                    otpInput.addEventListener('keypress', function(e) {
-                        if (!/\d/.test(e.key)) {
-                            e.preventDefault();
-                        }
-                    });
-
-                    // Handle Enter key
-                    otpInput.addEventListener('keydown', function(e) {
-                        if (e.key === 'Enter' && e.target.value.length === 6) {
-                            e.preventDefault();
-                            const submitButton = e.target.form.querySelector('button[type="submit"]');
-                            if (submitButton) {
-                                const originalText = submitButton.innerHTML;
-                                submitButton.innerHTML = '<svg class="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Verifying...';
-                                submitButton.disabled = true;
-                                e.target.form.submit();
-                            }
-                        }
-                    });
-                }
+                showOtpForm();
             }
 
             // Handle Send OTP button click
@@ -402,6 +416,48 @@
                         button.disabled = true;
                     }
                 });
+            }
+
+            // No resend button functionality needed - using simple link to register page
+
+            // Function to show messages
+            function showMessage(message, type) {
+                // Remove existing messages
+                const existingMessages = document.querySelectorAll('.message-alert');
+                existingMessages.forEach(msg => msg.remove());
+
+                // Create new message
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message-alert rounded-lg p-4 mb-6 ${type === 'success' ? 'bg-green-50' : 'bg-red-50'}`;
+                
+                const iconColor = type === 'success' ? 'text-green-400' : 'text-red-400';
+                const iconPath = type === 'success' 
+                    ? 'M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z'
+                    : 'M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z';
+                
+                messageDiv.innerHTML = `
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <svg class="h-5 w-5 ${iconColor}" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="${iconPath}" clip-rule="evenodd" />
+                            </svg>
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-sm font-medium ${type === 'success' ? 'text-green-800' : 'text-red-800'}">
+                                ${message}
+                            </p>
+                        </div>
+                    </div>
+                `;
+
+                // Insert message before the form
+                const form = document.querySelector('.bg-white.rounded-2xl');
+                form.insertBefore(messageDiv, form.firstChild);
+
+                // Auto-remove after 5 seconds
+                setTimeout(() => {
+                    messageDiv.remove();
+                }, 5000);
             }
         });
     </script>

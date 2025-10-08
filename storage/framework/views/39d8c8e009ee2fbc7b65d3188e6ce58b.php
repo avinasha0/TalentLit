@@ -157,6 +157,40 @@
                     </div>
                 <?php endif; ?>
 
+                <!-- Success Messages -->
+                <?php if(session('success')): ?>
+                    <div class="mb-6 p-6 bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-xl">
+                        <div class="flex items-start">
+                            <div class="flex-shrink-0">
+                                <svg class="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                            </div>
+                            <div class="ml-3">
+                                <h3 class="text-sm font-medium text-green-800 mb-2">Account Created Successfully!</h3>
+                                <p class="text-sm text-green-700"><?php echo e(session('success')); ?></p>
+                            </div>
+                        </div>
+                    </div>
+                <?php endif; ?>
+
+                <!-- Error Messages -->
+                <?php if(session('error')): ?>
+                    <div class="mb-6 p-6 bg-gradient-to-r from-red-50 to-pink-50 border border-red-200 rounded-xl">
+                        <div class="flex items-start">
+                            <div class="flex-shrink-0">
+                                <svg class="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                            </div>
+                            <div class="ml-3">
+                                <h3 class="text-sm font-medium text-red-800 mb-2">Registration Error</h3>
+                                <p class="text-sm text-red-700"><?php echo e(session('error')); ?></p>
+                            </div>
+                        </div>
+                    </div>
+                <?php endif; ?>
+
                 <form method="POST" action="<?php echo e(route('login')); ?>" class="space-y-6">
                     <?php echo csrf_field(); ?>
 
@@ -247,14 +281,22 @@ unset($__errorArgs, $__bag); ?>
                             </label>
                         </div>
 
-                        <?php if(Route::has('password.request')): ?>
-                            <div class="text-sm">
-                                <a href="<?php echo e(route('password.request')); ?>" 
+                        <div class="text-sm space-y-1">
+                            <?php if(Route::has('password.request')): ?>
+                                <div>
+                                    <a href="<?php echo e(route('password.request')); ?>" 
+                                        class="font-medium text-indigo-600 hover:text-indigo-500 transition-colors">
+                                        Forgot your password?
+                                    </a>
+                                </div>
+                            <?php endif; ?>
+                            <div>
+                                <a href="<?php echo e(route('auth.resend-activation-form')); ?>" 
                                     class="font-medium text-indigo-600 hover:text-indigo-500 transition-colors">
-                                    Forgot your password?
+                                    Didn't receive activation email?
                                 </a>
                             </div>
-                        <?php endif; ?>
+                        </div>
                     </div>
 
                     <!-- reCAPTCHA -->

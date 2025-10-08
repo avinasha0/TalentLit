@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\ConfirmablePasswordController;
+use App\Http\Controllers\Auth\EmailActivationController;
 use App\Http\Controllers\Auth\EmailVerificationController;
 use App\Http\Controllers\Auth\EmailVerificationNotificationController;
 use App\Http\Controllers\Auth\EmailVerificationPromptController;
@@ -18,18 +19,16 @@ Route::middleware('guest')->group(function () {
 
     Route::post('register', [RegisteredUserController::class, 'store']);
 
-    // Email verification routes
-    Route::get('verify-email-otp', [EmailVerificationController::class, 'show'])
-        ->name('verification.show');
+    // Email activation routes
+    Route::get('activate/{token}', [EmailActivationController::class, 'activate'])
+        ->name('auth.activate');
 
-    Route::post('verify-email/send', [EmailVerificationController::class, 'sendOtp'])
-        ->name('verification.send');
+    Route::get('resend-activation', function () {
+        return view('auth.resend-activation');
+    })->name('auth.resend-activation-form');
 
-    Route::post('verify-email/verify', [EmailVerificationController::class, 'verify'])
-        ->name('verification.verify-otp');
-
-    Route::post('verify-email/resend', [EmailVerificationController::class, 'resend'])
-        ->name('verification.resend');
+    Route::post('resend-activation', [EmailActivationController::class, 'resend'])
+        ->name('auth.resend-activation');
 
     Route::get('login', [AuthenticatedSessionController::class, 'create'])
         ->name('login');

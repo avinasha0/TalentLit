@@ -30,6 +30,18 @@ use App\Http\Controllers\ProfileController;
 // Public route
 Route::get('/', [HomeController::class, 'index'])->name('home');
 
+// Test route for OTP verification (temporary)
+Route::get('/test-otp', function (Request $request) {
+    $request->session()->put('pending_verification_email', 'test@example.com');
+    $request->session()->put('pending_registration', [
+        'name' => 'Test User',
+        'email' => 'test@example.com',
+        'password' => bcrypt('password'),
+        'created_at' => now()
+    ]);
+    return redirect()->route('verification.show');
+});
+
 // Help Center routes
 Route::get('/help-center.html', [HelpController::class, 'index'])->name('help.index');
 Route::get('/help/{page}', [HelpController::class, 'page'])->name('help.page')

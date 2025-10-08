@@ -186,7 +186,122 @@ class EmailVerificationController extends Controller
             return redirect()->route('register')->with('error', 'No pending verification found.');
         }
 
-        return $this->sendOtp($request->merge(['email' => $email]));
+        // Check if resend is allowed (60 seconds cooldown)
+        if (!EmailVerificationOtp::canResend($email)) {
+            $remainingTime = EmailVerificationOtp::getRemainingCooldown($email);
+            return back()->with('error', "Please wait {$remainingTime} seconds before requesting a new code.");
+        }
+
+        // Check if we have pending registration data for this email
+        $pendingRegistration = $request->session()->get('pending_registration');
+        if (!$pendingRegistration || $pendingRegistration['email'] !== $email) {
+            return redirect()->route('register')->with('error', 'No pending registration found for this email.');
+        }
+
+        // Check if registration data is not older than 10 minutes
+        $registrationTime = \Carbon\Carbon::parse($pendingRegistration['created_at']);
+        if ($registrationTime->diffInMinutes(now()) > 10) {
+            // Clear expired session data
+            $request->session()->forget('pending_registration');
+            $request->session()->forget('pending_verification_email');
+            
+            return redirect()->route('register')->with('error', 'Registration session expired. Please register again.');
+        }
+
+        // Check if user already exists and is verified
+        $existingUser = User::where('email', $email)->first();
+        if ($existingUser && $existingUser->email_verified_at) {
+            return redirect()->route('register')->with('error', 'Email already verified. Please login instead.');
+        }
+
+        // Generate new OTP
+        $otpRecord = EmailVerificationOtp::generateForEmail($email);
+
+        // Send email
+        try {
+            Mail::to($email)->send(new EmailVerificationOtpMail($otpRecord->otp, $email));
+            
+            return back()->with('success', 'New verification code sent to your email address.');
+        } catch (\Exception $e) {
+            \Log::error('Failed to resend OTP email: ' . $e->getMessage());
+            return back()->with('error', 'Failed to send verification code. Please try again.');
+        }
+    }
+
+    /**
+     * Resend OTP via AJAX
+     */
+    public function resendAjax(Request $request)
+    {
+        $email = $request->session()->get('pending_verification_email');
+        
+        if (!$email) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No pending verification found.'
+            ], 400);
+        }
+
+        // Check if resend is allowed (60 seconds cooldown)
+        if (!EmailVerificationOtp::canResend($email)) {
+            $remainingTime = EmailVerificationOtp::getRemainingCooldown($email);
+            return response()->json([
+                'success' => false,
+                'message' => "Please wait {$remainingTime} seconds before requesting a new code.",
+                'remaining_time' => $remainingTime
+            ], 429);
+        }
+
+        // Check if we have pending registration data for this email
+        $pendingRegistration = $request->session()->get('pending_registration');
+        if (!$pendingRegistration || $pendingRegistration['email'] !== $email) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No pending registration found for this email.'
+            ], 400);
+        }
+
+        // Check if registration data is not older than 10 minutes
+        $registrationTime = \Carbon\Carbon::parse($pendingRegistration['created_at']);
+        if ($registrationTime->diffInMinutes(now()) > 10) {
+            // Clear expired session data
+            $request->session()->forget('pending_registration');
+            $request->session()->forget('pending_verification_email');
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Registration session expired. Please register again.'
+            ], 400);
+        }
+
+        // Check if user already exists and is verified
+        $existingUser = User::where('email', $email)->first();
+        if ($existingUser && $existingUser->email_verified_at) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Email already verified. Please login instead.'
+            ], 400);
+        }
+
+        // Generate new OTP
+        $otpRecord = EmailVerificationOtp::generateForEmail($email);
+
+        // Send email
+        try {
+            Mail::to($email)->send(new EmailVerificationOtpMail($otpRecord->otp, $email));
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'New verification code sent to your email address.',
+                'remaining_time' => 10
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Failed to resend OTP email: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to send verification code. Please try again.'
+            ], 500);
+        }
     }
 
 

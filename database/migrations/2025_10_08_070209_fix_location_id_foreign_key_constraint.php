@@ -13,6 +13,9 @@ return new class extends Migration
     public function up(): void
     {
         // First, check if the foreign key constraint exists and drop it
+        $constraintName = 'job_openings_location_id_foreign';
+        
+        // Get all foreign key constraints for the job_openings table
         $foreignKeys = DB::select("
             SELECT CONSTRAINT_NAME 
             FROM information_schema.KEY_COLUMN_USAGE 
@@ -44,11 +47,8 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('job_openings', function (Blueprint $table) {
-            // Recreate the column
             $table->uuid('location_id')->after('department_id');
-            // Recreate the foreign key constraint
             $table->foreign('location_id')->references('id')->on('locations')->onDelete('cascade');
-            // Recreate the index
             $table->index(['tenant_id', 'location_id']);
         });
     }

@@ -80,27 +80,23 @@
 
                 <!-- Location -->
                 <div>
-                    <label for="city_id" class="block text-sm font-medium text-black mb-1">Location *</label>
-                    <select name="city_id"
-                            id="city_id"
+                    <label for="location_id" class="block text-sm font-medium text-black mb-1">Location *</label>
+                    <select name="location_id"
+                            id="location_id"
                             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                             required>
                         <option value="">Select Location</option>
-                        @foreach($cities->groupBy('state') as $state => $stateCities)
-                            <optgroup label="{{ $state }}">
-                                @foreach($stateCities as $city)
-                                    <option value="{{ $city->id }}" {{ old('city_id') == $city->id ? 'selected' : '' }}>
-                                        {{ $city->name }}
-                                    </option>
-                                @endforeach
-                            </optgroup>
+                        @foreach($locations as $location)
+                            <option value="{{ $location->id }}" {{ old('location_id') == $location->id ? 'selected' : '' }}>
+                                {{ $location->name }}
+                            </option>
                         @endforeach
                     </select>
-                    <p class="mt-1 text-xs text-gray-600">Choose from major Indian cities</p>
+                    <p class="mt-1 text-xs text-gray-600">Choose from your organization locations</p>
                     <div class="mt-2">
                         <a href="{{ route('tenant.locations.create', $tenant->slug) }}" class="text-blue-600 hover:text-blue-800 text-sm font-medium">+ Add Location</a>
                     </div>
-                    @error('city_id')
+                    @error('location_id')
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror
                 </div>

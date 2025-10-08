@@ -20,6 +20,7 @@ class JobOpening extends Model
         'title',
         'slug',
         'department_id',
+        'location_id',
         'global_department_id',
         'global_location_id',
         'city_id',
@@ -46,6 +47,10 @@ class JobOpening extends Model
         return $this->belongsTo(Department::class);
     }
 
+    public function location(): BelongsTo
+    {
+        return $this->belongsTo(Location::class);
+    }
 
     public function globalDepartment(): BelongsTo
     {

@@ -130,12 +130,13 @@ class JobController extends Controller
         Gate::authorize('create', JobOpening::class);
         
         $departments = Department::orderBy('name')->get();
+        $locations = Location::orderBy('name')->get();
         $globalDepartments = GlobalDepartment::active()->orderBy('name')->get();
         $globalLocations = GlobalLocation::active()->orderBy('name')->get();
         $cities = City::active()->orderBy('state')->orderBy('name')->get();
         $employmentTypes = ['full_time', 'part_time', 'contract', 'internship'];
 
-        return view('tenant.jobs.create', compact('departments', 'globalDepartments', 'globalLocations', 'cities', 'employmentTypes'));
+        return view('tenant.jobs.create', compact('departments', 'locations', 'globalDepartments', 'globalLocations', 'cities', 'employmentTypes'));
     }
 
     public function store(Request $request, string $tenant)
@@ -147,7 +148,7 @@ class JobController extends Controller
             'slug' => 'nullable|string|max:255|unique:job_openings,slug,NULL,id,tenant_id,' . tenant_id(),
             'department_id' => 'nullable|exists:departments,id',
             'global_department_id' => 'nullable|exists:global_departments,id',
-            'city_id' => 'required|exists:indian_cities,id',
+            'location_id' => 'required|exists:locations,id',
             'employment_type' => 'required|in:full_time,part_time,contract,internship',
             'status' => 'required|in:draft,published,closed',
             'openings_count' => 'required|integer|min:1',

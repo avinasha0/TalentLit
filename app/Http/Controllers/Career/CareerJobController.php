@@ -116,8 +116,11 @@ class CareerJobController extends Controller
             return view('careers.disabled', ['tenant' => $tenantModel, 'branding' => $branding]);
         }
         
-        // Find job by slug instead of relying on route model binding
-        $jobModel = JobOpening::where('slug', $job)
+        // Find job by ID (UUID) or slug
+        $jobModel = JobOpening::where(function ($query) use ($job) {
+                $query->where('id', $job)
+                      ->orWhere('slug', $job);
+            })
             ->where('tenant_id', $tenantModel->id)
             ->where('status', 'published')
             ->first();

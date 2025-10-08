@@ -42,7 +42,23 @@ class JobOpening extends Model
      */
     public function getRouteKeyName()
     {
-        return 'slug';
+        return 'id';
+    }
+
+    /**
+     * Retrieve the model for a bound value.
+     */
+    public function resolveRouteBinding($value, $field = null)
+    {
+        // First try to find by ID (UUID)
+        $job = $this->where('id', $value)->first();
+        
+        // If not found by ID, try to find by slug
+        if (!$job) {
+            $job = $this->where('slug', $value)->first();
+        }
+        
+        return $job;
     }
 
     public function requisition(): BelongsTo

@@ -144,9 +144,31 @@ class JobController extends Controller
     {
         Gate::authorize('create', JobOpening::class);
         
+        // Generate slug if not provided BEFORE validation
+        $requestData = $request->all();
+        if (empty($requestData['slug'])) {
+            $requestData['slug'] = Str::slug($requestData['title']);
+            
+            // Ensure uniqueness within tenant - use a more robust approach
+            $originalSlug = $requestData['slug'];
+            $counter = 1;
+            $currentSlug = $requestData['slug'];
+            
+            while (JobOpening::where('slug', $currentSlug)
+                ->where('tenant_id', tenant_id())
+                ->exists()) {
+                $currentSlug = $originalSlug . '-' . $counter;
+                $counter++;
+            }
+            
+            $requestData['slug'] = $currentSlug;
+            // Update the request with the generated slug
+            $request->merge(['slug' => $requestData['slug']]);
+        }
+        
         $validated = $request->validate([
             'title' => 'required|string|max:255',
-            'slug' => 'nullable|string|max:255|unique:job_openings,slug,NULL,id,tenant_id,' . tenant_id(),
+            'slug' => 'nullable|string|max:255',
             'department_id' => 'nullable|exists:departments,id',
             'global_department_id' => 'nullable|exists:global_departments,id',
             'location_id' => 'required|exists:locations,id',
@@ -161,22 +183,23 @@ class JobController extends Controller
             return back()->withErrors(['department_id' => 'Please select a department.']);
         }
 
-        // Generate slug if not provided
-        if (empty($validated['slug'])) {
-            $validated['slug'] = Str::slug($validated['title']);
-            
-            // Ensure uniqueness within tenant
+        $validated['tenant_id'] = tenant_id();
+        
+        // Final check to ensure slug is unique (double safety)
+        if (!empty($validated['slug'])) {
             $originalSlug = $validated['slug'];
             $counter = 1;
-            while (JobOpening::where('slug', $validated['slug'])
+            $currentSlug = $validated['slug'];
+            
+            while (JobOpening::where('slug', $currentSlug)
                 ->where('tenant_id', tenant_id())
                 ->exists()) {
-                $validated['slug'] = $originalSlug . '-' . $counter;
+                $currentSlug = $originalSlug . '-' . $counter;
                 $counter++;
             }
+            
+            $validated['slug'] = $currentSlug;
         }
-
-        $validated['tenant_id'] = tenant_id();
         
         if ($validated['status'] === 'published') {
             $validated['published_at'] = now();
@@ -224,7 +247,7 @@ class JobController extends Controller
             ],
             'department_id' => 'nullable|exists:departments,id',
             'global_department_id' => 'nullable|exists:global_departments,id',
-            'city_id' => 'required|exists:indian_cities,id',
+            'location_id' => 'required|exists:locations,id',
             'employment_type' => 'required|in:full_time,part_time,contract,internship',
             'status' => 'required|in:draft,published,closed',
             'openings_count' => 'required|integer|min:1',

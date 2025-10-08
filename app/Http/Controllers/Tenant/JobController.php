@@ -146,7 +146,13 @@ class JobController extends Controller
         
         $validated = $request->validate([
             'title' => 'required|string|max:255',
-            'slug' => 'nullable|string|max:255|unique:job_openings,slug,NULL,id,tenant_id,' . tenant_id(),
+            'slug' => [
+                'nullable',
+                'string',
+                'max:255',
+                Rule::unique('job_openings', 'slug')
+                    ->where('tenant_id', tenant_id())
+            ],
             'department_id' => 'nullable|exists:departments,id',
             'global_department_id' => 'nullable|exists:global_departments,id',
             'location_id' => 'required|exists:locations,id',
@@ -224,7 +230,7 @@ class JobController extends Controller
             ],
             'department_id' => 'nullable|exists:departments,id',
             'global_department_id' => 'nullable|exists:global_departments,id',
-            'city_id' => 'required|exists:indian_cities,id',
+            'location_id' => 'required|exists:locations,id',
             'employment_type' => 'required|in:full_time,part_time,contract,internship',
             'status' => 'required|in:draft,published,closed',
             'openings_count' => 'required|integer|min:1',

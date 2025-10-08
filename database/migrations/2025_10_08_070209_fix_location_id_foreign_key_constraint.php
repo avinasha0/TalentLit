@@ -35,10 +35,20 @@ return new class extends Migration
             }
         }
         
-        // Now drop the column
-        Schema::table('job_openings', function (Blueprint $table) {
-            $table->dropColumn('location_id');
-        });
+        // Check if location_id column exists before trying to drop it
+        $columnExists = DB::select("
+            SELECT COLUMN_NAME 
+            FROM information_schema.COLUMNS 
+            WHERE TABLE_NAME = 'job_openings' 
+            AND COLUMN_NAME = 'location_id'
+        ");
+        
+        if (count($columnExists) > 0) {
+            // Now drop the column
+            Schema::table('job_openings', function (Blueprint $table) {
+                $table->dropColumn('location_id');
+            });
+        }
     }
 
     /**

@@ -3,7 +3,7 @@
     <head>
         @php
             $seoTitle = (isset($header) ? strip_tags($header) . ' – ' : '') . 'TalentLit ATS';
-            $seoDescription = 'Managing your recruitment process with TalentLit. Track candidates, schedule interviews, and make data-driven hiring decisions with our modern ATS platform.';
+            $seoDescription = 'Manage your recruitment process with TalentLit. Track candidates, schedule interviews, and make data-driven hiring decisions with our modern ATS platform.';
             $tenant = tenant();
         @endphp
         @include('layouts.partials.head')

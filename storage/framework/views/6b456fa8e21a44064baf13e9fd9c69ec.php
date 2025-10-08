@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Application Submitted - {{ tenant()->name }}</title>
+    <title>Application Submitted - <?php echo e(tenant()->name); ?></title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
@@ -14,15 +14,15 @@
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex justify-between h-16">
                     <div class="flex items-center">
-                        <a href="{{ route('careers.index', ['tenant' => tenant()->slug]) }}" class="flex items-center space-x-2">
-                            <img src="{{ asset('logo-talentlit-small.svg') }}" alt="TalentLit Logo" class="h-8">
+                        <a href="<?php echo e(route('careers.index', ['tenant' => tenant()->slug])); ?>" class="flex items-center space-x-2">
+                            <img src="<?php echo e(asset('logo-talentlit-small.svg')); ?>" alt="TalentLit Logo" class="h-8">
                         </a>
                     </div>
                     <div class="flex items-center space-x-4">
-                        <a href="{{ route('careers.index', ['tenant' => tenant()->slug]) }}" class="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium">
+                        <a href="<?php echo e(route('careers.index', ['tenant' => tenant()->slug])); ?>" class="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium">
                             All Jobs
                         </a>
-                        <a href="{{ route('careers.index', ['tenant' => tenant()->slug]) }}" class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-lg">
+                        <a href="<?php echo e(route('careers.index', ['tenant' => tenant()->slug])); ?>" class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-lg">
                             View All Positions
                         </a>
                     </div>
@@ -59,7 +59,7 @@
                         Application Submitted Successfully!
                     </h1>
                     <p class="text-xl text-green-100 mb-8">
-                        Thank you for your interest in joining {{ tenant()->name }}.
+                        Thank you for your interest in joining <?php echo e(tenant()->name); ?>.
                     </p>
                 </div>
             </div>
@@ -86,7 +86,7 @@
                                 </div>
                                 <div>
                                     <p class="text-sm text-gray-600">Position</p>
-                                    <p class="font-semibold text-gray-900">{{ $job->title }}</p>
+                                    <p class="font-semibold text-gray-900"><?php echo e($job->title); ?></p>
                                 </div>
                             </div>
                             
@@ -98,7 +98,7 @@
                                 </div>
                                 <div>
                                     <p class="text-sm text-gray-600">Department</p>
-                                    <p class="font-semibold text-gray-900">{{ $job->department->name }}</p>
+                                    <p class="font-semibold text-gray-900"><?php echo e($job->department->name); ?></p>
                                 </div>
                             </div>
                             
@@ -111,7 +111,7 @@
                                 </div>
                                 <div>
                                     <p class="text-sm text-gray-600">Location</p>
-                                    <p class="font-semibold text-gray-900">{{ $job->location?->name ?? $job->globalLocation?->name ?? $job->city?->formatted_location ?? 'No location specified' }}</p>
+                                    <p class="font-semibold text-gray-900"><?php echo e($job->globalLocation?->name ?? $job->city?->formatted_location ?? 'No location specified'); ?></p>
                                 </div>
                             </div>
                             
@@ -123,11 +123,11 @@
                                 </div>
                                 <div>
                                     <p class="text-sm text-gray-600">Employment Type</p>
-                                    <p class="font-semibold text-gray-900">{{ ucfirst(str_replace('_', ' ', $job->employment_type)) }}</p>
+                                    <p class="font-semibold text-gray-900"><?php echo e(ucfirst(str_replace('_', ' ', $job->employment_type))); ?></p>
                                 </div>
                             </div>
                             
-                            @if(session('application_id'))
+                            <?php if(session('application_id')): ?>
                                 <div class="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg">
                                     <div class="w-10 h-10 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
                                         <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -136,10 +136,10 @@
                                     </div>
                                     <div>
                                         <p class="text-sm text-gray-600">Application ID</p>
-                                        <p class="font-semibold text-gray-900">{{ session('application_id') }}</p>
+                                        <p class="font-semibold text-gray-900"><?php echo e(session('application_id')); ?></p>
                                     </div>
                                 </div>
-                            @endif
+                            <?php endif; ?>
                             
                             <div class="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg">
                                 <div class="w-10 h-10 bg-gradient-to-r from-yellow-600 to-orange-600 rounded-lg flex items-center justify-center">
@@ -149,7 +149,7 @@
                                 </div>
                                 <div>
                                     <p class="text-sm text-gray-600">Submitted</p>
-                                    <p class="font-semibold text-gray-900">{{ now()->format('F j, Y \a\t g:i A') }}</p>
+                                    <p class="font-semibold text-gray-900"><?php echo e(now()->format('F j, Y \a\t g:i A')); ?></p>
                                 </div>
                             </div>
                         </div>
@@ -199,11 +199,11 @@
 
                     <!-- Action Buttons -->
                     <div class="flex flex-col sm:flex-row gap-6 justify-center">
-                        <a href="{{ route('careers.index', ['tenant' => tenant()->slug]) }}" 
+                        <a href="<?php echo e(route('careers.index', ['tenant' => tenant()->slug])); ?>" 
                            class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:from-indigo-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-1 text-center">
                             View Other Jobs
                         </a>
-                        <a href="{{ route('careers.show', ['tenant' => tenant()->slug, 'job' => $job->slug]) }}" 
+                        <a href="<?php echo e(route('careers.show', ['tenant' => tenant()->slug, 'job' => $job->slug])); ?>" 
                            class="border-2 border-gray-300 text-gray-700 px-8 py-4 rounded-lg text-lg font-semibold hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-all duration-200 text-center">
                             Back to Job Details
                         </a>
@@ -216,12 +216,12 @@
                             <p class="text-gray-600 mb-4">
                                 Questions about your application? Contact our HR department
                             </p>
-                            <a href="mailto:hr@{{ tenant()->slug }}.com" 
+                            <a href="mailto:hr{{ tenant()->slug }}.com" 
                                class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg font-semibold hover:from-green-700 hover:to-emerald-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-1">
                                 <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
                                 </svg>
-                                hr@{{ tenant()->slug }}.com
+                                hr{{ tenant()->slug }}.com
                             </a>
                         </div>
                     </div>
@@ -231,3 +231,4 @@
     </div>
 </body>
 </html>
+<?php /**PATH C:\xampp\htdocs\hirehub2\resources\views/careers/success.blade.php ENDPATH**/ ?>

@@ -10,9 +10,18 @@ use Illuminate\Support\Facades\Storage;
 
 class ApplyController extends Controller
 {
-    public function create(string $tenant, JobOpening $job)
+    public function create(string $tenant, string $jobSlug)
     {
         $tenantModel = tenant();
+        
+        // Fallback: get tenant from route parameter if tenant() returns null
+        if (!$tenantModel) {
+            $tenantModel = \App\Models\Tenant::where('slug', $tenant)->first();
+        }
+        
+        if (!$tenantModel) {
+            abort(404, 'Tenant not found');
+        }
         
         // Check if careers page is enabled
         if (!$tenantModel->careers_enabled) {
@@ -20,9 +29,14 @@ class ApplyController extends Controller
             return view('careers.disabled', ['tenant' => $tenantModel, 'branding' => $branding]);
         }
         
-        // Ensure job belongs to the current tenant
-        if ($job->tenant_id !== $tenantModel->id) {
-            abort(404);
+        // Find job by slug within the current tenant
+        $job = \App\Models\JobOpening::where('slug', $jobSlug)
+            ->where('tenant_id', $tenantModel->id)
+            ->where('status', 'published')
+            ->first();
+            
+        if (!$job) {
+            abort(404, 'Job not found');
         }
 
         // Ensure job is published
@@ -36,9 +50,18 @@ class ApplyController extends Controller
         return view('careers.apply', compact('job', 'tenantModel', 'branding'));
     }
 
-    public function store(ApplyRequest $request, string $tenant, JobOpening $job, UpsertCandidateAndApply $upsertAction)
+    public function store(ApplyRequest $request, string $tenant, string $jobSlug, UpsertCandidateAndApply $upsertAction)
     {
         $tenantModel = tenant();
+        
+        // Fallback: get tenant from route parameter if tenant() returns null
+        if (!$tenantModel) {
+            $tenantModel = \App\Models\Tenant::where('slug', $tenant)->first();
+        }
+        
+        if (!$tenantModel) {
+            abort(404, 'Tenant not found');
+        }
         
         // Check if careers page is enabled
         if (!$tenantModel->careers_enabled) {
@@ -46,14 +69,14 @@ class ApplyController extends Controller
             return view('careers.disabled', ['tenant' => $tenantModel, 'branding' => $branding]);
         }
         
-        // Ensure job belongs to the current tenant
-        if ($job->tenant_id !== $tenantModel->id) {
-            abort(404);
-        }
-
-        // Ensure job is published
-        if ($job->status !== 'published') {
-            abort(404);
+        // Find job by slug within the current tenant
+        $job = \App\Models\JobOpening::where('slug', $jobSlug)
+            ->where('tenant_id', $tenantModel->id)
+            ->where('status', 'published')
+            ->first();
+            
+        if (!$job) {
+            abort(404, 'Job not found');
         }
 
         // Load job with questions for validation
@@ -117,9 +140,18 @@ class ApplyController extends Controller
         }
     }
 
-    public function success(string $tenant, JobOpening $job)
+    public function success(string $tenant, string $jobSlug)
     {
         $tenantModel = tenant();
+        
+        // Fallback: get tenant from route parameter if tenant() returns null
+        if (!$tenantModel) {
+            $tenantModel = \App\Models\Tenant::where('slug', $tenant)->first();
+        }
+        
+        if (!$tenantModel) {
+            abort(404, 'Tenant not found');
+        }
         
         // Check if careers page is enabled
         if (!$tenantModel->careers_enabled) {
@@ -127,9 +159,14 @@ class ApplyController extends Controller
             return view('careers.disabled', ['tenant' => $tenantModel, 'branding' => $branding]);
         }
         
-        // Ensure job belongs to the current tenant
-        if ($job->tenant_id !== $tenantModel->id) {
-            abort(404);
+        // Find job by slug within the current tenant
+        $job = \App\Models\JobOpening::where('slug', $jobSlug)
+            ->where('tenant_id', $tenantModel->id)
+            ->where('status', 'published')
+            ->first();
+            
+        if (!$job) {
+            abort(404, 'Job not found');
         }
 
         return view('careers.success', compact('job'));

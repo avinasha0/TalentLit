@@ -18,7 +18,7 @@ class JobController extends Controller
 {
     public function index(Request $request, string $tenant)
     {
-        $query = JobOpening::with(['department', 'globalDepartment', 'globalLocation', 'city', 'jobStages'])
+        $query = JobOpening::with(['department', 'globalDepartment', 'location', 'globalLocation', 'city', 'jobStages'])
             ->orderBy('created_at', 'desc');
 
         // Apply filters
@@ -191,7 +191,7 @@ class JobController extends Controller
 
     public function show(string $tenant, JobOpening $job)
     {
-        $job->load(['department', 'globalLocation', 'city', 'jobStages', 'applications.candidate']);
+        $job->load(['department', 'globalDepartment', 'location', 'globalLocation', 'city', 'jobStages', 'applications.candidate']);
 
         return view('tenant.jobs.show', compact('job'));
     }

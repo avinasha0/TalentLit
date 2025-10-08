@@ -21,7 +21,7 @@ class CareerJobController extends Controller
         
         $branding = $tenant->branding;
         
-        $query = JobOpening::with(['department', 'globalDepartment', 'globalLocation', 'city'])
+        $query = JobOpening::with(['department', 'globalDepartment', 'location', 'globalLocation', 'city'])
             ->where('status', 'published')
             ->orderBy('published_at', 'desc');
 
@@ -116,11 +116,8 @@ class CareerJobController extends Controller
             return view('careers.disabled', ['tenant' => $tenantModel, 'branding' => $branding]);
         }
         
-        // Find job by ID (UUID) or slug
-        $jobModel = JobOpening::where(function ($query) use ($job) {
-                $query->where('id', $job)
-                      ->orWhere('slug', $job);
-            })
+        // Find job by slug instead of relying on route model binding
+        $jobModel = JobOpening::where('slug', $job)
             ->where('tenant_id', $tenantModel->id)
             ->where('status', 'published')
             ->first();
@@ -130,7 +127,7 @@ class CareerJobController extends Controller
         }
 
         $branding = $tenantModel->branding;
-        $jobModel->load(['department', 'globalDepartment', 'globalLocation', 'city', 'jobStages', 'applicationQuestions']);
+        $jobModel->load(['department', 'globalDepartment', 'location', 'globalLocation', 'city', 'jobStages', 'applicationQuestions']);
 
         return view('careers.show', ['job' => $jobModel, 'tenantModel' => $tenantModel, 'branding' => $branding]);
     }

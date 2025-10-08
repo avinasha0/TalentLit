@@ -28,9 +28,7 @@ class ResolveTenantFromPath
         $tenant = Tenant::query()->where('slug', $slug)->first();
 
         if (! $tenant) {
-            if (config('app.debug')) {
-                \Log::warning('Tenant not found for slug', ['slug' => $slug, 'path' => $request->path()]);
-            }
+            \Log::warning('Tenant not found for slug', ['slug' => $slug, 'path' => $request->path()]);
             // For API, return JSON 404; for web, normal 404.
             if ($request->expectsJson()) {
                 abort(response()->json(['message' => 'Tenant not found'], 404));

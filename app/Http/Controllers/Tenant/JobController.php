@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Tenant;
 use App\Http\Controllers\Controller;
 use App\Models\JobOpening;
 use App\Models\Department;
+use App\Models\Location;
 use App\Models\GlobalDepartment;
 use App\Models\GlobalLocation;
 use App\Models\City;

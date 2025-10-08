@@ -139,25 +139,24 @@ unset($__errorArgs, $__bag); ?>
 
                 <!-- Location -->
                 <div>
-                    <label for="city_id" class="block text-sm font-medium text-black mb-1">Location *</label>
-                    <select name="city_id"
-                            id="city_id"
+                    <label for="location_id" class="block text-sm font-medium text-black mb-1">Location *</label>
+                    <select name="location_id"
+                            id="location_id"
                             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                             required>
                         <option value="">Select Location</option>
-                        <?php $__currentLoopData = $cities->groupBy('state'); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $state => $stateCities): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                            <optgroup label="<?php echo e($state); ?>">
-                                <?php $__currentLoopData = $stateCities; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $city): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                                    <option value="<?php echo e($city->id); ?>" <?php echo e(old('city_id') == $city->id ? 'selected' : ''); ?>>
-                                        <?php echo e($city->name); ?>
+                        <?php $__currentLoopData = $locations; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $location): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                            <option value="<?php echo e($location->id); ?>" <?php echo e(old('location_id') == $location->id ? 'selected' : ''); ?>>
+                                <?php echo e($location->name); ?>
 
-                                    </option>
-                                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-                            </optgroup>
+                            </option>
                         <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                     </select>
-                    <p class="mt-1 text-xs text-gray-600">Choose from major Indian cities</p>
-                    <?php $__errorArgs = ['city_id'];
+                    <p class="mt-1 text-xs text-gray-600">Choose from your organization locations</p>
+                    <div class="mt-2">
+                        <a href="<?php echo e(route('tenant.locations.create', $tenant->slug)); ?>" class="text-blue-600 hover:text-blue-800 text-sm font-medium">+ Add Location</a>
+                    </div>
+                    <?php $__errorArgs = ['location_id'];
 $__bag = $errors->getBag($__errorArgs[1] ?? 'default');
 if ($__bag->has($__errorArgs[0])) :
 if (isset($message)) { $__messageOriginal = $message; }

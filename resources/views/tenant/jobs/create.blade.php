@@ -97,6 +97,9 @@
                         @endforeach
                     </select>
                     <p class="mt-1 text-xs text-gray-600">Choose from major Indian cities</p>
+                    <div class="mt-2">
+                        <a href="{{ route('tenant.locations.create', $tenant->slug) }}" class="text-blue-600 hover:text-blue-800 text-sm font-medium">+ Add Location</a>
+                    </div>
                     @error('city_id')
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror

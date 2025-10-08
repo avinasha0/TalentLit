@@ -353,10 +353,10 @@ Route::middleware('auth')->group(function () {
 // Public Career Site Routes
 Route::prefix('{tenant}/careers')->middleware(['capture.tenant', 'tenant'])->group(function () {
     Route::get('/', [CareerJobController::class, 'index'])->name('careers.index');
-    Route::get('/{job:slug}', [CareerJobController::class, 'show'])->name('careers.show');
-    Route::get('/{job:slug}/apply', [ApplyController::class, 'create'])->name('careers.apply.create');
-    Route::post('/{job:slug}/apply', [ApplyController::class, 'store'])->middleware('subscription.limit:max_applications_per_month')->name('careers.apply.store');
-    Route::get('/{job:slug}/success', [ApplyController::class, 'success'])->name('careers.success');
+    Route::get('/{job}', [CareerJobController::class, 'show'])->name('careers.show');
+    Route::get('/{job}/apply', [ApplyController::class, 'create'])->name('careers.apply.create');
+    Route::post('/{job}/apply', [ApplyController::class, 'store'])->middleware('subscription.limit:max_applications_per_month')->name('careers.apply.store');
+    Route::get('/{job}/success', [ApplyController::class, 'success'])->name('careers.success');
 });
 
 // Internal Tenant Management Routes (require authentication)

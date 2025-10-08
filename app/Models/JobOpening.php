@@ -37,6 +37,14 @@ class JobOpening extends Model
         'published_at' => 'datetime',
     ];
 
+    /**
+     * Get the route key for the model.
+     */
+    public function getRouteKeyName()
+    {
+        return 'slug';
+    }
+
     public function requisition(): BelongsTo
     {
         return $this->belongsTo(JobRequisition::class);

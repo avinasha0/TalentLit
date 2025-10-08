@@ -106,7 +106,7 @@ class CareerJobController extends Controller
         return view('careers.index', compact('jobs', 'departments', 'locations', 'employmentTypes', 'tenant', 'branding'));
     }
 
-    public function show(string $tenant, JobOpening $job)
+    public function show(string $tenant, string $job)
     {
         $tenantModel = tenant();
         
@@ -116,19 +116,19 @@ class CareerJobController extends Controller
             return view('careers.disabled', ['tenant' => $tenantModel, 'branding' => $branding]);
         }
         
-        // Ensure job belongs to the current tenant
-        if ($job->tenant_id !== $tenantModel->id) {
-            abort(404);
-        }
+        // Find job by slug instead of relying on route model binding
+        $jobModel = JobOpening::where('slug', $job)
+            ->where('tenant_id', $tenantModel->id)
+            ->where('status', 'published')
+            ->first();
 
-        // Ensure job is published
-        if ($job->status !== 'published') {
+        if (!$jobModel) {
             abort(404);
         }
 
         $branding = $tenantModel->branding;
-        $job->load(['department', 'globalDepartment', 'globalLocation', 'city', 'jobStages', 'applicationQuestions']);
+        $jobModel->load(['department', 'globalDepartment', 'globalLocation', 'city', 'jobStages', 'applicationQuestions']);
 
-        return view('careers.show', compact('job', 'tenantModel', 'branding'));
+        return view('careers.show', ['job' => $jobModel, 'tenantModel' => $tenantModel, 'branding' => $branding]);
     }
 }

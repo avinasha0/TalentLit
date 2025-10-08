@@ -14,7 +14,6 @@
     sidebarOpen: $store.sidebar?.open ?? (window.innerWidth >= 1024),
     jobsOpen: false,
     candidatesOpen: false,
-    departmentsOpen: false,
     settingsOpen: false
 }" 
 x-show="sidebarOpen"
@@ -137,39 +136,6 @@ class="fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 text-white transform lg:tran
                 </div>
             </div>
 
-            <!-- Departments -->
-            <div>
-                <button @click="departmentsOpen = !departmentsOpen" 
-                        class="flex items-center justify-between w-full px-3 py-2 text-sm font-medium text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors duration-200">
-                    <div class="flex items-center">
-                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7h18M3 12h18M3 17h18"></path>
-                        </svg>
-                        Departments
-                    </div>
-                    <svg class="w-4 h-4 transition-transform duration-200" :class="{ 'rotate-180': departmentsOpen }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                    </svg>
-                </button>
-                <div x-show="departmentsOpen" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 transform -translate-y-2" x-transition:enter-end="opacity-100 transform translate-y-0" class="ml-8 mt-2 space-y-1">
-                    <a href="<?php echo e(route('tenant.departments.index', $tenant->slug)); ?>"
-                       class="flex items-center px-3 py-2 text-sm text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors duration-200 <?php echo e(str_starts_with($currentRoute, 'tenant.departments.index') ? 'bg-gray-700 text-white' : ''); ?>">
-                        <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2"></path>
-                        </svg>
-                        All Departments
-                    </a>
-                    <?php if (app('App\Support\CustomPermissionChecker')->check('edit_jobs', $tenant)): ?>
-                    <a href="<?php echo e(route('tenant.departments.create', $tenant->slug)); ?>" 
-                       class="flex items-center px-3 py-2 text-sm text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors duration-200 <?php echo e($currentRoute === 'tenant.departments.create' ? 'bg-gray-700 text-white' : ''); ?>">
-                        <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                        </svg>
-                        Add Department
-                    </a>
-                    <?php endif; ?>
-                </div>
-            </div>
 
             <!-- Pipeline (contextual - only show if inside a job) -->
             <?php if(request()->route('job')): ?>

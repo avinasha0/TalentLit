@@ -168,10 +168,18 @@ class JobController extends Controller
         
         $validated = $request->validate([
             'title' => 'required|string|max:255',
-            'slug' => 'nullable|string|max:255',
+            'slug' => [
+                'nullable',
+                'string',
+                'max:255',
+                Rule::unique('job_openings', 'slug')
+                    ->where('tenant_id', tenant_id())
+            ],
             'department_id' => 'nullable|exists:departments,id',
             'global_department_id' => 'nullable|exists:global_departments,id',
-            'location_id' => 'required|exists:locations,id',
+            'location_id' => 'nullable|exists:locations,id',
+            'global_location_id' => 'nullable|exists:global_locations,id',
+            'city_id' => 'nullable|exists:cities,id',
             'employment_type' => 'required|in:full_time,part_time,contract,internship',
             'status' => 'required|in:draft,published,closed',
             'openings_count' => 'required|integer|min:1',
@@ -181,6 +189,10 @@ class JobController extends Controller
         // Ensure at least one department and location is selected
         if (!$validated['department_id'] && !$validated['global_department_id']) {
             return back()->withErrors(['department_id' => 'Please select a department.']);
+        }
+
+        if (!$validated['location_id'] && !$validated['global_location_id'] && !$validated['city_id']) {
+            return back()->withErrors(['location_id' => 'Please select a location.']);
         }
 
         $validated['tenant_id'] = tenant_id();
@@ -224,11 +236,13 @@ class JobController extends Controller
         Gate::authorize('update', $job);
         
         $departments = Department::orderBy('name')->get();
+        $locations = Location::orderBy('name')->get();
         $globalDepartments = GlobalDepartment::active()->orderBy('name')->get();
+        $globalLocations = GlobalLocation::active()->orderBy('name')->get();
         $cities = City::active()->orderBy('state')->orderBy('name')->get();
         $employmentTypes = ['full_time', 'part_time', 'contract', 'internship'];
 
-        return view('tenant.jobs.edit', compact('job', 'departments', 'globalDepartments', 'cities', 'employmentTypes'));
+        return view('tenant.jobs.edit', compact('job', 'departments', 'locations', 'globalDepartments', 'globalLocations', 'cities', 'employmentTypes'));
     }
 
     public function update(Request $request, string $tenant, JobOpening $job)
@@ -247,7 +261,9 @@ class JobController extends Controller
             ],
             'department_id' => 'nullable|exists:departments,id',
             'global_department_id' => 'nullable|exists:global_departments,id',
-            'location_id' => 'required|exists:locations,id',
+            'location_id' => 'nullable|exists:locations,id',
+            'global_location_id' => 'nullable|exists:global_locations,id',
+            'city_id' => 'nullable|exists:cities,id',
             'employment_type' => 'required|in:full_time,part_time,contract,internship',
             'status' => 'required|in:draft,published,closed',
             'openings_count' => 'required|integer|min:1',
@@ -257,6 +273,10 @@ class JobController extends Controller
         // Ensure at least one department and location is selected
         if (!$validated['department_id'] && !$validated['global_department_id']) {
             return back()->withErrors(['department_id' => 'Please select a department.']);
+        }
+
+        if (!$validated['location_id'] && !$validated['global_location_id'] && !$validated['city_id']) {
+            return back()->withErrors(['location_id' => 'Please select a location.']);
         }
 
         // Generate slug if not provided

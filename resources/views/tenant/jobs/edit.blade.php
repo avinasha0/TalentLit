@@ -58,39 +58,90 @@
                     @enderror
                 </div>
 
-                <!-- Department and Location -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <label for="department_id" class="block text-sm font-medium text-black mb-1">Department *</label>
-                        <select name="department_id"
-                                id="department_id"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                required>
-                            <option value="">Select Department</option>
-                            @foreach($departments as $department)
-                                <option value="{{ $department->id }}" {{ old('department_id', $job->department_id) == $department->id ? 'selected' : '' }}>
-                                    {{ $department->name }}
-                                </option>
-                            @endforeach
-                        </select>
-                        @error('department_id')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                        @enderror
-                    </div>
+                <!-- Department -->
+                <div>
+                    <label for="department_id" class="block text-sm font-medium text-black mb-1">Department *</label>
+                    <select name="department_id"
+                            id="department_id"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="">Select Department</option>
+                        @foreach($departments as $department)
+                            <option value="{{ $department->id }}" {{ old('department_id', $job->department_id) == $department->id ? 'selected' : '' }}>
+                                {{ $department->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                    @error('department_id')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <!-- Global Department -->
+                <div>
+                    <label for="global_department_id" class="block text-sm font-medium text-black mb-1">Or Select Global Department</label>
+                    <select name="global_department_id"
+                            id="global_department_id"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="">Select Global Department</option>
+                        @foreach($globalDepartments as $globalDepartment)
+                            <option value="{{ $globalDepartment->id }}" {{ old('global_department_id', $job->global_department_id) == $globalDepartment->id ? 'selected' : '' }}>
+                                {{ $globalDepartment->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                    @error('global_department_id')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
 
                 <!-- Location -->
                 <div>
-                    <label for="city_id" class="block text-sm font-medium text-black mb-1">Location *</label>
+                    <label for="location_id" class="block text-sm font-medium text-black mb-1">Location *</label>
+                    <select name="location_id"
+                            id="location_id"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="">Select Location</option>
+                        @foreach($locations as $location)
+                            <option value="{{ $location->id }}" {{ old('location_id', $job->location_id) == $location->id ? 'selected' : '' }}>
+                                {{ $location->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                    @error('location_id')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <!-- Global Location -->
+                <div>
+                    <label for="global_location_id" class="block text-sm font-medium text-black mb-1">Or Select Global Location</label>
+                    <select name="global_location_id"
+                            id="global_location_id"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="">Select Global Location</option>
+                        @foreach($globalLocations as $globalLocation)
+                            <option value="{{ $globalLocation->id }}" {{ old('global_location_id', $job->global_location_id) == $globalLocation->id ? 'selected' : '' }}>
+                                {{ $globalLocation->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                    @error('global_location_id')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <!-- City -->
+                <div>
+                    <label for="city_id" class="block text-sm font-medium text-black mb-1">Or Select City</label>
                     <select name="city_id"
                             id="city_id"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            required>
-                        <option value="">Select Location</option>
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="">Select City</option>
                         @foreach($cities->groupBy('state') as $state => $stateCities)
                             <optgroup label="{{ $state }}">
                                 @foreach($stateCities as $city)
                                     <option value="{{ $city->id }}" {{ old('city_id', $job->city_id) == $city->id ? 'selected' : '' }}>
-                                        {{ $city->name }}
+                                        {{ $city->formatted_location }}
                                     </option>
                                 @endforeach
                             </optgroup>

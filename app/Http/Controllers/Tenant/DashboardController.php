@@ -41,7 +41,9 @@ class DashboardController extends Controller
 
         // Recent Applications
         $recentApplications = Application::where('tenant_id', $tenantModel->id)
-            ->recent(10)
+            ->with(['candidate', 'jobOpening'])
+            ->orderBy('applied_at', 'desc')
+            ->limit(10)
             ->get();
 
         return view('tenant.dashboard', [

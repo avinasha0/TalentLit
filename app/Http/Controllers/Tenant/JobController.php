@@ -6,9 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\JobOpening;
 use App\Models\Department;
 use App\Models\Location;
-use App\Models\GlobalDepartment;
-use App\Models\GlobalLocation;
-use App\Models\City;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -18,7 +15,7 @@ class JobController extends Controller
 {
     public function index(Request $request, string $tenant)
     {
-        $query = JobOpening::with(['department', 'globalDepartment', 'location', 'globalLocation', 'city', 'jobStages'])
+        $query = JobOpening::with(['department', 'location', 'jobStages'])
             ->orderBy('created_at', 'desc');
 
         // Apply filters
@@ -27,22 +24,14 @@ class JobController extends Controller
         }
 
         if ($request->filled('department')) {
-            $query->where(function ($q) use ($request) {
-                $q->whereHas('department', function ($subQ) use ($request) {
-                    $subQ->where('name', 'like', '%'.$request->department.'%');
-                })->orWhereHas('globalDepartment', function ($subQ) use ($request) {
-                    $subQ->where('name', 'like', '%'.$request->department.'%');
-                });
+            $query->whereHas('department', function ($subQ) use ($request) {
+                $subQ->where('name', 'like', '%'.$request->department.'%');
             });
         }
 
         if ($request->filled('location')) {
-            $query->where(function ($q) use ($request) {
-                $q->whereHas('globalLocation', function ($subQ) use ($request) {
-                    $subQ->where('name', 'like', '%'.$request->location.'%');
-                })->orWhereHas('city', function ($subQ) use ($request) {
-                    $subQ->where('name', 'like', '%'.$request->location.'%');
-                });
+            $query->whereHas('location', function ($subQ) use ($request) {
+                $subQ->where('name', 'like', '%'.$request->location.'%');
             });
         }
 
@@ -132,12 +121,9 @@ class JobController extends Controller
         
         $departments = Department::orderBy('name')->get();
         $locations = Location::orderBy('name')->get();
-        $globalDepartments = GlobalDepartment::active()->orderBy('name')->get();
-        $globalLocations = GlobalLocation::active()->orderBy('name')->get();
-        $cities = City::active()->orderBy('state')->orderBy('name')->get();
         $employmentTypes = ['full_time', 'part_time', 'contract', 'internship'];
 
-        return view('tenant.jobs.create', compact('departments', 'locations', 'globalDepartments', 'globalLocations', 'cities', 'employmentTypes'));
+        return view('tenant.jobs.create', compact('departments', 'locations', 'employmentTypes'));
     }
 
     public function store(Request $request, string $tenant)
@@ -176,10 +162,7 @@ class JobController extends Controller
                     ->where('tenant_id', tenant_id())
             ],
             'department_id' => 'nullable|exists:departments,id',
-            'global_department_id' => 'nullable|exists:global_departments,id',
             'location_id' => 'nullable|exists:locations,id',
-            'global_location_id' => 'nullable|exists:global_locations,id',
-            'city_id' => 'nullable|exists:cities,id',
             'employment_type' => 'required|in:full_time,part_time,contract,internship',
             'status' => 'required|in:draft,published,closed',
             'openings_count' => 'required|integer|min:1',
@@ -187,11 +170,11 @@ class JobController extends Controller
         ]);
 
         // Ensure at least one department and location is selected
-        if (!$validated['department_id'] && !$validated['global_department_id']) {
+        if (!$validated['department_id']) {
             return back()->withErrors(['department_id' => 'Please select a department.']);
         }
 
-        if (!$validated['location_id'] && !$validated['global_location_id'] && !$validated['city_id']) {
+        if (!$validated['location_id']) {
             return back()->withErrors(['location_id' => 'Please select a location.']);
         }
 
@@ -226,7 +209,7 @@ class JobController extends Controller
 
     public function show(string $tenant, JobOpening $job)
     {
-        $job->load(['department', 'globalDepartment', 'location', 'globalLocation', 'city', 'jobStages', 'applications.candidate']);
+        $job->load(['department', 'location', 'jobStages', 'applications.candidate']);
 
         return view('tenant.jobs.show', compact('job'));
     }
@@ -237,12 +220,9 @@ class JobController extends Controller
         
         $departments = Department::orderBy('name')->get();
         $locations = Location::orderBy('name')->get();
-        $globalDepartments = GlobalDepartment::active()->orderBy('name')->get();
-        $globalLocations = GlobalLocation::active()->orderBy('name')->get();
-        $cities = City::active()->orderBy('state')->orderBy('name')->get();
         $employmentTypes = ['full_time', 'part_time', 'contract', 'internship'];
 
-        return view('tenant.jobs.edit', compact('job', 'departments', 'locations', 'globalDepartments', 'globalLocations', 'cities', 'employmentTypes'));
+        return view('tenant.jobs.edit', compact('job', 'departments', 'locations', 'employmentTypes'));
     }
 
     public function update(Request $request, string $tenant, JobOpening $job)
@@ -260,10 +240,7 @@ class JobController extends Controller
                     ->where('tenant_id', tenant_id())
             ],
             'department_id' => 'nullable|exists:departments,id',
-            'global_department_id' => 'nullable|exists:global_departments,id',
             'location_id' => 'nullable|exists:locations,id',
-            'global_location_id' => 'nullable|exists:global_locations,id',
-            'city_id' => 'nullable|exists:cities,id',
             'employment_type' => 'required|in:full_time,part_time,contract,internship',
             'status' => 'required|in:draft,published,closed',
             'openings_count' => 'required|integer|min:1',
@@ -271,11 +248,11 @@ class JobController extends Controller
         ]);
 
         // Ensure at least one department and location is selected
-        if (!$validated['department_id'] && !$validated['global_department_id']) {
+        if (!$validated['department_id']) {
             return back()->withErrors(['department_id' => 'Please select a department.']);
         }
 
-        if (!$validated['location_id'] && !$validated['global_location_id'] && !$validated['city_id']) {
+        if (!$validated['location_id']) {
             return back()->withErrors(['location_id' => 'Please select a location.']);
         }
 

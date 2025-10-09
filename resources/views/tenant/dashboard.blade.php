@@ -203,7 +203,7 @@
                                         {{ $application->candidate->full_name }}
                                     </p>
                                     <p class="text-sm text-black">
-                                        {{ $application->jobOpening->title }}
+                                        {{ $application->jobOpening?->title ?? 'Job Opening Not Found' }}
                                     </p>
                                 </div>
                                 <div class="flex items-center space-x-2">

@@ -112,7 +112,8 @@ unset($__errorArgs, $__bag); ?>
                     <label for="department_id" class="block text-sm font-medium text-black mb-1">Department *</label>
                     <select name="department_id"
                             id="department_id"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            required>
                         <option value="">Select Department</option>
                         <?php $__currentLoopData = $departments; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $department): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                             <option value="<?php echo e($department->id); ?>" <?php echo e(old('department_id') == $department->id ? 'selected' : ''); ?>>
@@ -136,38 +137,14 @@ endif;
 unset($__errorArgs, $__bag); ?>
                 </div>
 
-                <!-- Global Department -->
-                <div>
-                    <label for="global_department_id" class="block text-sm font-medium text-black mb-1">Or Select Global Department</label>
-                    <select name="global_department_id"
-                            id="global_department_id"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <option value="">Select Global Department</option>
-                        <?php $__currentLoopData = $globalDepartments; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $globalDepartment): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                            <option value="<?php echo e($globalDepartment->id); ?>" <?php echo e(old('global_department_id') == $globalDepartment->id ? 'selected' : ''); ?>>
-                                <?php echo e($globalDepartment->name); ?>
-
-                            </option>
-                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-                    </select>
-                    <?php $__errorArgs = ['global_department_id'];
-$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
-if ($__bag->has($__errorArgs[0])) :
-if (isset($message)) { $__messageOriginal = $message; }
-$message = $__bag->first($__errorArgs[0]); ?>
-                        <p class="mt-1 text-sm text-red-600"><?php echo e($message); ?></p>
-                    <?php unset($message);
-if (isset($__messageOriginal)) { $message = $__messageOriginal; }
-endif;
-unset($__errorArgs, $__bag); ?>
-                </div>
 
                 <!-- Location -->
                 <div>
                     <label for="location_id" class="block text-sm font-medium text-black mb-1">Location *</label>
                     <select name="location_id"
                             id="location_id"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            required>
                         <option value="">Select Location</option>
                         <?php $__currentLoopData = $locations; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $location): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                             <option value="<?php echo e($location->id); ?>" <?php echo e(old('location_id') == $location->id ? 'selected' : ''); ?>>
@@ -192,57 +169,7 @@ endif;
 unset($__errorArgs, $__bag); ?>
                 </div>
 
-                <!-- Global Location -->
-                <div>
-                    <label for="global_location_id" class="block text-sm font-medium text-black mb-1">Or Select Global Location</label>
-                    <select name="global_location_id"
-                            id="global_location_id"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <option value="">Select Global Location</option>
-                        <?php $__currentLoopData = $globalLocations; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $globalLocation): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                            <option value="<?php echo e($globalLocation->id); ?>" <?php echo e(old('global_location_id') == $globalLocation->id ? 'selected' : ''); ?>>
-                                <?php echo e($globalLocation->name); ?>
 
-                            </option>
-                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-                    </select>
-                    <?php $__errorArgs = ['global_location_id'];
-$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
-if ($__bag->has($__errorArgs[0])) :
-if (isset($message)) { $__messageOriginal = $message; }
-$message = $__bag->first($__errorArgs[0]); ?>
-                        <p class="mt-1 text-sm text-red-600"><?php echo e($message); ?></p>
-                    <?php unset($message);
-if (isset($__messageOriginal)) { $message = $__messageOriginal; }
-endif;
-unset($__errorArgs, $__bag); ?>
-                </div>
-
-                <!-- City -->
-                <div>
-                    <label for="city_id" class="block text-sm font-medium text-black mb-1">Or Select City</label>
-                    <select name="city_id"
-                            id="city_id"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <option value="">Select City</option>
-                        <?php $__currentLoopData = $cities; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $city): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                            <option value="<?php echo e($city->id); ?>" <?php echo e(old('city_id') == $city->id ? 'selected' : ''); ?>>
-                                <?php echo e($city->formatted_location); ?>
-
-                            </option>
-                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-                    </select>
-                    <?php $__errorArgs = ['city_id'];
-$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
-if ($__bag->has($__errorArgs[0])) :
-if (isset($message)) { $__messageOriginal = $message; }
-$message = $__bag->first($__errorArgs[0]); ?>
-                        <p class="mt-1 text-sm text-red-600"><?php echo e($message); ?></p>
-                    <?php unset($message);
-if (isset($__messageOriginal)) { $message = $__messageOriginal; }
-endif;
-unset($__errorArgs, $__bag); ?>
-                </div>
 
                 <!-- Employment Type and Openings Count -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">

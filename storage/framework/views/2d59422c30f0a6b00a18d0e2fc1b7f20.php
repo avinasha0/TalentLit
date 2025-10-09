@@ -1,14 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    @php
+    <?php
         $seoTitle = 'Resend Activation Email - TalentLit ATS';
         $seoDescription = 'Resend your TalentLit account activation email to complete your registration and access your recruitment dashboard.';
         $seoKeywords = 'TalentLit, resend activation, email activation, ATS, recruitment, account verification';
         $seoAuthor = 'TalentLit';
         $seoImage = asset('logo-talentlit-small.png');
-    @endphp
-    @include('layouts.partials.head')
+    ?>
+    <?php echo $__env->make('layouts.partials.head', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
@@ -19,7 +19,7 @@
             <div class="flex justify-between h-16">
                 <div class="flex items-center">
                     <a href="/" class="flex items-center space-x-2">
-                        <img src="{{ asset('logo-talentlit-small.png') }}" alt="TalentLit Logo" class="h-8">
+                        <img src="<?php echo e(asset('logo-talentlit-small.png')); ?>" alt="TalentLit Logo" class="h-8">
                     </a>
                 </div>
                 
@@ -41,16 +41,16 @@
                                 <div>
                                     <div class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Source</div>
                                     <div class="space-y-1">
-                                        <a href="{{ route('features.candidate-sourcing') }}" class="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-600 rounded-md transition-colors duration-200">
+                                        <a href="<?php echo e(route('features.candidate-sourcing')); ?>" class="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-600 rounded-md transition-colors duration-200">
                                             <div class="font-medium whitespace-nowrap">Candidate Sourcing</div>
                                         </a>
-                                        <a href="{{ route('features.career-site') }}" class="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-600 rounded-md transition-colors duration-200">
+                                        <a href="<?php echo e(route('features.career-site')); ?>" class="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-600 rounded-md transition-colors duration-200">
                                             <div class="font-medium whitespace-nowrap">Career Site</div>
                                         </a>
-                                        <a href="{{ route('features.job-advertising') }}" class="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-600 rounded-md transition-colors duration-200">
+                                        <a href="<?php echo e(route('features.job-advertising')); ?>" class="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-600 rounded-md transition-colors duration-200">
                                             <div class="font-medium whitespace-nowrap">Job Advertising</div>
                                         </a>
-                                        <a href="{{ route('features.employee-referral') }}" class="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-600 rounded-md transition-colors duration-200">
+                                        <a href="<?php echo e(route('features.employee-referral')); ?>" class="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-600 rounded-md transition-colors duration-200">
                                             <div class="font-medium whitespace-nowrap">Employee Referral</div>
                                         </a>
                                     </div>
@@ -60,16 +60,16 @@
                                 <div>
                                     <div class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Track</div>
                                     <div class="space-y-1">
-                                        <a href="{{ route('features.hiring-pipeline') }}" class="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-600 rounded-md transition-colors duration-200">
+                                        <a href="<?php echo e(route('features.hiring-pipeline')); ?>" class="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-600 rounded-md transition-colors duration-200">
                                             <div class="font-medium whitespace-nowrap">Hiring Pipeline</div>
                                         </a>
-                                        <a href="{{ route('features.resume-management') }}" class="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-600 rounded-md transition-colors duration-200">
+                                        <a href="<?php echo e(route('features.resume-management')); ?>" class="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-600 rounded-md transition-colors duration-200">
                                             <div class="font-medium whitespace-nowrap">Resume Management</div>
                                         </a>
-                                        <a href="{{ route('features.manage-submission') }}" class="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-600 rounded-md transition-colors duration-200">
+                                        <a href="<?php echo e(route('features.manage-submission')); ?>" class="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-600 rounded-md transition-colors duration-200">
                                             <div class="font-medium whitespace-nowrap">Manage Submission</div>
                                         </a>
-                                        <a href="{{ route('features.hiring-analytics') }}" class="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-600 rounded-md transition-colors duration-200">
+                                        <a href="<?php echo e(route('features.hiring-analytics')); ?>" class="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-600 rounded-md transition-colors duration-200">
                                             <div class="font-medium whitespace-nowrap">Hiring Analytics</div>
                                         </a>
                                     </div>
@@ -78,13 +78,13 @@
                         </div>
                     </div>
                     
-                    <a href="{{ route('subscription.pricing') }}" class="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium">
+                    <a href="<?php echo e(route('subscription.pricing')); ?>" class="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium">
                         Pricing
                     </a>
-                    <a href="{{ route('login') }}" class="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium">
+                    <a href="<?php echo e(route('login')); ?>" class="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium">
                         Sign In
                     </a>
-                    <a href="{{ route('register') }}" class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-lg">
+                    <a href="<?php echo e(route('register')); ?>" class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-lg">
                         Get Started Free
                     </a>
                 </div>
@@ -107,10 +107,10 @@
                     <div class="px-3 py-2">
                         <div class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Features</div>
                         <div class="space-y-1">
-                            <a href="{{ route('features.candidate-sourcing') }}" class="block px-3 py-2 text-base text-gray-700 hover:text-indigo-600 hover:bg-gray-50 rounded-md">
+                            <a href="<?php echo e(route('features.candidate-sourcing')); ?>" class="block px-3 py-2 text-base text-gray-700 hover:text-indigo-600 hover:bg-gray-50 rounded-md">
                                 Candidate Sourcing
                             </a>
-                            <a href="{{ route('features.hiring-pipeline') }}" class="block px-3 py-2 text-base text-gray-700 hover:text-indigo-600 hover:bg-gray-50 rounded-md">
+                            <a href="<?php echo e(route('features.hiring-pipeline')); ?>" class="block px-3 py-2 text-base text-gray-700 hover:text-indigo-600 hover:bg-gray-50 rounded-md">
                                 Hiring Pipeline
                             </a>
                         </div>
@@ -119,13 +119,13 @@
                     <div class="border-t border-gray-200"></div>
                     
                     <!-- Other Links -->
-                    <a href="{{ route('subscription.pricing') }}" class="block px-3 py-2 text-base text-gray-700 hover:text-indigo-600 hover:bg-gray-50 rounded-md">
+                    <a href="<?php echo e(route('subscription.pricing')); ?>" class="block px-3 py-2 text-base text-gray-700 hover:text-indigo-600 hover:bg-gray-50 rounded-md">
                         Pricing
                     </a>
-                    <a href="{{ route('login') }}" class="block px-3 py-2 text-base text-gray-700 hover:text-indigo-600 hover:bg-gray-50 rounded-md">
+                    <a href="<?php echo e(route('login')); ?>" class="block px-3 py-2 text-base text-gray-700 hover:text-indigo-600 hover:bg-gray-50 rounded-md">
                         Sign In
                     </a>
-                    <a href="{{ route('register') }}" class="block px-3 py-2 text-base bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 rounded-md">
+                    <a href="<?php echo e(route('register')); ?>" class="block px-3 py-2 text-base bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 rounded-md">
                         Get Started Free
                     </a>
                 </div>
@@ -138,7 +138,7 @@
             <!-- Header -->
             <div class="text-center">
                 <div class="flex justify-center mb-6">
-                    <img src="{{ asset('logo-talentlit-small.png') }}" alt="TalentLit Logo" class="h-12">
+                    <img src="<?php echo e(asset('logo-talentlit-small.png')); ?>" alt="TalentLit Logo" class="h-12">
                 </div>
                 <h2 class="text-3xl font-bold text-gray-900 mb-2">
                     Resend activation email
@@ -151,7 +151,7 @@
             <!-- Resend Activation Form -->
             <div class="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
                 <!-- Success Messages -->
-            @if (session('success'))
+            <?php if(session('success')): ?>
                     <div class="mb-6 p-6 bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-xl">
                         <div class="flex items-start">
                         <div class="flex-shrink-0">
@@ -161,14 +161,14 @@
                         </div>
                         <div class="ml-3">
                                 <h3 class="text-sm font-medium text-green-800 mb-2">Activation Email Sent!</h3>
-                                <p class="text-sm text-green-700">{{ session('success') }}</p>
+                                <p class="text-sm text-green-700"><?php echo e(session('success')); ?></p>
                             </div>
                     </div>
                 </div>
-            @endif
+            <?php endif; ?>
 
                 <!-- Error Messages -->
-            @if (session('error'))
+            <?php if(session('error')): ?>
                     <div class="mb-6 p-6 bg-gradient-to-r from-red-50 to-pink-50 border border-red-200 rounded-xl">
                         <div class="flex items-start">
                         <div class="flex-shrink-0">
@@ -178,14 +178,14 @@
                         </div>
                         <div class="ml-3">
                                 <h3 class="text-sm font-medium text-red-800 mb-2">Error</h3>
-                                <p class="text-sm text-red-700">{{ session('error') }}</p>
+                                <p class="text-sm text-red-700"><?php echo e(session('error')); ?></p>
                             </div>
                     </div>
                 </div>
-            @endif
+            <?php endif; ?>
 
                 <!-- Info Messages -->
-            @if (session('info'))
+            <?php if(session('info')): ?>
                     <div class="mb-6 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl">
                         <div class="flex items-start">
                         <div class="flex-shrink-0">
@@ -195,14 +195,14 @@
                         </div>
                         <div class="ml-3">
                                 <h3 class="text-sm font-medium text-blue-800 mb-2">Information</h3>
-                                <p class="text-sm text-blue-700">{{ session('info') }}</p>
+                                <p class="text-sm text-blue-700"><?php echo e(session('info')); ?></p>
                             </div>
                         </div>
                     </div>
-                @endif
+                <?php endif; ?>
 
                 <!-- Form Validation Errors -->
-                @if ($errors->any())
+                <?php if($errors->any()): ?>
                     <div class="mb-6 p-6 bg-gradient-to-r from-red-50 to-pink-50 border border-red-200 rounded-xl">
                         <div class="flex items-start">
                             <div class="flex-shrink-0">
@@ -213,17 +213,17 @@
                             <div class="ml-3">
                                 <h3 class="text-sm font-medium text-red-800 mb-2">Please correct the following errors:</h3>
                                 <ul class="text-sm text-red-700 space-y-1">
-                                    @foreach ($errors->all() as $error)
-                                        <li>• {{ $error }}</li>
-                                    @endforeach
+                                    <?php $__currentLoopData = $errors->all(); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $error): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                        <li>• <?php echo e($error); ?></li>
+                                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                                 </ul>
                         </div>
                     </div>
                 </div>
-            @endif
+            <?php endif; ?>
 
-                <form method="POST" action="{{ route('auth.resend-activation') }}" class="space-y-6" id="resendActivationForm">
-                @csrf
+                <form method="POST" action="<?php echo e(route('auth.resend-activation')); ?>" class="space-y-6" id="resendActivationForm">
+                <?php echo csrf_field(); ?>
 
                     <!-- Email Address -->
                 <div>
@@ -239,21 +239,47 @@
                             <input id="email" 
                                 type="email" 
                                 name="email" 
-                                value="{{ old('email') }}" 
+                                value="<?php echo e(old('email')); ?>" 
                                 required 
                                 autofocus 
                                 autocomplete="email"
                                 placeholder="Enter your email address"
                                 class="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors">
                         </div>
-                    @error('email')
-                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
-                    @enderror
+                    <?php $__errorArgs = ['email'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?>
+                        <p class="mt-2 text-sm text-red-600"><?php echo e($message); ?></p>
+                    <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
                 </div>
 
                 <!-- reCAPTCHA -->
                 <div class="flex justify-center">
-                    <x-recaptcha />
+                    <?php if (isset($component)) { $__componentOriginalc8680908dbd82701772537a108fb92cd = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginalc8680908dbd82701772537a108fb92cd = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.recaptcha','data' => []] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('recaptcha'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes([]); ?>
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginalc8680908dbd82701772537a108fb92cd)): ?>
+<?php $attributes = $__attributesOriginalc8680908dbd82701772537a108fb92cd; ?>
+<?php unset($__attributesOriginalc8680908dbd82701772537a108fb92cd); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginalc8680908dbd82701772537a108fb92cd)): ?>
+<?php $component = $__componentOriginalc8680908dbd82701772537a108fb92cd; ?>
+<?php unset($__componentOriginalc8680908dbd82701772537a108fb92cd); ?>
+<?php endif; ?>
                 </div>
                     
                     <!-- Error Message -->
@@ -274,7 +300,7 @@
                 <div class="text-center">
                         <p class="text-sm text-gray-600">
                             Already activated? 
-                            <a href="{{ route('login') }}" class="font-semibold text-indigo-600 hover:text-indigo-500 transition-colors">
+                            <a href="<?php echo e(route('login')); ?>" class="font-semibold text-indigo-600 hover:text-indigo-500 transition-colors">
                                 Sign in instead
                             </a>
                         </p>
@@ -345,6 +371,26 @@
     </script>
 
     <!-- Centralized Footer Component -->
-    <x-footer />
+    <?php if (isset($component)) { $__componentOriginal8a8716efb3c62a45938aca52e78e0322 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal8a8716efb3c62a45938aca52e78e0322 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.footer','data' => []] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('footer'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes([]); ?>
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal8a8716efb3c62a45938aca52e78e0322)): ?>
+<?php $attributes = $__attributesOriginal8a8716efb3c62a45938aca52e78e0322; ?>
+<?php unset($__attributesOriginal8a8716efb3c62a45938aca52e78e0322); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal8a8716efb3c62a45938aca52e78e0322)): ?>
+<?php $component = $__componentOriginal8a8716efb3c62a45938aca52e78e0322; ?>
+<?php unset($__componentOriginal8a8716efb3c62a45938aca52e78e0322); ?>
+<?php endif; ?>
 </body>
 </html>
+<?php /**PATH C:\xampp\htdocs\hirehub2\resources\views/auth/resend-activation.blade.php ENDPATH**/ ?>

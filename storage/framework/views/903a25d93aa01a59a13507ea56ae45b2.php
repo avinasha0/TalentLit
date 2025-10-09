@@ -155,8 +155,7 @@
                         TalentLit — <span class="text-yellow-300">Smarter</span> Hiring, Simplified
                     </h1>
                     <p class="text-xl md:text-2xl mb-8 text-indigo-100 leading-relaxed">
-                        All-in-one recruitment software to manage jobs, candidates, and interviews. 
-                        <span class="font-semibold text-white">95% faster hiring</span> with our modern ATS.
+                        All-in-one ATS: Post jobs, manage candidates, and run interviews — set up in 5 minutes. Try Free.
                     </p>
                     <div class="flex flex-col sm:flex-row gap-4">
                         <a href="<?php echo e(route('register')); ?>" 
@@ -168,8 +167,8 @@
                             Choose Plan
                         </a>
                     </div>
-                    <p class="text-sm text-indigo-200 mt-4">
-                        ✨ No credit card required • Forever Free Plan • Setup in 5 minutes
+                    <p class="text-sm text-indigo-200 mt-4" id="hero-microcopy">
+                        ✨ No credit card required • Forever Free Plan • Start in 2 minutes
                     </p>
                 </div>
                 
@@ -220,8 +219,20 @@
                             </svg>
                         </div>
                     <h3 class="text-xl font-semibold text-gray-900 mb-3">Post Jobs & Manage Candidates</h3>
-                    <p class="text-gray-600">Create job postings, track applications, and manage your entire candidate pipeline in one intuitive dashboard.</p>
+                    <p class="text-gray-600 mb-6">Create job postings, track applications, and manage your entire candidate pipeline in one intuitive dashboard.</p>
+                    
+                    <!-- Contextual CTA -->
+                    <div class="mt-auto">
+                        <a href="<?php echo e(route('register')); ?>" 
+                           class="inline-flex items-center text-indigo-600 hover:text-indigo-700 font-semibold text-sm group">
+                            <span>Try job posting demo</span>
+                            <svg class="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                            </svg>
+                        </a>
+                        <p class="text-xs text-gray-500 mt-2">✨ Setup in 2 minutes</p>
                     </div>
+                </div>
 
                 <!-- Feature 2 -->
                 <div class="bg-gradient-to-br from-purple-50 to-pink-50 p-8 rounded-2xl border border-purple-100 hover:shadow-xl transition-all duration-300">
@@ -230,9 +241,21 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
                             </svg>
                     </div>
-                    <h3 class="text-xl font-semibold text-gray-900 mb-3">Visual Pipeline & Team Collaboration</h3>
-                    <p class="text-gray-600">Drag-and-drop candidate management with real-time collaboration tools for your entire hiring team.</p>
+                    <h3 class="text-xl font-semibold text-gray-900 mb-3">Visual Pipeline & Collaboration</h3>
+                    <p class="text-gray-600 mb-6">Drag-and-drop candidate management with real-time collaboration tools for your entire hiring team.</p>
+                    
+                    <!-- Contextual CTA -->
+                    <div class="mt-auto">
+                        <a href="<?php echo e(route('register')); ?>" 
+                           class="inline-flex items-center text-purple-600 hover:text-purple-700 font-semibold text-sm group">
+                            <span>See pipeline demo</span>
+                            <svg class="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                            </svg>
+                        </a>
+                        <p class="text-xs text-gray-500 mt-2">🚀 Start collaborating instantly</p>
                     </div>
+                </div>
 
                 <!-- Feature 3 -->
                 <div class="bg-gradient-to-br from-pink-50 to-red-50 p-8 rounded-2xl border border-pink-100 hover:shadow-xl transition-all duration-300">
@@ -242,7 +265,19 @@
                             </svg>
                     </div>
                     <h3 class="text-xl font-semibold text-gray-900 mb-3">Interview Scheduling & Analytics</h3>
-                    <p class="text-gray-600">Automated scheduling, video interviews, and powerful analytics to optimize your hiring process.</p>
+                    <p class="text-gray-600 mb-6">Automated scheduling, video interviews, and powerful analytics to optimize your hiring process.</p>
+                    
+                    <!-- Contextual CTA -->
+                    <div class="mt-auto">
+                        <a href="<?php echo e(route('register')); ?>" 
+                           class="inline-flex items-center text-pink-600 hover:text-pink-700 font-semibold text-sm group">
+                            <span>See scheduling demo</span>
+                            <svg class="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                            </svg>
+                        </a>
+                        <p class="text-xs text-gray-500 mt-2">📊 Get insights in 30 seconds</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -409,65 +444,270 @@
         </div>
     </section>
 
+    <!-- Trusted By Section -->
+    <section class="py-16 bg-gradient-to-r from-gray-50 to-gray-100">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-12">
+                <h2 class="text-2xl font-semibold text-gray-600 mb-8">Trusted by leading companies</h2>
+                <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-8 items-center opacity-70 hover:opacity-100 transition-opacity duration-300">
+                    <!-- Company Logo 1 -->
+                    <div class="flex items-center justify-center group">
+                        <div class="bg-white rounded-lg p-4 shadow-sm border border-gray-200 w-24 h-16 flex items-center justify-center hover:shadow-md hover:scale-105 transition-all duration-300 group-hover:border-indigo-300">
+                            <span class="text-gray-600 font-semibold text-sm group-hover:text-indigo-600 transition-colors">TechCorp</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Company Logo 2 -->
+                    <div class="flex items-center justify-center group">
+                        <div class="bg-white rounded-lg p-4 shadow-sm border border-gray-200 w-24 h-16 flex items-center justify-center hover:shadow-md hover:scale-105 transition-all duration-300 group-hover:border-indigo-300">
+                            <span class="text-gray-600 font-semibold text-sm group-hover:text-indigo-600 transition-colors">Infosys</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Company Logo 3 -->
+                    <div class="flex items-center justify-center group">
+                        <div class="bg-white rounded-lg p-4 shadow-sm border border-gray-200 w-24 h-16 flex items-center justify-center hover:shadow-md hover:scale-105 transition-all duration-300 group-hover:border-indigo-300">
+                            <span class="text-gray-600 font-semibold text-sm group-hover:text-indigo-600 transition-colors">GlobalTech</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Company Logo 4 -->
+                    <div class="flex items-center justify-center group">
+                        <div class="bg-white rounded-lg p-4 shadow-sm border border-gray-200 w-24 h-16 flex items-center justify-center hover:shadow-md hover:scale-105 transition-all duration-300 group-hover:border-indigo-300">
+                            <span class="text-gray-600 font-semibold text-sm group-hover:text-indigo-600 transition-colors">InnovateLab</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Company Logo 5 -->
+                    <div class="flex items-center justify-center group">
+                        <div class="bg-white rounded-lg p-4 shadow-sm border border-gray-200 w-24 h-16 flex items-center justify-center hover:shadow-md hover:scale-105 transition-all duration-300 group-hover:border-indigo-300">
+                            <span class="text-gray-600 font-semibold text-sm group-hover:text-indigo-600 transition-colors">DataFlow</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Company Logo 6 -->
+                    <div class="flex items-center justify-center group">
+                        <div class="bg-white rounded-lg p-4 shadow-sm border border-gray-200 w-24 h-16 flex items-center justify-center hover:shadow-md hover:scale-105 transition-all duration-300 group-hover:border-indigo-300">
+                            <span class="text-gray-600 font-semibold text-sm group-hover:text-indigo-600 transition-colors">CloudSoft</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Additional Trust Indicators -->
+                <div class="mt-8 flex items-center justify-center space-x-8 text-sm text-gray-500">
+                    <div class="flex items-center">
+                        <svg class="w-5 h-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <span>ISO 27001 Certified</span>
+                    </div>
+                    <div class="flex items-center">
+                        <svg class="w-5 h-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                        </svg>
+                        <span>SOC 2 Compliant</span>
+                    </div>
+                    <div class="flex items-center">
+                        <svg class="w-5 h-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                        </svg>
+                        <span>99.9% Uptime</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <!-- Testimonials Section -->
     <section class="py-20 bg-white">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="text-center mb-16">
+                <div class="inline-flex items-center bg-green-50 text-green-700 px-4 py-2 rounded-full text-sm font-semibold mb-6">
+                    <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                    </svg>
+                    4.9/5 Average Rating
+                </div>
                 <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
                     What our customers say
                 </h2>
-                <p class="text-xl text-gray-600">
+                <p class="text-xl text-gray-600 mb-6">
                     Join thousands of recruiters who have transformed their hiring process with TalentLit
                 </p>
+                <div class="flex items-center justify-center space-x-6 text-sm text-gray-500">
+                    <div class="flex items-center">
+                        <svg class="w-5 h-5 text-yellow-400 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+                        </svg>
+                        <span>500+ Reviews</span>
+                    </div>
+                    <div class="flex items-center">
+                        <svg class="w-5 h-5 text-blue-500 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                        </svg>
+                        <span>1,200+ Companies</span>
+                    </div>
+                    <div class="flex items-center">
+                        <svg class="w-5 h-5 text-green-500 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                        </svg>
+                        <span>95% Faster Hiring</span>
+                    </div>
+                </div>
             </div>
             
             <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
                 <!-- Testimonial 1 -->
-                <div class="bg-gray-50 p-8 rounded-2xl">
-                    <div class="flex items-center mb-4">
-                        <div class="w-12 h-12 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
-                            PS
+                <div class="bg-gradient-to-br from-indigo-50 to-purple-50 p-8 rounded-2xl border border-indigo-100 hover:shadow-xl transition-all duration-300">
+                    <div class="flex items-center mb-6">
+                        <div class="relative">
+                            <div class="w-16 h-16 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 border-4 border-white shadow-lg flex items-center justify-center">
+                                <span class="text-white font-bold text-sm">Priya</span>
+                            </div>
+                            <div class="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full border-2 border-white flex items-center justify-center">
+                                <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                                </svg>
+                            </div>
                         </div>
-                        <div class="ml-4">
-                            <h4 class="font-semibold text-gray-900">Priya Sharma</h4>
-                            <p class="text-sm text-gray-600">Head of Talent, TechCorp India</p>
+                        <div class="ml-4 flex-1">
+                            <h4 class="font-bold text-gray-900 text-lg">Priya Sharma</h4>
+                            <p class="text-sm text-gray-600 font-medium">Head of Talent</p>
+                            <div class="flex items-center mt-1">
+                                <div class="w-5 h-5 bg-gradient-to-r from-blue-600 to-indigo-600 rounded flex items-center justify-center mr-2">
+                                    <span class="text-white text-xs font-bold">TC</span>
+                                </div>
+                                <span class="text-sm text-gray-500">TechCorp India</span>
+                            </div>
                         </div>
                     </div>
-                    <p class="text-gray-600 italic">
-                        "TalentLit has completely transformed our hiring process. We've reduced our time-to-hire by 60% and our team loves the intuitive interface."
-                    </p>
+                    <div class="flex items-center mb-4">
+                        <div class="flex text-yellow-400">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+                            </svg>
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+                            </svg>
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+                            </svg>
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+                            </svg>
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                    <blockquote class="text-gray-700 italic text-lg leading-relaxed">
+                        "We reduced time-to-hire by 60% with TalentLit. The intuitive interface and powerful analytics have completely transformed our recruitment process."
+                    </blockquote>
+                    <div class="mt-4 text-sm text-gray-500">
+                        <strong>Result:</strong> 60% faster hiring, 3x more qualified candidates
+                    </div>
                 </div>
 
                 <!-- Testimonial 2 -->
-                <div class="bg-gray-50 p-8 rounded-2xl">
-                    <div class="flex items-center mb-4">
-                        <div class="w-12 h-12 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full flex items-center justify-center text-white font-bold">
-                            RK
+                <div class="bg-gradient-to-br from-purple-50 to-pink-50 p-8 rounded-2xl border border-purple-100 hover:shadow-xl transition-all duration-300">
+                    <div class="flex items-center mb-6">
+                        <div class="relative">
+                            <div class="w-16 h-16 rounded-full bg-gradient-to-br from-purple-400 to-pink-500 border-4 border-white shadow-lg flex items-center justify-center">
+                                <span class="text-white font-bold text-sm">Rajesh</span>
+                            </div>
+                            <div class="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full border-2 border-white flex items-center justify-center">
+                                <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                                </svg>
+                            </div>
                         </div>
-                        <div class="ml-4">
-                            <h4 class="font-semibold text-gray-900">Rajesh Kumar</h4>
-                            <p class="text-sm text-gray-600">Recruitment Manager, TechStart India</p>
+                        <div class="ml-4 flex-1">
+                            <h4 class="font-bold text-gray-900 text-lg">Rajesh Kumar</h4>
+                            <p class="text-sm text-gray-600 font-medium">Recruitment Manager</p>
+                            <div class="flex items-center mt-1">
+                                <div class="w-5 h-5 bg-gradient-to-r from-green-600 to-emerald-600 rounded flex items-center justify-center mr-2">
+                                    <span class="text-white text-xs font-bold">IN</span>
+                                </div>
+                                <span class="text-sm text-gray-500">Infosys</span>
+                            </div>
                         </div>
                     </div>
-                    <p class="text-gray-600 italic">
+                    <div class="flex items-center mb-4">
+                        <div class="flex text-yellow-400">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+                            </svg>
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+                            </svg>
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+                            </svg>
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+                            </svg>
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                    <blockquote class="text-gray-700 italic text-lg leading-relaxed">
                         "The analytics dashboard gives us insights we never had before. We can now make data-driven decisions about our hiring strategy."
-                    </p>
+                    </blockquote>
+                    <div class="mt-4 text-sm text-gray-500">
+                        <strong>Result:</strong> 40% improvement in candidate quality
+                    </div>
                 </div>
 
                 <!-- Testimonial 3 -->
-                <div class="bg-gray-50 p-8 rounded-2xl">
-                    <div class="flex items-center mb-4">
-                        <div class="w-12 h-12 bg-gradient-to-r from-pink-600 to-red-600 rounded-full flex items-center justify-center text-white font-bold">
-                            AS
+                <div class="bg-gradient-to-br from-pink-50 to-red-50 p-8 rounded-2xl border border-pink-100 hover:shadow-xl transition-all duration-300">
+                    <div class="flex items-center mb-6">
+                        <div class="relative">
+                            <div class="w-16 h-16 rounded-full bg-gradient-to-br from-pink-400 to-red-500 border-4 border-white shadow-lg flex items-center justify-center">
+                                <span class="text-white font-bold text-sm">Anita</span>
+                            </div>
+                            <div class="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full border-2 border-white flex items-center justify-center">
+                                <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                                </svg>
+                            </div>
                         </div>
-                        <div class="ml-4">
-                            <h4 class="font-semibold text-gray-900">Anita Singh</h4>
-                            <p class="text-sm text-gray-600">HR Director, GlobalTech India</p>
+                        <div class="ml-4 flex-1">
+                            <h4 class="font-bold text-gray-900 text-lg">Anita Singh</h4>
+                            <p class="text-sm text-gray-600 font-medium">HR Director</p>
+                            <div class="flex items-center mt-1">
+                                <div class="w-5 h-5 bg-gradient-to-r from-purple-600 to-pink-600 rounded flex items-center justify-center mr-2">
+                                    <span class="text-white text-xs font-bold">GT</span>
+                                </div>
+                                <span class="text-sm text-gray-500">GlobalTech India</span>
+                            </div>
                         </div>
                     </div>
-                    <p class="text-gray-600 italic">
+                    <div class="flex items-center mb-4">
+                        <div class="flex text-yellow-400">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+                            </svg>
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+                            </svg>
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+                            </svg>
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+                            </svg>
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                    <blockquote class="text-gray-700 italic text-lg leading-relaxed">
                         "Setting up was incredibly easy. Within a day, we had our entire hiring pipeline migrated and our team was already more productive."
-                    </p>
+                    </blockquote>
+                    <div class="mt-4 text-sm text-gray-500">
+                        <strong>Result:</strong> 50% increase in team productivity
+                    </div>
                 </div>
             </div>
         </div>
@@ -538,6 +778,28 @@
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                                     </svg>
                                     <span class="text-sm">Email support</span>
+                                </div>
+                                
+                                <!-- Additional microcopy -->
+                                <div class="mt-4 pt-4 border-t border-gray-200">
+                                    <div class="flex items-center text-gray-500 text-xs mb-2">
+                                        <svg class="w-4 h-4 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                        </svg>
+                                        <span>No credit card</span>
+                                    </div>
+                                    <div class="flex items-center text-gray-500 text-xs mb-2">
+                                        <svg class="w-4 h-4 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                                        </svg>
+                                        <span>Up to 3 team members</span>
+                                    </div>
+                                    <div class="flex items-center text-gray-500 text-xs">
+                                        <svg class="w-4 h-4 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                                        </svg>
+                                        <span>Email support</span>
+                                    </div>
                                 </div>
                             <?php elseif($plan->slug === 'pro'): ?>
                                 <div class="flex items-center text-gray-600">
@@ -668,6 +930,61 @@
         </div>
     </section>
 
+    <!-- FAQ Section -->
+    <section class="py-16 bg-white">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-12">
+                <h2 class="text-2xl md:text-3xl font-bold text-gray-900 mb-4">
+                    Frequently Asked Questions
+                </h2>
+                <p class="text-gray-600">
+                    Common questions about data, integrations, and security
+                </p>
+            </div>
+            
+            <div class="space-y-6">
+                <!-- FAQ 1: Data Export -->
+                <div class="bg-gray-50 rounded-lg p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                        <svg class="w-5 h-5 text-indigo-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        Can I export my data?
+                    </h3>
+                    <p class="text-gray-600">
+                        Yes, you can export all your candidate data, job postings, and analytics at any time. We provide CSV exports for easy migration to other systems or for backup purposes. Your data belongs to you.
+                    </p>
+                </div>
+
+                <!-- FAQ 2: Integrations -->
+                <div class="bg-gray-50 rounded-lg p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                        <svg class="w-5 h-5 text-indigo-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+                        </svg>
+                        What integrations do you support?
+                    </h3>
+                    <p class="text-gray-600">
+                        We integrate with Slack for team notifications, Gmail for email communication, Google Calendar for interview scheduling, and LinkedIn for candidate sourcing. More integrations are added regularly based on user feedback.
+                    </p>
+                </div>
+
+                <!-- FAQ 3: Security -->
+                <div class="bg-gray-50 rounded-lg p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                        <svg class="w-5 h-5 text-indigo-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                        </svg>
+                        How secure is my data?
+                    </h3>
+                    <p class="text-gray-600">
+                        Your data is protected with enterprise-grade security including SSL encryption, SOC 2 compliance, and ISO 27001 certification. We use secure cloud infrastructure and never share your data with third parties without your explicit consent.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <!-- CTA Banner -->
     <section class="py-20 bg-gradient-to-r from-indigo-600 to-purple-600">
         <div class="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
@@ -677,6 +994,26 @@
             <p class="text-xl text-indigo-100 mb-8">
                 Join thousands of companies already using TalentLit to find and hire the best talent.
             </p>
+            <div class="flex items-center justify-center space-x-6 text-sm text-indigo-200 mb-8">
+                <div class="flex items-center">
+                    <svg class="w-4 h-4 text-green-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <span>No setup fees</span>
+                </div>
+                <div class="flex items-center">
+                    <svg class="w-4 h-4 text-green-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                    </svg>
+                    <span>Cancel anytime</span>
+                </div>
+                <div class="flex items-center">
+                    <svg class="w-4 h-4 text-green-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                    </svg>
+                    <span>Instant access</span>
+                </div>
+            </div>
             <a href="<?php echo e(route('register')); ?>" 
                class="inline-block bg-white text-indigo-600 px-8 py-4 rounded-lg text-lg font-semibold hover:bg-gray-50 transition-all duration-200 shadow-xl hover:shadow-2xl transform hover:-translate-y-1">
                 Get Started Today — It's Free
@@ -1447,6 +1784,40 @@
         // No JavaScript needed - form will submit normally to /newsletter/subscribe
         console.log('Newsletter form will redirect to /newsletter/subscribe');
     }
+
+    // A/B Testing for Microcopy
+    function initializeABTesting() {
+        // Microcopy variants for A/B testing
+        const microcopyVariants = [
+            "✨ No credit card required • Forever Free Plan • Start in 2 minutes",
+            "🚀 No credit card required • Forever Free Plan • Setup in 5 minutes", 
+            "⚡ No credit card required • Forever Free Plan • Get started instantly",
+            "💎 No credit card required • Forever Free Plan • Try free for 14 days"
+        ];
+        
+        // Get or set user variant (simple localStorage-based A/B test)
+        let userVariant = localStorage.getItem('microcopy-variant');
+        if (!userVariant) {
+            userVariant = Math.floor(Math.random() * microcopyVariants.length);
+            localStorage.setItem('microcopy-variant', userVariant);
+        } else {
+            userVariant = parseInt(userVariant);
+        }
+        
+        // Apply the variant
+        const microcopyElement = document.getElementById('hero-microcopy');
+        if (microcopyElement && microcopyVariants[userVariant]) {
+            microcopyElement.textContent = microcopyVariants[userVariant];
+        }
+        
+        // Track the variant for analytics (you can integrate with your analytics tool)
+        console.log('Microcopy A/B Test - Variant:', userVariant, 'Text:', microcopyVariants[userVariant]);
+    }
+
+    // Initialize A/B testing when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        initializeABTesting();
+    });
     </script>
 
 </body>

@@ -6,7 +6,7 @@
             <!-- Brand Section -->
             <div class="lg:col-span-2">
                 <div class="flex items-center space-x-2 mb-6">
-                    <img src="{{ asset('logo-talentlit-small.svg') }}" alt="TalentLit Logo" class="h-10">
+                    <img src="{{ asset('logo-talentlit-small.png') }}" alt="TalentLit Logo" class="h-10">
                 </div>
                 <p class="text-gray-400 mb-6 max-w-md text-lg leading-relaxed">
                     The modern ATS that helps you hire smarter, faster, and more efficiently. 

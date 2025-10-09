@@ -9,7 +9,7 @@
         $seoAuthor = $tenantModel->name;
         $seoImage = ($branding && $branding->logo_path) 
             ? asset('storage/' . $branding->logo_path) 
-            : asset('logo-talentlit-small.svg');
+            : asset('logo-talentlit-small.png');
     @endphp
     @include('layouts.partials.head')
     <script src="https://cdn.tailwindcss.com"></script>

@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Generate Favicon Files</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .favicon-container { margin: 20px 0; }
+        canvas { border: 1px solid #ccc; margin: 10px; }
+        button { margin: 5px; padding: 10px; background: #6A0DAD; color: white; border: none; border-radius: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>Lightbulb Favicon Generator</h1>
+    <p>Right-click on each canvas and "Save image as..." to download the favicon files.</p>
+    
+    <div class="favicon-container">
+        <h3>16x16 Favicon</h3>
+        <canvas id="canvas16" width="16" height="16"></canvas>
+        <button onclick="downloadCanvas('canvas16', 'favicon-16x16.png')">Download 16x16</button>
+    </div>
+    
+    <div class="favicon-container">
+        <h3>32x32 Favicon</h3>
+        <canvas id="canvas32" width="32" height="32"></canvas>
+        <button onclick="downloadCanvas('canvas32', 'favicon-32x32.png')">Download 32x32</button>
+    </div>
+    
+    <div class="favicon-container">
+        <h3>48x48 Favicon</h3>
+        <canvas id="canvas48" width="48" height="48"></canvas>
+        <button onclick="downloadCanvas('canvas48', 'favicon-48x48.png')">Download 48x48</button>
+    </div>
+    
+    <div class="favicon-container">
+        <h3>180x180 Apple Touch Icon</h3>
+        <canvas id="canvas180" width="180" height="180"></canvas>
+        <button onclick="downloadCanvas('canvas180', 'apple-touch-icon.png')">Download 180x180</button>
+    </div>
+
+    <script>
+        function drawLightbulb(canvas, size) {
+            const ctx = canvas.getContext('2d');
+            const scale = size / 32;
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, size, size);
+            
+            // Purple background
+            ctx.fillStyle = '#6A0DAD';
+            ctx.fillRect(0, 0, size, size);
+            
+            // Set drawing properties
+            ctx.lineWidth = Math.max(1, 2 * scale);
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            
+            // Lightbulb outline (white)
+            ctx.strokeStyle = 'white';
+            ctx.beginPath();
+            ctx.moveTo(16 * scale, 6 * scale);
+            ctx.quadraticCurveTo(12 * scale, 6 * scale, 9 * scale, 9 * scale);
+            ctx.quadraticCurveTo(9 * scale, 15 * scale, 11 * scale, 19 * scale);
+            ctx.lineTo(11 * scale, 21 * scale);
+            ctx.quadraticCurveTo(11 * scale, 22 * scale, 12 * scale, 23 * scale);
+            ctx.lineTo(20 * scale, 23 * scale);
+            ctx.quadraticCurveTo(21 * scale, 22 * scale, 21 * scale, 21 * scale);
+            ctx.lineTo(21 * scale, 19 * scale);
+            ctx.quadraticCurveTo(23 * scale, 17 * scale, 23 * scale, 13 * scale);
+            ctx.quadraticCurveTo(23 * scale, 9 * scale, 20 * scale, 6 * scale);
+            ctx.quadraticCurveTo(16 * scale, 6 * scale, 16 * scale, 6 * scale);
+            ctx.stroke();
+            
+            // Lightbulb base (white rectangle)
+            ctx.fillStyle = 'white';
+            ctx.fillRect(13 * scale, 23 * scale, 6 * scale, 3 * scale);
+            
+            // Filament (yellow curved line)
+            ctx.strokeStyle = '#FFD700';
+            ctx.beginPath();
+            ctx.moveTo(14 * scale, 12 * scale);
+            ctx.quadraticCurveTo(16 * scale, 14 * scale, 18 * scale, 12 * scale);
+            ctx.stroke();
+            
+            // Light rays (yellow)
+            ctx.strokeStyle = '#FFD700';
+            ctx.beginPath();
+            ctx.moveTo(16 * scale, 6 * scale);
+            ctx.lineTo(16 * scale, 4 * scale);
+            ctx.moveTo(16 * scale, 6 * scale);
+            ctx.lineTo(14 * scale, 4 * scale);
+            ctx.moveTo(16 * scale, 6 * scale);
+            ctx.lineTo(18 * scale, 4 * scale);
+            ctx.moveTo(16 * scale, 6 * scale);
+            ctx.lineTo(16 * scale, 3 * scale);
+            ctx.stroke();
+        }
+        
+        function downloadCanvas(canvasId, filename) {
+            const canvas = document.getElementById(canvasId);
+            const link = document.createElement('a');
+            link.download = filename;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+        
+        // Generate all favicon sizes when page loads
+        window.onload = function() {
+            drawLightbulb(document.getElementById('canvas16'), 16);
+            drawLightbulb(document.getElementById('canvas32'), 32);
+            drawLightbulb(document.getElementById('canvas48'), 48);
+            drawLightbulb(document.getElementById('canvas180'), 180);
+        };
+    </script>
+</body>
+</html>

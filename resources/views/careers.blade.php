@@ -6,7 +6,7 @@
         $seoDescription = 'Join TalentLit and help revolutionize recruitment. Explore open positions, learn about our culture, and discover why we\'re the best place to build your career.';
         $seoKeywords = 'TalentLit careers, jobs, hiring, recruitment jobs, tech careers, remote work, company culture';
         $seoAuthor = 'TalentLit';
-        $seoImage = asset('logo-talentlit-small.svg');
+        $seoImage = asset('logo-talentlit-small.png');
     @endphp
     @include('layouts.partials.head')
     <script src="https://cdn.tailwindcss.com"></script>
@@ -19,7 +19,7 @@
             <div class="flex justify-between h-16">
                 <div class="flex items-center">
                     <a href="/" class="flex items-center space-x-2">
-                        <img src="{{ asset('logo-talentlit-small.svg') }}" alt="TalentLit Logo" class="h-8">
+                        <img src="{{ asset('logo-talentlit-small.png') }}" alt="TalentLit Logo" class="h-8">
                     </a>
                 </div>
                 

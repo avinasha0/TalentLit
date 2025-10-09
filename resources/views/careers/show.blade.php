@@ -11,7 +11,7 @@
         $seoAuthor = $tenantModel->name;
         $seoImage = ($branding && $branding->logo_path) 
             ? asset('storage/' . $branding->logo_path) 
-            : asset('logo-talentlit-small.svg');
+            : asset('logo-talentlit-small.png');
     @endphp
     @include('layouts.partials.head')
     <script src="https://cdn.tailwindcss.com"></script>
@@ -33,7 +33,7 @@
                             @if($branding && $branding->logo_path)
                                 <img src="{{ asset('storage/' . $branding->logo_path) }}" alt="{{ $tenantModel->name }} Logo" class="h-8">
                             @else
-                                <img src="{{ asset('logo-talentlit-small.svg') }}" alt="TalentLit Logo" class="h-8">
+                                <img src="{{ asset('logo-talentlit-small.png') }}" alt="TalentLit Logo" class="h-8">
                             @endif
                         </a>
                     </div>

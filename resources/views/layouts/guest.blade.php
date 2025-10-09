@@ -12,7 +12,7 @@
             <div class="sm:mx-auto sm:w-full {{ $attributes->get('max-width', 'sm:max-w-md') }}">
                 <div class="flex justify-center">
                     <a href="/" class="flex items-center space-x-2">
-                        <img src="{{ asset('logo-talentlit-small.svg') }}" alt="TalentLit Logo" class="h-10">
+                        <img src="{{ asset('logo-talentlit-small.png') }}" alt="TalentLit Logo" class="h-10">
                     </a>
                 </div>
                 <h2 class="mt-6 text-center text-3xl font-bold tracking-tight text-gray-900 dark:text-white">

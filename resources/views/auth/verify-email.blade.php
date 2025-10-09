@@ -6,7 +6,7 @@
         $seoDescription = 'Verify your email address to complete your TalentLit account setup and start using our modern ATS platform.';
         $seoKeywords = 'TalentLit, email verification, ATS, account setup, recruitment';
         $seoAuthor = 'TalentLit';
-        $seoImage = asset('logo-talentlit-small.svg');
+        $seoImage = asset('logo-talentlit-small.png');
     @endphp
     @include('layouts.partials.head')
     <script src="https://cdn.tailwindcss.com"></script>
@@ -19,7 +19,7 @@
             <div class="flex justify-between h-16">
                 <div class="flex items-center">
                     <a href="/" class="flex items-center space-x-2">
-                        <img src="{{ asset('logo-talentlit-small.svg') }}" alt="TalentLit Logo" class="h-8">
+                        <img src="{{ asset('logo-talentlit-small.png') }}" alt="TalentLit Logo" class="h-8">
                     </a>
                 </div>
                 
@@ -138,7 +138,7 @@
             <!-- Header -->
             <div class="text-center">
                 <div class="flex justify-center mb-6">
-                    <img src="{{ asset('logo-talentlit-small.svg') }}" alt="TalentLit Logo" class="h-12">
+                    <img src="{{ asset('logo-talentlit-small.png') }}" alt="TalentLit Logo" class="h-12">
                 </div>
                 <h2 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
                     Verify Your Email

@@ -42,7 +42,7 @@
         .activation-button {
             display: inline-block;
             background: linear-gradient(135deg, #4f46e5, #7c3aed);
-            color: white;
+            color: white !important;
             text-decoration: none;
             padding: 16px 32px;
             border-radius: 8px;
@@ -51,6 +51,7 @@
             text-align: center;
             margin: 20px 0;
             transition: transform 0.2s;
+            border: none;
         }
         .activation-button:hover {
             transform: translateY(-2px);
@@ -99,7 +100,7 @@
             <p>Thank you for registering with TalentLit! To complete your account setup, please activate your email address by clicking the button below:</p>
 
             <div style="text-align: center;">
-                <a href="{{ $activationUrl }}" class="activation-button">
+                <a href="{{ $activationUrl }}" class="activation-button" style="color: white !important; text-decoration: none;">
                     Activate My Account
                 </a>
             </div>

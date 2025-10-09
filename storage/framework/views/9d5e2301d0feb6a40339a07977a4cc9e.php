@@ -4,7 +4,7 @@
     $seoDescription = $seoDescription ?? 'TalentLit is a modern Applicant Tracking System (ATS) that helps organizations streamline their recruitment process, manage candidates, and hire top talent efficiently.';
     $seoKeywords = $seoKeywords ?? 'TalentLit, ATS, applicant tracking system, recruitment, hiring, jobs, careers, talent management';
     $seoAuthor = $seoAuthor ?? (isset($tenant) ? $tenant->name : 'TalentLit');
-    $seoImage = $seoImage ?? asset('images/logo-talentlit.svg');
+    $seoImage = $seoImage ?? asset('images/logo-talentlit.png');
     $canonicalUrl = $canonicalUrl ?? url()->current();
     
     // Open Graph defaults
@@ -60,8 +60,8 @@
 <link rel="manifest" href="<?php echo e(asset('site.webmanifest')); ?>">
 
 <!-- Theme Colors -->
-<meta name="theme-color" content="#6E46AE">
-<meta name="msapplication-TileColor" content="#6E46AE">
+<meta name="theme-color" content="#6A0DAD">
+<meta name="msapplication-TileColor" content="#6A0DAD">
 <meta name="msapplication-config" content="<?php echo e(asset('browserconfig.xml')); ?>">
 
 <!-- Fonts -->

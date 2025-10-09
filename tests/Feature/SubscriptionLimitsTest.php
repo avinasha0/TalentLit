@@ -102,8 +102,8 @@ class SubscriptionLimitsTest extends TestCase
             'send_invitation' => false,
         ]);
 
-        // Should redirect to pricing page with error
-        $response->assertRedirect(route('subscription.pricing'));
+        // Should redirect to subscription page with error
+        $response->assertRedirect(route('subscription.show', $this->tenant->slug));
         $response->assertSessionHas('error');
 
         // Verify second user was NOT created
@@ -207,8 +207,8 @@ class SubscriptionLimitsTest extends TestCase
             'description' => 'Test job description',
         ]);
 
-        // Should redirect to pricing page with error
-        $response->assertRedirect(route('subscription.pricing'));
+        // Should redirect to subscription page with error
+        $response->assertRedirect(route('subscription.show', $this->tenant->slug));
         $response->assertSessionHas('error');
     }
 
@@ -229,8 +229,8 @@ class SubscriptionLimitsTest extends TestCase
             'file' => 'test.csv',
         ]);
 
-        // Should redirect to pricing page with error
-        $response->assertRedirect(route('subscription.pricing'));
+        // Should redirect to subscription page with error
+        $response->assertRedirect(route('subscription.show', $this->tenant->slug));
         $response->assertSessionHas('error');
     }
 
@@ -265,8 +265,8 @@ class SubscriptionLimitsTest extends TestCase
             'notes' => 'Test interview',
         ]);
 
-        // Should redirect to pricing page with error
-        $response->assertRedirect(route('subscription.pricing'));
+        // Should redirect to subscription page with error
+        $response->assertRedirect(route('subscription.show', $this->tenant->slug));
         $response->assertSessionHas('error');
     }
 

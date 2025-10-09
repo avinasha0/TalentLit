@@ -6,7 +6,7 @@
         $seoDescription = 'Streamline resume management with TalentLit. Parse, organize, and analyze resumes with AI-powered tools. Store, search, and track candidate documents efficiently.';
         $seoKeywords = 'resume management, resume parsing, document management, candidate files, resume storage, ATS resume tools';
         $seoAuthor = 'TalentLit';
-        $seoImage = asset('logo-talentlit-small.svg');
+        $seoImage = asset('logo-talentlit-small.png');
     @endphp
     @include('layouts.partials.head')
     <script src="https://cdn.tailwindcss.com"></script>
@@ -19,7 +19,7 @@
             <div class="flex justify-between h-16">
                 <div class="flex items-center">
                     <a href="/" class="flex items-center space-x-2">
-                        <img src="{{ asset('logo-talentlit-small.svg') }}" alt="TalentLit Logo" class="h-8">
+                        <img src="{{ asset('logo-talentlit-small.png') }}" alt="TalentLit Logo" class="h-8">
                     </a>
                 </div>
                 

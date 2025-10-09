@@ -8,7 +8,7 @@
     $seoDescription = 'Complete guide to setting up your TalentLit account, creating your organization, and getting started with your first job posting.';
     $seoKeywords = 'TalentLit onboarding, account setup, organization setup, first job posting';
     $seoAuthor = 'TalentLit';
-    $seoImage = asset('logo-talentlit-small.svg');
+    $seoImage = asset('logo-talentlit-small.png');
 @endphp
 
 @section('content')
@@ -19,7 +19,7 @@
             <div class="flex justify-between h-16">
                 <div class="flex items-center">
                     <a href="/" class="flex items-center space-x-2">
-                        <img src="{{ asset('logo-talentlit-small.svg') }}" alt="TalentLit Logo" class="h-8">
+                        <img src="{{ asset('logo-talentlit-small.png') }}" alt="TalentLit Logo" class="h-8">
                     </a>
                 </div>
                 

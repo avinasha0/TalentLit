@@ -6,7 +6,7 @@
         $seoDescription = 'Learn How TalentLit protects your privacy and handles your data. Our comprehensive privacy policy outlines our data collection, usage, and protection practices.';
         $seoKeywords = 'privacy policy, data protection, GDPR, privacy, TalentLit, ATS, recruitment software';
         $seoAuthor = 'TalentLit';
-        $seoImage = asset('logo-talentlit-small.svg');
+        $seoImage = asset('logo-talentlit-small.png');
     @endphp
     @include('layouts.partials.head')
     <script src="https://cdn.tailwindcss.com"></script>
@@ -19,7 +19,7 @@
             <div class="flex justify-between h-16">
                 <div class="flex items-center">
                     <a href="/" class="flex items-center space-x-2">
-                        <img src="{{ asset('logo-talentlit-small.svg') }}" alt="TalentLit Logo" class="h-8">
+                        <img src="{{ asset('logo-talentlit-small.png') }}" alt="TalentLit Logo" class="h-8">
                     </a>
                 </div>
                 

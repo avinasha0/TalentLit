@@ -6,7 +6,7 @@
             $seoDescription = $description ?? 'Get help with TalentLit ATS. Find guides, tutorials, and support for managing your recruitment process.';
             $seoKeywords = $keywords ?? 'TalentLit help, ATS support, recruitment software help, hiring guide, user manual';
             $seoAuthor = 'TalentLit';
-            $seoImage = asset('logo-talentlit-small.svg');
+            $seoImage = asset('logo-talentlit-small.png');
         @endphp
         @include('layouts.partials.head')
     </head>

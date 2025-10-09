@@ -78,17 +78,26 @@ class CheckSubscriptionLimits
     }
 
     /**
-     * Redirect to pricing page with error message.
+     * Redirect to subscription page with error message.
      */
     private function redirectToPricing(Request $request, string $message)
     {
+        $tenant = Tenancy::get();
+        
         if ($request->expectsJson()) {
             return response()->json([
                 'error' => $message,
-                'redirect' => route('subscription.pricing')
+                'redirect' => $tenant ? route('subscription.show', $tenant->slug) : route('subscription.pricing')
             ], 403);
         }
 
+        // Redirect to tenant-specific subscription page if tenant is available
+        if ($tenant) {
+            return redirect()->route('subscription.show', $tenant->slug)
+                ->with('error', $message);
+        }
+
+        // Fallback to public pricing page if no tenant context
         return redirect()->route('subscription.pricing')
             ->with('error', $message);
     }

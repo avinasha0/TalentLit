@@ -33,6 +33,16 @@ class CareersSettingsController extends Controller
             'primary_color' => 'nullable|regex:/^#[0-9A-Fa-f]{6}$/',
             'intro_headline' => 'nullable|string|max:255',
             'intro_subtitle' => 'nullable|string|max:1000',
+            'company_description' => 'nullable|string|max:2000',
+            'benefits_text' => 'nullable|string|max:1000',
+            'contact_email' => 'nullable|email|max:255',
+            'contact_phone' => 'nullable|string|max:50',
+            'linkedin_url' => 'nullable|url|max:255',
+            'twitter_url' => 'nullable|url|max:255',
+            'facebook_url' => 'nullable|url|max:255',
+            'show_benefits' => 'nullable|boolean',
+            'show_company_info' => 'nullable|boolean',
+            'show_social_links' => 'nullable|boolean',
         ]);
 
         // Get or create branding record
@@ -64,6 +74,16 @@ class CareersSettingsController extends Controller
         $branding->primary_color = $request->primary_color;
         $branding->intro_headline = $request->intro_headline;
         $branding->intro_subtitle = $request->intro_subtitle;
+        $branding->company_description = $request->company_description;
+        $branding->benefits_text = $request->benefits_text;
+        $branding->contact_email = $request->contact_email;
+        $branding->contact_phone = $request->contact_phone;
+        $branding->linkedin_url = $request->linkedin_url;
+        $branding->twitter_url = $request->twitter_url;
+        $branding->facebook_url = $request->facebook_url;
+        $branding->show_benefits = $request->has('show_benefits');
+        $branding->show_company_info = $request->has('show_company_info');
+        $branding->show_social_links = $request->has('show_social_links');
         
         $branding->save();
         

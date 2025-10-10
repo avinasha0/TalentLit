@@ -19,6 +19,16 @@ class TenantBranding extends Model
         'primary_color',
         'intro_headline',
         'intro_subtitle',
+        'company_description',
+        'benefits_text',
+        'contact_email',
+        'contact_phone',
+        'linkedin_url',
+        'twitter_url',
+        'facebook_url',
+        'show_benefits',
+        'show_company_info',
+        'show_social_links',
     ];
 
     protected $table = 'tenant_branding';

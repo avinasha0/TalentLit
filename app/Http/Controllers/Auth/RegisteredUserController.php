@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class RegisteredUserController extends Controller
@@ -38,18 +39,40 @@ class RegisteredUserController extends Controller
     {
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
+            'email' => [
+                'required', 
+                'string', 
+                'lowercase', 
+                'email', 
+                'max:255', 
+                Rule::unique('users')->where(function ($query) {
+                    return $query->whereNotNull('email_verified_at');
+                })
+            ],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
             'g-recaptcha-response' => ['required', new RecaptchaRule(app(\App\Services\RecaptchaService::class), $request)],
         ]);
 
-        // Create user account but mark as unverified
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'email_verified_at' => null, // Not verified yet
-        ]);
+        // Check if user already exists but is unverified
+        $user = User::where('email', $request->email)
+            ->whereNull('email_verified_at')
+            ->first();
+
+        if ($user) {
+            // Update existing unverified user
+            $user->update([
+                'name' => $request->name,
+                'password' => Hash::make($request->password),
+            ]);
+        } else {
+            // Create new user account but mark as unverified
+            $user = User::create([
+                'name' => $request->name,
+                'email' => $request->email,
+                'password' => Hash::make($request->password),
+                'email_verified_at' => null, // Not verified yet
+            ]);
+        }
 
         // Generate activation token
         $activationToken = Str::random(60);
@@ -71,16 +94,21 @@ class RegisteredUserController extends Controller
                 'user_email' => $user->email
             ]);
 
-            return redirect()->route('login')
-                ->with('success', '🎉 Registration successful! Please check your email inbox and click the activation link to complete your account setup. If you don\'t see the email, check your spam folder.');
+            $message = $user->wasRecentlyCreated 
+                ? '🎉 Registration successful! Please check your email inbox and click the activation link to complete your account setup. If you don\'t see the email, check your spam folder.'
+                : '📧 Activation email resent! Please check your email inbox and click the activation link to complete your account setup. If you don\'t see the email, check your spam folder.';
+            
+            return redirect()->route('login')->with('success', $message);
         } catch (\Exception $e) {
             \Log::error('Failed to send activation email', [
                 'user_id' => $user->id,
                 'error' => $e->getMessage()
             ]);
 
-            // Delete the user if email sending fails
-            $user->delete();
+            // Delete the user if email sending fails and it was newly created
+            if ($user->wasRecentlyCreated) {
+                $user->delete();
+            }
 
             return back()->with('error', 'Failed to send activation email. Please try again.');
         }

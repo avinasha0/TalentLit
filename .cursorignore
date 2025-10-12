@@ -1,0 +1,14 @@
+# Environment files - NEVER MODIFY
+.env
+.env.*
+!.env.example
+
+# Sensitive configuration files
+config/database.php
+config/mail.php
+config/services.php
+
+# Production files
+deploy*.php
+fix_production*.php
+safe_production*.php

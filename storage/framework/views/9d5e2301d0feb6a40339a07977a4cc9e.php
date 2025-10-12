@@ -49,12 +49,12 @@
 <?php endif; ?>
 
 <!-- Favicon -->
-<link rel="icon" type="image/x-icon" href="<?php echo e(asset('favicon.ico')); ?>">
-<link rel="icon" type="image/png" sizes="16x16" href="<?php echo e(asset('favicon-16x16.png')); ?>">
-<link rel="icon" type="image/png" sizes="32x32" href="<?php echo e(asset('favicon-32x32.png')); ?>">
-<link rel="icon" type="image/png" sizes="48x48" href="<?php echo e(asset('favicon-48x48.png')); ?>">
-<link rel="apple-touch-icon" sizes="180x180" href="<?php echo e(asset('apple-touch-icon.png')); ?>">
-<link rel="shortcut icon" href="<?php echo e(asset('favicon.ico')); ?>">
+<link rel="icon" type="image/x-icon" href="<?php echo e(asset('favicon.ico')); ?>?v=<?php echo e(filemtime(public_path('favicon.ico'))); ?>">
+<link rel="icon" type="image/png" sizes="16x16" href="<?php echo e(asset('favicon-16x16.png')); ?>?v=<?php echo e(filemtime(public_path('favicon-16x16.png'))); ?>">
+<link rel="icon" type="image/png" sizes="32x32" href="<?php echo e(asset('favicon-32x32.png')); ?>?v=<?php echo e(filemtime(public_path('favicon-32x32.png'))); ?>">
+<link rel="icon" type="image/png" sizes="48x48" href="<?php echo e(asset('favicon-48x48.png')); ?>?v=<?php echo e(filemtime(public_path('favicon-48x48.png'))); ?>">
+<link rel="apple-touch-icon" sizes="180x180" href="<?php echo e(asset('apple-touch-icon.png')); ?>?v=<?php echo e(filemtime(public_path('apple-touch-icon.png'))); ?>">
+<link rel="shortcut icon" href="<?php echo e(asset('favicon.ico')); ?>?v=<?php echo e(filemtime(public_path('favicon.ico'))); ?>">
 
 <!-- Web App Manifest -->
 <link rel="manifest" href="<?php echo e(asset('site.webmanifest')); ?>">

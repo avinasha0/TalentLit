@@ -108,10 +108,15 @@
         
         <!-- Bottom Footer -->
         <div class="border-t border-gray-800 pt-8">
-            <div class="flex flex-col md:flex-row justify-between items-center">
-                <p class="text-gray-400 text-sm mb-4 md:mb-0">
+            <div class="text-center mb-6">
+                <p class="text-gray-400 text-sm mb-2">
                     © <?php echo e(date('Y')); ?> TalentLit. All rights reserved.
                 </p>
+                <p class="text-gray-500 text-sm">
+                    Proudly Developed by <a href="https://digitalxbrand.com/" target="_blank" rel="noopener noreferrer" class="text-gray-400 hover:text-white transition-colors underline">DigitalXbrand</a>
+                </p>
+            </div>
+            <div class="flex justify-center">
                 <div class="flex space-x-6">
                     <a href="<?php echo e(route('privacy-policy')); ?>" class="text-gray-400 hover:text-white transition-colors text-sm">Privacy Policy</a>
                     <a href="/terms-of-service.html" class="text-gray-400 hover:text-white transition-colors text-sm">Terms of Service</a>

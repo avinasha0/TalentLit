@@ -447,8 +447,8 @@ Route::middleware(['capture.tenant', 'tenant', 'auth'])->group(function () {
         
         // Candidate Tags Routes
         Route::get('/{tenant}/tags.json', [CandidateTagController::class, 'index'])->name('tenant.tags.index');
-        Route::post('/{tenant}/candidates/{candidate}/tags', [CandidateTagController::class, 'store'])->name('tenant.candidates.tags.store');
-        Route::delete('/{tenant}/candidates/{candidate}/tags/{tag}', [CandidateTagController::class, 'destroy'])->name('tenant.candidates.tags.destroy');
+        Route::post('/{tenant}/candidates/{candidate}/tags', [CandidateTagController::class, 'store'])->whereUuid('candidate')->name('tenant.candidates.tags.store');
+        Route::delete('/{tenant}/candidates/{candidate}/tags/{tag}', [CandidateTagController::class, 'destroy'])->whereUuid('candidate')->name('tenant.candidates.tags.destroy');
         
         // Candidate Resume Routes
         Route::post('/{tenant}/candidates/{candidate}/resumes', [CandidateController::class, 'storeResume'])->whereUuid('candidate')->name('tenant.candidates.resumes.store');

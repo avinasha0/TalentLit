@@ -501,10 +501,16 @@
                                             </div>
                                         </div>
                                         <div class="ml-4 flex space-x-2">
-                                            <a href="{{ route('tenant.jobs.show', ['tenant' => $tenantSlug, 'job' => $application->jobOpening]) }}" 
-                                               class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                                                View Job
-                                            </a>
+                                            @if($application->jobOpening)
+                                                <a href="{{ route('tenant.jobs.show', ['tenant' => $tenantSlug, 'job' => $application->jobOpening->id]) }}" 
+                                                   class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                                    View Job
+                                                </a>
+                                            @else
+                                                <span class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-400 bg-gray-100 cursor-not-allowed">
+                                                    Job Not Available
+                                                </span>
+                                            @endif
                                         </div>
                                     </div>
                                 </div>

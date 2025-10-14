@@ -1,3 +1,11 @@
+@php
+    // Ensure tenant is an object, not a string
+    $tenant = $tenant ?? tenant();
+    if (is_string($tenant)) {
+        $tenant = \App\Models\Tenant::where('slug', $tenant)->first();
+    }
+@endphp
+
 {{-- Simple Mobile Overlay --}}
 <div data-mobile-overlay class="fixed inset-0 bg-black bg-opacity-50 hidden lg:hidden"></div>
 
@@ -14,7 +22,7 @@
 
     {{-- Navigation - Scrollable --}}
     <nav class="flex-1 overflow-y-auto p-4">
-        @if($tenant)
+        @if($tenant && is_object($tenant))
         <div class="space-y-2">
             <a href="{{ route('tenant.dashboard', ['tenant' => $tenant->slug ?? tenant()->slug]) }}" class="block py-2 text-gray-700 hover:text-blue-600">Dashboard</a>
             
@@ -48,7 +56,11 @@
             </div>
 
             @if(request()->route('job'))
-            <a href="{{ route('tenant.jobs.pipeline', [$tenant->slug ?? tenant()->slug, request()->route('job')->id]) }}" class="block py-2 text-gray-700 hover:text-blue-600">Pipeline</a>
+            @php
+                $jobParam = request()->route('job');
+                $jobId = is_object($jobParam) ? $jobParam->id : $jobParam;
+            @endphp
+            <a href="{{ route('tenant.jobs.pipeline', [$tenant->slug ?? tenant()->slug, $jobId]) }}" class="block py-2 text-gray-700 hover:text-blue-600">Pipeline</a>
             @endif
 
             <a href="{{ route('tenant.interviews.index', ['tenant' => $tenant->slug ?? tenant()->slug]) }}" class="block py-2 text-gray-700 hover:text-blue-600">Interviews</a>
@@ -79,6 +91,13 @@
                 </div>
             </div>
             @endcustomCan
+        </div>
+        @else
+        <!-- Fallback when tenant is not available -->
+        <div class="text-center py-8">
+            <div class="text-gray-400 text-sm">
+                <p>Unable to load navigation</p>
+            </div>
         </div>
         @endif
     </nav>

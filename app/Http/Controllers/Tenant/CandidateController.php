@@ -14,12 +14,30 @@ class CandidateController extends Controller
 {
     public function index(Request $request, string $tenant, $job = null)
     {
-        $query = Candidate::with(['tags', 'applications.jobOpening']);
+        // Get tenant context
+        $tenantModel = tenant();
+        if (!$tenantModel) {
+            abort(404, 'Tenant not found');
+        }
+        
+        $query = Candidate::where('tenant_id', $tenantModel->id)
+            ->with(['tags', 'applications.jobOpening']);
         
         // Filter by job if job parameter is provided
         if ($job) {
-            $query->whereHas('applications', function ($q) use ($job) {
-                $q->where('job_opening_id', $job);
+            $jobId = (int) $job; // Ensure job parameter is cast to integer
+            
+            // Verify the job exists and belongs to the tenant
+            $jobExists = \App\Models\JobOpening::where('id', $jobId)
+                ->where('tenant_id', $tenantModel->id)
+                ->exists();
+                
+            if (!$jobExists) {
+                abort(404, 'Job not found');
+            }
+            
+            $query->whereHas('applications', function ($q) use ($jobId) {
+                $q->where('job_opening_id', $jobId);
             });
         }
 
@@ -85,15 +103,13 @@ class CandidateController extends Controller
             ]);
         }
 
-        $tenant = tenant();
-        
         // Get subscription limit information
-        $currentPlan = $tenant->currentPlan();
-        $currentCandidateCount = $tenant->candidates()->count();
+        $currentPlan = $tenantModel->currentPlan();
+        $currentCandidateCount = $tenantModel->candidates()->count();
         $maxCandidates = $currentPlan ? $currentPlan->max_candidates : 0;
         $canAddCandidates = $maxCandidates === -1 || $currentCandidateCount < $maxCandidates;
 
-        return view('tenant.candidates.index', compact('candidates', 'sources', 'tags', 'tenant', 'currentCandidateCount', 'maxCandidates', 'canAddCandidates'));
+        return view('tenant.candidates.index', compact('candidates', 'sources', 'tags', 'tenantModel', 'currentCandidateCount', 'maxCandidates', 'canAddCandidates'));
     }
 
     public function show(string $tenant, Candidate $candidate)

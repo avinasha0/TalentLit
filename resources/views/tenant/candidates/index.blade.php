@@ -1,5 +1,5 @@
 @php
-    $tenant = tenant();
+    $tenant = $tenantModel ?? tenant();
     $tenantSlug = $tenant->slug;
     $isJobFiltered = request()->route('job') !== null;
     $jobTitle = $isJobFiltered ? \App\Models\JobOpening::find(request()->route('job'))?->title : null;

@@ -1,5 +1,11 @@
 @php
     $tenant = tenant() ?? $tenant ?? null;
+    
+    // Ensure tenant is an object, not a string
+    if (is_string($tenant)) {
+        $tenant = \App\Models\Tenant::where('slug', $tenant)->first();
+    }
+    
     $branding = $tenant ? $tenant->branding : null;
     $currentRoute = request()->route() ? request()->route()->getName() : '';
     $isDashboard = $currentRoute === 'tenant.dashboard';
@@ -66,7 +72,7 @@ class="fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 text-white transform lg:tran
 
         <!-- Navigation -->
         <nav class="flex-1 px-4 py-4 space-y-2 overflow-y-auto">
-            @if($tenant)
+            @if($tenant && is_object($tenant))
             <!-- Dashboard -->
     <a href="{{ route('tenant.dashboard', $tenant->slug) }}"
                class="flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors duration-200 {{ $isDashboard ? 'bg-purple-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">
@@ -139,7 +145,11 @@ class="fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 text-white transform lg:tran
 
             <!-- Pipeline (contextual - only show if inside a job) -->
             @if(request()->route('job'))
-            <a href="{{ route('tenant.jobs.pipeline', [$tenant->slug, request()->route('job')->id]) }}" 
+            @php
+                $jobParam = request()->route('job');
+                $jobId = is_object($jobParam) ? $jobParam->id : $jobParam;
+            @endphp
+            <a href="{{ route('tenant.jobs.pipeline', [$tenant->slug, $jobId]) }}" 
                class="flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors duration-200 {{ str_starts_with($currentRoute, 'tenant.jobs.pipeline') ? 'bg-purple-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">
                 <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
@@ -240,6 +250,16 @@ class="fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 text-white transform lg:tran
                 </div>
             </div>
             @endcustomCan
+            @else
+            <!-- Fallback when tenant is not available -->
+            <div class="text-center py-8">
+                <div class="text-gray-400 text-sm">
+                    <svg class="w-8 h-8 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                    </svg>
+                    <p>Unable to load navigation</p>
+                </div>
+            </div>
             @endif
   </nav>
 

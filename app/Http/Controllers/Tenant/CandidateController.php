@@ -114,8 +114,14 @@ class CandidateController extends Controller
 
     public function show(string $tenant, Candidate $candidate)
     {
+        // Get tenant context
+        $tenantModel = tenant();
+        if (!$tenantModel) {
+            abort(404, 'Tenant not found');
+        }
+        
         // Ensure candidate belongs to current tenant
-        if ($candidate->tenant_id !== tenant_id()) {
+        if ($candidate->tenant_id !== $tenantModel->id) {
             abort(404, 'Candidate not found in this tenant');
         }
 
@@ -139,8 +145,7 @@ class CandidateController extends Controller
             }
         ]);
 
-        $tenant = tenant();
-        return view('tenant.candidates.show', compact('candidate', 'tenant'));
+        return view('tenant.candidates.show', compact('candidate', 'tenantModel'));
     }
 
     public function edit(string $tenant, Candidate $candidate)

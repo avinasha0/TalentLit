@@ -1,5 +1,5 @@
 @php
-    $tenant = tenant();
+    $tenant = $tenantModel ?? tenant();
     $tenantSlug = $tenant->slug;
     $breadcrumbs = [
         ['label' => 'Dashboard', 'url' => route('tenant.dashboard', $tenantSlug)],

@@ -28,7 +28,7 @@
         <!-- Page header -->
         <div class="flex items-center justify-between">
             <div>
-                <h1 class="text-2xl font-bold text-white">
+                <h1 class="text-2xl font-bold text-black">
                     @if($isJobFiltered && $jobTitle)
                         Applications for {{ $jobTitle }}
                     @else
@@ -65,7 +65,7 @@
                         </x-button>
                     @else
                         <button onclick="showCandidateLimitReached()"
-                                class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gray-400 cursor-not-allowed opacity-75">
+                                class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-gray-600 bg-gray-400 cursor-not-allowed opacity-75">
                             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                             </svg>
@@ -127,7 +127,7 @@
 
         <!-- Results header -->
         <div class="flex items-center justify-between">
-            <h2 class="text-lg font-medium text-white">
+            <h2 class="text-lg font-medium text-black">
                 Showing {{ $candidates->total() }} candidates
             </h2>
         </div>
@@ -150,7 +150,7 @@
                                         </div>
                                     </div>
                                     <div class="flex-1 min-w-0">
-                                        <h4 class="text-lg font-medium text-white truncate">
+                                        <h4 class="text-lg font-medium text-black truncate">
                                             {{ $candidate->full_name }}
                                         </h4>
                                         @if($candidate->primary_phone)
@@ -223,7 +223,7 @@
                                             </div>
                                         </div>
                                         <div class="ml-4">
-                                            <div class="text-sm font-medium text-white">
+                                            <div class="text-sm font-medium text-black">
                                                 {{ $candidate->full_name }}
                                             </div>
                                             @if($candidate->primary_phone)
@@ -234,7 +234,7 @@
                                         </div>
                                     </div>
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-white">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-black">
                                     {{ $candidate->primary_email }}
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">

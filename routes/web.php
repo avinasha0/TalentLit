@@ -437,13 +437,13 @@ Route::middleware(['capture.tenant', 'tenant', 'auth'])->group(function () {
     Route::middleware('custom.permission:view_candidates')->group(function () {
         Route::get('/{tenant}/candidates', [CandidateController::class, 'index'])->name('tenant.candidates.index');
         Route::get('/{tenant}/candidates/job/{job}', [CandidateController::class, 'index'])->name('tenant.candidates.index.job');
-        Route::get('/{tenant}/candidates/{candidate}', [CandidateController::class, 'show'])->whereNumber('candidate')->name('tenant.candidates.show');
-        Route::get('/{tenant}/candidates/{candidate}/edit', [CandidateController::class, 'edit'])->whereNumber('candidate')->name('tenant.candidates.edit');
-        Route::put('/{tenant}/candidates/{candidate}', [CandidateController::class, 'update'])->whereNumber('candidate')->name('tenant.candidates.update');
+        Route::get('/{tenant}/candidates/{candidate}', [CandidateController::class, 'show'])->whereUuid('candidate')->name('tenant.candidates.show');
+        Route::get('/{tenant}/candidates/{candidate}/edit', [CandidateController::class, 'edit'])->whereUuid('candidate')->name('tenant.candidates.edit');
+        Route::put('/{tenant}/candidates/{candidate}', [CandidateController::class, 'update'])->whereUuid('candidate')->name('tenant.candidates.update');
         
         // Candidate Notes Routes
-        Route::post('/{tenant}/candidates/{candidate}/notes', [CandidateNoteController::class, 'store'])->whereNumber('candidate')->name('tenant.candidates.notes.store');
-        Route::delete('/{tenant}/candidates/{candidate}/notes/{note}', [CandidateNoteController::class, 'destroy'])->whereNumber('candidate')->name('tenant.candidates.notes.destroy');
+        Route::post('/{tenant}/candidates/{candidate}/notes', [CandidateNoteController::class, 'store'])->whereUuid('candidate')->name('tenant.candidates.notes.store');
+        Route::delete('/{tenant}/candidates/{candidate}/notes/{note}', [CandidateNoteController::class, 'destroy'])->whereUuid('candidate')->name('tenant.candidates.notes.destroy');
         
         // Candidate Tags Routes
         Route::get('/{tenant}/tags.json', [CandidateTagController::class, 'index'])->name('tenant.tags.index');
@@ -451,8 +451,8 @@ Route::middleware(['capture.tenant', 'tenant', 'auth'])->group(function () {
         Route::delete('/{tenant}/candidates/{candidate}/tags/{tag}', [CandidateTagController::class, 'destroy'])->name('tenant.candidates.tags.destroy');
         
         // Candidate Resume Routes
-        Route::post('/{tenant}/candidates/{candidate}/resumes', [CandidateController::class, 'storeResume'])->whereNumber('candidate')->name('tenant.candidates.resumes.store');
-        Route::delete('/{tenant}/candidates/{candidate}/resumes/{resume}', [CandidateController::class, 'destroyResume'])->whereNumber('candidate')->name('tenant.candidates.resumes.destroy');
+        Route::post('/{tenant}/candidates/{candidate}/resumes', [CandidateController::class, 'storeResume'])->whereUuid('candidate')->name('tenant.candidates.resumes.store');
+        Route::delete('/{tenant}/candidates/{candidate}/resumes/{resume}', [CandidateController::class, 'destroyResume'])->whereUuid('candidate')->name('tenant.candidates.resumes.destroy');
     });
 
     // Candidate Import Routes - Owner, Admin, Recruiter

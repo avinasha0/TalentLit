@@ -209,6 +209,11 @@ class JobController extends Controller
 
     public function show(string $tenant, JobOpening $job)
     {
+        // Ensure the job belongs to the current tenant
+        if ($job->tenant_id !== tenant_id()) {
+            abort(404, 'Job not found');
+        }
+
         $job->load(['department', 'location', 'jobStages', 'applications.candidate']);
 
         return view('tenant.jobs.show', compact('job'));
@@ -216,6 +221,11 @@ class JobController extends Controller
 
     public function edit(string $tenant, JobOpening $job)
     {
+        // Ensure the job belongs to the current tenant
+        if ($job->tenant_id !== tenant_id()) {
+            abort(404, 'Job not found');
+        }
+
         Gate::authorize('update', $job);
         
         $departments = Department::orderBy('name')->get();
@@ -227,6 +237,11 @@ class JobController extends Controller
 
     public function update(Request $request, string $tenant, JobOpening $job)
     {
+        // Ensure the job belongs to the current tenant
+        if ($job->tenant_id !== tenant_id()) {
+            abort(404, 'Job not found');
+        }
+
         Gate::authorize('update', $job);
         
         $validated = $request->validate([
@@ -286,6 +301,11 @@ class JobController extends Controller
 
     public function publish(string $tenant, JobOpening $job)
     {
+        // Ensure the job belongs to the current tenant
+        if ($job->tenant_id !== tenant_id()) {
+            abort(404, 'Job not found');
+        }
+
         Gate::authorize('publish', $job);
         
         $job->update([
@@ -300,6 +320,11 @@ class JobController extends Controller
 
     public function close(string $tenant, JobOpening $job)
     {
+        // Ensure the job belongs to the current tenant
+        if ($job->tenant_id !== tenant_id()) {
+            abort(404, 'Job not found');
+        }
+
         Gate::authorize('close', $job);
         
         $job->update([
@@ -313,6 +338,11 @@ class JobController extends Controller
 
     public function destroy(string $tenant, JobOpening $job)
     {
+        // Ensure the job belongs to the current tenant
+        if ($job->tenant_id !== tenant_id()) {
+            abort(404, 'Job not found');
+        }
+
         Gate::authorize('delete', $job);
         
         $job->delete();

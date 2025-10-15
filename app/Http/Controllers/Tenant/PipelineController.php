@@ -21,6 +21,11 @@ class PipelineController extends Controller
     use AuthorizesRequests;
     public function index(Request $request, $tenant, JobOpening $job)
     {
+        // Ensure the job belongs to the current tenant
+        if ($job->tenant_id !== tenant_id()) {
+            abort(404, 'Job not found');
+        }
+
         $this->authorize('view', $job);
 
         // Get job stages ordered by sort_order
@@ -64,6 +69,11 @@ class PipelineController extends Controller
 
     public function json(Request $request, $tenant, JobOpening $job)
     {
+        // Ensure the job belongs to the current tenant
+        if ($job->tenant_id !== tenant_id()) {
+            abort(404, 'Job not found');
+        }
+
         $this->authorize('view', $job);
 
         // Get job stages ordered by sort_order
@@ -95,6 +105,11 @@ class PipelineController extends Controller
 
     public function move(Request $request, $tenant, JobOpening $job)
     {
+        // Ensure the job belongs to the current tenant
+        if ($job->tenant_id !== tenant_id()) {
+            abort(404, 'Job not found');
+        }
+
         // Resolve tenant from slug
         $tenantModel = \App\Models\Tenant::where('slug', $tenant)->firstOrFail();
 

@@ -121,7 +121,7 @@ class JobController extends Controller
         
         $departments = Department::orderBy('name')->get();
         $locations = Location::orderBy('name')->get();
-        $employmentTypes = ['full_time', 'part_time', 'contract', 'internship'];
+        $employmentTypes = ['full_time', 'part_time', 'contract', 'intern'];
 
         return view('tenant.jobs.create', compact('departments', 'locations', 'employmentTypes'));
     }
@@ -163,7 +163,7 @@ class JobController extends Controller
             ],
             'department_id' => 'nullable|exists:departments,id',
             'location_id' => 'nullable|exists:locations,id',
-            'employment_type' => 'required|in:full_time,part_time,contract,internship',
+            'employment_type' => 'required|in:full_time,part_time,contract,intern',
             'status' => 'required|in:draft,published,closed',
             'openings_count' => 'required|integer|min:1',
             'description' => 'required|string',
@@ -209,6 +209,11 @@ class JobController extends Controller
 
     public function show(string $tenant, JobOpening $job)
     {
+        // Ensure the job belongs to the current tenant
+        if ($job->tenant_id !== tenant_id()) {
+            abort(404, 'Job not found');
+        }
+
         $job->load(['department', 'location', 'jobStages', 'applications.candidate']);
 
         return view('tenant.jobs.show', compact('job'));
@@ -216,17 +221,27 @@ class JobController extends Controller
 
     public function edit(string $tenant, JobOpening $job)
     {
+        // Ensure the job belongs to the current tenant
+        if ($job->tenant_id !== tenant_id()) {
+            abort(404, 'Job not found');
+        }
+
         Gate::authorize('update', $job);
         
         $departments = Department::orderBy('name')->get();
         $locations = Location::orderBy('name')->get();
-        $employmentTypes = ['full_time', 'part_time', 'contract', 'internship'];
+        $employmentTypes = ['full_time', 'part_time', 'contract', 'intern'];
 
         return view('tenant.jobs.edit', compact('job', 'departments', 'locations', 'employmentTypes'));
     }
 
     public function update(Request $request, string $tenant, JobOpening $job)
     {
+        // Ensure the job belongs to the current tenant
+        if ($job->tenant_id !== tenant_id()) {
+            abort(404, 'Job not found');
+        }
+
         Gate::authorize('update', $job);
         
         $validated = $request->validate([
@@ -241,7 +256,7 @@ class JobController extends Controller
             ],
             'department_id' => 'nullable|exists:departments,id',
             'location_id' => 'nullable|exists:locations,id',
-            'employment_type' => 'required|in:full_time,part_time,contract,internship',
+            'employment_type' => 'required|in:full_time,part_time,contract,intern',
             'status' => 'required|in:draft,published,closed',
             'openings_count' => 'required|integer|min:1',
             'description' => 'required|string',
@@ -286,6 +301,11 @@ class JobController extends Controller
 
     public function publish(string $tenant, JobOpening $job)
     {
+        // Ensure the job belongs to the current tenant
+        if ($job->tenant_id !== tenant_id()) {
+            abort(404, 'Job not found');
+        }
+
         Gate::authorize('publish', $job);
         
         $job->update([
@@ -300,6 +320,11 @@ class JobController extends Controller
 
     public function close(string $tenant, JobOpening $job)
     {
+        // Ensure the job belongs to the current tenant
+        if ($job->tenant_id !== tenant_id()) {
+            abort(404, 'Job not found');
+        }
+
         Gate::authorize('close', $job);
         
         $job->update([
@@ -313,6 +338,11 @@ class JobController extends Controller
 
     public function destroy(string $tenant, JobOpening $job)
     {
+        // Ensure the job belongs to the current tenant
+        if ($job->tenant_id !== tenant_id()) {
+            abort(404, 'Job not found');
+        }
+
         Gate::authorize('delete', $job);
         
         $job->delete();

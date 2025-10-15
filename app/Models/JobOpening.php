@@ -52,16 +52,9 @@ class JobOpening extends Model
     {
         // Check if this is a UUID (for tenant routes) or slug (for career routes)
         if (preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $value)) {
-            // UUID - find by ID within current tenant context
-            $query = $this->where('id', $value);
-            
-            // Add tenant filter if tenant context is available
-            $tenant = tenant();
-            if ($tenant) {
-                $query->where('tenant_id', $tenant->id);
-            }
-            
-            return $query->first();
+            // UUID - find by ID, but don't filter by tenant here since tenant context
+            // might not be available during route model binding. Let the controller handle tenant validation.
+            return $this->where('id', $value)->first();
         } else {
             // Slug - find by slug (let controller handle tenant validation)
             return $this->where('slug', $value)->first();

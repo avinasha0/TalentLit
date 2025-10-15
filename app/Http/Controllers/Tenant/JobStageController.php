@@ -12,6 +12,11 @@ class JobStageController extends Controller
 {
     public function index(string $tenant, JobOpening $job)
     {
+        // Ensure the job belongs to the current tenant
+        if ($job->tenant_id !== tenant_id()) {
+            abort(404, 'Job not found');
+        }
+
         $stages = $job->jobStages()->orderBy('sort_order')->get();
 
         if (request()->expectsJson()) {
@@ -33,6 +38,11 @@ class JobStageController extends Controller
 
     public function store(Request $request, string $tenant, JobOpening $job)
     {
+        // Ensure the job belongs to the current tenant
+        if ($job->tenant_id !== tenant_id()) {
+            abort(404, 'Job not found');
+        }
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'is_terminal' => 'boolean',
@@ -67,6 +77,11 @@ class JobStageController extends Controller
 
     public function update(Request $request, string $tenant, JobOpening $job, JobStage $stage)
     {
+        // Ensure the job belongs to the current tenant
+        if ($job->tenant_id !== tenant_id()) {
+            abort(404, 'Job not found');
+        }
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'is_terminal' => 'boolean',
@@ -96,6 +111,11 @@ class JobStageController extends Controller
 
     public function destroy(string $tenant, JobOpening $job, JobStage $stage)
     {
+        // Ensure the job belongs to the current tenant
+        if ($job->tenant_id !== tenant_id()) {
+            abort(404, 'Job not found');
+        }
+
         // Check if stage has applications
         if ($stage->applications()->count() > 0) {
             if (request()->expectsJson()) {
@@ -127,6 +147,11 @@ class JobStageController extends Controller
 
     public function reorder(Request $request, string $tenant, JobOpening $job)
     {
+        // Ensure the job belongs to the current tenant
+        if ($job->tenant_id !== tenant_id()) {
+            abort(404, 'Job not found');
+        }
+
         $validated = $request->validate([
             'stages' => 'required|array',
             'stages.*' => 'required|uuid|exists:job_stages,id',

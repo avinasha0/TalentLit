@@ -297,22 +297,6 @@
                         </a>
                     </x-auth.for>
 
-                    <x-auth.for permission="manage_email_templates">
-                        <a href="{{ route('tenant.email-templates.create', $tenant->slug) }}" 
-                           class="flex items-center p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
-                            <div class="flex-shrink-0">
-                                <div class="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center">
-                                    <svg class="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
-                                    </svg>
-                                </div>
-                            </div>
-                            <div class="ml-3">
-                                <p class="text-sm font-medium text-black">Create Email Template</p>
-                                <p class="text-sm text-black">Design communication templates</p>
-                            </div>
-                        </a>
-                    </x-auth.for>
 
                     <x-auth.for permission="manage_users">
                         <a href="{{ route('tenant.settings.team', $tenant->slug) }}" 

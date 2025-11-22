@@ -12,6 +12,9 @@ class CandidateTag extends Pivot
 
     protected $table = 'candidate_tags';
 
+    protected $keyType = 'string';
+    public $incrementing = false;
+
     protected $fillable = [
         'tenant_id',
         'candidate_id',

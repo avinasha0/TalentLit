@@ -5,8 +5,10 @@ namespace App\Http\Controllers\Tenant;
 use App\Http\Controllers\Controller;
 use App\Models\Candidate;
 use App\Models\Tag;
+use App\Models\CandidateTag;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class CandidateTagController extends Controller
 {
@@ -48,9 +50,21 @@ class CandidateTagController extends Controller
             ]
         );
 
+        // Check if tag is already attached to candidate
+        $exists = DB::table('candidate_tags')
+            ->where('tenant_id', tenant_id())
+            ->where('candidate_id', $candidate->id)
+            ->where('tag_id', $tag->id)
+            ->exists();
+
         // Attach tag to candidate if not already attached
-        if (!$candidate->tags()->where('candidate_tags.id', $tag->id)->exists()) {
-            $candidate->tags()->attach($tag->id, ['tenant_id' => tenant_id()]);
+        if (!$exists) {
+            // Use the pivot model directly to ensure UUID is generated
+            CandidateTag::create([
+                'tenant_id' => tenant_id(),
+                'candidate_id' => $candidate->id,
+                'tag_id' => $tag->id,
+            ]);
         }
 
         if ($request->expectsJson()) {

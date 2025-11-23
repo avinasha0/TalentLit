@@ -50,23 +50,84 @@ class RazorPayService
     public function createOrder(array $data): array
     {
         try {
+            Log::info('DEBUG: createOrder method called', [
+                'input_data' => $data,
+                'has_amount' => isset($data['amount']),
+                'amount' => $data['amount'] ?? 'N/A',
+                'has_currency' => isset($data['currency']),
+                'currency' => $data['currency'] ?? 'N/A',
+                'has_receipt' => isset($data['receipt']),
+                'razorpay_configured' => $this->isConfigured(),
+                'has_api' => !is_null($this->api),
+            ]);
+
+            // Validate required data
+            if (!isset($data['amount']) || $data['amount'] <= 0) {
+                Log::error('DEBUG: Invalid amount in order data', ['amount' => $data['amount'] ?? 'missing']);
+                throw new \Exception('Invalid order amount: ' . ($data['amount'] ?? 'missing'));
+            }
+
             $orderData = [
                 'amount' => $data['amount'] * 100, // Convert to paise
                 'currency' => $data['currency'] ?? config('razorpay.currency'),
-                'receipt' => substr($data['receipt'], 0, 40), // RazorPay receipt max 40 chars
+                'receipt' => substr($data['receipt'] ?? 'order_' . time(), 0, 40), // RazorPay receipt max 40 chars
                 'notes' => $data['notes'] ?? [],
                 'payment_capture' => 1, // Auto-capture payment (1 = auto, 0 = manual)
             ];
 
+            Log::info('DEBUG: Order data prepared', [
+                'order_data' => $orderData,
+                'order_data_json' => json_encode($orderData, JSON_PRETTY_PRINT),
+                'amount_in_paise' => $orderData['amount'],
+                'amount_in_rupees' => $orderData['amount'] / 100,
+            ]);
+
+            if (!$this->api) {
+                Log::error('DEBUG: Razorpay API not initialized');
+                throw new \Exception('Razorpay API not initialized. Check key_id and key_secret configuration.');
+            }
+
+            Log::info('DEBUG: Calling Razorpay API to create order');
             $order = $this->api->order->create($orderData);
+
+            Log::info('DEBUG: Razorpay order created successfully', [
+                'order_id' => $order['id'] ?? 'N/A',
+                'order_response' => json_encode($order, JSON_PRETTY_PRINT),
+            ]);
 
             return [
                 'success' => true,
                 'order' => $order,
                 'order_id' => $order['id'],
             ];
+        } catch (RazorpayError $apiError) {
+            $errorDetails = [
+                'error_code' => $apiError->getCode(),
+                'error_message' => $apiError->getMessage(),
+                'error_description' => method_exists($apiError, 'getDescription') ? $apiError->getDescription() : 'N/A',
+                'error_field' => method_exists($apiError, 'getField') ? $apiError->getField() : 'N/A',
+                'error_source' => method_exists($apiError, 'getSource') ? $apiError->getSource() : 'N/A',
+                'error_step' => method_exists($apiError, 'getStep') ? $apiError->getStep() : 'N/A',
+                'error_reason' => method_exists($apiError, 'getReason') ? $apiError->getReason() : 'N/A',
+                'input_data' => $data,
+            ];
+            
+            Log::error('DEBUG: Razorpay API Error during order creation', $errorDetails);
+            
+            return [
+                'success' => false,
+                'error' => $apiError->getMessage(),
+            ];
         } catch (\Exception $e) {
-            Log::error('RazorPay Order Creation Failed: ' . $e->getMessage());
+            Log::error('DEBUG: RazorPay Order Creation Failed', [
+                'error_type' => get_class($e),
+                'error_message' => $e->getMessage(),
+                'error_code' => $e->getCode(),
+                'error_file' => $e->getFile(),
+                'error_line' => $e->getLine(),
+                'error_trace' => $e->getTraceAsString(),
+                'input_data' => $data,
+            ]);
             
             return [
                 'success' => false,

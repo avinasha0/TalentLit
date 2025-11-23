@@ -54,6 +54,7 @@ class RazorPayService
                 'currency' => $data['currency'] ?? config('razorpay.currency'),
                 'receipt' => substr($data['receipt'], 0, 40), // RazorPay receipt max 40 chars
                 'notes' => $data['notes'] ?? [],
+                'payment_capture' => 1, // Auto-capture payment (1 = auto, 0 = manual)
             ];
 
             $order = $this->api->order->create($orderData);
@@ -79,22 +80,44 @@ class RazorPayService
     public function verifyPayment(array $attributes): array
     {
         try {
+            // Log verification attempt for debugging
+            Log::info('RazorPay Payment Verification Attempt', [
+                'order_id' => $attributes['razorpay_order_id'] ?? 'missing',
+                'payment_id' => $attributes['razorpay_payment_id'] ?? 'missing',
+                'signature_present' => isset($attributes['razorpay_signature']),
+            ]);
+            
             $this->api->utility->verifyPaymentSignature($attributes);
+            
+            Log::info('RazorPay Payment Verification Success', [
+                'payment_id' => $attributes['razorpay_payment_id'] ?? 'missing',
+            ]);
             
             return [
                 'success' => true,
                 'verified' => true,
             ];
         } catch (SignatureVerificationError $e) {
-            Log::error('RazorPay Payment Verification Failed: ' . $e->getMessage());
+            Log::error('RazorPay Payment Verification Failed: ' . $e->getMessage(), [
+                'order_id' => $attributes['razorpay_order_id'] ?? 'missing',
+                'payment_id' => $attributes['razorpay_payment_id'] ?? 'missing',
+                'error_details' => [
+                    'message' => $e->getMessage(),
+                    'code' => $e->getCode() ?? 'N/A',
+                ],
+            ]);
             
             return [
                 'success' => false,
                 'verified' => false,
-                'error' => 'Payment verification failed',
+                'error' => 'Payment verification failed: ' . $e->getMessage(),
             ];
         } catch (\Exception $e) {
-            Log::error('RazorPay Payment Verification Error: ' . $e->getMessage());
+            Log::error('RazorPay Payment Verification Error: ' . $e->getMessage(), [
+                'order_id' => $attributes['razorpay_order_id'] ?? 'missing',
+                'payment_id' => $attributes['razorpay_payment_id'] ?? 'missing',
+                'error_type' => get_class($e),
+            ]);
             
             return [
                 'success' => false,
@@ -111,9 +134,29 @@ class RazorPayService
     {
         try {
             $payment = $this->api->payment->fetch($paymentId);
+            
+            // Check if payment is already captured
+            if (isset($payment['status']) && $payment['status'] === 'captured') {
+                Log::info('Payment already captured', [
+                    'payment_id' => $paymentId,
+                    'status' => $payment['status'],
+                ]);
+                
+                return [
+                    'success' => true,
+                    'payment' => $payment,
+                ];
+            }
+            
+            // Capture the payment
             $captured = $payment->capture([
                 'amount' => $amount * 100, // Convert to paise
                 'currency' => config('razorpay.currency'),
+            ]);
+
+            Log::info('Payment captured successfully', [
+                'payment_id' => $paymentId,
+                'amount' => $amount,
             ]);
 
             return [
@@ -121,7 +164,11 @@ class RazorPayService
                 'payment' => $captured,
             ];
         } catch (\Exception $e) {
-            Log::error('RazorPay Payment Capture Failed: ' . $e->getMessage());
+            Log::error('RazorPay Payment Capture Failed: ' . $e->getMessage(), [
+                'payment_id' => $paymentId,
+                'amount' => $amount,
+                'error_type' => get_class($e),
+            ]);
             
             return [
                 'success' => false,

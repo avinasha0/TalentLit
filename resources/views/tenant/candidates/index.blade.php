@@ -126,7 +126,7 @@
         </x-card>
 
         <!-- Results header -->
-        <div class="flex items-center justify-between">
+        <div class="flex items-center justify-between bg-white lg:bg-transparent px-4 lg:px-0 py-3 lg:py-0">
             <h2 class="text-lg font-medium text-black">
                 Showing {{ $candidates->total() }} candidates
             </h2>
@@ -134,10 +134,10 @@
 
         @if($candidates->count() > 0)
             <!-- Mobile: Horizontal scroll container -->
-            <div class="block lg:hidden overflow-x-auto">
+            <div class="block lg:hidden overflow-x-auto bg-white">
                 <div class="min-w-full">
                     @foreach($candidates as $candidate)
-                        <div class="border-b border-gray-200 dark:border-gray-700 p-4 min-w-[320px]">
+                        <div class="bg-white border-b border-gray-200 dark:border-gray-700 p-4 min-w-[320px]">
                             <!-- Mobile Candidate Card -->
                             <div class="space-y-3">
                                 <!-- Candidate Header -->
@@ -154,7 +154,7 @@
                                             {{ $candidate->full_name }}
                                         </h4>
                                         @if($candidate->primary_phone)
-                                            <div class="text-sm text-gray-400 truncate">
+                                            <div class="text-sm text-gray-600 truncate">
                                                 {{ $candidate->primary_phone }}
                                             </div>
                                         @endif
@@ -163,11 +163,11 @@
                                 
                                 <!-- Candidate Details -->
                                 <div class="space-y-2">
-                                    <div class="flex items-center text-sm text-gray-300">
-                                        <svg class="w-4 h-4 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <div class="flex items-center text-sm text-black">
+                                        <svg class="w-4 h-4 mr-2 flex-shrink-0 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207"></path>
                                         </svg>
-                                        <span class="truncate">{{ $candidate->primary_email }}</span>
+                                        <span class="truncate text-black">{{ $candidate->primary_email }}</span>
                                     </div>
                                     
                                     <div class="flex items-center justify-between">
@@ -176,17 +176,17 @@
                                                 {{ $candidate->source }}
                                             </span>
                                         @else
-                                            <span class="text-sm text-gray-400">No source</span>
+                                            <span class="text-sm text-gray-600">No source</span>
                                         @endif
                                         
-                                        <div class="text-xs text-gray-400">
+                                        <div class="text-xs text-gray-600">
                                             {{ $candidate->updated_at->diffForHumans() }}
                                         </div>
                                     </div>
                                 </div>
                                 
                                 <!-- Action Button -->
-                                <div class="flex items-center justify-end pt-2 border-t border-gray-100">
+                                <div class="flex items-center justify-end pt-2 border-t border-gray-200">
                                     <a href="{{ route('tenant.candidates.show', ['tenant' => $tenant->slug, 'candidate' => $candidate->id]) }}" 
                                        class="text-blue-600 hover:text-blue-800 text-sm font-medium">
                                         View Details

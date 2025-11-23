@@ -33,7 +33,7 @@ class JobOpeningFactory extends Factory
             'slug' => Str::slug($title.'-'.$this->faker->unique()->numerify('###')),
             'department_id' => Department::factory(),
             'location_id' => Location::factory(),
-            'employment_type' => $this->faker->randomElement(['full_time', 'part_time', 'contract', 'intern']),
+            'employment_type' => $this->faker->randomElement(['full_time', 'part_time', 'contract', 'intern', 'freelancer']),
             'status' => $this->faker->randomElement(['draft', 'published', 'closed']),
             'openings_count' => $this->faker->numberBetween(1, 5),
             'description' => $this->faker->paragraphs(5, true),

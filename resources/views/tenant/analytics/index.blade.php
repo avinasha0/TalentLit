@@ -13,34 +13,39 @@
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <!-- Filter Bar -->
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg mb-6">
-                <div class="p-6">
-                    <div class="flex flex-wrap items-end gap-4">
-                        <div class="flex-1 min-w-0">
+                <div class="p-4 sm:p-6">
+                    <div class="flex flex-col lg:flex-row lg:flex-wrap lg:items-end gap-4">
+                        <div class="flex-1 min-w-0 lg:min-w-[200px]">
                             <label for="date-from" class="block text-sm font-medium text-gray-700 mb-1">From Date</label>
                             <input type="date" id="date-from" name="from" 
                                    value="{{ now()->subDays(90)->format('Y-m-d') }}"
                                    class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
                         </div>
-                        <div class="flex-1 min-w-0">
+                        <div class="flex-1 min-w-0 lg:min-w-[200px]">
                             <label for="date-to" class="block text-sm font-medium text-gray-700 mb-1">To Date</label>
                             <input type="date" id="date-to" name="to" 
                                    value="{{ now()->format('Y-m-d') }}"
                                    class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
                         </div>
-                        <div class="flex gap-2">
-                            <button type="button" class="preset-btn px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200" data-days="30">30D</button>
-                            <button type="button" class="preset-btn px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200" data-days="90">90D</button>
-                            <button type="button" class="preset-btn px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200" data-days="ytd">YTD</button>
-                            <button type="button" class="preset-btn px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200" data-days="all">ALL</button>
+                        <div class="lg:flex-shrink-0">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Quick Filters</label>
+                            <div class="flex flex-wrap gap-2">
+                                <button type="button" class="preset-btn px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200" data-days="30">30D</button>
+                                <button type="button" class="preset-btn px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200" data-days="90">90D</button>
+                                <button type="button" class="preset-btn px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200" data-days="ytd">YTD</button>
+                                <button type="button" class="preset-btn px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200" data-days="all">ALL</button>
+                            </div>
                         </div>
-                        <button type="button" id="apply-filters" 
-                                class="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                            Apply Filters
-                        </button>
-                        <a href="#" id="export-data" 
-                           class="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
-                            Export CSV
-                        </a>
+                        <div class="flex flex-col sm:flex-row gap-2 lg:flex-shrink-0">
+                            <button type="button" id="apply-filters" 
+                                    class="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 whitespace-nowrap">
+                                Apply Filters
+                            </button>
+                            <a href="#" id="export-data" 
+                               class="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 text-center whitespace-nowrap flex items-center justify-center">
+                                Export CSV
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>

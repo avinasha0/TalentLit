@@ -452,6 +452,14 @@ function showNotification(message, type = 'info') {
 // Payment functionality
 async function initiatePayment(planId, planName, amount, currency) {
     try {
+        // Ensure Razorpay script is loaded
+        await loadRazorPayScript();
+        
+        if (!window.Razorpay) {
+            showNotification('Payment gateway is not available. Please refresh the page and try again.', 'error');
+            return;
+        }
+        
         // Show loading state
         showNotification('Creating payment order...', 'info');
         
@@ -560,22 +568,6 @@ async function initiatePayment(planId, planName, amount, currency) {
             theme: {
                 color: '#4f46e5'
             },
-        };
-        
-        // Add subscription_id for recurring payments or order_id for one-time payments
-        if (isSubscription && subscriptionId) {
-            options.subscription_id = subscriptionId;
-            console.log('DEBUG: Using subscription checkout', { subscriptionId });
-        } else if (!isSubscription && orderId) {
-            options.amount = data.amount * 100; // Convert to paise
-            options.currency = data.currency;
-            options.order_id = orderId;
-            console.log('DEBUG: Using one-time payment checkout', { orderId });
-        } else {
-            console.error('Missing subscription_id or order_id', { isSubscription, subscriptionId, orderId });
-            showNotification('Payment configuration error. Please try again.', 'error');
-            return;
-        }
             handler: function(response) {
                 // Log full response for debugging
                 console.log('Razorpay payment handler called with response:', response);
@@ -657,6 +649,21 @@ async function initiatePayment(planId, planName, amount, currency) {
                 }
             }
         };
+        
+        // Add subscription_id for recurring payments or order_id for one-time payments
+        if (isSubscription && subscriptionId) {
+            options.subscription_id = subscriptionId;
+            console.log('DEBUG: Using subscription checkout', { subscriptionId });
+        } else if (!isSubscription && orderId) {
+            options.amount = data.amount * 100; // Convert to paise
+            options.currency = data.currency;
+            options.order_id = orderId;
+            console.log('DEBUG: Using one-time payment checkout', { orderId });
+        } else {
+            console.error('Missing subscription_id or order_id', { isSubscription, subscriptionId, orderId });
+            showNotification('Payment configuration error. Please try again.', 'error');
+            return;
+        }
         
         // Open RazorPay checkout
         try {

@@ -1,14 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    @php
+    <?php
         $seoTitle = 'Pricing Plans — TalentLit ATS';
         $seoDescription = 'Choose the perfect TalentLit plan for your team. Simple, transparent pricing with no hidden fees. Start free and scale as you grow.';
         $seoKeywords = 'TalentLit pricing, ATS pricing, recruitment software pricing, hiring software cost';
         $seoAuthor = 'TalentLit';
         $seoImage = asset('logo-talentlit-small.png');
-    @endphp
-    @include('layouts.partials.head')
+    ?>
+    <?php echo $__env->make('layouts.partials.head', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
@@ -19,7 +19,7 @@
             <div class="flex justify-between h-16">
                 <div class="flex items-center">
                     <a href="/" class="flex items-center space-x-2">
-                        <img src="{{ asset('logo-talentlit-small.png') }}" alt="TalentLit Logo" class="h-8">
+                        <img src="<?php echo e(asset('logo-talentlit-small.png')); ?>" alt="TalentLit Logo" class="h-8">
                     </a>
                 </div>
                 
@@ -41,16 +41,16 @@
                                 <div>
                                     <div class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Source</div>
                                     <div class="space-y-1">
-                                        <a href="{{ route('features.candidate-sourcing') }}" class="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-600 rounded-md transition-colors duration-200">
+                                        <a href="<?php echo e(route('features.candidate-sourcing')); ?>" class="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-600 rounded-md transition-colors duration-200">
                                             <div class="font-medium whitespace-nowrap">Candidate Sourcing</div>
                                         </a>
-                                        <a href="{{ route('features.career-site') }}" class="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-600 rounded-md transition-colors duration-200">
+                                        <a href="<?php echo e(route('features.career-site')); ?>" class="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-600 rounded-md transition-colors duration-200">
                                             <div class="font-medium whitespace-nowrap">Career Site</div>
                                         </a>
-                                        <a href="{{ route('features.job-advertising') }}" class="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-600 rounded-md transition-colors duration-200">
+                                        <a href="<?php echo e(route('features.job-advertising')); ?>" class="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-600 rounded-md transition-colors duration-200">
                                             <div class="font-medium whitespace-nowrap">Job Advertising</div>
                                         </a>
-                                        <a href="{{ route('features.employee-referral') }}" class="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-600 rounded-md transition-colors duration-200">
+                                        <a href="<?php echo e(route('features.employee-referral')); ?>" class="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-600 rounded-md transition-colors duration-200">
                                             <div class="font-medium whitespace-nowrap">Employee Referral</div>
                                         </a>
                                     </div>
@@ -60,16 +60,16 @@
                                 <div>
                                     <div class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Track</div>
                                     <div class="space-y-1">
-                                        <a href="{{ route('features.hiring-pipeline') }}" class="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-600 rounded-md transition-colors duration-200">
+                                        <a href="<?php echo e(route('features.hiring-pipeline')); ?>" class="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-600 rounded-md transition-colors duration-200">
                                             <div class="font-medium whitespace-nowrap">Hiring Pipeline</div>
                                         </a>
-                                        <a href="{{ route('features.resume-management') }}" class="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-600 rounded-md transition-colors duration-200">
+                                        <a href="<?php echo e(route('features.resume-management')); ?>" class="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-600 rounded-md transition-colors duration-200">
                                             <div class="font-medium whitespace-nowrap">Resume Management</div>
                                         </a>
-                                        <a href="{{ route('features.manage-submission') }}" class="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-600 rounded-md transition-colors duration-200">
+                                        <a href="<?php echo e(route('features.manage-submission')); ?>" class="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-600 rounded-md transition-colors duration-200">
                                             <div class="font-medium whitespace-nowrap">Manage Submission</div>
                                         </a>
-                                        <a href="{{ route('features.hiring-analytics') }}" class="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-600 rounded-md transition-colors duration-200">
+                                        <a href="<?php echo e(route('features.hiring-analytics')); ?>" class="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-600 rounded-md transition-colors duration-200">
                                             <div class="font-medium whitespace-nowrap">Hiring Analytics</div>
                                         </a>
                                     </div>
@@ -78,13 +78,13 @@
                         </div>
                     </div>
                     
-                    <a href="{{ route('subscription.pricing') }}" class="text-indigo-600 px-3 py-2 rounded-md text-sm font-medium">
+                    <a href="<?php echo e(route('subscription.pricing')); ?>" class="text-indigo-600 px-3 py-2 rounded-md text-sm font-medium">
                         Pricing
                     </a>
-                    <a href="{{ route('login') }}" class="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium">
+                    <a href="<?php echo e(route('login')); ?>" class="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium">
                         Sign In
                     </a>
-                    <a href="{{ route('register') }}" class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-lg">
+                    <a href="<?php echo e(route('register')); ?>" class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-lg">
                         Get Started Free
                     </a>
                 </div>
@@ -107,10 +107,10 @@
                     <div class="px-3 py-2">
                         <div class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Features</div>
                         <div class="space-y-1">
-                            <a href="{{ route('features.candidate-sourcing') }}" class="block px-3 py-2 text-base text-gray-700 hover:text-indigo-600 hover:bg-gray-50 rounded-md">
+                            <a href="<?php echo e(route('features.candidate-sourcing')); ?>" class="block px-3 py-2 text-base text-gray-700 hover:text-indigo-600 hover:bg-gray-50 rounded-md">
                                 Candidate Sourcing
                             </a>
-                            <a href="{{ route('features.hiring-pipeline') }}" class="block px-3 py-2 text-base text-gray-700 hover:text-indigo-600 hover:bg-gray-50 rounded-md">
+                            <a href="<?php echo e(route('features.hiring-pipeline')); ?>" class="block px-3 py-2 text-base text-gray-700 hover:text-indigo-600 hover:bg-gray-50 rounded-md">
                                 Hiring Pipeline
                             </a>
                         </div>
@@ -119,13 +119,13 @@
                     <div class="border-t border-gray-200"></div>
                     
                     <!-- Other Links -->
-                    <a href="{{ route('subscription.pricing') }}" class="block px-3 py-2 text-base text-indigo-600 bg-indigo-50 rounded-md">
+                    <a href="<?php echo e(route('subscription.pricing')); ?>" class="block px-3 py-2 text-base text-indigo-600 bg-indigo-50 rounded-md">
                         Pricing
                     </a>
-                    <a href="{{ route('login') }}" class="block px-3 py-2 text-base text-gray-700 hover:text-indigo-600 hover:bg-gray-50 rounded-md">
+                    <a href="<?php echo e(route('login')); ?>" class="block px-3 py-2 text-base text-gray-700 hover:text-indigo-600 hover:bg-gray-50 rounded-md">
                         Sign In
                     </a>
-                    <a href="{{ route('register') }}" class="block px-3 py-2 text-base bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 rounded-md">
+                    <a href="<?php echo e(route('register')); ?>" class="block px-3 py-2 text-base bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 rounded-md">
                         Get Started Free
                     </a>
                 </div>
@@ -181,40 +181,40 @@
 
         <!-- Pricing Cards -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-12 max-w-6xl mx-auto">
-            @foreach($plans as $plan)
-            <div class="relative bg-white rounded-3xl shadow-2xl border border-gray-200 overflow-hidden hover:shadow-3xl transition-all duration-300 {{ $plan->is_popular ? 'ring-4 ring-indigo-500 scale-105 z-10' : 'hover:scale-105' }}">
-                @if($plan->is_popular)
+            <?php $__currentLoopData = $plans; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $plan): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+            <div class="relative bg-white rounded-3xl shadow-2xl border border-gray-200 overflow-hidden hover:shadow-3xl transition-all duration-300 <?php echo e($plan->is_popular ? 'ring-4 ring-indigo-500 scale-105 z-10' : 'hover:scale-105'); ?>">
+                <?php if($plan->is_popular): ?>
                 <div class="absolute top-0 left-0 right-0 bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-center py-3 text-sm font-bold">
                     ⭐ Most Popular
                 </div>
-                @endif
+                <?php endif; ?>
 
-                <div class="p-8 {{ $plan->is_popular ? 'pt-16' : 'pt-8' }}">
+                <div class="p-8 <?php echo e($plan->is_popular ? 'pt-16' : 'pt-8'); ?>">
                     <!-- Plan Header -->
                     <div class="text-center mb-8">
-                        <div class="w-16 h-16 mx-auto mb-4 {{ $plan->is_popular ? 'bg-gradient-to-r from-indigo-600 to-purple-600' : 'bg-gradient-to-r from-gray-600 to-gray-700' }} rounded-2xl flex items-center justify-center">
-                            @if($plan->isFree())
+                        <div class="w-16 h-16 mx-auto mb-4 <?php echo e($plan->is_popular ? 'bg-gradient-to-r from-indigo-600 to-purple-600' : 'bg-gradient-to-r from-gray-600 to-gray-700'); ?> rounded-2xl flex items-center justify-center">
+                            <?php if($plan->isFree()): ?>
                                 <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
                                 </svg>
-                            @else
+                            <?php else: ?>
                                 <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
                                 </svg>
-                            @endif
+                            <?php endif; ?>
                         </div>
-                        <h3 class="text-2xl font-bold text-gray-900 mb-2">{{ $plan->name }}</h3>
-                        <p class="text-gray-600 mb-6">{{ $plan->description }}</p>
+                        <h3 class="text-2xl font-bold text-gray-900 mb-2"><?php echo e($plan->name); ?></h3>
+                        <p class="text-gray-600 mb-6"><?php echo e($plan->description); ?></p>
                         
                         <div class="mb-6">
-                            @if($plan->requiresContactForPricing())
+                            <?php if($plan->requiresContactForPricing()): ?>
                                 <span class="text-4xl font-bold text-gray-900">Contact for Pricing</span>
-                            @else
+                            <?php else: ?>
                                 <span class="text-6xl font-bold text-gray-900">
-                                    @subscriptionPrice($plan->price, $plan->currency)
+                                    <?php echo subscriptionPrice($plan->price, $plan->currency); ?>
                                 </span>
-                                <span class="text-gray-600 text-lg">/{{ $plan->billing_cycle }}</span>
-                            @endif
+                                <span class="text-gray-600 text-lg">/<?php echo e($plan->billing_cycle); ?></span>
+                            <?php endif; ?>
                         </div>
                     </div>
 
@@ -232,7 +232,7 @@
                                         </svg>
                                     </div>
                                     <span class="text-gray-700 font-medium">
-                                        {{ $plan->max_users == -1 ? 'Unlimited' : $plan->max_users }} Team Members
+                                        <?php echo e($plan->max_users == -1 ? 'Unlimited' : $plan->max_users); ?> Team Members
                                     </span>
                                 </div>
 
@@ -243,7 +243,7 @@
                                         </svg>
                                     </div>
                                     <span class="text-gray-700 font-medium">
-                                        {{ $plan->max_job_openings == -1 ? 'Unlimited' : $plan->max_job_openings }} Job Postings
+                                        <?php echo e($plan->max_job_openings == -1 ? 'Unlimited' : $plan->max_job_openings); ?> Job Postings
                                     </span>
                                 </div>
 
@@ -254,7 +254,7 @@
                                         </svg>
                                     </div>
                                     <span class="text-gray-700 font-medium">
-                                        {{ $plan->max_candidates == -1 ? 'Unlimited' : number_format($plan->max_candidates) }} Candidates
+                                        <?php echo e($plan->max_candidates == -1 ? 'Unlimited' : number_format($plan->max_candidates)); ?> Candidates
                                     </span>
                                 </div>
 
@@ -265,7 +265,7 @@
                                         </svg>
                                     </div>
                                     <span class="text-gray-700 font-medium">
-                                        {{ $plan->max_applications_per_month == -1 ? 'Unlimited' : number_format($plan->max_applications_per_month) }} Applications/Month
+                                        <?php echo e($plan->max_applications_per_month == -1 ? 'Unlimited' : number_format($plan->max_applications_per_month)); ?> Applications/Month
                                     </span>
                                 </div>
 
@@ -276,7 +276,7 @@
                                         </svg>
                                     </div>
                                     <span class="text-gray-700 font-medium">
-                                        {{ $plan->max_interviews_per_month == -1 ? 'Unlimited' : number_format($plan->max_interviews_per_month) }} Interviews/Month
+                                        <?php echo e($plan->max_interviews_per_month == -1 ? 'Unlimited' : number_format($plan->max_interviews_per_month)); ?> Interviews/Month
                                     </span>
                                 </div>
 
@@ -287,18 +287,18 @@
                                         </svg>
                                     </div>
                                     <span class="text-gray-700 font-medium">
-                                        {{ $plan->max_storage_gb }}GB File Storage
+                                        <?php echo e($plan->max_storage_gb); ?>GB File Storage
                                     </span>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Advanced Features -->
-                        @if($plan->analytics_enabled || $plan->custom_branding || $plan->api_access || $plan->priority_support || $plan->white_label)
+                        <?php if($plan->analytics_enabled || $plan->custom_branding || $plan->api_access || $plan->priority_support || $plan->white_label): ?>
                         <div>
                             <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Advanced Features</h4>
                             <div class="space-y-3">
-                                @if($plan->analytics_enabled)
+                                <?php if($plan->analytics_enabled): ?>
                                 <div class="flex items-center">
                                     <div class="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center mr-3">
                                         <svg class="w-3 h-3 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
@@ -307,9 +307,9 @@
                                     </div>
                                     <span class="text-gray-700 font-medium">Advanced Analytics & Reports</span>
                                 </div>
-                                @endif
+                                <?php endif; ?>
 
-                                @if($plan->custom_branding)
+                                <?php if($plan->custom_branding): ?>
                                 <div class="flex items-center">
                                     <div class="w-5 h-5 bg-purple-100 rounded-full flex items-center justify-center mr-3">
                                         <svg class="w-3 h-3 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
@@ -318,9 +318,9 @@
                                     </div>
                                     <span class="text-gray-700 font-medium">Custom Branding & White Label</span>
                                 </div>
-                                @endif
+                                <?php endif; ?>
 
-                                @if($plan->api_access)
+                                <?php if($plan->api_access): ?>
                                 <div class="flex items-center">
                                     <div class="w-5 h-5 bg-indigo-100 rounded-full flex items-center justify-center mr-3">
                                         <svg class="w-3 h-3 text-indigo-600" fill="currentColor" viewBox="0 0 20 20">
@@ -329,9 +329,9 @@
                                     </div>
                                     <span class="text-gray-700 font-medium">API Access & Integrations</span>
                                 </div>
-                                @endif
+                                <?php endif; ?>
 
-                                @if($plan->priority_support)
+                                <?php if($plan->priority_support): ?>
                                 <div class="flex items-center">
                                     <div class="w-5 h-5 bg-yellow-100 rounded-full flex items-center justify-center mr-3">
                                         <svg class="w-3 h-3 text-yellow-600" fill="currentColor" viewBox="0 0 20 20">
@@ -340,9 +340,9 @@
                                     </div>
                                     <span class="text-gray-700 font-medium">Priority Support</span>
                                 </div>
-                                @endif
+                                <?php endif; ?>
 
-                                @if($plan->white_label)
+                                <?php if($plan->white_label): ?>
                                 <div class="flex items-center">
                                     <div class="w-5 h-5 bg-pink-100 rounded-full flex items-center justify-center mr-3">
                                         <svg class="w-3 h-3 text-pink-600" fill="currentColor" viewBox="0 0 20 20">
@@ -351,35 +351,35 @@
                                     </div>
                                     <span class="text-gray-700 font-medium">White Label Solution</span>
                                 </div>
-                                @endif
+                                <?php endif; ?>
                             </div>
                         </div>
-                        @endif
+                        <?php endif; ?>
                     </div>
 
                     <!-- CTA Button -->
                     <div class="mt-auto">
-                        @if($plan->slug === 'pro')
-                            @if(config('razorpay.pro_plan_mode') === 'active' && config('razorpay.key_id'))
+                        <?php if($plan->slug === 'pro'): ?>
+                            <?php if(config('razorpay.pro_plan_mode') === 'active' && config('razorpay.key_id')): ?>
                                 <!-- Pro Plan - Payment Button -->
-                                @if(auth()->check())
-                                    @php
+                                <?php if(auth()->check()): ?>
+                                    <?php
                                         $user = auth()->user();
                                         $tenant = $user->tenants->first();
                                         $hasFreePlan = $tenant ? $tenant->hasFreePlan() : false;
-                                    @endphp
+                                    ?>
                                     
-                                    @if($tenant)
-                                        @if($hasFreePlan)
+                                    <?php if($tenant): ?>
+                                        <?php if($hasFreePlan): ?>
                                             <!-- User has Free plan, can upgrade to Pro -->
-                                            <button onclick="initiatePayment('{{ $plan->id }}', '{{ $plan->name }}', {{ $plan->price }}, '{{ $plan->currency }}')" 
+                                            <button onclick="initiatePayment('<?php echo e($plan->id); ?>', '<?php echo e($plan->name); ?>', <?php echo e($plan->price); ?>, '<?php echo e($plan->currency); ?>')" 
                                                     class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-4 px-6 rounded-xl transition-all duration-200 transform hover:-translate-y-1 shadow-lg hover:shadow-xl">
-                                                🔄 Upgrade to Pro - ₹{{ number_format($plan->price, 0) }}/month
+                                                🔄 Upgrade to Pro - ₹<?php echo e(number_format($plan->price, 0)); ?>/month
                                             </button>
                                             <p class="text-center text-sm text-gray-500 mt-3">
                                                 Upgrade from your Free plan
                                             </p>
-                                        @else
+                                        <?php else: ?>
                                             <!-- User doesn't have Free plan, need to start with Free first -->
                                             <div class="w-full bg-gray-100 text-gray-600 font-bold py-4 px-6 rounded-xl text-center">
                                                 📋 Start with Free Plan First
@@ -387,94 +387,94 @@
                                             <p class="text-center text-sm text-gray-500 mt-3">
                                                 Subscribe to Free plan to unlock Pro upgrade
                                             </p>
-                                        @endif
-                                    @else
+                                        <?php endif; ?>
+                                    <?php else: ?>
                                         <!-- User authenticated but no tenant, redirect to onboarding -->
-                                        <a href="{{ route('onboarding.organization') }}" 
+                                        <a href="<?php echo e(route('onboarding.organization')); ?>" 
                                            class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-4 px-6 rounded-xl transition-all duration-200 transform hover:-translate-y-1 block text-center shadow-lg hover:shadow-xl">
-                                            🚀 Get Started - ₹{{ number_format($plan->price, 0) }}/month
+                                            🚀 Get Started - ₹<?php echo e(number_format($plan->price, 0)); ?>/month
                                         </a>
                                         <p class="text-center text-sm text-gray-500 mt-3">
                                             Create your organization first
                                         </p>
-                                    @endif
-                                @else
+                                    <?php endif; ?>
+                                <?php else: ?>
                                     <!-- User not authenticated, redirect to register -->
-                                    <a href="{{ route('register') }}" 
+                                    <a href="<?php echo e(route('register')); ?>" 
                                        class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-4 px-6 rounded-xl transition-all duration-200 transform hover:-translate-y-1 block text-center shadow-lg hover:shadow-xl">
-                                        🚀 Get Started - ₹{{ number_format($plan->price, 0) }}/month
+                                        🚀 Get Started - ₹<?php echo e(number_format($plan->price, 0)); ?>/month
                                     </a>
                                     <p class="text-center text-sm text-gray-500 mt-3">
                                         Sign up to subscribe
                                     </p>
-                                @endif
-                            @else
+                                <?php endif; ?>
+                            <?php else: ?>
                                 <!-- Pro Plan - Waitlist Button -->
-                                @if(auth()->check())
-                                    <button onclick="openWaitlistModal('{{ $plan->slug }}')" 
+                                <?php if(auth()->check()): ?>
+                                    <button onclick="openWaitlistModal('<?php echo e($plan->slug); ?>')" 
                                             class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-4 px-6 rounded-xl transition-all duration-200 transform hover:-translate-y-1 shadow-lg hover:shadow-xl">
                                         📋 Join Waitlist
                                     </button>
                                     <p class="text-center text-sm text-gray-500 mt-3">
                                         Be the first to know when Pro plan launches
                                     </p>
-                                @else
-                                    <a href="{{ route('login') }}" 
+                                <?php else: ?>
+                                    <a href="<?php echo e(route('login')); ?>" 
                                        class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-4 px-6 rounded-xl transition-all duration-200 transform hover:-translate-y-1 block text-center shadow-lg hover:shadow-xl">
                                         ⚡ Get Started as Pro
                                     </a>
-                                @endif
-                            @endif
-                        @elseif($plan->requiresContactForPricing())
+                                <?php endif; ?>
+                            <?php endif; ?>
+                        <?php elseif($plan->requiresContactForPricing()): ?>
                             <!-- Enterprise Plan - Contact for Pricing -->
-                            <a href="{{ route('contact') }}" 
+                            <a href="<?php echo e(route('contact')); ?>" 
                                class="w-full bg-gradient-to-r from-gray-900 to-gray-800 hover:from-gray-800 hover:to-gray-700 text-white font-bold py-4 px-6 rounded-xl transition-all duration-200 transform hover:-translate-y-1 shadow-lg hover:shadow-xl block text-center">
                                 📞 Contact for Pricing
                             </a>
                             <p class="text-center text-sm text-gray-500 mt-3">
                                 Custom pricing for your organization
                             </p>
-                        @else
+                        <?php else: ?>
                             <!-- Free Plan - Regular CTA -->
-                            @if(auth()->check())
-                                @php
+                            <?php if(auth()->check()): ?>
+                                <?php
                                     $user = auth()->user();
                                     $tenant = $user->tenants->first();
-                                @endphp
+                                ?>
                                 
-                                @if($tenant)
+                                <?php if($tenant): ?>
                                     <!-- User has a tenant, can subscribe -->
-                                    <form method="POST" action="{{ route('subscription.subscribe', $tenant->slug) }}" class="w-full">
-                                        @csrf
-                                        <input type="hidden" name="plan_id" value="{{ $plan->id }}">
+                                    <form method="POST" action="<?php echo e(route('subscription.subscribe', $tenant->slug)); ?>" class="w-full">
+                                        <?php echo csrf_field(); ?>
+                                        <input type="hidden" name="plan_id" value="<?php echo e($plan->id); ?>">
                                         <button type="submit" 
                                                 class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-4 px-6 rounded-xl transition-all duration-200 transform hover:-translate-y-1 shadow-lg hover:shadow-xl">
                                             🚀 Get Started Free
                                         </button>
                                     </form>
-                                @else
+                                <?php else: ?>
                                     <!-- User authenticated but no tenant, redirect to onboarding -->
-                                    <a href="{{ route('onboarding.organization') }}" 
+                                    <a href="<?php echo e(route('onboarding.organization')); ?>" 
                                        class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-4 px-6 rounded-xl transition-all duration-200 transform hover:-translate-y-1 block text-center shadow-lg hover:shadow-xl">
                                         🚀 Get Started Free
                                     </a>
-                                @endif
-                            @else
+                                <?php endif; ?>
+                            <?php else: ?>
                                 <!-- User not authenticated, redirect to register -->
-                                <a href="{{ route('register') }}" 
+                                <a href="<?php echo e(route('register')); ?>" 
                                    class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-4 px-6 rounded-xl transition-all duration-200 transform hover:-translate-y-1 block text-center shadow-lg hover:shadow-xl">
                                     🚀 Get Started Free
                                 </a>
-                            @endif
+                            <?php endif; ?>
                             
                             <p class="text-center text-sm text-gray-500 mt-3">
                                 No credit card required
                             </p>
-                        @endif
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>
-            @endforeach
+            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
         </div>
     </div>
 </section>
@@ -701,11 +701,11 @@
             Start your free trial today and see the difference.
         </p>
         <div class="flex flex-col sm:flex-row gap-4 justify-center">
-            <a href="{{ route('register') }}" 
+            <a href="<?php echo e(route('register')); ?>" 
                class="inline-block bg-white text-indigo-600 px-8 py-4 rounded-lg text-lg font-semibold hover:bg-gray-50 transition-all duration-200 shadow-xl hover:shadow-2xl transform hover:-translate-y-1">
                 🚀 Get Started Free
             </a>
-            <a href="{{ route('contact') }}" 
+            <a href="<?php echo e(route('contact')); ?>" 
                class="inline-block border-2 border-white text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-white hover:text-indigo-600 transition-all duration-200">
                 📞 Contact Sales
             </a>
@@ -744,7 +744,7 @@
             <!-- Modal Body -->
             <div class="p-6">
                 <!-- User Info Display -->
-                @if(auth()->check())
+                <?php if(auth()->check()): ?>
                 <div class="mb-6 p-4 bg-gray-50 rounded-lg">
                     <div class="flex items-center space-x-3">
                         <div class="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
@@ -753,12 +753,12 @@
                             </svg>
                         </div>
                         <div>
-                            <p class="font-semibold text-gray-900">{{ auth()->user()->name }}</p>
-                            <p class="text-sm text-gray-600">{{ auth()->user()->email }}</p>
+                            <p class="font-semibold text-gray-900"><?php echo e(auth()->user()->name); ?></p>
+                            <p class="text-sm text-gray-600"><?php echo e(auth()->user()->email); ?></p>
                         </div>
                     </div>
                 </div>
-                @else
+                <?php else: ?>
                 <div class="mb-6 p-4 bg-red-50 rounded-lg border border-red-200">
                     <div class="flex items-center space-x-3">
                         <div class="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
@@ -772,12 +772,12 @@
                         </div>
                     </div>
                 </div>
-                @endif
+                <?php endif; ?>
 
                 <!-- Waitlist Form -->
-                @if(auth()->check())
-                <form id="waitlistForm" class="space-y-4" action="{{ route('waitlist.store') }}" method="POST">
-                    @csrf
+                <?php if(auth()->check()): ?>
+                <form id="waitlistForm" class="space-y-4" action="<?php echo e(route('waitlist.store')); ?>" method="POST">
+                    <?php echo csrf_field(); ?>
                     <input type="hidden" name="plan_slug" id="plan_slug_input" value="">
                     
                     <div>
@@ -810,9 +810,9 @@
                         </span>
                     </button>
                 </form>
-                @else
+                <?php else: ?>
                 <div class="text-center">
-                    <a href="{{ route('login') }}" 
+                    <a href="<?php echo e(route('login')); ?>" 
                        class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-200 transform hover:-translate-y-1 shadow-lg hover:shadow-xl inline-block">
                         🔐 Login to Join Waitlist
                     </a>
@@ -820,7 +820,7 @@
                         You need to be logged in to join our waitlist
                     </p>
                 </div>
-                @endif
+                <?php endif; ?>
 
                 <!-- Success Message -->
                 <div id="waitlistSuccess" class="hidden text-center">
@@ -951,7 +951,7 @@ document.getElementById('waitlistForm').addEventListener('submit', async functio
             throw new Error('CSRF token not found');
         }
         
-        const response = await fetch('{{ route("waitlist.store") }}', {
+        const response = await fetch('<?php echo e(route("waitlist.store")); ?>', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -1220,7 +1220,7 @@ async function initiatePayment(planId, planName, amount, currency) {
         showNotification('Creating payment order...', 'info');
         
         // Create payment order
-        const response = await fetch('{{ route("payment.create-order") }}', {
+        const response = await fetch('<?php echo e(route("payment.create-order")); ?>', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -1254,7 +1254,7 @@ async function initiatePayment(planId, planName, amount, currency) {
                 // Payment successful
                 const form = document.createElement('form');
                 form.method = 'GET';
-                form.action = '{{ route("payment.success") }}';
+                form.action = '<?php echo e(route("payment.success")); ?>';
                 
                 const paymentId = document.createElement('input');
                 paymentId.type = 'hidden';
@@ -1320,7 +1320,27 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
     <!-- Centralized Footer Component -->
-    <x-footer />
+    <?php if (isset($component)) { $__componentOriginal8a8716efb3c62a45938aca52e78e0322 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal8a8716efb3c62a45938aca52e78e0322 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.footer','data' => []] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('footer'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes([]); ?>
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal8a8716efb3c62a45938aca52e78e0322)): ?>
+<?php $attributes = $__attributesOriginal8a8716efb3c62a45938aca52e78e0322; ?>
+<?php unset($__attributesOriginal8a8716efb3c62a45938aca52e78e0322); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal8a8716efb3c62a45938aca52e78e0322)): ?>
+<?php $component = $__componentOriginal8a8716efb3c62a45938aca52e78e0322; ?>
+<?php unset($__componentOriginal8a8716efb3c62a45938aca52e78e0322); ?>
+<?php endif; ?>
 
 </body>
 </html>
+<?php /**PATH C:\xampp\htdocs\hirehub2\resources\views/subscription/pricing.blade.php ENDPATH**/ ?>

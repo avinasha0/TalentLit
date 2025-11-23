@@ -1,15 +1,43 @@
-@php
+<?php
     $tenant = tenant();
     $breadcrumbs = [
         ['label' => 'Dashboard', 'url' => route('tenant.dashboard', $tenant->slug)],
         ['label' => 'Subscription', 'url' => null]
     ];
-@endphp
+?>
 
-<x-app-layout :tenant="$tenant">
-    <x-slot name="breadcrumbs">
-        <x-breadcrumbs :items="$breadcrumbs" />
-    </x-slot>
+<?php if (isset($component)) { $__componentOriginal9ac128a9029c0e4701924bd2d73d7f54 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal9ac128a9029c0e4701924bd2d73d7f54 = $attributes; } ?>
+<?php $component = App\View\Components\AppLayout::resolve([] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('app-layout'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\App\View\Components\AppLayout::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['tenant' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($tenant)]); ?>
+     <?php $__env->slot('breadcrumbs', null, []); ?> 
+        <?php if (isset($component)) { $__componentOriginal360d002b1b676b6f84d43220f22129e2 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal360d002b1b676b6f84d43220f22129e2 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.breadcrumbs','data' => ['items' => $breadcrumbs]] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('breadcrumbs'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['items' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($breadcrumbs)]); ?>
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal360d002b1b676b6f84d43220f22129e2)): ?>
+<?php $attributes = $__attributesOriginal360d002b1b676b6f84d43220f22129e2; ?>
+<?php unset($__attributesOriginal360d002b1b676b6f84d43220f22129e2); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal360d002b1b676b6f84d43220f22129e2)): ?>
+<?php $component = $__componentOriginal360d002b1b676b6f84d43220f22129e2; ?>
+<?php unset($__componentOriginal360d002b1b676b6f84d43220f22129e2); ?>
+<?php endif; ?>
+     <?php $__env->endSlot(); ?>
 <div class="min-h-screen bg-gray-50 py-8">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <!-- Header -->
@@ -18,27 +46,27 @@
             <p class="mt-2 text-gray-600">Manage your subscription and view usage statistics.</p>
         </div>
 
-        @if(session('success'))
+        <?php if(session('success')): ?>
         <div class="mb-6 bg-green-50 border border-green-200 rounded-lg p-4">
             <div class="flex">
                 <svg class="w-5 h-5 text-green-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
                 </svg>
-                <p class="text-green-800">{{ session('success') }}</p>
+                <p class="text-green-800"><?php echo e(session('success')); ?></p>
             </div>
         </div>
-        @endif
+        <?php endif; ?>
 
-        @if(session('error'))
+        <?php if(session('error')): ?>
         <div class="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
             <div class="flex">
                 <svg class="w-5 h-5 text-red-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
                 </svg>
-                <p class="text-red-800">{{ session('error') }}</p>
+                <p class="text-red-800"><?php echo e(session('error')); ?></p>
             </div>
         </div>
-        @endif
+        <?php endif; ?>
 
         <!-- All Plans Overview -->
         <div class="mb-8">
@@ -47,32 +75,32 @@
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
-            @php
+            <?php
                 $allPlans = \App\Models\SubscriptionPlan::where('is_active', true)->orderBy('price', 'asc')->get();
                 $currentPlanSlug = $subscription ? $subscription->plan->slug : null;
-            @endphp
+            ?>
             
-            @foreach($allPlans as $planItem)
-            <div class="bg-white rounded-lg shadow-sm border-2 {{ $currentPlanSlug === $planItem->slug ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200' }} p-6 relative">
-                @if($currentPlanSlug === $planItem->slug)
+            <?php $__currentLoopData = $allPlans; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $planItem): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+            <div class="bg-white rounded-lg shadow-sm border-2 <?php echo e($currentPlanSlug === $planItem->slug ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200'); ?> p-6 relative">
+                <?php if($currentPlanSlug === $planItem->slug): ?>
                 <div class="absolute -top-3 left-1/2 transform -translate-x-1/2">
                     <span class="bg-indigo-600 text-white px-4 py-1 rounded-full text-sm font-semibold">Current Plan</span>
                 </div>
-                @endif
+                <?php endif; ?>
                 
                 <div class="text-center mb-6">
-                    <h3 class="text-xl font-bold {{ $currentPlanSlug === $planItem->slug ? 'text-indigo-900' : 'text-gray-900' }} mb-2">{{ $planItem->name }}</h3>
-                    <p class="text-gray-600 mb-4">{{ $planItem->description }}</p>
+                    <h3 class="text-xl font-bold <?php echo e($currentPlanSlug === $planItem->slug ? 'text-indigo-900' : 'text-gray-900'); ?> mb-2"><?php echo e($planItem->name); ?></h3>
+                    <p class="text-gray-600 mb-4"><?php echo e($planItem->description); ?></p>
                     
                     <div class="mb-4">
-                        @if($planItem->requiresContactForPricing())
+                        <?php if($planItem->requiresContactForPricing()): ?>
                             <span class="text-2xl font-bold text-gray-900">Contact for Pricing</span>
-                        @else
-                            <span class="text-3xl font-bold {{ $currentPlanSlug === $planItem->slug ? 'text-indigo-900' : 'text-gray-900' }}">
-                                @subscriptionPrice($planItem->price, $planItem->currency)
+                        <?php else: ?>
+                            <span class="text-3xl font-bold <?php echo e($currentPlanSlug === $planItem->slug ? 'text-indigo-900' : 'text-gray-900'); ?>">
+                                <?php echo subscriptionPrice($planItem->price, $planItem->currency); ?>
                             </span>
-                            <span class="text-gray-600">/{{ $planItem->billing_cycle }}</span>
-                        @endif
+                            <span class="text-gray-600">/<?php echo e($planItem->billing_cycle); ?></span>
+                        <?php endif; ?>
                     </div>
                 </div>
 
@@ -83,7 +111,7 @@
                             <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
                         </svg>
                         <span class="text-sm text-gray-700">
-                            {{ $planItem->max_users == -1 ? 'Unlimited' : $planItem->max_users }} Users
+                            <?php echo e($planItem->max_users == -1 ? 'Unlimited' : $planItem->max_users); ?> Users
                         </span>
                     </div>
                     
@@ -92,115 +120,117 @@
                             <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
                         </svg>
                         <span class="text-sm text-gray-700">
-                            {{ $planItem->max_job_openings == -1 ? 'Unlimited' : $planItem->max_job_openings }} Job Openings
+                            <?php echo e($planItem->max_job_openings == -1 ? 'Unlimited' : $planItem->max_job_openings); ?> Job Openings
                         </span>
                     </div>
                     
-                    @if($planItem->analytics_enabled)
+                    <?php if($planItem->analytics_enabled): ?>
                     <div class="flex items-center">
                         <svg class="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
                             <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
                         </svg>
                         <span class="text-sm text-gray-700">Advanced Analytics</span>
                     </div>
-                    @endif
+                    <?php endif; ?>
                     
-                    @if($planItem->custom_branding)
+                    <?php if($planItem->custom_branding): ?>
                     <div class="flex items-center">
                         <svg class="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
                             <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
                         </svg>
                         <span class="text-sm text-gray-700">Custom Branding</span>
                     </div>
-                    @endif
+                    <?php endif; ?>
                 </div>
 
                 <!-- Action Button -->
                 <div class="mt-auto">
-                    @if($currentPlanSlug === $planItem->slug)
+                    <?php if($currentPlanSlug === $planItem->slug): ?>
                         <div class="w-full bg-gray-100 text-gray-600 font-semibold py-3 px-6 rounded-lg text-center">
                             ✓ Current Plan
                         </div>
-                    @elseif($planItem->slug === 'free')
-                        <form method="POST" action="{{ route('subscription.subscribe', $tenant->slug) }}" class="w-full">
-                            @csrf
-                            <input type="hidden" name="plan_id" value="{{ $planItem->id }}">
+                    <?php elseif($planItem->slug === 'free'): ?>
+                        <form method="POST" action="<?php echo e(route('subscription.subscribe', $tenant->slug)); ?>" class="w-full">
+                            <?php echo csrf_field(); ?>
+                            <input type="hidden" name="plan_id" value="<?php echo e($planItem->id); ?>">
                             <button type="submit" 
                                     class="w-full bg-gray-900 hover:bg-gray-800 text-white font-semibold py-3 px-6 rounded-lg transition duration-200">
                                 Switch to Free
                             </button>
                         </form>
-                    @elseif($planItem->slug === 'pro')
-                        @if(config('razorpay.pro_plan_mode') === 'active' && config('razorpay.key_id'))
-                            @if($tenant->hasFreePlan())
-                                <button onclick="initiatePayment('{{ $planItem->id }}', '{{ $planItem->name }}', {{ $planItem->price }}, '{{ $planItem->currency }}')" 
+                    <?php elseif($planItem->slug === 'pro'): ?>
+                        <?php if(config('razorpay.pro_plan_mode') === 'active' && config('razorpay.key_id')): ?>
+                            <?php if($tenant->hasFreePlan()): ?>
+                                <button onclick="initiatePayment('<?php echo e($planItem->id); ?>', '<?php echo e($planItem->name); ?>', <?php echo e($planItem->price); ?>, '<?php echo e($planItem->currency); ?>')" 
                                         class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-200">
-                                    Upgrade to Pro - ₹{{ number_format($planItem->price, 0) }}/month
+                                    Upgrade to Pro - ₹<?php echo e(number_format($planItem->price, 0)); ?>/month
                                 </button>
-                            @else
+                            <?php else: ?>
                                 <div class="w-full bg-gray-100 text-gray-600 font-semibold py-3 px-6 rounded-lg text-center">
                                     Start with Free Plan First
                                 </div>
-                            @endif
-                        @else
+                            <?php endif; ?>
+                        <?php else: ?>
                             <button onclick="openWaitlistModal('pro')" 
                                     class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-200">
                                 Upgrade To Pro
                             </button>
-                        @endif
-                    @elseif($planItem->slug === 'enterprise')
-                        <a href="{{ route('contact') }}" 
+                        <?php endif; ?>
+                    <?php elseif($planItem->slug === 'enterprise'): ?>
+                        <a href="<?php echo e(route('contact')); ?>" 
                            class="w-full bg-gradient-to-r from-gray-900 to-gray-800 hover:from-gray-800 hover:to-gray-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-200 text-center block">
                             Contact for Pricing
                         </a>
-                    @endif
+                    <?php endif; ?>
                 </div>
             </div>
-            @endforeach
+            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
         </div>
 
         <!-- Usage Statistics -->
-        @if($usage)
+        <?php if($usage): ?>
         <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <h2 class="text-xl font-semibold text-gray-900 mb-6">Usage Statistics</h2>
                     
                     <div class="space-y-6">
-                        @foreach($usage as $key => $stat)
+                        <?php $__currentLoopData = $usage; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $key => $stat): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                         <div>
                             <div class="flex justify-between items-center mb-2">
                                 <span class="text-sm font-medium text-gray-700 capitalize">
-                                    {{ str_replace('_', ' ', $key) }}
+                                    <?php echo e(str_replace('_', ' ', $key)); ?>
+
                                 </span>
                                 <span class="text-sm text-gray-500">
-                                    {{ $stat['current'] }} / {{ $stat['limit'] == -1 ? '∞' : $stat['limit'] }}
+                                    <?php echo e($stat['current']); ?> / <?php echo e($stat['limit'] == -1 ? '∞' : $stat['limit']); ?>
+
                                 </span>
                             </div>
                             
-                            @if($stat['limit'] != -1)
+                            <?php if($stat['limit'] != -1): ?>
                             <div class="w-full bg-gray-200 rounded-full h-2">
-                                @php
+                                <?php
                                     $percentage = min(100, ($stat['current'] / $stat['limit']) * 100);
-                                @endphp
+                                ?>
                                 <div class="bg-indigo-600 h-2 rounded-full transition-all duration-300" 
-                                     style="width: {{ $percentage }}%"></div>
+                                     style="width: <?php echo e($percentage); ?>%"></div>
                             </div>
                             
-                            @if($stat['remaining'] <= 0)
+                            <?php if($stat['remaining'] <= 0): ?>
                             <p class="text-xs text-red-600 mt-1">Limit reached</p>
-                            @elseif($stat['remaining'] <= 2)
-                            <p class="text-xs text-yellow-600 mt-1">{{ $stat['remaining'] }} remaining</p>
-                            @endif
-                            @else
+                            <?php elseif($stat['remaining'] <= 2): ?>
+                            <p class="text-xs text-yellow-600 mt-1"><?php echo e($stat['remaining']); ?> remaining</p>
+                            <?php endif; ?>
+                            <?php else: ?>
                             <div class="w-full bg-gray-200 rounded-full h-2">
                                 <div class="bg-green-600 h-2 rounded-full" style="width: 100%"></div>
                             </div>
-                            @endif
+                            <?php endif; ?>
                         </div>
-                        @endforeach
+                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                     </div>
                 </div>
             </div>
-            @endif
+            <?php endif; ?>
         </div>
     </div>
 </div>
@@ -242,15 +272,15 @@
                             </svg>
                         </div>
                         <div>
-                            <p class="font-semibold text-gray-900">{{ auth()->user()->name }}</p>
-                            <p class="text-sm text-gray-600">{{ auth()->user()->email }}</p>
+                            <p class="font-semibold text-gray-900"><?php echo e(auth()->user()->name); ?></p>
+                            <p class="text-sm text-gray-600"><?php echo e(auth()->user()->email); ?></p>
                         </div>
                     </div>
                 </div>
 
                 <!-- Waitlist Form -->
-                <form id="waitlistForm" class="space-y-4" action="{{ route('waitlist.store') }}" method="POST">
-                    @csrf
+                <form id="waitlistForm" class="space-y-4" action="<?php echo e(route('waitlist.store')); ?>" method="POST">
+                    <?php echo csrf_field(); ?>
                     <input type="hidden" name="plan_slug" id="plan_slug_input" value="">
                     
                     <div>
@@ -363,7 +393,7 @@ document.getElementById('waitlistForm').addEventListener('submit', async functio
     btnLoading.classList.remove('hidden');
     
     console.log('Submitting waitlist data:', data);
-    console.log('Route URL:', '{{ route("waitlist.store") }}');
+    console.log('Route URL:', '<?php echo e(route("waitlist.store")); ?>');
     
     try {
         const csrfToken = document.querySelector('meta[name="csrf-token"]');
@@ -371,7 +401,7 @@ document.getElementById('waitlistForm').addEventListener('submit', async functio
             throw new Error('CSRF token not found');
         }
         
-        const response = await fetch('{{ route("waitlist.store") }}', {
+        const response = await fetch('<?php echo e(route("waitlist.store")); ?>', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -450,7 +480,7 @@ async function initiatePayment(planId, planName, amount, currency) {
         showNotification('Creating payment order...', 'info');
         
         // Create payment order
-        const response = await fetch('{{ route("payment.create-order") }}', {
+        const response = await fetch('<?php echo e(route("payment.create-order")); ?>', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -484,7 +514,7 @@ async function initiatePayment(planId, planName, amount, currency) {
                 // Payment successful
                 const form = document.createElement('form');
                 form.method = 'GET';
-                form.action = '{{ route("payment.success") }}';
+                form.action = '<?php echo e(route("payment.success")); ?>';
                 
                 const paymentId = document.createElement('input');
                 paymentId.type = 'hidden';
@@ -548,4 +578,14 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
-</x-app-layout>
+ <?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal9ac128a9029c0e4701924bd2d73d7f54)): ?>
+<?php $attributes = $__attributesOriginal9ac128a9029c0e4701924bd2d73d7f54; ?>
+<?php unset($__attributesOriginal9ac128a9029c0e4701924bd2d73d7f54); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal9ac128a9029c0e4701924bd2d73d7f54)): ?>
+<?php $component = $__componentOriginal9ac128a9029c0e4701924bd2d73d7f54; ?>
+<?php unset($__componentOriginal9ac128a9029c0e4701924bd2d73d7f54); ?>
+<?php endif; ?>
+<?php /**PATH C:\xampp\htdocs\hirehub2\resources\views/subscription/show.blade.php ENDPATH**/ ?>

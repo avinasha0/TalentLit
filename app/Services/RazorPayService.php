@@ -312,9 +312,17 @@ class RazorPayService
             Log::info('DEBUG: Fetching existing Razorpay plans');
             $plans = $this->api->plan->all(['count' => 100]);
             
+            // Convert Razorpay Collection to array if needed
+            if (is_object($plans)) {
+                $plans = json_decode(json_encode($plans), true);
+            }
+            
             Log::info('DEBUG: Razorpay plans fetched', [
+                'plans_type' => gettype($plans),
+                'is_array' => is_array($plans),
                 'total_plans' => count($plans['items'] ?? []),
-                'plans_structure' => array_keys($plans),
+                'plans_structure' => is_array($plans) ? array_keys($plans) : 'not_array',
+                'has_items' => isset($plans['items']),
             ]);
             
             // Look for existing plan with matching amount
@@ -324,7 +332,23 @@ class RazorPayService
                 'search_currency' => strtoupper($plan->currency),
             ]);
 
-            foreach ($plans['items'] ?? [] as $index => $razorpayPlan) {
+            // Ensure plans['items'] is an array
+            $planItems = [];
+            if (isset($plans['items'])) {
+                if (is_array($plans['items'])) {
+                    $planItems = $plans['items'];
+                } elseif (is_object($plans['items'])) {
+                    // Convert object to array
+                    $planItems = json_decode(json_encode($plans['items']), true);
+                }
+            }
+
+            foreach ($planItems as $index => $razorpayPlan) {
+                // Convert plan to array if it's an object
+                if (is_object($razorpayPlan)) {
+                    $razorpayPlan = json_decode(json_encode($razorpayPlan), true);
+                }
+                
                 Log::info('DEBUG: Checking plan ' . $index, [
                     'razorpay_plan_id' => $razorpayPlan['id'] ?? 'N/A',
                     'razorpay_amount' => $razorpayPlan['amount'] ?? 'N/A',
@@ -335,8 +359,11 @@ class RazorPayService
                     'matches_interval' => ($razorpayPlan['interval'] ?? 0) == 1,
                 ]);
 
-                if ($razorpayPlan['amount'] == $planAmount && 
+                if (isset($razorpayPlan['amount']) && 
+                    $razorpayPlan['amount'] == $planAmount && 
+                    isset($razorpayPlan['currency']) &&
                     $razorpayPlan['currency'] == strtoupper($plan->currency) &&
+                    isset($razorpayPlan['interval']) &&
                     $razorpayPlan['interval'] == 1) { // Monthly
                     Log::info('DEBUG: Found existing Razorpay plan', [
                         'plan_id' => $razorpayPlan['id'],

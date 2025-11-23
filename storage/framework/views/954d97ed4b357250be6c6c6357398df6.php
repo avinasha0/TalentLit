@@ -495,40 +495,157 @@ async function initiatePayment(planId, planName, amount, currency) {
             })
         });
         
+        // DEBUG: Check response status first
+        if (!response.ok) {
+            console.error('DEBUG: HTTP error response', {
+                status: response.status,
+                statusText: response.statusText,
+                url: response.url
+            });
+            const errorData = await response.json().catch(() => ({}));
+            console.error('DEBUG: Error response data:', errorData);
+            showNotification(errorData.message || 'Failed to create payment order', 'error');
+            return;
+        }
+        
         const data = await response.json();
         
+        // DEBUG: Log full response structure
+        console.log('DEBUG: Payment creation response received', {
+            success: data.success,
+            has_order: !!data.order,
+            has_order_id: !!data.order_id,
+            has_subscription: !!data.subscription,
+            has_subscription_id: !!data.subscription_id,
+            order_type: typeof data.order,
+            subscription_type: typeof data.subscription,
+            all_response_keys: Object.keys(data),
+            full_response: JSON.stringify(data, null, 2)
+        });
+        
         if (!data.success) {
+            console.error('DEBUG: Order creation failed', data);
             showNotification(data.message || 'Failed to create payment order', 'error');
             return;
         }
         
-        // Store order_id for fallback
-        const orderIdFromOrder = data.order.id;
+        // DEBUG: Check if this is a subscription (recurring) or one-time payment
+        const isSubscription = !!(data.subscription && data.subscription.id);
+        let subscriptionId = null;
+        let orderId = null;
+        
+        if (isSubscription) {
+            // Extract subscription ID
+            subscriptionId = data.subscription.id || data.subscription_id;
+            console.log('DEBUG: Subscription payment detected', { subscriptionId });
+        } else {
+            // Extract order ID for one-time payment
+            if (data.order) {
+                console.log('DEBUG: Checking data.order structure', {
+                    order_type: typeof data.order,
+                    order_is_array: Array.isArray(data.order),
+                    order_keys: Object.keys(data.order),
+                    order_id_direct: data.order.id,
+                    order_id_bracket: data.order['id'],
+                    order_order_id: data.order.order_id
+                });
+                
+                orderId = data.order.id || data.order.order_id || data.order['id'];
+            }
+            
+            if (!orderId && data.order_id) {
+                console.log('DEBUG: Using root level order_id', data.order_id);
+                orderId = data.order_id;
+            }
+            
+            if (!orderId) {
+                console.error('DEBUG: Order ID extraction failed', {
+                    data_order: data.order,
+                    data_order_id: data.order_id,
+                    data_order_type: typeof data.order,
+                    all_keys: Object.keys(data),
+                    full_response: JSON.stringify(data, null, 2)
+                });
+                showNotification('Invalid order data. Check browser console (F12) for details.', 'error');
+                return;
+            }
+            
+            console.log('DEBUG: Order ID extracted successfully', orderId);
+        }
+        
+        if (!data.key_id) {
+            console.error('Razorpay key_id missing:', data);
+            showNotification('Payment gateway configuration error. Please contact support.', 'error');
+            return;
+        }
         
         // Configure RazorPay options
         const options = {
             key: data.key_id,
-            amount: data.amount * 100, // Convert to paise
-            currency: data.currency,
             name: data.name,
             description: data.description,
-            order_id: orderIdFromOrder,
-            prefill: data.prefill,
+            prefill: data.prefill || {},
             theme: {
                 color: '#4f46e5'
             },
+        };
+        
+        // Add subscription_id for recurring payments or order_id for one-time payments
+        if (isSubscription && subscriptionId) {
+            options.subscription_id = subscriptionId;
+            console.log('DEBUG: Using subscription checkout', { subscriptionId });
+        } else if (!isSubscription && orderId) {
+            options.amount = data.amount * 100; // Convert to paise
+            options.currency = data.currency;
+            options.order_id = orderId;
+            console.log('DEBUG: Using one-time payment checkout', { orderId });
+        } else {
+            console.error('Missing subscription_id or order_id', { isSubscription, subscriptionId, orderId });
+            showNotification('Payment configuration error. Please try again.', 'error');
+            return;
+        }
             handler: function(response) {
-                // Payment successful
-                // Use response order_id or fallback to original order_id
-                const orderId = response.razorpay_order_id || orderIdFromOrder;
+                // Log full response for debugging
+                console.log('Razorpay payment handler called with response:', response);
                 
-                // Validate required fields
-                if (!response.razorpay_payment_id || !response.razorpay_signature || !orderId) {
-                    console.error('Missing payment details in Razorpay response:', response);
-                    showNotification('Payment details incomplete. Please contact support.', 'error');
+                // Payment successful - validate response
+                if (!response || typeof response !== 'object') {
+                    console.error('Invalid Razorpay response:', response);
+                    showNotification('Invalid payment response. Please try again.', 'error');
                     return;
                 }
                 
+                // For subscriptions, get subscription_id; for one-time, get order_id
+                const responseSubscriptionId = response.razorpay_subscription_id || (isSubscription ? subscriptionId : null);
+                const responseOrderId = response.razorpay_order_id || (!isSubscription ? orderId : null);
+                
+                // Validate critical fields with detailed error messages
+                if (!response.razorpay_payment_id) {
+                    console.error('Missing payment_id in Razorpay response:', response);
+                    showNotification('Payment ID is missing. Please contact support.', 'error');
+                    return;
+                }
+                
+                if (!response.razorpay_signature) {
+                    console.error('Missing signature in Razorpay response:', response);
+                    showNotification('Payment signature is missing. Please contact support with Payment ID: ' + response.razorpay_payment_id, 'error');
+                    return;
+                }
+                
+                // Validate subscription_id or order_id based on payment type
+                if (isSubscription && !responseSubscriptionId) {
+                    console.error('Subscription ID is missing:', { response, subscriptionId });
+                    showNotification('Subscription ID is missing. Please contact support with Payment ID: ' + response.razorpay_payment_id, 'error');
+                    return;
+                }
+                
+                if (!isSubscription && !responseOrderId) {
+                    console.error('Order ID is missing:', { response, orderId });
+                    showNotification('Order ID is missing. Please contact support with Payment ID: ' + response.razorpay_payment_id, 'error');
+                    return;
+                }
+                
+                // All validations passed, proceed with form submission
                 const form = document.createElement('form');
                 form.method = 'GET';
                 form.action = '<?php echo e(route("payment.success")); ?>';
@@ -539,11 +656,19 @@ async function initiatePayment(planId, planName, amount, currency) {
                 paymentId.value = response.razorpay_payment_id;
                 form.appendChild(paymentId);
                 
-                const orderIdInput = document.createElement('input');
-                orderIdInput.type = 'hidden';
-                orderIdInput.name = 'razorpay_order_id';
-                orderIdInput.value = orderId;
-                form.appendChild(orderIdInput);
+                if (isSubscription && responseSubscriptionId) {
+                    const subscriptionIdInput = document.createElement('input');
+                    subscriptionIdInput.type = 'hidden';
+                    subscriptionIdInput.name = 'razorpay_subscription_id';
+                    subscriptionIdInput.value = responseSubscriptionId;
+                    form.appendChild(subscriptionIdInput);
+                } else if (!isSubscription && responseOrderId) {
+                    const orderIdInput = document.createElement('input');
+                    orderIdInput.type = 'hidden';
+                    orderIdInput.name = 'razorpay_order_id';
+                    orderIdInput.value = responseOrderId;
+                    form.appendChild(orderIdInput);
+                }
                 
                 const signature = document.createElement('input');
                 signature.type = 'hidden';
@@ -562,8 +687,21 @@ async function initiatePayment(planId, planName, amount, currency) {
         };
         
         // Open RazorPay checkout
-        const rzp = new Razorpay(options);
-        rzp.open();
+        try {
+            const rzp = new Razorpay(options);
+            
+            // Add error handler for payment failures
+            rzp.on('payment.failed', function(response) {
+                console.error('Razorpay payment failed:', response);
+                const errorMessage = response.error?.description || response.error?.reason || 'Payment failed. Please try again.';
+                showNotification('Payment failed: ' + errorMessage, 'error');
+            });
+            
+            rzp.open();
+        } catch (error) {
+            console.error('Error opening Razorpay checkout:', error);
+            showNotification('Failed to open payment gateway. Please try again.', 'error');
+        }
         
     } catch (error) {
         console.error('Payment error:', error);

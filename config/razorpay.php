@@ -65,7 +65,8 @@ return [
         'payment.captured',
         'payment.failed',
         'order.paid',
-        'subscription.charged',
-        'subscription.cancelled',
+        'invoice.paid', // Recurring subscription payment - sent when subscription invoice is paid
+        'invoice.partially_paid', // Subscription payment partially completed
+        'invoice.expired', // Subscription invoice expired (payment failed or not completed)
     ],
 ];

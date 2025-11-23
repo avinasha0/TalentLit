@@ -73,11 +73,29 @@ class PaymentController extends Controller
             ], 400);
         }
 
-        // Create order
-        $orderData = [
-            'amount' => $plan->price,
-            'currency' => $plan->currency,
-            'receipt' => 'TL_' . substr($tenant->id, 0, 8) . '_' . time(),
+        // Create or get Razorpay Plan for recurring subscription
+        $planResult = $this->razorPayService->createOrGetPlan($plan);
+        
+        if (!$planResult['success']) {
+            Log::error('Razorpay plan creation/get failed', [
+                'user_id' => $user->id,
+                'tenant_id' => $tenant->id,
+                'plan_id' => $plan->id,
+                'error' => $planResult['error'] ?? 'Unknown error',
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to create payment plan',
+                'error' => $planResult['error'],
+            ], 500);
+        }
+        
+        $razorpayPlanId = $planResult['plan_id'];
+        
+        // Create Razorpay Subscription for recurring payments
+        $subscriptionData = [
+            'plan_id' => $razorpayPlanId,
             'notes' => [
                 'tenant_id' => $tenant->id,
                 'user_id' => $user->id,
@@ -85,75 +103,45 @@ class PaymentController extends Controller
                 'plan_name' => $plan->name,
             ],
         ];
+        
+        $subscriptionResult = $this->razorPayService->createSubscription($subscriptionData);
 
-        $orderResult = $this->razorPayService->createOrder($orderData);
-
-        // DEBUG: Log the raw order result
-        Log::info('DEBUG: RazorPay createOrder result', [
-            'success' => $orderResult['success'] ?? 'missing',
-            'has_order' => isset($orderResult['order']),
-            'has_order_id' => isset($orderResult['order_id']),
-            'order_type' => isset($orderResult['order']) ? gettype($orderResult['order']) : 'N/A',
-            'order_class' => isset($orderResult['order']) && is_object($orderResult['order']) ? get_class($orderResult['order']) : 'N/A',
-            'order_keys' => isset($orderResult['order']) && is_array($orderResult['order']) ? array_keys($orderResult['order']) : (isset($orderResult['order']) && is_object($orderResult['order']) ? 'object' : 'N/A'),
-            'error' => $orderResult['error'] ?? null,
-            'full_result' => json_encode($orderResult, JSON_PRETTY_PRINT),
+        // DEBUG: Log the raw subscription result
+        Log::info('DEBUG: RazorPay createSubscription result', [
+            'success' => $subscriptionResult['success'] ?? 'missing',
+            'has_subscription' => isset($subscriptionResult['subscription']),
+            'has_subscription_id' => isset($subscriptionResult['subscription_id']),
+            'error' => $subscriptionResult['error'] ?? null,
         ]);
 
-        if (!$orderResult['success']) {
-            Log::error('Order creation failed', [
+        if (!$subscriptionResult['success']) {
+            Log::error('Subscription creation failed', [
                 'user_id' => $user->id,
                 'tenant_id' => $tenant->id,
                 'plan_id' => $plan->id,
-                'error' => $orderResult['error'] ?? 'Unknown error',
+                'error' => $subscriptionResult['error'] ?? 'Unknown error',
             ]);
             
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to create payment order',
-                'error' => $orderResult['error'],
+                'message' => 'Failed to create subscription',
+                'error' => $subscriptionResult['error'],
             ], 500);
         }
 
-        // DEBUG: Inspect order structure
-        $order = $orderResult['order'];
-        $orderId = null;
+        // Get subscription details
+        $subscription = $subscriptionResult['subscription'];
+        $subscriptionId = $subscriptionResult['subscription_id'];
         
-        if (is_object($order)) {
-            // Try to get ID from object
-            if (isset($order->id)) {
-                $orderId = $order->id;
-            } elseif (method_exists($order, 'getId')) {
-                $orderId = $order->getId();
-            } elseif (method_exists($order, 'toArray')) {
-                $orderArray = $order->toArray();
-                $orderId = $orderArray['id'] ?? null;
-            }
-            
-            // Convert to array for JSON response
-            $order = json_decode(json_encode($order), true);
-        } elseif (is_array($order)) {
-            $orderId = $order['id'] ?? null;
+        // Convert subscription to array if needed
+        if (is_object($subscription)) {
+            $subscription = json_decode(json_encode($subscription), true);
         }
         
-        // Fallback to order_id from result
-        if (!$orderId && isset($orderResult['order_id'])) {
-            $orderId = $orderResult['order_id'];
+        // Ensure subscription has id
+        if (is_array($subscription) && !isset($subscription['id']) && $subscriptionId) {
+            $subscription['id'] = $subscriptionId;
         }
-        
-        // Ensure order array has id
-        if (is_array($order) && !isset($order['id']) && $orderId) {
-            $order['id'] = $orderId;
-        }
-        
-        // DEBUG: Log final order structure
-        Log::info('DEBUG: Final order structure before JSON response', [
-            'order_id' => $orderId,
-            'order_type' => gettype($order),
-            'order_has_id' => is_array($order) ? isset($order['id']) : 'N/A',
-            'order_keys' => is_array($order) ? array_keys($order) : 'N/A',
-            'order_sample' => is_array($order) ? json_encode(array_slice($order, 0, 5, true)) : 'N/A',
-        ]);
 
         $responseData = [
             'success' => true,
@@ -187,25 +175,36 @@ class PaymentController extends Controller
      */
     public function success(Request $request)
     {
-        $request->validate([
-            'razorpay_payment_id' => 'required|string',
-            'razorpay_order_id' => 'required|string|not_in:undefined',
-            'razorpay_signature' => 'required|string',
-        ], [
-            'razorpay_order_id.not_in' => 'Invalid order ID. Please try the payment again.',
-            'razorpay_order_id.required' => 'Order ID is required for payment verification.',
-        ]);
+        // For subscriptions, we get subscription_id instead of order_id
+        $isSubscription = $request->has('razorpay_subscription_id');
         
-        // Additional check for undefined string
-        if ($request->razorpay_order_id === 'undefined' || empty(trim($request->razorpay_order_id))) {
-            Log::error('Order ID is undefined or empty', [
-                'payment_id' => $request->razorpay_payment_id,
-                'order_id' => $request->razorpay_order_id,
-                'signature_present' => !empty($request->razorpay_signature),
+        if ($isSubscription) {
+            $request->validate([
+                'razorpay_payment_id' => 'required|string',
+                'razorpay_subscription_id' => 'required|string',
+                'razorpay_signature' => 'required|string',
+            ]);
+        } else {
+            $request->validate([
+                'razorpay_payment_id' => 'required|string',
+                'razorpay_order_id' => 'required|string|not_in:undefined',
+                'razorpay_signature' => 'required|string',
+            ], [
+                'razorpay_order_id.not_in' => 'Invalid order ID. Please try the payment again.',
+                'razorpay_order_id.required' => 'Order ID is required for payment verification.',
             ]);
             
-            return redirect()->route('payment.failure')
-                ->with('error', 'Invalid order ID. Please contact support with your payment ID: ' . $request->razorpay_payment_id);
+            // Additional check for undefined string
+            if ($request->razorpay_order_id === 'undefined' || empty(trim($request->razorpay_order_id))) {
+                Log::error('Order ID is undefined or empty', [
+                    'payment_id' => $request->razorpay_payment_id,
+                    'order_id' => $request->razorpay_order_id,
+                    'signature_present' => !empty($request->razorpay_signature),
+                ]);
+                
+                return redirect()->route('payment.failure')
+                    ->with('error', 'Invalid order ID. Please contact support with your payment ID: ' . $request->razorpay_payment_id);
+            }
         }
 
         $user = Auth::user();
@@ -216,12 +215,22 @@ class PaymentController extends Controller
                 ->with('error', 'User does not have a tenant');
         }
 
-        // Verify payment signature
-        $verificationResult = $this->razorPayService->verifyPayment([
-            'razorpay_order_id' => $request->razorpay_order_id,
-            'razorpay_payment_id' => $request->razorpay_payment_id,
-            'razorpay_signature' => $request->razorpay_signature,
-        ]);
+        // Handle subscription vs one-time payment
+        if ($isSubscription) {
+            // For subscriptions, verify using subscription_id
+            $verificationResult = $this->razorPayService->verifySubscription([
+                'razorpay_subscription_id' => $request->razorpay_subscription_id,
+                'razorpay_payment_id' => $request->razorpay_payment_id,
+                'razorpay_signature' => $request->razorpay_signature,
+            ]);
+        } else {
+            // For one-time payments, verify using order_id
+            $verificationResult = $this->razorPayService->verifyPayment([
+                'razorpay_order_id' => $request->razorpay_order_id,
+                'razorpay_payment_id' => $request->razorpay_payment_id,
+                'razorpay_signature' => $request->razorpay_signature,
+            ]);
+        }
 
         $signatureVerified = $verificationResult['success'] && $verificationResult['verified'];
         
@@ -235,7 +244,9 @@ class PaymentController extends Controller
                     'user_id' => $user->id,
                     'tenant_id' => $tenant->id,
                     'payment_id' => $request->razorpay_payment_id,
-                    'order_id' => $request->razorpay_order_id,
+                    'is_subscription' => $isSubscription,
+                    'order_id' => $isSubscription ? 'N/A' : $request->razorpay_order_id,
+                    'subscription_id' => $isSubscription ? $request->razorpay_subscription_id : 'N/A',
                     'signature_error' => $verificationResult['error'] ?? 'Unknown error',
                     'fetch_error' => $paymentResult['error'] ?? 'Unknown error',
                 ]);
@@ -247,20 +258,22 @@ class PaymentController extends Controller
 
         $payment = $paymentResult['payment'];
         
-        // Verify order_id matches for security (even if signature verification failed)
-        $paymentOrderId = $payment['order_id'] ?? null;
-        if ($paymentOrderId !== $request->razorpay_order_id) {
-            Log::error('Order ID mismatch', [
-                'user_id' => $user->id,
-                'tenant_id' => $tenant->id,
-                'payment_id' => $request->razorpay_payment_id,
-                'expected_order_id' => $request->razorpay_order_id,
-                'actual_order_id' => $paymentOrderId,
-                'signature_verified' => $signatureVerified,
-            ]);
-            
-            return redirect()->route('payment.failure')
-                ->with('error', 'Payment order ID mismatch. Please contact support.');
+        // For one-time payments, verify order_id matches
+        if (!$isSubscription) {
+            $paymentOrderId = $payment['order_id'] ?? null;
+            if ($paymentOrderId !== $request->razorpay_order_id) {
+                Log::error('Order ID mismatch', [
+                    'user_id' => $user->id,
+                    'tenant_id' => $tenant->id,
+                    'payment_id' => $request->razorpay_payment_id,
+                    'expected_order_id' => $request->razorpay_order_id,
+                    'actual_order_id' => $paymentOrderId,
+                    'signature_verified' => $signatureVerified,
+                ]);
+                
+                return redirect()->route('payment.failure')
+                    ->with('error', 'Payment order ID mismatch. Please contact support.');
+            }
         }
         
         // If signature verification failed but payment is valid, log warning but proceed
@@ -269,7 +282,9 @@ class PaymentController extends Controller
                 'user_id' => $user->id,
                 'tenant_id' => $tenant->id,
                 'payment_id' => $request->razorpay_payment_id,
-                'order_id' => $request->razorpay_order_id,
+                'is_subscription' => $isSubscription,
+                'order_id' => $isSubscription ? 'N/A' : $request->razorpay_order_id,
+                'subscription_id' => $isSubscription ? $request->razorpay_subscription_id : 'N/A',
                 'payment_status' => $payment['status'] ?? 'unknown',
                 'signature_error' => $verificationResult['error'] ?? 'Unknown error',
             ]);
@@ -349,12 +364,14 @@ class PaymentController extends Controller
         }
 
         // Process successful payment
+        $razorpaySubscriptionId = $isSubscription ? $request->razorpay_subscription_id : null;
+        
         $processResult = $this->razorPayService->processSuccessfulPayment([
             'razorpay_payment_id' => $request->razorpay_payment_id,
-            'razorpay_order_id' => $request->razorpay_order_id,
+            'razorpay_order_id' => $isSubscription ? null : $request->razorpay_order_id,
             'amount' => $payment['amount'],
             'currency' => $payment['currency'],
-        ], $user, $plan);
+        ], $user, $plan, $razorpaySubscriptionId);
 
         if (!$processResult['success']) {
             return redirect()->route('payment.failure')

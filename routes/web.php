@@ -189,6 +189,22 @@ Route::get('/terms-of-service.html', function () {
     return view('legal.terms-of-service');
 })->name('terms-of-service.html');
 
+Route::get('/cancellation-refund-policy', function () {
+    return view('legal.cancellation-refund-policy');
+})->name('cancellation-refund-policy');
+
+Route::get('/cancellation-refund-policy.html', function () {
+    return view('legal.cancellation-refund-policy');
+})->name('cancellation-refund-policy.html');
+
+Route::get('/shipping-delivery', function () {
+    return view('legal.shipping-delivery');
+})->name('shipping-delivery');
+
+Route::get('/shipping-delivery.html', function () {
+    return view('legal.shipping-delivery');
+})->name('shipping-delivery.html');
+
 // Additional HTML routes for company pages
 Route::get('/about.html', function () {
     return view('about');

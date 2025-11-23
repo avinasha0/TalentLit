@@ -78,7 +78,7 @@
 
         <!-- Filters -->
         <x-card>
-            <form method="GET" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <form method="GET" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                 <div>
                     <label for="search" class="block text-sm font-medium text-gray-200 mb-1">Search</label>
                     <input type="text" 
@@ -112,6 +112,20 @@
                         @foreach($tags as $tag)
                             <option value="{{ $tag }}" {{ request('tag') == $tag ? 'selected' : '' }}>
                                 {{ $tag }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div>
+                    <label for="status" class="block text-sm font-medium text-gray-200 mb-1">Status</label>
+                    <select name="status" 
+                            id="status"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+                        <option value="">All Statuses</option>
+                        @foreach($statuses as $status)
+                            <option value="{{ $status }}" {{ request('status') == $status ? 'selected' : '' }}>
+                                {{ ucfirst($status === 'active' ? 'Applied' : $status) }}
                             </option>
                         @endforeach
                     </select>

@@ -65,6 +65,12 @@ class CandidateController extends Controller
             });
         }
 
+        if ($request->filled('status')) {
+            $query->whereHas('applications', function ($q) use ($request) {
+                $q->where('status', $request->status);
+            });
+        }
+
         $candidates = $query->orderBy('created_at', 'desc')->paginate(20);
 
         // Get filter options
@@ -78,6 +84,9 @@ class CandidateController extends Controller
             ->unique()
             ->sort()
             ->values();
+
+        // Get available statuses
+        $statuses = ['applied', 'active', 'called', 'interviewed', 'hold', 'rejected', 'hired', 'withdrawn'];
 
         if ($request->expectsJson()) {
             return response()->json([
@@ -113,7 +122,7 @@ class CandidateController extends Controller
         $maxCandidates = $currentPlan ? $currentPlan->max_candidates : 0;
         $canAddCandidates = $maxCandidates === -1 || $currentCandidateCount < $maxCandidates;
 
-        return view('tenant.candidates.index', compact('candidates', 'sources', 'tags', 'tenantModel', 'currentCandidateCount', 'maxCandidates', 'canAddCandidates'));
+        return view('tenant.candidates.index', compact('candidates', 'sources', 'tags', 'statuses', 'tenantModel', 'currentCandidateCount', 'maxCandidates', 'canAddCandidates'));
     }
 
     public function show(string $tenant, Candidate $candidate)

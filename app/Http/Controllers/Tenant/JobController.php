@@ -121,7 +121,7 @@ class JobController extends Controller
         
         $departments = Department::orderBy('name')->get();
         $locations = Location::orderBy('name')->get();
-        $employmentTypes = ['full_time', 'part_time', 'contract', 'intern'];
+        $employmentTypes = ['full_time', 'part_time', 'contract', 'intern', 'freelancer'];
 
         return view('tenant.jobs.create', compact('departments', 'locations', 'employmentTypes'));
     }
@@ -163,7 +163,7 @@ class JobController extends Controller
             ],
             'department_id' => 'nullable|exists:departments,id',
             'location_id' => 'nullable|exists:locations,id',
-            'employment_type' => 'required|in:full_time,part_time,contract,intern',
+            'employment_type' => 'required|in:full_time,part_time,contract,intern,freelancer',
             'status' => 'required|in:draft,published,closed',
             'openings_count' => 'required|integer|min:1',
             'description' => 'required|string',
@@ -230,7 +230,7 @@ class JobController extends Controller
         
         $departments = Department::orderBy('name')->get();
         $locations = Location::orderBy('name')->get();
-        $employmentTypes = ['full_time', 'part_time', 'contract', 'intern'];
+        $employmentTypes = ['full_time', 'part_time', 'contract', 'intern', 'freelancer'];
 
         return view('tenant.jobs.edit', compact('job', 'departments', 'locations', 'employmentTypes'));
     }
@@ -256,7 +256,7 @@ class JobController extends Controller
             ],
             'department_id' => 'nullable|exists:departments,id',
             'location_id' => 'nullable|exists:locations,id',
-            'employment_type' => 'required|in:full_time,part_time,contract,intern',
+            'employment_type' => 'required|in:full_time,part_time,contract,intern,freelancer',
             'status' => 'required|in:draft,published,closed',
             'openings_count' => 'required|integer|min:1',
             'description' => 'required|string',

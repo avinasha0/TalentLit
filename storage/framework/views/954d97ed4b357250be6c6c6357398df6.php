@@ -159,11 +159,15 @@
                             </button>
                         </form>
                     <?php elseif($planItem->slug === 'pro'): ?>
-                        <?php if(config('razorpay.pro_plan_mode') === 'active' && config('razorpay.key_id')): ?>
+                        <?php
+                            $razorpayConfigured = config('razorpay.key_id') && config('razorpay.key_secret');
+                            $proPlanActive = config('razorpay.pro_plan_mode') === 'active' || $razorpayConfigured;
+                        ?>
+                        <?php if($proPlanActive && $razorpayConfigured): ?>
                             <?php if($tenant->hasFreePlan()): ?>
                                 <button onclick="initiatePayment('<?php echo e($planItem->id); ?>', '<?php echo e($planItem->name); ?>', <?php echo e($planItem->price); ?>, '<?php echo e($planItem->currency); ?>')" 
                                         class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-200">
-                                    Upgrade to Pro - ₹<?php echo e(number_format($planItem->price, 0)); ?>/month
+                                    Upgrade To Pro - ₹<?php echo e(number_format($planItem->price, 0)); ?>/month
                                 </button>
                             <?php else: ?>
                                 <div class="w-full bg-gray-100 text-gray-600 font-semibold py-3 px-6 rounded-lg text-center">

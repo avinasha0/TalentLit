@@ -36,8 +36,9 @@ class PaymentController extends Controller
             ], 400);
         }
 
-        // Check if Pro plan is active
-        if (!$this->razorPayService->isProPlanActive()) {
+        // Check if Pro plan is active or Razorpay is configured
+        $proPlanActive = $this->razorPayService->isProPlanActive() || $this->razorPayService->isConfigured();
+        if (!$proPlanActive) {
             return response()->json([
                 'success' => false,
                 'message' => 'Pro plan is not available for payment',
@@ -152,11 +153,73 @@ class PaymentController extends Controller
         $paymentResult = $this->razorPayService->getPayment($request->razorpay_payment_id);
         
         if (!$paymentResult['success']) {
+            Log::error('Failed to fetch payment details', [
+                'user_id' => $user->id,
+                'tenant_id' => $tenant->id,
+                'payment_id' => $request->razorpay_payment_id,
+                'error' => $paymentResult['error'] ?? 'Unknown error',
+            ]);
+            
             return redirect()->route('payment.failure')
                 ->with('error', 'Failed to fetch payment details');
         }
 
         $payment = $paymentResult['payment'];
+        
+        // Check payment status
+        $paymentStatus = $payment['status'] ?? null;
+        
+        // If payment is authorized but not captured, capture it
+        if ($paymentStatus === 'authorized') {
+            $amount = $payment['amount'] / 100; // Convert from paise
+            $captureResult = $this->razorPayService->capturePayment($request->razorpay_payment_id, $amount);
+            
+            if (!$captureResult['success']) {
+                Log::error('Payment capture failed', [
+                    'user_id' => $user->id,
+                    'tenant_id' => $tenant->id,
+                    'payment_id' => $request->razorpay_payment_id,
+                    'error' => $captureResult['error'] ?? 'Unknown error',
+                ]);
+                
+                return redirect()->route('payment.failure')
+                    ->with('error', 'Payment capture failed. Please contact support.');
+            }
+            
+            // Update payment object with captured payment details
+            $payment = $captureResult['payment'];
+            $paymentStatus = $payment['status'] ?? null;
+        }
+        
+        // Verify payment is captured
+        if ($paymentStatus !== 'captured') {
+            Log::error('Payment not captured', [
+                'user_id' => $user->id,
+                'tenant_id' => $tenant->id,
+                'payment_id' => $request->razorpay_payment_id,
+                'payment_status' => $paymentStatus,
+            ]);
+            
+            return redirect()->route('payment.failure')
+                ->with('error', 'Payment is not in captured state. Please contact support.');
+        }
+        
+        // Check if this payment has already been processed
+        $existingSubscription = TenantSubscription::where('payment_id', $request->razorpay_payment_id)
+            ->where('tenant_id', $tenant->id)
+            ->first();
+            
+        if ($existingSubscription && $existingSubscription->status === 'active') {
+            Log::info('Payment already processed', [
+                'user_id' => $user->id,
+                'tenant_id' => $tenant->id,
+                'payment_id' => $request->razorpay_payment_id,
+                'subscription_id' => $existingSubscription->id,
+            ]);
+            
+            return redirect()->route('subscription.show', $tenant->slug)
+                ->with('success', 'Payment already processed. Your subscription is active.');
+        }
         
         // Find the plan based on amount
         $amount = $payment['amount'] / 100; // Convert from paise
@@ -165,6 +228,13 @@ class PaymentController extends Controller
             ->first();
 
         if (!$plan) {
+            Log::error('Plan not found for payment', [
+                'user_id' => $user->id,
+                'tenant_id' => $tenant->id,
+                'payment_id' => $request->razorpay_payment_id,
+                'amount' => $amount,
+            ]);
+            
             return redirect()->route('payment.failure')
                 ->with('error', 'Invalid plan');
         }
@@ -182,8 +252,9 @@ class PaymentController extends Controller
                 ->with('error', 'Failed to process payment');
         }
 
-        return redirect()->route('payment.success')
-            ->with('success', 'Payment successful! Your subscription has been activated.');
+        // Redirect to tenant subscription page
+        return redirect()->route('subscription.show', $tenant->slug)
+            ->with('success', 'Payment successful! Your Pro subscription has been activated.');
     }
 
     /**

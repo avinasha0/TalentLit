@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Tenant;
 use App\Http\Controllers\Controller;
 use App\Models\Candidate;
 use App\Models\Resume;
+use App\Models\Application;
 use App\Http\Requests\StoreCandidateRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -21,7 +22,10 @@ class CandidateController extends Controller
         }
         
         $query = Candidate::where('tenant_id', $tenantModel->id)
-            ->with(['tags', 'applications.jobOpening']);
+            ->with(['tags', 'applications' => function($q) {
+                $q->with('jobOpening')
+                  ->orderBy('applied_at', 'desc');
+            }]);
         
         // Filter by job if job parameter is provided
         if ($job) {
@@ -233,6 +237,68 @@ class CandidateController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Resume deleted successfully.'
+        ]);
+    }
+
+    public function updateApplicationStatus(Request $request, string $tenant, Candidate $candidate, Application $application)
+    {
+        // Ensure candidate and application belong to current tenant
+        $tenantModel = tenant();
+        if (!$tenantModel) {
+            abort(404, 'Tenant not found');
+        }
+
+        if ($candidate->tenant_id !== $tenantModel->id || $application->tenant_id !== $tenantModel->id) {
+            abort(404, 'Resource not found in this tenant');
+        }
+
+        // Ensure application belongs to candidate
+        if ($application->candidate_id !== $candidate->id) {
+            abort(404, 'Application not found for this candidate');
+        }
+
+        $request->validate([
+            'status' => 'required|in:applied,called,interviewed,hold,rejected,hired,active,withdrawn',
+        ]);
+
+        // Map status to stage name
+        $statusToStageMap = [
+            'applied' => 'Applied',
+            'active' => 'Applied',
+            'called' => 'Screen',
+            'interviewed' => 'Interview',
+            'hired' => 'Hired',
+        ];
+
+        $updateData = [
+            'status' => $request->status,
+        ];
+
+        // Update current_stage_id if there's a mapping for this status
+        if (isset($statusToStageMap[$request->status])) {
+            $stageName = $statusToStageMap[$request->status];
+            
+            // Find the stage for this job with the matching name
+            $stage = \App\Models\JobStage::where('tenant_id', $tenantModel->id)
+                ->where('job_opening_id', $application->job_opening_id)
+                ->where('name', $stageName)
+                ->first();
+
+            if ($stage) {
+                $updateData['current_stage_id'] = $stage->id;
+            }
+        }
+
+        $application->update($updateData);
+
+        // Reload the relationship to get the updated stage name
+        $application->load('currentStage');
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Application status updated successfully.',
+            'status' => $application->status,
+            'current_stage' => $application->currentStage ? $application->currentStage->name : null,
         ]);
     }
 }

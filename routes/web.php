@@ -453,6 +453,9 @@ Route::middleware(['capture.tenant', 'tenant', 'auth'])->group(function () {
         // Candidate Resume Routes
         Route::post('/{tenant}/candidates/{candidate}/resumes', [CandidateController::class, 'storeResume'])->whereUuid('candidate')->name('tenant.candidates.resumes.store');
         Route::delete('/{tenant}/candidates/{candidate}/resumes/{resume}', [CandidateController::class, 'destroyResume'])->whereUuid('candidate')->name('tenant.candidates.resumes.destroy');
+        
+        // Application Status Update Route
+        Route::patch('/{tenant}/candidates/{candidate}/applications/{application}/status', [CandidateController::class, 'updateApplicationStatus'])->whereUuid(['candidate', 'application'])->name('tenant.candidates.applications.status.update');
     });
 
     // Candidate Import Routes - Owner, Admin, Recruiter

@@ -258,14 +258,42 @@
                                         <span class="truncate text-black"><?php echo e($candidate->primary_email); ?></span>
                                     </div>
                                     
-                                    <div class="flex items-center justify-between">
-                                        <?php if($candidate->source): ?>
-                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                                <?php echo e($candidate->source); ?>
+                                    <div class="space-y-2">
+                                        <div class="flex items-center justify-between">
+                                            <?php if($candidate->source): ?>
+                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                                    <?php echo e($candidate->source); ?>
 
-                                            </span>
-                                        <?php else: ?>
-                                            <span class="text-sm text-gray-600">No source</span>
+                                                </span>
+                                            <?php else: ?>
+                                                <span class="text-sm text-gray-600">No source</span>
+                                            <?php endif; ?>
+                                        </div>
+                                        
+                                        <?php
+                                            $latestApplication = $candidate->applications->first();
+                                            $status = $latestApplication ? strtolower($latestApplication->status) : null;
+                                            $statusConfig = [
+                                                'applied' => ['bg' => 'bg-green-600', 'text' => 'text-white'],
+                                                'active' => ['bg' => 'bg-green-600', 'text' => 'text-white'],
+                                                'called' => ['bg' => 'bg-blue-100', 'text' => 'text-blue-800'],
+                                                'interviewed' => ['bg' => 'bg-yellow-100', 'text' => 'text-yellow-800'],
+                                                'hold' => ['bg' => 'bg-gray-100', 'text' => 'text-gray-800'],
+                                                'rejected' => ['bg' => 'bg-red-100', 'text' => 'text-red-800'],
+                                                'hired' => ['bg' => 'bg-emerald-100', 'text' => 'text-emerald-800'],
+                                                'withdrawn' => ['bg' => 'bg-gray-100', 'text' => 'text-gray-800'],
+                                            ];
+                                            $config = $status ? ($statusConfig[$status] ?? $statusConfig['applied']) : null;
+                                            $displayStatus = $latestApplication ? ($latestApplication->status === 'active' ? 'Applied' : ucfirst($latestApplication->status)) : 'No Application';
+                                        ?>
+                                        <?php if($latestApplication && $config): ?>
+                                            <div class="flex items-center">
+                                                <span class="text-xs font-medium text-gray-600 mr-2">Status:</span>
+                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium <?php echo e($config['bg']); ?> <?php echo e($config['text']); ?>">
+                                                    <?php echo e($displayStatus); ?>
+
+                                                </span>
+                                            </div>
                                         <?php endif; ?>
                                         
                                         <div class="text-xs text-gray-600">
@@ -314,6 +342,7 @@
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Name</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Email</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Source</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Status</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Updated</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Actions</th>
                         </tr>
@@ -353,6 +382,32 @@
                                     <?php if($candidate->source): ?>
                                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                                             <?php echo e($candidate->source); ?>
+
+                                        </span>
+                                    <?php else: ?>
+                                        <span class="text-sm text-gray-400">—</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <?php
+                                        $latestApplication = $candidate->applications->first();
+                                        $status = $latestApplication ? strtolower($latestApplication->status) : null;
+                                        $statusConfig = [
+                                            'applied' => ['bg' => 'bg-green-600', 'text' => 'text-white'],
+                                            'active' => ['bg' => 'bg-green-600', 'text' => 'text-white'],
+                                            'called' => ['bg' => 'bg-blue-100', 'text' => 'text-blue-800'],
+                                            'interviewed' => ['bg' => 'bg-yellow-100', 'text' => 'text-yellow-800'],
+                                            'hold' => ['bg' => 'bg-gray-100', 'text' => 'text-gray-800'],
+                                            'rejected' => ['bg' => 'bg-red-100', 'text' => 'text-red-800'],
+                                            'hired' => ['bg' => 'bg-emerald-100', 'text' => 'text-emerald-800'],
+                                            'withdrawn' => ['bg' => 'bg-gray-100', 'text' => 'text-gray-800'],
+                                        ];
+                                        $config = $status ? ($statusConfig[$status] ?? $statusConfig['applied']) : null;
+                                        $displayStatus = $latestApplication ? ($latestApplication->status === 'active' ? 'Applied' : ucfirst($latestApplication->status)) : 'No Application';
+                                    ?>
+                                    <?php if($latestApplication && $config): ?>
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium <?php echo e($config['bg']); ?> <?php echo e($config['text']); ?>">
+                                            <?php echo e($displayStatus); ?>
 
                                         </span>
                                     <?php else: ?>

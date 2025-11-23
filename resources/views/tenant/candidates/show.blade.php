@@ -11,7 +11,10 @@
     $statusConfig = [
         'applied' => ['bg' => 'bg-green-600', 'text' => 'text-white', 'dark_bg' => 'dark:bg-green-600', 'dark_text' => 'dark:text-white'],
         'active' => ['bg' => 'bg-green-600', 'text' => 'text-white', 'dark_bg' => 'dark:bg-green-600', 'dark_text' => 'dark:text-white'],
+        'called' => ['bg' => 'bg-blue-100', 'text' => 'text-blue-800', 'dark_bg' => 'dark:bg-blue-900/20', 'dark_text' => 'dark:text-blue-300'],
+        'interviewed' => ['bg' => 'bg-yellow-100', 'text' => 'text-yellow-800', 'dark_bg' => 'dark:bg-yellow-900/20', 'dark_text' => 'dark:text-yellow-300'],
         'interview' => ['bg' => 'bg-yellow-100', 'text' => 'text-yellow-800', 'dark_bg' => 'dark:bg-yellow-900/20', 'dark_text' => 'dark:text-yellow-300'],
+        'hold' => ['bg' => 'bg-gray-100', 'text' => 'text-gray-800', 'dark_bg' => 'dark:bg-gray-900/20', 'dark_text' => 'dark:text-gray-300'],
         'hired' => ['bg' => 'bg-emerald-100', 'text' => 'text-emerald-800', 'dark_bg' => 'dark:bg-emerald-900/20', 'dark_text' => 'dark:text-emerald-300'],
         'rejected' => ['bg' => 'bg-red-100', 'text' => 'text-red-800', 'dark_bg' => 'dark:bg-red-900/20', 'dark_text' => 'dark:text-red-300'],
     ];
@@ -112,6 +115,39 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- Compensation Section -->
+                    @php
+                        // Get the most recent application
+                        $latestApplication = $candidate->applications->sortByDesc('applied_at')->first();
+                    @endphp
+                    @if($latestApplication)
+                        <div>
+                            <h3 class="text-lg font-medium text-gray-900 mb-4">Compensation</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Current CTC Per Year (In Lakhs)</label>
+                                    <p class="mt-1 text-sm text-gray-900">
+                                        @if($latestApplication->current_ctc !== null)
+                                            {{ number_format($latestApplication->current_ctc, 2) }} Lakhs
+                                        @else
+                                            <span class="text-gray-400">Not provided</span>
+                                        @endif
+                                    </p>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Expected CTC Per Year (In Lakhs)</label>
+                                    <p class="mt-1 text-sm text-gray-900">
+                                        @if($latestApplication->expected_ctc !== null)
+                                            {{ number_format($latestApplication->expected_ctc, 2) }} Lakhs
+                                        @else
+                                            <span class="text-gray-400">Not provided</span>
+                                        @endif
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
 
                     <!-- Applications Summary -->
                     @if($candidate->applications->count() > 0)
@@ -486,17 +522,48 @@
                                                 </div>
                                                 <div>
                                                     <span class="font-medium">Current Stage:</span> 
-                                                    {{ $application->currentStage->name ?? 'No Stage' }}
+                                                    <span id="current-stage-{{ $application->id }}">{{ $application->currentStage->name ?? 'No Stage' }}</span>
                                                 </div>
                                                 <div>
                                                     <span class="font-medium">Status:</span>
-                                                    @php
-                                                        $status = strtolower($application->status);
-                                                        $config = $statusConfig[$status] ?? $statusConfig['applied'];
-                                                    @endphp
-                                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $config['bg'] }} {{ $config['text'] }} {{ $config['dark_bg'] }} {{ $config['dark_text'] }}">
-                                                        {{ ucfirst($application->status) }}
+                                                    <span class="inline-flex items-center">
+                                                        @php
+                                                            $status = strtolower($application->status);
+                                                            $config = $statusConfig[$status] ?? $statusConfig['applied'];
+                                                            $displayStatus = $application->status === 'active' ? 'Applied' : ucfirst($application->status);
+                                                        @endphp
+                                                        <span id="status-badge-{{ $application->id }}" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $config['bg'] }} {{ $config['text'] }} {{ $config['dark_bg'] }} {{ $config['dark_text'] }}">
+                                                            {{ $displayStatus }}
+                                                        </span>
+                                                        <button type="button" 
+                                                                onclick="toggleStatusEdit('{{ $application->id }}')" 
+                                                                class="ml-2 text-blue-600 hover:text-blue-800 text-sm font-medium">
+                                                            Edit
+                                                        </button>
                                                     </span>
+                                                    <div id="status-edit-{{ $application->id }}" class="hidden mt-2">
+                                                        <select id="status-select-{{ $application->id }}" 
+                                                                class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+                                                            <option value="applied" {{ strtolower($application->status) === 'applied' || strtolower($application->status) === 'active' ? 'selected' : '' }}>Applied</option>
+                                                            <option value="called" {{ strtolower($application->status) === 'called' ? 'selected' : '' }}>Called</option>
+                                                            <option value="interviewed" {{ strtolower($application->status) === 'interviewed' ? 'selected' : '' }}>Interviewed</option>
+                                                            <option value="hold" {{ strtolower($application->status) === 'hold' ? 'selected' : '' }}>Hold</option>
+                                                            <option value="rejected" {{ strtolower($application->status) === 'rejected' ? 'selected' : '' }}>Rejected</option>
+                                                            <option value="hired" {{ strtolower($application->status) === 'hired' ? 'selected' : '' }}>Hired</option>
+                                                        </select>
+                                                        <div class="mt-2 flex space-x-2">
+                                                            <button type="button" 
+                                                                    onclick="updateApplicationStatus('{{ $application->id }}', '{{ $candidate->id }}', '{{ $tenantSlug }}')" 
+                                                                    class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                                                Save
+                                                            </button>
+                                                            <button type="button" 
+                                                                    onclick="toggleStatusEdit('{{ $application->id }}')" 
+                                                                    class="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                                                Cancel
+                                                            </button>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -989,6 +1056,100 @@
             .catch(error => {
                 console.error('Error deleting resume:', error);
                 alert('Error deleting resume: ' + error.message);
+            });
+        }
+
+        // Application Status Update Functions
+        function toggleStatusEdit(applicationId) {
+            const editDiv = document.getElementById('status-edit-' + applicationId);
+            if (editDiv.classList.contains('hidden')) {
+                editDiv.classList.remove('hidden');
+            } else {
+                editDiv.classList.add('hidden');
+            }
+        }
+
+        function updateApplicationStatus(applicationId, candidateId, tenantSlug) {
+            const statusSelect = document.getElementById('status-select-' + applicationId);
+            const newStatus = statusSelect.value;
+
+            const csrfToken = getCsrfToken();
+
+            fetch(`/${tenantSlug}/candidates/${candidateId}/applications/${applicationId}/status`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({ status: newStatus })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.text().then(text => {
+                        if (response.status === 419) {
+                            return refreshCsrfToken().then(newToken => {
+                                return fetch(`/${tenantSlug}/candidates/${candidateId}/applications/${applicationId}/status`, {
+                                    method: 'PATCH',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'X-CSRF-TOKEN': newToken,
+                                        'Accept': 'application/json'
+                                    },
+                                    body: JSON.stringify({ status: newStatus })
+                                });
+                            }).then(retryResponse => {
+                                if (!retryResponse.ok) {
+                                    throw new Error(`HTTP error! status: ${retryResponse.status}`);
+                                }
+                                return retryResponse.json();
+                            });
+                        }
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    // Update status badge
+                    const statusBadge = document.getElementById('status-badge-' + applicationId);
+                    const statusText = newStatus.charAt(0).toUpperCase() + newStatus.slice(1);
+                    statusBadge.textContent = statusText;
+                    
+                    // Update status badge colors based on status
+                    statusBadge.className = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium';
+                    if (newStatus === 'applied' || newStatus === 'active') {
+                        statusBadge.className += ' bg-green-600 text-white dark:bg-green-600 dark:text-white';
+                    } else if (newStatus === 'called') {
+                        statusBadge.className += ' bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300';
+                    } else if (newStatus === 'interviewed') {
+                        statusBadge.className += ' bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300';
+                    } else if (newStatus === 'hold') {
+                        statusBadge.className += ' bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300';
+                    } else if (newStatus === 'rejected') {
+                        statusBadge.className += ' bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300';
+                    } else if (newStatus === 'hired') {
+                        statusBadge.className += ' bg-emerald-100 text-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-300';
+                    }
+
+                    // Update current stage display if provided
+                    if (data.current_stage) {
+                        const currentStageElement = document.getElementById('current-stage-' + applicationId);
+                        if (currentStageElement) {
+                            currentStageElement.textContent = data.current_stage;
+                        }
+                    }
+
+                    // Hide edit form
+                    toggleStatusEdit(applicationId);
+                } else {
+                    alert('Error updating status: ' + (data.message || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                console.error('Error updating application status:', error);
+                alert('Error updating application status: ' + error.message);
             });
         }
     </script>

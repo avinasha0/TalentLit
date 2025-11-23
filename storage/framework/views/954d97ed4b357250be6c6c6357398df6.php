@@ -502,6 +502,9 @@ async function initiatePayment(planId, planName, amount, currency) {
             return;
         }
         
+        // Store order_id for fallback
+        const orderIdFromOrder = data.order.id;
+        
         // Configure RazorPay options
         const options = {
             key: data.key_id,
@@ -509,13 +512,23 @@ async function initiatePayment(planId, planName, amount, currency) {
             currency: data.currency,
             name: data.name,
             description: data.description,
-            order_id: data.order.id,
+            order_id: orderIdFromOrder,
             prefill: data.prefill,
             theme: {
                 color: '#4f46e5'
             },
             handler: function(response) {
                 // Payment successful
+                // Use response order_id or fallback to original order_id
+                const orderId = response.razorpay_order_id || orderIdFromOrder;
+                
+                // Validate required fields
+                if (!response.razorpay_payment_id || !response.razorpay_signature || !orderId) {
+                    console.error('Missing payment details in Razorpay response:', response);
+                    showNotification('Payment details incomplete. Please contact support.', 'error');
+                    return;
+                }
+                
                 const form = document.createElement('form');
                 form.method = 'GET';
                 form.action = '<?php echo e(route("payment.success")); ?>';
@@ -526,11 +539,11 @@ async function initiatePayment(planId, planName, amount, currency) {
                 paymentId.value = response.razorpay_payment_id;
                 form.appendChild(paymentId);
                 
-                const orderId = document.createElement('input');
-                orderId.type = 'hidden';
-                orderId.name = 'razorpay_order_id';
-                orderId.value = response.razorpay_order_id;
-                form.appendChild(orderId);
+                const orderIdInput = document.createElement('input');
+                orderIdInput.type = 'hidden';
+                orderIdInput.name = 'razorpay_order_id';
+                orderIdInput.value = orderId;
+                form.appendChild(orderIdInput);
                 
                 const signature = document.createElement('input');
                 signature.type = 'hidden';

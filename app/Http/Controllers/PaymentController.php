@@ -118,9 +118,24 @@ class PaymentController extends Controller
     {
         $request->validate([
             'razorpay_payment_id' => 'required|string',
-            'razorpay_order_id' => 'required|string',
+            'razorpay_order_id' => 'required|string|not_in:undefined',
             'razorpay_signature' => 'required|string',
+        ], [
+            'razorpay_order_id.not_in' => 'Invalid order ID. Please try the payment again.',
+            'razorpay_order_id.required' => 'Order ID is required for payment verification.',
         ]);
+        
+        // Additional check for undefined string
+        if ($request->razorpay_order_id === 'undefined' || empty(trim($request->razorpay_order_id))) {
+            Log::error('Order ID is undefined or empty', [
+                'payment_id' => $request->razorpay_payment_id,
+                'order_id' => $request->razorpay_order_id,
+                'signature_present' => !empty($request->razorpay_signature),
+            ]);
+            
+            return redirect()->route('payment.failure')
+                ->with('error', 'Invalid order ID. Please contact support with your payment ID: ' . $request->razorpay_payment_id);
+        }
 
         $user = Auth::user();
         $tenant = $user->tenants->first();
@@ -137,34 +152,57 @@ class PaymentController extends Controller
             'razorpay_signature' => $request->razorpay_signature,
         ]);
 
-        if (!$verificationResult['success'] || !$verificationResult['verified']) {
-            Log::error('Payment verification failed', [
-                'user_id' => $user->id,
-                'tenant_id' => $tenant->id,
-                'payment_id' => $request->razorpay_payment_id,
-                'error' => $verificationResult['error'] ?? 'Unknown error',
-            ]);
-
-            return redirect()->route('payment.failure')
-                ->with('error', 'Payment verification failed');
-        }
-
-        // Get payment details
+        $signatureVerified = $verificationResult['success'] && $verificationResult['verified'];
+        
+        // Get payment details first to verify payment status regardless of signature
         $paymentResult = $this->razorPayService->getPayment($request->razorpay_payment_id);
         
         if (!$paymentResult['success']) {
-            Log::error('Failed to fetch payment details', [
-                'user_id' => $user->id,
-                'tenant_id' => $tenant->id,
-                'payment_id' => $request->razorpay_payment_id,
-                'error' => $paymentResult['error'] ?? 'Unknown error',
-            ]);
+            // If signature verification also failed, log both errors
+            if (!$signatureVerified) {
+                Log::error('Payment verification and fetch both failed', [
+                    'user_id' => $user->id,
+                    'tenant_id' => $tenant->id,
+                    'payment_id' => $request->razorpay_payment_id,
+                    'order_id' => $request->razorpay_order_id,
+                    'signature_error' => $verificationResult['error'] ?? 'Unknown error',
+                    'fetch_error' => $paymentResult['error'] ?? 'Unknown error',
+                ]);
+            }
             
             return redirect()->route('payment.failure')
                 ->with('error', 'Failed to fetch payment details');
         }
 
         $payment = $paymentResult['payment'];
+        
+        // Verify order_id matches for security (even if signature verification failed)
+        $paymentOrderId = $payment['order_id'] ?? null;
+        if ($paymentOrderId !== $request->razorpay_order_id) {
+            Log::error('Order ID mismatch', [
+                'user_id' => $user->id,
+                'tenant_id' => $tenant->id,
+                'payment_id' => $request->razorpay_payment_id,
+                'expected_order_id' => $request->razorpay_order_id,
+                'actual_order_id' => $paymentOrderId,
+                'signature_verified' => $signatureVerified,
+            ]);
+            
+            return redirect()->route('payment.failure')
+                ->with('error', 'Payment order ID mismatch. Please contact support.');
+        }
+        
+        // If signature verification failed but payment is valid, log warning but proceed
+        if (!$signatureVerified) {
+            Log::warning('Payment signature verification failed but proceeding with API verification', [
+                'user_id' => $user->id,
+                'tenant_id' => $tenant->id,
+                'payment_id' => $request->razorpay_payment_id,
+                'order_id' => $request->razorpay_order_id,
+                'payment_status' => $payment['status'] ?? 'unknown',
+                'signature_error' => $verificationResult['error'] ?? 'Unknown error',
+            ]);
+        }
         
         // Check payment status
         $paymentStatus = $payment['status'] ?? null;

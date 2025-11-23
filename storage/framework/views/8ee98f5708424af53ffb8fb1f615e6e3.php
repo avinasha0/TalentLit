@@ -237,12 +237,16 @@ unset($__errorArgs, $__bag); ?>
 
                                     <div>
                                         <label for="phone" class="block text-sm font-medium text-gray-700 mb-2">
-                                            Phone Number
+                                            Phone Number <span class="text-red-500">*</span>
                                         </label>
                                         <input type="tel" 
                                                name="phone" 
                                                id="phone"
                                                value="<?php echo e(old('phone')); ?>"
+                                               required
+                                               pattern="[0-9]{10}"
+                                               maxlength="10"
+                                               placeholder="Enter 10 digit phone number"
                                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors <?php $__errorArgs = ['phone'];
 $__bag = $errors->getBag($__errorArgs[1] ?? 'default');
 if ($__bag->has($__errorArgs[0])) :
@@ -542,6 +546,44 @@ unset($__errorArgs, $__bag); ?>">
             </div>
         </section>
     </div>
+
+    <script>
+        // Phone number validation - only allow digits and limit to 10
+        document.addEventListener('DOMContentLoaded', function() {
+            const phoneInput = document.getElementById('phone');
+            if (phoneInput) {
+                phoneInput.addEventListener('input', function(e) {
+                    // Remove any non-digit characters
+                    let value = e.target.value.replace(/\D/g, '');
+                    // Limit to 10 digits
+                    if (value.length > 10) {
+                        value = value.substring(0, 10);
+                    }
+                    e.target.value = value;
+                });
+
+                // Validate on form submit
+                const form = phoneInput.closest('form');
+                if (form) {
+                    form.addEventListener('submit', function(e) {
+                        const phoneValue = phoneInput.value.replace(/\D/g, '');
+                        if (phoneValue.length !== 10) {
+                            e.preventDefault();
+                            phoneInput.focus();
+                            phoneInput.classList.add('border-red-500');
+                            if (!phoneInput.nextElementSibling || !phoneInput.nextElementSibling.classList.contains('text-red-600')) {
+                                const errorMsg = document.createElement('p');
+                                errorMsg.className = 'mt-1 text-sm text-red-600';
+                                errorMsg.textContent = 'Phone number must be exactly 10 digits.';
+                                phoneInput.parentNode.insertBefore(errorMsg, phoneInput.nextSibling);
+                            }
+                            return false;
+                        }
+                    });
+                }
+            }
+        });
+    </script>
 </body>
 </html>
 <?php /**PATH C:\xampp\htdocs\hirehub2\resources\views/careers/apply.blade.php ENDPATH**/ ?>

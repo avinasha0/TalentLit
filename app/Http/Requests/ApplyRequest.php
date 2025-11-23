@@ -24,7 +24,7 @@ class ApplyRequest extends FormRequest
                 // Note: We don't validate uniqueness here because we handle it in the action
                 // to allow reusing existing candidates
             ],
-            'phone' => ['nullable', 'string', 'max:20'],
+            'phone' => ['required', 'string', 'regex:/^[0-9]{10}$/'],
             'resume' => [
                 'required',
                 'file',
@@ -44,7 +44,8 @@ class ApplyRequest extends FormRequest
             'email.required' => 'Email address is required.',
             'email.email' => 'Please enter a valid email address.',
             'email.unique' => 'An application with this email already exists.',
-            'phone.max' => 'Phone number must not exceed 20 characters.',
+            'phone.required' => 'Phone number is required.',
+            'phone.regex' => 'Phone number must be exactly 10 digits.',
             'resume.required' => 'Resume is required.',
             'resume.file' => 'Resume must be a valid file.',
             'resume.max' => 'Resume file size must not exceed 5MB.',

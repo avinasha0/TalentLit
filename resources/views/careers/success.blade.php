@@ -158,20 +158,8 @@
                     <!-- Next Steps -->
                     <div class="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-8 text-white mb-8">
                         <h3 class="text-2xl font-bold mb-6">What's Next?</h3>
-                        <div class="grid md:grid-cols-3 gap-6">
-                            <div class="flex items-start space-x-4">
-                                <div class="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
-                                    </svg>
-                                </div>
-                                <div>
-                                    <h4 class="font-semibold mb-2">Confirmation Email</h4>
-                                    <p class="text-blue-100 text-sm">You will receive a confirmation email shortly</p>
-                                </div>
-                            </div>
-                            
-                            <div class="flex items-start space-x-4">
+                        <div class="flex justify-center">
+                            <div class="flex items-start space-x-4 max-w-md">
                                 <div class="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0">
                                     <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                                         <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
@@ -179,19 +167,7 @@
                                 </div>
                                 <div>
                                     <h4 class="font-semibold mb-2">Application Review</h4>
-                                    <p class="text-blue-100 text-sm">Our recruitment team will review your application</p>
-                                </div>
-                            </div>
-                            
-                            <div class="flex items-start space-x-4">
-                                <div class="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
-                                    </svg>
-                                </div>
-                                <div>
-                                    <h4 class="font-semibold mb-2">Follow-up Contact</h4>
-                                    <p class="text-blue-100 text-sm">We'll contact you within 5-7 business days</p>
+                                    <p class="text-blue-100 text-sm">Our recruitment team will review your application and Contact if matching to the open positions</p>
                                 </div>
                             </div>
                         </div>

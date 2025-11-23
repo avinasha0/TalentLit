@@ -1642,20 +1642,73 @@
                 })
             });
             
+            // DEBUG: Check response status first
+            if (!response.ok) {
+                console.error('DEBUG: HTTP error response', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    url: response.url
+                });
+                const errorData = await response.json().catch(() => ({}));
+                console.error('DEBUG: Error response data:', errorData);
+                showNotification(errorData.message || 'Failed to create payment order', 'error');
+                return;
+            }
+            
             const data = await response.json();
             
+            // DEBUG: Log full response structure
+            console.log('DEBUG: Order creation response received', {
+                success: data.success,
+                has_order: !!data.order,
+                has_order_id: !!data.order_id,
+                order_type: typeof data.order,
+                order_is_array: Array.isArray(data.order),
+                order_keys: data.order ? Object.keys(data.order) : 'N/A',
+                all_response_keys: Object.keys(data),
+                full_response: JSON.stringify(data, null, 2)
+            });
+            
             if (!data.success) {
-                console.error('Order creation failed:', data);
+                console.error('DEBUG: Order creation failed', data);
                 showNotification(data.message || 'Failed to create payment order', 'error');
                 return;
             }
             
-            // Validate order data structure
-            if (!data.order || !data.order.id) {
-                console.error('Invalid order data structure:', data);
-                showNotification('Invalid order data. Please try again.', 'error');
+            // DEBUG: Try to extract order ID with detailed logging
+            let orderId = null;
+            
+            if (data.order) {
+                console.log('DEBUG: Checking data.order structure', {
+                    order_type: typeof data.order,
+                    order_is_array: Array.isArray(data.order),
+                    order_keys: Object.keys(data.order),
+                    order_id_direct: data.order.id,
+                    order_id_bracket: data.order['id'],
+                    order_order_id: data.order.order_id
+                });
+                
+                orderId = data.order.id || data.order.order_id || data.order['id'];
+            }
+            
+            if (!orderId && data.order_id) {
+                console.log('DEBUG: Using root level order_id', data.order_id);
+                orderId = data.order_id;
+            }
+            
+            if (!orderId) {
+                console.error('DEBUG: Order ID extraction failed', {
+                    data_order: data.order,
+                    data_order_id: data.order_id,
+                    data_order_type: typeof data.order,
+                    all_keys: Object.keys(data),
+                    full_response: JSON.stringify(data, null, 2)
+                });
+                showNotification('Invalid order data. Check browser console (F12) for details.', 'error');
                 return;
             }
+            
+            console.log('DEBUG: Order ID extracted successfully', orderId);
             
             if (!data.key_id) {
                 console.error('Razorpay key_id missing:', data);
@@ -1664,14 +1717,7 @@
             }
             
             // Store order_id for fallback
-            const orderIdFromOrder = data.order.id;
-            
-            // Validate order_id before proceeding
-            if (!orderIdFromOrder) {
-                console.error('Order ID is missing from order data:', data);
-                showNotification('Failed to create payment order. Please try again.', 'error');
-                return;
-            }
+            const orderIdFromOrder = orderId;
             
             // Configure RazorPay options
             const options = {

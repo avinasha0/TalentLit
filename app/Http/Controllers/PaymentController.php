@@ -88,7 +88,26 @@ class PaymentController extends Controller
 
         $orderResult = $this->razorPayService->createOrder($orderData);
 
+        // DEBUG: Log the raw order result
+        Log::info('DEBUG: RazorPay createOrder result', [
+            'success' => $orderResult['success'] ?? 'missing',
+            'has_order' => isset($orderResult['order']),
+            'has_order_id' => isset($orderResult['order_id']),
+            'order_type' => isset($orderResult['order']) ? gettype($orderResult['order']) : 'N/A',
+            'order_class' => isset($orderResult['order']) && is_object($orderResult['order']) ? get_class($orderResult['order']) : 'N/A',
+            'order_keys' => isset($orderResult['order']) && is_array($orderResult['order']) ? array_keys($orderResult['order']) : (isset($orderResult['order']) && is_object($orderResult['order']) ? 'object' : 'N/A'),
+            'error' => $orderResult['error'] ?? null,
+            'full_result' => json_encode($orderResult, JSON_PRETTY_PRINT),
+        ]);
+
         if (!$orderResult['success']) {
+            Log::error('Order creation failed', [
+                'user_id' => $user->id,
+                'tenant_id' => $tenant->id,
+                'plan_id' => $plan->id,
+                'error' => $orderResult['error'] ?? 'Unknown error',
+            ]);
+            
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to create payment order',
@@ -96,9 +115,50 @@ class PaymentController extends Controller
             ], 500);
         }
 
-        return response()->json([
+        // DEBUG: Inspect order structure
+        $order = $orderResult['order'];
+        $orderId = null;
+        
+        if (is_object($order)) {
+            // Try to get ID from object
+            if (isset($order->id)) {
+                $orderId = $order->id;
+            } elseif (method_exists($order, 'getId')) {
+                $orderId = $order->getId();
+            } elseif (method_exists($order, 'toArray')) {
+                $orderArray = $order->toArray();
+                $orderId = $orderArray['id'] ?? null;
+            }
+            
+            // Convert to array for JSON response
+            $order = json_decode(json_encode($order), true);
+        } elseif (is_array($order)) {
+            $orderId = $order['id'] ?? null;
+        }
+        
+        // Fallback to order_id from result
+        if (!$orderId && isset($orderResult['order_id'])) {
+            $orderId = $orderResult['order_id'];
+        }
+        
+        // Ensure order array has id
+        if (is_array($order) && !isset($order['id']) && $orderId) {
+            $order['id'] = $orderId;
+        }
+        
+        // DEBUG: Log final order structure
+        Log::info('DEBUG: Final order structure before JSON response', [
+            'order_id' => $orderId,
+            'order_type' => gettype($order),
+            'order_has_id' => is_array($order) ? isset($order['id']) : 'N/A',
+            'order_keys' => is_array($order) ? array_keys($order) : 'N/A',
+            'order_sample' => is_array($order) ? json_encode(array_slice($order, 0, 5, true)) : 'N/A',
+        ]);
+
+        $responseData = [
             'success' => true,
-            'order' => $orderResult['order'],
+            'order' => $order,
+            'order_id' => $orderId, // Add order_id at root level for compatibility
             'key_id' => config('razorpay.key_id'),
             'currency' => $plan->currency,
             'amount' => $plan->price,
@@ -108,7 +168,18 @@ class PaymentController extends Controller
                 'name' => $user->name,
                 'email' => $user->email,
             ],
+        ];
+        
+        // DEBUG: Log what we're sending to frontend
+        Log::info('DEBUG: JSON response being sent to frontend', [
+            'response_keys' => array_keys($responseData),
+            'has_order' => isset($responseData['order']),
+            'order_id_in_order' => is_array($responseData['order']) ? ($responseData['order']['id'] ?? 'missing') : 'not_array',
+            'order_id_at_root' => $responseData['order_id'] ?? 'missing',
+            'response_sample' => json_encode($responseData, JSON_PRETTY_PRINT),
         ]);
+
+        return response()->json($responseData);
     }
 
     /**

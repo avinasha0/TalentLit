@@ -438,19 +438,24 @@ class RazorPayService
                 throw $e;
             }
             
+            // Convert razorpayPlan to array if it's an object
+            if (is_object($razorpayPlan)) {
+                $razorpayPlan = json_decode(json_encode($razorpayPlan), true);
+            }
+            
             Log::info('DEBUG: Razorpay plan created successfully', [
                 'razorpay_plan_id' => $razorpayPlan['id'] ?? 'N/A',
                 'razorpay_plan_response' => json_encode($razorpayPlan, JSON_PRETTY_PRINT),
             ]);
             
             Log::info('Created new Razorpay plan', [
-                'plan_id' => $razorpayPlan['id'],
-                'amount' => $razorpayPlan['amount'],
+                'plan_id' => $razorpayPlan['id'] ?? 'N/A',
+                'amount' => $razorpayPlan['amount'] ?? 'N/A',
             ]);
             
             return [
                 'success' => true,
-                'plan_id' => $razorpayPlan['id'],
+                'plan_id' => $razorpayPlan['id'] ?? null,
                 'plan' => $razorpayPlan,
             ];
         } catch (\Exception $e) {

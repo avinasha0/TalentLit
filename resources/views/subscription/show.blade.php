@@ -468,12 +468,33 @@ async function initiatePayment(planId, planName, amount, currency) {
         const data = await response.json();
         
         if (!data.success) {
+            console.error('Order creation failed:', data);
             showNotification(data.message || 'Failed to create payment order', 'error');
+            return;
+        }
+        
+        // Validate order data structure
+        if (!data.order || !data.order.id) {
+            console.error('Invalid order data structure:', data);
+            showNotification('Invalid order data. Please try again.', 'error');
+            return;
+        }
+        
+        if (!data.key_id) {
+            console.error('Razorpay key_id missing:', data);
+            showNotification('Payment gateway configuration error. Please contact support.', 'error');
             return;
         }
         
         // Store order_id for fallback
         const orderIdFromOrder = data.order.id;
+        
+        // Validate order data before proceeding
+        if (!orderIdFromOrder) {
+            console.error('Order ID is missing from order data:', data);
+            showNotification('Failed to create payment order. Please try again.', 'error');
+            return;
+        }
         
         // Configure RazorPay options
         const options = {
@@ -483,22 +504,44 @@ async function initiatePayment(planId, planName, amount, currency) {
             name: data.name,
             description: data.description,
             order_id: orderIdFromOrder,
-            prefill: data.prefill,
+            prefill: data.prefill || {},
             theme: {
                 color: '#4f46e5'
             },
             handler: function(response) {
-                // Payment successful
-                // Use response order_id or fallback to original order_id
-                const orderId = response.razorpay_order_id || orderIdFromOrder;
+                // Log full response for debugging
+                console.log('Razorpay payment handler called with response:', response);
                 
-                // Validate required fields
-                if (!response.razorpay_payment_id || !response.razorpay_signature || !orderId) {
-                    console.error('Missing payment details in Razorpay response:', response);
-                    showNotification('Payment details incomplete. Please contact support.', 'error');
+                // Payment successful - validate response
+                if (!response || typeof response !== 'object') {
+                    console.error('Invalid Razorpay response:', response);
+                    showNotification('Invalid payment response. Please try again.', 'error');
                     return;
                 }
                 
+                // Use response order_id or fallback to original order_id
+                const orderId = response.razorpay_order_id || orderIdFromOrder;
+                
+                // Validate critical fields with detailed error messages
+                if (!response.razorpay_payment_id) {
+                    console.error('Missing payment_id in Razorpay response:', response);
+                    showNotification('Payment ID is missing. Please contact support with Order ID: ' + orderIdFromOrder, 'error');
+                    return;
+                }
+                
+                if (!response.razorpay_signature) {
+                    console.error('Missing signature in Razorpay response:', response);
+                    showNotification('Payment signature is missing. Please contact support with Payment ID: ' + response.razorpay_payment_id, 'error');
+                    return;
+                }
+                
+                if (!orderId) {
+                    console.error('Order ID is missing:', { response, orderIdFromOrder });
+                    showNotification('Order ID is missing. Please contact support with Payment ID: ' + response.razorpay_payment_id, 'error');
+                    return;
+                }
+                
+                // All validations passed, proceed with form submission
                 const form = document.createElement('form');
                 form.method = 'GET';
                 form.action = '{{ route("payment.success") }}';
@@ -532,8 +575,21 @@ async function initiatePayment(planId, planName, amount, currency) {
         };
         
         // Open RazorPay checkout
-        const rzp = new Razorpay(options);
-        rzp.open();
+        try {
+            const rzp = new Razorpay(options);
+            
+            // Add error handler for payment failures
+            rzp.on('payment.failed', function(response) {
+                console.error('Razorpay payment failed:', response);
+                const errorMessage = response.error?.description || response.error?.reason || 'Payment failed. Please try again.';
+                showNotification('Payment failed: ' + errorMessage, 'error');
+            });
+            
+            rzp.open();
+        } catch (error) {
+            console.error('Error opening Razorpay checkout:', error);
+            showNotification('Failed to open payment gateway. Please try again.', 'error');
+        }
         
     } catch (error) {
         console.error('Payment error:', error);

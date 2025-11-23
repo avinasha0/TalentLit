@@ -135,8 +135,13 @@ class PaymentController extends Controller
             ], 400);
         }
 
-        // Create or get Razorpay Plan for recurring subscription
-        Log::info('DEBUG: Starting Razorpay plan creation/get', [
+        // Try to create subscription first, fallback to one-time order if subscriptions not enabled
+        $useSubscriptions = true;
+        $subscriptionResult = null;
+        $orderResult = null;
+        
+        // First, try to create Razorpay Plan for recurring subscription
+        Log::info('DEBUG: Attempting to create Razorpay plan for subscription', [
             'plan_id' => $plan->id,
             'plan_price' => $plan->price,
             'plan_currency' => $plan->currency,
@@ -151,92 +156,148 @@ class PaymentController extends Controller
             'error' => $planResult['error'] ?? null,
         ]);
         
-        if (!$planResult['success']) {
-            Log::error('Razorpay plan creation/get failed', [
-                'user_id' => $user->id,
-                'tenant_id' => $tenant->id,
-                'plan_id' => $plan->id,
+        if ($planResult['success']) {
+            // Plan created successfully, try to create subscription
+            $razorpayPlanId = $planResult['plan_id'];
+            
+            $subscriptionData = [
+                'plan_id' => $razorpayPlanId,
+                'notes' => [
+                    'tenant_id' => $tenant->id,
+                    'user_id' => $user->id,
+                    'plan_id' => $plan->id,
+                    'plan_name' => $plan->name,
+                ],
+            ];
+            
+            Log::info('DEBUG: Starting Razorpay subscription creation', [
+                'razorpay_plan_id' => $razorpayPlanId,
+                'subscription_data' => $subscriptionData,
+            ]);
+            
+            $subscriptionResult = $this->razorPayService->createSubscription($subscriptionData);
+            
+            if (!$subscriptionResult['success']) {
+                Log::warning('DEBUG: Subscription creation failed, falling back to one-time order', [
+                    'error' => $subscriptionResult['error'] ?? 'Unknown error',
+                ]);
+                $useSubscriptions = false;
+            }
+        } else {
+            // Plan creation failed (likely subscriptions not enabled), use one-time order
+            Log::warning('DEBUG: Plan creation failed, using one-time order instead', [
                 'error' => $planResult['error'] ?? 'Unknown error',
             ]);
-            
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to create payment plan',
-                'error' => $planResult['error'],
-            ], 500);
+            $useSubscriptions = false;
         }
         
-        $razorpayPlanId = $planResult['plan_id'];
-        
-        // Create Razorpay Subscription for recurring payments
-        $subscriptionData = [
-            'plan_id' => $razorpayPlanId,
-            'notes' => [
-                'tenant_id' => $tenant->id,
-                'user_id' => $user->id,
+        // If subscriptions failed, create one-time order instead
+        if (!$useSubscriptions || !$subscriptionResult || !$subscriptionResult['success']) {
+            Log::info('DEBUG: Creating one-time payment order', [
                 'plan_id' => $plan->id,
-                'plan_name' => $plan->name,
-            ],
-        ];
-        
-        Log::info('DEBUG: Starting Razorpay subscription creation', [
-            'razorpay_plan_id' => $razorpayPlanId,
-            'subscription_data' => $subscriptionData,
-        ]);
-        
-        $subscriptionResult = $this->razorPayService->createSubscription($subscriptionData);
-
-        // DEBUG: Log the raw subscription result
-        Log::info('DEBUG: RazorPay createSubscription result', [
-            'success' => $subscriptionResult['success'] ?? 'missing',
-            'has_subscription' => isset($subscriptionResult['subscription']),
-            'has_subscription_id' => isset($subscriptionResult['subscription_id']),
-            'error' => $subscriptionResult['error'] ?? null,
-        ]);
-
-        if (!$subscriptionResult['success']) {
-            Log::error('Subscription creation failed', [
-                'user_id' => $user->id,
-                'tenant_id' => $tenant->id,
-                'plan_id' => $plan->id,
-                'error' => $subscriptionResult['error'] ?? 'Unknown error',
+                'amount' => $plan->price,
+                'currency' => $plan->currency,
             ]);
             
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to create subscription',
-                'error' => $subscriptionResult['error'],
-            ], 500);
+            $orderData = [
+                'amount' => $plan->price,
+                'currency' => $plan->currency,
+                'receipt' => 'plan_' . $plan->id . '_' . $tenant->id . '_' . time(),
+                'notes' => [
+                    'tenant_id' => $tenant->id,
+                    'user_id' => $user->id,
+                    'plan_id' => $plan->id,
+                    'plan_name' => $plan->name,
+                    'payment_type' => 'one_time',
+                ],
+            ];
+            
+            $orderResult = $this->razorPayService->createOrder($orderData);
+            
+            Log::info('DEBUG: One-time order creation result', [
+                'success' => $orderResult['success'] ?? 'missing',
+                'has_order_id' => isset($orderResult['order_id']),
+                'order_id' => $orderResult['order_id'] ?? 'N/A',
+                'error' => $orderResult['error'] ?? null,
+            ]);
+            
+            if (!$orderResult['success']) {
+                Log::error('DEBUG: Both subscription and order creation failed', [
+                    'subscription_error' => $subscriptionResult['error'] ?? 'N/A',
+                    'order_error' => $orderResult['error'] ?? 'N/A',
+                ]);
+                
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to create payment. Please try again or contact support.',
+                    'error' => $orderResult['error'] ?? 'Payment creation failed',
+                ], 500);
+            }
         }
 
-        // Get subscription details
-        $subscription = $subscriptionResult['subscription'];
-        $subscriptionId = $subscriptionResult['subscription_id'];
-        
-        // Convert subscription to array if needed
-        if (is_object($subscription)) {
-            $subscription = json_decode(json_encode($subscription), true);
+        // Prepare response data based on payment type
+        if ($useSubscriptions && $subscriptionResult && $subscriptionResult['success']) {
+            // Subscription payment
+            $subscription = $subscriptionResult['subscription'];
+            $subscriptionId = $subscriptionResult['subscription_id'];
+            
+            // Convert subscription to array if needed
+            if (is_object($subscription)) {
+                $subscription = json_decode(json_encode($subscription), true);
+            }
+            
+            // Ensure subscription has id
+            if (is_array($subscription) && !isset($subscription['id']) && $subscriptionId) {
+                $subscription['id'] = $subscriptionId;
+            }
+            
+            Log::info('DEBUG: Using subscription payment', [
+                'subscription_id' => $subscriptionId,
+            ]);
+            
+            $responseData = [
+                'success' => true,
+                'subscription' => $subscription,
+                'subscription_id' => $subscriptionId,
+                'key_id' => config('razorpay.key_id'),
+                'currency' => $plan->currency,
+                'amount' => $plan->price,
+                'name' => config('app.name'),
+                'description' => $plan->name . ' Subscription',
+                'prefill' => [
+                    'name' => $user->name,
+                    'email' => $user->email,
+                ],
+            ];
+        } else {
+            // One-time order payment
+            $order = $orderResult['order'];
+            $orderId = $orderResult['order_id'];
+            
+            // Convert order to array if needed
+            if (is_object($order)) {
+                $order = json_decode(json_encode($order), true);
+            }
+            
+            Log::info('DEBUG: Using one-time order payment', [
+                'order_id' => $orderId,
+            ]);
+            
+            $responseData = [
+                'success' => true,
+                'order' => $order,
+                'order_id' => $orderId,
+                'key_id' => config('razorpay.key_id'),
+                'currency' => $plan->currency,
+                'amount' => $plan->price,
+                'name' => config('app.name'),
+                'description' => $plan->name . ' Payment',
+                'prefill' => [
+                    'name' => $user->name,
+                    'email' => $user->email,
+                ],
+            ];
         }
-        
-        // Ensure subscription has id
-        if (is_array($subscription) && !isset($subscription['id']) && $subscriptionId) {
-            $subscription['id'] = $subscriptionId;
-        }
-
-        $responseData = [
-            'success' => true,
-            'subscription' => $subscription,
-            'subscription_id' => $subscriptionId,
-            'key_id' => config('razorpay.key_id'),
-            'currency' => $plan->currency,
-            'amount' => $plan->price,
-            'name' => config('app.name'),
-            'description' => $plan->name . ' Subscription',
-            'prefill' => [
-                'name' => $user->name,
-                'email' => $user->email,
-            ],
-        ];
         
         // DEBUG: Log what we're sending to frontend
         Log::info('DEBUG: JSON response being sent to frontend', [

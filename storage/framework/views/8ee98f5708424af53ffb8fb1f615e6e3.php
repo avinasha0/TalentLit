@@ -269,6 +269,79 @@ unset($__errorArgs, $__bag); ?>
                                 </div>
                             </div>
 
+                            <!-- CTC Information -->
+                            <div>
+                                <h3 class="text-xl font-semibold text-gray-900 mb-6">Compensation Details</h3>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <label for="current_ctc" class="block text-sm font-medium text-gray-700 mb-2">
+                                            Current CTC Per Year (In Lakhs) <span class="text-red-500">*</span>
+                                        </label>
+                                        <input type="number" 
+                                               name="current_ctc" 
+                                               id="current_ctc"
+                                               value="<?php echo e(old('current_ctc', '')); ?>"
+                                               required
+                                               step="0.01"
+                                               min="0"
+                                               max="999999.99"
+                                               placeholder="Enter current CTC per year (0 for freshers)"
+                                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors <?php $__errorArgs = ['current_ctc'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?> border-red-500 <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>">
+                                        <p class="mt-1 text-xs text-gray-500">Enter 0 if you are a fresher</p>
+                                        <?php $__errorArgs = ['current_ctc'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?>
+                                            <p class="mt-1 text-sm text-red-600"><?php echo e($message); ?></p>
+                                        <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
+                                    </div>
+
+                                    <div>
+                                        <label for="expected_ctc" class="block text-sm font-medium text-gray-700 mb-2">
+                                            Expected CTC Per Year (In Lakhs) <span class="text-red-500">*</span>
+                                        </label>
+                                        <input type="number" 
+                                               name="expected_ctc" 
+                                               id="expected_ctc"
+                                               value="<?php echo e(old('expected_ctc')); ?>"
+                                               required
+                                               step="0.01"
+                                               min="0"
+                                               max="999999.99"
+                                               placeholder="Enter expected CTC per year"
+                                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors <?php $__errorArgs = ['expected_ctc'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?> border-red-500 <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>">
+                                        <?php $__errorArgs = ['expected_ctc'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?>
+                                            <p class="mt-1 text-sm text-red-600"><?php echo e($message); ?></p>
+                                        <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
+                                    </div>
+                                </div>
+                            </div>
+
                             <!-- Resume Upload -->
                             <div>
                                 <h3 class="text-xl font-semibold text-gray-900 mb-6">Resume Upload</h3>

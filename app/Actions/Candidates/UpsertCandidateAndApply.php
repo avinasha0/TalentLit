@@ -26,6 +26,8 @@ class UpsertCandidateAndApply
         string $lastName,
         string $email,
         ?string $phone,
+        float $currentCtc,
+        float $expectedCtc,
         ?UploadedFile $resume,
         bool $consent,
         array $customAnswers = []
@@ -37,6 +39,8 @@ class UpsertCandidateAndApply
             $lastName,
             $email,
             $phone,
+            $currentCtc,
+            $expectedCtc,
             $resume,
             $customAnswers
         ) {
@@ -94,12 +98,22 @@ class UpsertCandidateAndApply
                     'applied_at' => now(),
                     'current_stage_id' => $firstStage?->id,
                     'stage_position' => $nextPosition,
+                    'current_ctc' => $currentCtc,
+                    'expected_ctc' => $expectedCtc,
                 ]
             );
 
-            // Update application with resume if provided
+            // Update application with resume and CTC if provided or if application already existed
+            $updateData = [];
             if ($resumeModel) {
-                $application->update(['resume_id' => $resumeModel->id]);
+                $updateData['resume_id'] = $resumeModel->id;
+            }
+            // Always update CTC fields in case application already existed
+            $updateData['current_ctc'] = $currentCtc;
+            $updateData['expected_ctc'] = $expectedCtc;
+            
+            if (!empty($updateData)) {
+                $application->update($updateData);
             }
 
             // Handle custom answers

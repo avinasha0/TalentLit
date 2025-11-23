@@ -24,12 +24,34 @@ class PaymentController extends Controller
      */
     public function createOrder(Request $request)
     {
+        // DEBUG: Log incoming request
+        Log::info('DEBUG: Payment createOrder request received', [
+            'request_data' => $request->all(),
+            'plan_id' => $request->plan_id,
+            'user_authenticated' => Auth::check(),
+            'user_id' => Auth::id(),
+            'timestamp' => now()->toDateTimeString(),
+        ]);
+
         $request->validate([
             'plan_id' => 'required|exists:subscription_plans,id',
         ]);
 
+        // DEBUG: Log after validation
+        Log::info('DEBUG: Request validation passed', [
+            'plan_id' => $request->plan_id,
+        ]);
+
         // Check if RazorPay is configured
-        if (!$this->razorPayService->isConfigured()) {
+        $isConfigured = $this->razorPayService->isConfigured();
+        Log::info('DEBUG: Razorpay configuration check', [
+            'is_configured' => $isConfigured,
+            'has_key_id' => !empty(config('razorpay.key_id')),
+            'has_key_secret' => !empty(config('razorpay.key_secret')),
+        ]);
+
+        if (!$isConfigured) {
+            Log::error('DEBUG: Razorpay not configured');
             return response()->json([
                 'success' => false,
                 'message' => 'Payment gateway not configured',
@@ -38,7 +60,14 @@ class PaymentController extends Controller
 
         // Check if Pro plan is active or Razorpay is configured
         $proPlanActive = $this->razorPayService->isProPlanActive() || $this->razorPayService->isConfigured();
+        Log::info('DEBUG: Pro plan availability check', [
+            'pro_plan_active' => $proPlanActive,
+            'is_pro_plan_active' => $this->razorPayService->isProPlanActive(),
+            'pro_plan_mode' => config('razorpay.pro_plan_mode'),
+        ]);
+
         if (!$proPlanActive) {
+            Log::error('DEBUG: Pro plan not active');
             return response()->json([
                 'success' => false,
                 'message' => 'Pro plan is not available for payment',
@@ -46,7 +75,22 @@ class PaymentController extends Controller
         }
 
         $user = Auth::user();
+        Log::info('DEBUG: User retrieved', [
+            'user_id' => $user->id,
+            'user_name' => $user->name,
+            'user_email' => $user->email,
+        ]);
+
         $plan = SubscriptionPlan::findOrFail($request->plan_id);
+        Log::info('DEBUG: Plan retrieved', [
+            'plan_id' => $plan->id,
+            'plan_name' => $plan->name,
+            'plan_slug' => $plan->slug,
+            'plan_price' => $plan->price,
+            'plan_currency' => $plan->currency,
+            'is_free' => $plan->isFree(),
+            'requires_contact' => $plan->requiresContactForPricing(),
+        ]);
 
         // Check if plan is payable
         if ($plan->isFree() || $plan->requiresContactForPricing()) {
@@ -58,7 +102,14 @@ class PaymentController extends Controller
 
         // Get user's tenant
         $tenant = $user->tenants->first();
+        Log::info('DEBUG: Tenant check', [
+            'has_tenant' => !is_null($tenant),
+            'tenant_id' => $tenant->id ?? 'N/A',
+            'tenant_slug' => $tenant->slug ?? 'N/A',
+        ]);
+
         if (!$tenant) {
+            Log::error('DEBUG: User has no tenant');
             return response()->json([
                 'success' => false,
                 'message' => 'User does not have a tenant',
@@ -66,7 +117,18 @@ class PaymentController extends Controller
         }
 
         // Check if user has Free plan (required for Pro upgrade)
-        if (!$tenant->hasFreePlan()) {
+        $hasFreePlan = $tenant->hasFreePlan();
+        Log::info('DEBUG: Free plan check', [
+            'has_free_plan' => $hasFreePlan,
+            'current_subscription' => $tenant->activeSubscription ? [
+                'id' => $tenant->activeSubscription->id,
+                'plan_slug' => $tenant->activeSubscription->plan->slug ?? 'N/A',
+                'status' => $tenant->activeSubscription->status ?? 'N/A',
+            ] : 'No active subscription',
+        ]);
+
+        if (!$hasFreePlan) {
+            Log::error('DEBUG: User does not have Free plan');
             return response()->json([
                 'success' => false,
                 'message' => 'You must first subscribe to the Free plan before upgrading to Pro.',
@@ -74,7 +136,20 @@ class PaymentController extends Controller
         }
 
         // Create or get Razorpay Plan for recurring subscription
+        Log::info('DEBUG: Starting Razorpay plan creation/get', [
+            'plan_id' => $plan->id,
+            'plan_price' => $plan->price,
+            'plan_currency' => $plan->currency,
+        ]);
+
         $planResult = $this->razorPayService->createOrGetPlan($plan);
+        
+        Log::info('DEBUG: Razorpay plan creation/get result', [
+            'success' => $planResult['success'] ?? 'missing',
+            'has_plan_id' => isset($planResult['plan_id']),
+            'plan_id' => $planResult['plan_id'] ?? 'N/A',
+            'error' => $planResult['error'] ?? null,
+        ]);
         
         if (!$planResult['success']) {
             Log::error('Razorpay plan creation/get failed', [
@@ -103,6 +178,11 @@ class PaymentController extends Controller
                 'plan_name' => $plan->name,
             ],
         ];
+        
+        Log::info('DEBUG: Starting Razorpay subscription creation', [
+            'razorpay_plan_id' => $razorpayPlanId,
+            'subscription_data' => $subscriptionData,
+        ]);
         
         $subscriptionResult = $this->razorPayService->createSubscription($subscriptionData);
 
@@ -145,8 +225,8 @@ class PaymentController extends Controller
 
         $responseData = [
             'success' => true,
-            'order' => $order,
-            'order_id' => $orderId, // Add order_id at root level for compatibility
+            'subscription' => $subscription,
+            'subscription_id' => $subscriptionId,
             'key_id' => config('razorpay.key_id'),
             'currency' => $plan->currency,
             'amount' => $plan->price,
@@ -161,9 +241,9 @@ class PaymentController extends Controller
         // DEBUG: Log what we're sending to frontend
         Log::info('DEBUG: JSON response being sent to frontend', [
             'response_keys' => array_keys($responseData),
-            'has_order' => isset($responseData['order']),
-            'order_id_in_order' => is_array($responseData['order']) ? ($responseData['order']['id'] ?? 'missing') : 'not_array',
-            'order_id_at_root' => $responseData['order_id'] ?? 'missing',
+            'has_subscription' => isset($responseData['subscription']),
+            'subscription_id_in_subscription' => is_array($responseData['subscription']) ? ($responseData['subscription']['id'] ?? 'missing') : 'not_array',
+            'subscription_id_at_root' => $responseData['subscription_id'] ?? 'missing',
             'response_sample' => json_encode($responseData, JSON_PRETTY_PRINT),
         ]);
 

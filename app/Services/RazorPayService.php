@@ -4,6 +4,7 @@ namespace App\Services;
 
 use Razorpay\Api\Api;
 use Razorpay\Api\Errors\SignatureVerificationError;
+use Razorpay\Api\Errors\Error as RazorpayError;
 use Illuminate\Support\Facades\Log;
 use App\Models\SubscriptionPlan;
 use App\Models\TenantSubscription;
@@ -227,16 +228,56 @@ class RazorPayService
     public function createOrGetPlan(SubscriptionPlan $plan): array
     {
         try {
+            Log::info('DEBUG: createOrGetPlan started', [
+                'plan_id' => $plan->id,
+                'plan_name' => $plan->name,
+                'plan_price' => $plan->price,
+                'plan_currency' => $plan->currency,
+                'razorpay_configured' => $this->isConfigured(),
+            ]);
+
+            // Validate plan data
+            if (!$plan->price || $plan->price <= 0) {
+                Log::error('DEBUG: Invalid plan price', ['price' => $plan->price]);
+                throw new \Exception('Invalid plan price: ' . $plan->price);
+            }
+            
+            if (!$plan->currency) {
+                Log::error('DEBUG: Plan currency missing');
+                throw new \Exception('Plan currency is required');
+            }
+            
             // Check if plan already exists in Razorpay by searching
+            Log::info('DEBUG: Fetching existing Razorpay plans');
             $plans = $this->api->plan->all(['count' => 100]);
+            
+            Log::info('DEBUG: Razorpay plans fetched', [
+                'total_plans' => count($plans['items'] ?? []),
+                'plans_structure' => array_keys($plans),
+            ]);
             
             // Look for existing plan with matching amount
             $planAmount = $plan->price * 100; // Convert to paise
-            foreach ($plans['items'] as $razorpayPlan) {
+            Log::info('DEBUG: Searching for existing plan', [
+                'search_amount' => $planAmount,
+                'search_currency' => strtoupper($plan->currency),
+            ]);
+
+            foreach ($plans['items'] ?? [] as $index => $razorpayPlan) {
+                Log::info('DEBUG: Checking plan ' . $index, [
+                    'razorpay_plan_id' => $razorpayPlan['id'] ?? 'N/A',
+                    'razorpay_amount' => $razorpayPlan['amount'] ?? 'N/A',
+                    'razorpay_currency' => $razorpayPlan['currency'] ?? 'N/A',
+                    'razorpay_interval' => $razorpayPlan['interval'] ?? 'N/A',
+                    'matches_amount' => ($razorpayPlan['amount'] ?? 0) == $planAmount,
+                    'matches_currency' => ($razorpayPlan['currency'] ?? '') == strtoupper($plan->currency),
+                    'matches_interval' => ($razorpayPlan['interval'] ?? 0) == 1,
+                ]);
+
                 if ($razorpayPlan['amount'] == $planAmount && 
                     $razorpayPlan['currency'] == strtoupper($plan->currency) &&
                     $razorpayPlan['interval'] == 1) { // Monthly
-                    Log::info('Found existing Razorpay plan', [
+                    Log::info('DEBUG: Found existing Razorpay plan', [
                         'plan_id' => $razorpayPlan['id'],
                         'amount' => $razorpayPlan['amount'],
                     ]);
@@ -249,6 +290,7 @@ class RazorPayService
             }
             
             // Create new plan if not found
+            Log::info('DEBUG: No existing plan found, creating new plan');
             $planData = [
                 'period' => 'monthly',
                 'interval' => 1,
@@ -264,7 +306,54 @@ class RazorPayService
                 ],
             ];
             
-            $razorpayPlan = $this->api->plan->create($planData);
+            Log::info('DEBUG: Calling Razorpay API to create plan', [
+                'plan_data' => $planData,
+                'plan_data_json' => json_encode($planData, JSON_PRETTY_PRINT),
+            ]);
+            
+            try {
+                $razorpayPlan = $this->api->plan->create($planData);
+            } catch (RazorpayError $apiError) {
+                $errorMessage = $apiError->getMessage();
+                $errorDetails = [
+                    'error_code' => $apiError->getCode(),
+                    'error_message' => $errorMessage,
+                    'error_description' => method_exists($apiError, 'getDescription') ? $apiError->getDescription() : 'N/A',
+                    'error_field' => method_exists($apiError, 'getField') ? $apiError->getField() : 'N/A',
+                    'error_source' => method_exists($apiError, 'getSource') ? $apiError->getSource() : 'N/A',
+                    'error_step' => method_exists($apiError, 'getStep') ? $apiError->getStep() : 'N/A',
+                    'error_reason' => method_exists($apiError, 'getReason') ? $apiError->getReason() : 'N/A',
+                    'error_metadata' => method_exists($apiError, 'getMetadata') ? json_encode($apiError->getMetadata()) : 'N/A',
+                    'error_string' => (string)$apiError,
+                ];
+                
+                Log::error('DEBUG: Razorpay API Error (RazorpayError) caught', $errorDetails);
+                
+                // Check if error is about subscriptions not being enabled
+                if (stripos($errorMessage, 'not found') !== false || 
+                    stripos($errorMessage, '404') !== false ||
+                    stripos($errorMessage, 'URL was not found') !== false) {
+                    Log::error('DEBUG: CRITICAL - Subscriptions feature may not be enabled in Razorpay account', [
+                        'action_required' => 'Enable Subscriptions feature in Razorpay Dashboard',
+                        'dashboard_url' => 'https://dashboard.razorpay.com/',
+                        'error_details' => $errorDetails,
+                    ]);
+                }
+                
+                throw $apiError;
+            } catch (\Exception $e) {
+                Log::error('DEBUG: General Exception during plan create', [
+                    'error_type' => get_class($e),
+                    'error_message' => $e->getMessage(),
+                    'error_code' => $e->getCode(),
+                ]);
+                throw $e;
+            }
+            
+            Log::info('DEBUG: Razorpay plan created successfully', [
+                'razorpay_plan_id' => $razorpayPlan['id'] ?? 'N/A',
+                'razorpay_plan_response' => json_encode($razorpayPlan, JSON_PRETTY_PRINT),
+            ]);
             
             Log::info('Created new Razorpay plan', [
                 'plan_id' => $razorpayPlan['id'],
@@ -277,7 +366,17 @@ class RazorPayService
                 'plan' => $razorpayPlan,
             ];
         } catch (\Exception $e) {
-            Log::error('RazorPay Plan Creation Failed: ' . $e->getMessage());
+            Log::error('DEBUG: RazorPay Plan Creation Failed', [
+                'error_message' => $e->getMessage(),
+                'error_code' => $e->getCode(),
+                'error_file' => $e->getFile(),
+                'error_line' => $e->getLine(),
+                'error_trace' => $e->getTraceAsString(),
+                'plan_id' => $plan->id ?? 'N/A',
+                'plan_price' => $plan->price ?? 'N/A',
+                'plan_currency' => $plan->currency ?? 'N/A',
+                'plan_amount_paise' => isset($plan->price) ? ($plan->price * 100) : 'N/A',
+            ]);
             
             return [
                 'success' => false,
@@ -292,6 +391,12 @@ class RazorPayService
     public function createSubscription(array $data): array
     {
         try {
+            Log::info('DEBUG: createSubscription started', [
+                'input_data' => $data,
+                'has_plan_id' => isset($data['plan_id']),
+                'plan_id' => $data['plan_id'] ?? 'N/A',
+            ]);
+
             $subscriptionData = [
                 'plan_id' => $data['plan_id'], // Razorpay plan ID
                 'customer_notify' => 1,
@@ -301,12 +406,25 @@ class RazorPayService
                 'notes' => $data['notes'] ?? [],
             ];
 
+            Log::info('DEBUG: Subscription data prepared', [
+                'subscription_data' => $subscriptionData,
+            ]);
+
             // Add customer details if provided
             if (isset($data['customer'])) {
                 $subscriptionData['customer_notify'] = 1;
             }
 
+            Log::info('DEBUG: Calling Razorpay API to create subscription', [
+                'final_subscription_data' => $subscriptionData,
+            ]);
+
             $subscription = $this->api->subscription->create($subscriptionData);
+            
+            Log::info('DEBUG: Razorpay subscription created successfully', [
+                'subscription_id' => $subscription['id'] ?? 'N/A',
+                'subscription_response' => json_encode($subscription, JSON_PRETTY_PRINT),
+            ]);
 
             Log::info('Razorpay subscription created', [
                 'subscription_id' => $subscription['id'],
@@ -319,8 +437,14 @@ class RazorPayService
                 'subscription_id' => $subscription['id'],
             ];
         } catch (\Exception $e) {
-            Log::error('RazorPay Subscription Creation Failed: ' . $e->getMessage(), [
+            Log::error('DEBUG: RazorPay Subscription Creation Failed', [
+                'error_message' => $e->getMessage(),
+                'error_code' => $e->getCode(),
+                'error_file' => $e->getFile(),
+                'error_line' => $e->getLine(),
+                'error_trace' => $e->getTraceAsString(),
                 'plan_id' => $data['plan_id'] ?? 'N/A',
+                'input_data' => $data,
             ]);
             
             return [

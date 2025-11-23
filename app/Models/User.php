@@ -95,7 +95,7 @@ class User extends Authenticatable
      */
     public function getRolesForTenant($tenantId)
     {
-        $roleName = \DB::table('custom_user_roles')
+        $roleName = DB::table('custom_user_roles')
             ->where('user_id', $this->id)
             ->where('tenant_id', $tenantId)
             ->value('role_name');
@@ -112,6 +112,42 @@ class User extends Authenticatable
                 'id' => $roleName . '_' . $tenantId // Create a unique ID
             ]
         ]);
+    }
+
+    /**
+     * Check if user has a specific role for the current tenant
+     */
+    public function hasRole($roleName, $tenantId = null)
+    {
+        $tenantId = $tenantId ?? tenant_id();
+        if (!$tenantId) {
+            return false;
+        }
+
+        $userRole = DB::table('custom_user_roles')
+            ->where('user_id', $this->id)
+            ->where('tenant_id', $tenantId)
+            ->value('role_name');
+
+        return $userRole === $roleName;
+    }
+
+    /**
+     * Check if user has any of the specified roles for the current tenant
+     */
+    public function hasAnyRole(array $roleNames, $tenantId = null)
+    {
+        $tenantId = $tenantId ?? tenant_id();
+        if (!$tenantId) {
+            return false;
+        }
+
+        $userRole = DB::table('custom_user_roles')
+            ->where('user_id', $this->id)
+            ->where('tenant_id', $tenantId)
+            ->value('role_name');
+
+        return in_array($userRole, $roleNames);
     }
 
     /**

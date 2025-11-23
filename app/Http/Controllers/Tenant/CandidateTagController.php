@@ -42,29 +42,44 @@ class CandidateTagController extends Controller
             abort(403, 'You do not have permission to manage tags.');
         }
 
-        // Find or create tag
-        $tag = Tag::firstOrCreate(
-            [
-                'tenant_id' => tenant_id(),
-                'name' => $request->name,
-            ]
-        );
+        try {
+            // Find or create tag
+            $tag = Tag::firstOrCreate(
+                [
+                    'tenant_id' => tenant_id(),
+                    'name' => $request->name,
+                ],
+                [
+                    'tenant_id' => tenant_id(),
+                    'name' => $request->name,
+                    'color' => null, // Default color, can be set later
+                ]
+            );
 
-        // Check if tag is already attached to candidate
-        $exists = DB::table('candidate_tags')
-            ->where('tenant_id', tenant_id())
-            ->where('candidate_id', $candidate->id)
-            ->where('tag_id', $tag->id)
-            ->exists();
+            // Check if tag is already attached to candidate
+            $exists = DB::table('candidate_tags')
+                ->where('tenant_id', tenant_id())
+                ->where('candidate_id', $candidate->id)
+                ->where('tag_id', $tag->id)
+                ->exists();
 
-        // Attach tag to candidate if not already attached
-        if (!$exists) {
-            // Use the pivot model directly to ensure UUID is generated
-            CandidateTag::create([
-                'tenant_id' => tenant_id(),
-                'candidate_id' => $candidate->id,
-                'tag_id' => $tag->id,
-            ]);
+            // Attach tag to candidate if not already attached
+            if (!$exists) {
+                // Use the pivot model directly to ensure UUID is generated
+                CandidateTag::create([
+                    'tenant_id' => tenant_id(),
+                    'candidate_id' => $candidate->id,
+                    'tag_id' => $tag->id,
+                ]);
+            }
+        } catch (\Exception $e) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to add tag: ' . $e->getMessage()
+                ], 500);
+            }
+            throw $e;
         }
 
         if ($request->expectsJson()) {

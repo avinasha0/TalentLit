@@ -378,9 +378,16 @@ class PaymentController extends Controller
                 ->with('error', 'Failed to process payment');
         }
 
+        // Prepare success message based on payment type
+        if ($isSubscription) {
+            $successMessage = '🎉 Recurring Subscription Activated! Your Pro plan subscription is now active and will automatically renew monthly. You will be charged automatically each month until you cancel.';
+        } else {
+            $successMessage = 'Payment successful! Your Pro subscription has been activated.';
+        }
+
         // Redirect to tenant subscription page
         return redirect()->route('subscription.show', $tenant->slug)
-            ->with('success', 'Payment successful! Your Pro subscription has been activated.');
+            ->with('success', $successMessage);
     }
 
     /**

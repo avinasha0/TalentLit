@@ -61,8 +61,8 @@
                 <ul class="space-y-3">
                     <li><a href="/help-center.html" class="text-gray-400 hover:text-white transition-colors text-sm">Help Center</a></li>
                     <li><a href="/documentation.html" class="text-gray-400 hover:text-white transition-colors text-sm">Documentation</a></li>
-                    <li><a href="/security.html" class="text-gray-400 hover:text-white transition-colors text-sm">Security</a></li>
-                    <li><a href="/status.html" class="text-gray-400 hover:text-white transition-colors text-sm">Status</a></li>
+                    <li><a href="{{ route('shipping-delivery') }}" class="text-gray-400 hover:text-white transition-colors text-sm">Shipping</a></li>
+                    <li><a href="{{ route('cancellation-refund-policy') }}" class="text-gray-400 hover:text-white transition-colors text-sm">Refunds</a></li>
                     <li><a href="/community.html" class="text-gray-400 hover:text-white transition-colors text-sm">Community</a></li>
                 </ul>
             </div>

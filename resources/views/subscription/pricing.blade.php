@@ -1247,57 +1247,67 @@ async function initiatePayment(planId, planName, amount, currency) {
         const data = await response.json();
         
         // DEBUG: Log full response structure
-        console.log('DEBUG: Order creation response received', {
+        console.log('DEBUG: Payment creation response received', {
             success: data.success,
             has_order: !!data.order,
             has_order_id: !!data.order_id,
+            has_subscription: !!data.subscription,
+            has_subscription_id: !!data.subscription_id,
             order_type: typeof data.order,
-            order_is_array: Array.isArray(data.order),
-            order_keys: data.order ? Object.keys(data.order) : 'N/A',
+            subscription_type: typeof data.subscription,
             all_response_keys: Object.keys(data),
             full_response: JSON.stringify(data, null, 2)
         });
         
         if (!data.success) {
-            console.error('DEBUG: Order creation failed', data);
-            showNotification(data.message || 'Failed to create payment order', 'error');
+            console.error('DEBUG: Payment creation failed', data);
+            showNotification(data.message || 'Failed to create payment', 'error');
             return;
         }
         
-        // DEBUG: Try to extract order ID with detailed logging
+        // DEBUG: Check if this is a subscription (recurring) or one-time payment
+        const isSubscription = !!(data.subscription && data.subscription.id);
+        let subscriptionId = null;
         let orderId = null;
         
-        if (data.order) {
-            console.log('DEBUG: Checking data.order structure', {
-                order_type: typeof data.order,
-                order_is_array: Array.isArray(data.order),
-                order_keys: Object.keys(data.order),
-                order_id_direct: data.order.id,
-                order_id_bracket: data.order['id'],
-                order_order_id: data.order.order_id
-            });
+        if (isSubscription) {
+            // Extract subscription ID
+            subscriptionId = data.subscription.id || data.subscription_id;
+            console.log('DEBUG: Subscription payment detected', { subscriptionId });
+        } else {
+            // Extract order ID for one-time payment
+            if (data.order) {
+                console.log('DEBUG: Checking data.order structure', {
+                    order_type: typeof data.order,
+                    order_is_array: Array.isArray(data.order),
+                    order_keys: Object.keys(data.order),
+                    order_id_direct: data.order.id,
+                    order_id_bracket: data.order['id'],
+                    order_order_id: data.order.order_id
+                });
+                
+                orderId = data.order.id || data.order.order_id || data.order['id'];
+            }
             
-            orderId = data.order.id || data.order.order_id || data.order['id'];
+            if (!orderId && data.order_id) {
+                console.log('DEBUG: Using root level order_id', data.order_id);
+                orderId = data.order_id;
+            }
+            
+            if (!orderId) {
+                console.error('DEBUG: Order ID extraction failed', {
+                    data_order: data.order,
+                    data_order_id: data.order_id,
+                    data_order_type: typeof data.order,
+                    all_keys: Object.keys(data),
+                    full_response: JSON.stringify(data, null, 2)
+                });
+                showNotification('Invalid order data. Check browser console (F12) for details.', 'error');
+                return;
+            }
+            
+            console.log('DEBUG: Order ID extracted successfully', orderId);
         }
-        
-        if (!orderId && data.order_id) {
-            console.log('DEBUG: Using root level order_id', data.order_id);
-            orderId = data.order_id;
-        }
-        
-        if (!orderId) {
-            console.error('DEBUG: Order ID extraction failed', {
-                data_order: data.order,
-                data_order_id: data.order_id,
-                data_order_type: typeof data.order,
-                all_keys: Object.keys(data),
-                full_response: JSON.stringify(data, null, 2)
-            });
-            showNotification('Invalid order data. Check browser console (F12) for details.', 'error');
-            return;
-        }
-        
-        console.log('DEBUG: Order ID extracted successfully', orderId);
         
         if (!data.key_id) {
             console.error('Razorpay key_id missing:', data);
@@ -1305,22 +1315,33 @@ async function initiatePayment(planId, planName, amount, currency) {
             return;
         }
         
-        // Store order_id for fallback
-        const orderIdFromOrder = orderId;
-        
         // Configure RazorPay options
         const options = {
             key: data.key_id,
-            amount: data.amount * 100, // Convert to paise
-            currency: data.currency,
             name: data.name,
             description: data.description,
-            order_id: orderIdFromOrder,
-            prefill: data.prefill,
+            prefill: data.prefill || {},
             theme: {
                 color: '#4f46e5'
             },
-            handler: function(response) {
+        };
+        
+        // Add subscription_id for recurring payments or order_id for one-time payments
+        if (isSubscription && subscriptionId) {
+            options.subscription_id = subscriptionId;
+            console.log('DEBUG: Using subscription checkout', { subscriptionId });
+        } else if (!isSubscription && orderId) {
+            options.amount = data.amount * 100; // Convert to paise
+            options.currency = data.currency;
+            options.order_id = orderId;
+            console.log('DEBUG: Using one-time payment checkout', { orderId });
+        } else {
+            console.error('Missing subscription_id or order_id', { isSubscription, subscriptionId, orderId });
+            showNotification('Payment configuration error. Please try again.', 'error');
+            return;
+        }
+        
+        options.handler = function(response) {
                 // Log full response for debugging
                 console.log('Razorpay payment handler called with response:', response);
                 
@@ -1331,13 +1352,14 @@ async function initiatePayment(planId, planName, amount, currency) {
                     return;
                 }
                 
-                // Use response order_id or fallback to original order_id
-                const orderId = response.razorpay_order_id || orderIdFromOrder;
+                // For subscriptions, get subscription_id; for one-time, get order_id
+                const responseSubscriptionId = response.razorpay_subscription_id || (isSubscription ? subscriptionId : null);
+                const responseOrderId = response.razorpay_order_id || (!isSubscription ? orderId : null);
                 
                 // Validate critical fields with detailed error messages
                 if (!response.razorpay_payment_id) {
                     console.error('Missing payment_id in Razorpay response:', response);
-                    showNotification('Payment ID is missing. Please contact support with Order ID: ' + orderIdFromOrder, 'error');
+                    showNotification('Payment ID is missing. Please contact support.', 'error');
                     return;
                 }
                 
@@ -1347,8 +1369,15 @@ async function initiatePayment(planId, planName, amount, currency) {
                     return;
                 }
                 
-                if (!orderId) {
-                    console.error('Order ID is missing:', { response, orderIdFromOrder });
+                // Validate subscription_id or order_id based on payment type
+                if (isSubscription && !responseSubscriptionId) {
+                    console.error('Subscription ID is missing:', { response, subscriptionId });
+                    showNotification('Subscription ID is missing. Please contact support with Payment ID: ' + response.razorpay_payment_id, 'error');
+                    return;
+                }
+                
+                if (!isSubscription && !responseOrderId) {
+                    console.error('Order ID is missing:', { response, orderId });
                     showNotification('Order ID is missing. Please contact support with Payment ID: ' + response.razorpay_payment_id, 'error');
                     return;
                 }
@@ -1363,11 +1392,19 @@ async function initiatePayment(planId, planName, amount, currency) {
                 paymentId.value = response.razorpay_payment_id;
                 form.appendChild(paymentId);
                 
-                const orderIdInput = document.createElement('input');
-                orderIdInput.type = 'hidden';
-                orderIdInput.name = 'razorpay_order_id';
-                orderIdInput.value = orderId;
-                form.appendChild(orderIdInput);
+                if (isSubscription && responseSubscriptionId) {
+                    const subscriptionIdInput = document.createElement('input');
+                    subscriptionIdInput.type = 'hidden';
+                    subscriptionIdInput.name = 'razorpay_subscription_id';
+                    subscriptionIdInput.value = responseSubscriptionId;
+                    form.appendChild(subscriptionIdInput);
+                } else if (!isSubscription && responseOrderId) {
+                    const orderIdInput = document.createElement('input');
+                    orderIdInput.type = 'hidden';
+                    orderIdInput.name = 'razorpay_order_id';
+                    orderIdInput.value = responseOrderId;
+                    form.appendChild(orderIdInput);
+                }
                 
                 const signature = document.createElement('input');
                 signature.type = 'hidden';
@@ -1377,7 +1414,9 @@ async function initiatePayment(planId, planName, amount, currency) {
                 
                 document.body.appendChild(form);
                 form.submit();
-            },
+            };
+        
+        options.modal = {
             modal: {
                 ondismiss: function() {
                     showNotification('Payment cancelled', 'info');

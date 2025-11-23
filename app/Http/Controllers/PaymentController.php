@@ -303,8 +303,10 @@ class PaymentController extends Controller
         Log::info('DEBUG: JSON response being sent to frontend', [
             'response_keys' => array_keys($responseData),
             'has_subscription' => isset($responseData['subscription']),
-            'subscription_id_in_subscription' => is_array($responseData['subscription']) ? ($responseData['subscription']['id'] ?? 'missing') : 'not_array',
+            'has_order' => isset($responseData['order']),
+            'subscription_id_in_subscription' => (isset($responseData['subscription']) && is_array($responseData['subscription'])) ? ($responseData['subscription']['id'] ?? 'missing') : 'not_present_or_not_array',
             'subscription_id_at_root' => $responseData['subscription_id'] ?? 'missing',
+            'order_id_at_root' => $responseData['order_id'] ?? 'missing',
             'response_sample' => json_encode($responseData, JSON_PRETTY_PRINT),
         ]);
 

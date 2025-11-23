@@ -123,6 +123,8 @@ class ApplyController extends Controller
                 lastName: $request->last_name,
                 email: $request->email,
                 phone: $request->phone,
+                currentCtc: $request->current_ctc,
+                expectedCtc: $request->expected_ctc,
                 resume: $request->file('resume'),
                 consent: $request->boolean('consent'),
                 customAnswers: $customAnswers

@@ -22,6 +22,8 @@ class Application extends Model
         'current_stage_id',
         'stage_position',
         'applied_at',
+        'current_ctc',
+        'expected_ctc',
     ];
 
     protected $casts = [

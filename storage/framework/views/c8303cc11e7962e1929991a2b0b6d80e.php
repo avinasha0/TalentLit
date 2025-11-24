@@ -514,15 +514,11 @@
                                 ?>
                                 
                                 <?php if($tenant): ?>
-                                    <!-- User has a tenant, can subscribe -->
-                                    <form method="POST" action="<?php echo e(route('subscription.subscribe', $tenant->slug)); ?>" class="w-full">
-                                        <?php echo csrf_field(); ?>
-                                        <input type="hidden" name="plan_id" value="<?php echo e($plan->id); ?>">
-                                        <button type="submit" 
-                                                class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-4 px-6 rounded-xl transition-all duration-200 transform hover:-translate-y-1 shadow-lg hover:shadow-xl">
-                                            🚀 Get Started Free
-                                        </button>
-                                    </form>
+                                    <!-- User authenticated with tenant, redirect to tenant dashboard -->
+                                    <a href="<?php echo e(route('tenant.dashboard', $tenant->slug)); ?>" 
+                                       class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-4 px-6 rounded-xl transition-all duration-200 transform hover:-translate-y-1 block text-center shadow-lg hover:shadow-xl">
+                                        🚀 Get Started Free
+                                    </a>
                                 <?php else: ?>
                                     <!-- User authenticated but no tenant, redirect to onboarding -->
                                     <a href="<?php echo e(route('onboarding.organization')); ?>" 

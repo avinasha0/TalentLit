@@ -11,6 +11,9 @@
     @include('layouts.partials.head')
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>
+        [x-cloak] { display: none !important; }
+    </style>
 </head>
 <body class="bg-white">
     <!-- Navigation -->
@@ -176,8 +179,28 @@
 </section>
 
 <!-- Pricing Cards Section -->
-<section id="pricing" class="py-20 bg-gray-50">
+<section id="pricing" class="py-20 bg-gray-50" x-data="{ billingCycle: 'yearly' }">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        <!-- Billing Cycle Toggle -->
+        <div class="flex justify-center mb-12">
+            <div class="inline-flex items-center bg-white rounded-xl p-1 shadow-lg border border-gray-200">
+                <button 
+                    @click="billingCycle = 'monthly'"
+                    :class="billingCycle === 'monthly' ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md' : 'text-gray-600 hover:text-gray-900'"
+                    class="px-6 py-3 rounded-lg font-semibold text-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                >
+                    Monthly
+                </button>
+                <button 
+                    @click="billingCycle = 'yearly'"
+                    :class="billingCycle === 'yearly' ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md' : 'text-gray-600 hover:text-gray-900'"
+                    class="px-6 py-3 rounded-lg font-semibold text-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                >
+                    Yearly
+                </button>
+            </div>
+        </div>
 
         <!-- Pricing Cards -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-12 max-w-6xl mx-auto">
@@ -210,10 +233,44 @@
                             @if($plan->requiresContactForPricing())
                                 <span class="text-4xl font-bold text-gray-900">Contact for Pricing</span>
                             @else
-                                <span class="text-6xl font-bold text-gray-900">
-                                    @subscriptionPrice($plan->price, $plan->currency)
-                                </span>
-                                <span class="text-gray-600 text-lg">/{{ $plan->billing_cycle }}</span>
+                                @php
+                                    // Original and discounted pricing
+                                    $monthlyOriginalPrice = $plan->price > 0 ? 3999 : 0;
+                                    $monthlyDiscountedPrice = $plan->price > 0 ? 997 : 0;
+                                    $yearlyOriginalPrice = $plan->price > 0 ? 47964 : 0;
+                                    $yearlyDiscountedPrice = $plan->price > 0 ? 9997 : 0;
+                                @endphp
+                                <div x-show="billingCycle === 'monthly'" x-cloak>
+                                    @if($plan->price > 0)
+                                    <div class="mb-2">
+                                        <span class="text-2xl text-gray-400 line-through">
+                                            {{ $plan->currency === 'INR' ? '₹' : '$' }}{{ number_format($monthlyOriginalPrice, 0) }}
+                                        </span>
+                                    </div>
+                                    @endif
+                                    <span class="text-6xl font-bold text-gray-900">
+                                        @subscriptionPrice($monthlyDiscountedPrice, $plan->currency)
+                                    </span>
+                                    <span class="text-gray-600 text-lg">/month</span>
+                                </div>
+                                <div x-show="billingCycle === 'yearly'" x-cloak>
+                                    @if($plan->price > 0)
+                                    <div class="mb-2">
+                                        <span class="text-2xl text-gray-400 line-through">
+                                            {{ $plan->currency === 'INR' ? '₹' : '$' }}{{ number_format($yearlyOriginalPrice, 0) }}
+                                        </span>
+                                    </div>
+                                    @endif
+                                    <span class="text-6xl font-bold text-gray-900">
+                                        @subscriptionPrice($yearlyDiscountedPrice, $plan->currency)
+                                    </span>
+                                    <span class="text-gray-600 text-lg">/year</span>
+                                    @if($plan->price > 0)
+                                    <div class="mt-2">
+                                        <span class="text-sm text-green-600 font-semibold">Save 79%</span>
+                                    </div>
+                                    @endif
+                                </div>
                             @endif
                         </div>
                     </div>
@@ -372,9 +429,16 @@
                                     @if($tenant)
                                         @if($hasFreePlan)
                                             <!-- User has Free plan, can upgrade to Pro -->
-                                            <button onclick="initiatePayment('{{ $plan->id }}', '{{ $plan->name }}', {{ $plan->price }}, '{{ $plan->currency }}')" 
-                                                    class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-4 px-6 rounded-xl transition-all duration-200 transform hover:-translate-y-1 shadow-lg hover:shadow-xl">
-                                                🔄 Upgrade to Pro - ₹{{ number_format($plan->price, 0) }}/month
+                                            @php
+                                                $monthlyPrice = $plan->price > 0 ? 997 : 0;
+                                                $yearlyPrice = $plan->price > 0 ? 9997 : 0;
+                                            @endphp
+                                            <button 
+                                                x-data="{ monthlyPrice: {{ $monthlyPrice }}, yearlyPrice: {{ $yearlyPrice }}, currency: '{{ $plan->currency }}' }"
+                                                @click="initiatePayment('{{ $plan->id }}', '{{ $plan->name }}', billingCycle === 'monthly' ? monthlyPrice : yearlyPrice, currency)"
+                                                class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-4 px-6 rounded-xl transition-all duration-200 transform hover:-translate-y-1 shadow-lg hover:shadow-xl">
+                                                <span x-show="billingCycle === 'monthly'" x-cloak>🔄 Upgrade to Pro - {{ $plan->currency === 'INR' ? '₹' : '$' }}{{ number_format($monthlyPrice, 0) }}/month</span>
+                                                <span x-show="billingCycle === 'yearly'" x-cloak>🔄 Upgrade to Pro - {{ $plan->currency === 'INR' ? '₹' : '$' }}{{ number_format($yearlyPrice, 0) }}/year</span>
                                             </button>
                                             <p class="text-center text-sm text-gray-500 mt-3">
                                                 Upgrade from your Free plan
@@ -390,9 +454,14 @@
                                         @endif
                                     @else
                                         <!-- User authenticated but no tenant, redirect to onboarding -->
+                                        @php
+                                            $monthlyPrice = $plan->price > 0 ? 997 : 0;
+                                            $yearlyPrice = $plan->price > 0 ? 9997 : 0;
+                                        @endphp
                                         <a href="{{ route('onboarding.organization') }}" 
                                            class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-4 px-6 rounded-xl transition-all duration-200 transform hover:-translate-y-1 block text-center shadow-lg hover:shadow-xl">
-                                            🚀 Get Started - ₹{{ number_format($plan->price, 0) }}/month
+                                            <span x-show="billingCycle === 'monthly'" x-cloak>🚀 Get Started - {{ $plan->currency === 'INR' ? '₹' : '$' }}{{ number_format($monthlyPrice, 0) }}/month</span>
+                                            <span x-show="billingCycle === 'yearly'" x-cloak>🚀 Get Started - {{ $plan->currency === 'INR' ? '₹' : '$' }}{{ number_format($yearlyPrice, 0) }}/year</span>
                                         </a>
                                         <p class="text-center text-sm text-gray-500 mt-3">
                                             Create your organization first
@@ -400,9 +469,14 @@
                                     @endif
                                 @else
                                     <!-- User not authenticated, redirect to register -->
+                                    @php
+                                        $monthlyPrice = $plan->price > 0 ? 997 : 0;
+                                        $yearlyPrice = $plan->price > 0 ? 9997 : 0;
+                                    @endphp
                                     <a href="{{ route('register') }}" 
                                        class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-4 px-6 rounded-xl transition-all duration-200 transform hover:-translate-y-1 block text-center shadow-lg hover:shadow-xl">
-                                        🚀 Get Started - ₹{{ number_format($plan->price, 0) }}/month
+                                        <span x-show="billingCycle === 'monthly'" x-cloak>🚀 Get Started - {{ $plan->currency === 'INR' ? '₹' : '$' }}{{ number_format($monthlyPrice, 0) }}/month</span>
+                                        <span x-show="billingCycle === 'yearly'" x-cloak>🚀 Get Started - {{ $plan->currency === 'INR' ? '₹' : '$' }}{{ number_format($yearlyPrice, 0) }}/year</span>
                                     </a>
                                     <p class="text-center text-sm text-gray-500 mt-3">
                                         Sign up to subscribe
@@ -475,6 +549,161 @@
                 </div>
             </div>
             @endforeach
+        </div>
+    </div>
+</section>
+
+<!-- Limited Time Offer Timer -->
+<section class="py-12 bg-gradient-to-r from-red-50 via-orange-50 to-yellow-50 border-y border-orange-200" 
+         x-data="{
+             showTimer: false,
+             hours: 0,
+             minutes: 0,
+             seconds: 0,
+             init() {
+                 this.checkAndStartTimer();
+                 setInterval(() => {
+                     this.updateTimer();
+                 }, 1000);
+             },
+             checkAndStartTimer() {
+                 const now = new Date();
+                 const currentHour = now.getHours();
+                 
+                 // Show timer only after 5 PM (17:00)
+                 if (currentHour >= 17) {
+                     this.showTimer = true;
+                     this.calculateTimeRemaining();
+                 } else {
+                     this.showTimer = false;
+                 }
+             },
+             calculateTimeRemaining() {
+                 const now = new Date();
+                 const currentHour = now.getHours();
+                 const currentMinute = now.getMinutes();
+                 const currentSecond = now.getSeconds();
+                 
+                 // Calculate time until 9 PM (21:00) - 4 hours from 5 PM
+                 let targetHour = 21;
+                 let targetMinute = 0;
+                 let targetSecond = 0;
+                 
+                 // If it's past 9 PM, calculate for next day's 5 PM
+                 if (currentHour >= 21) {
+                     targetHour = 17;
+                     const tomorrow = new Date(now);
+                     tomorrow.setDate(tomorrow.getDate() + 1);
+                     tomorrow.setHours(targetHour, targetMinute, targetSecond);
+                     const diff = tomorrow - now;
+                     this.setTimeFromDiff(diff);
+                 } else {
+                     // Calculate time until 9 PM today
+                     const target = new Date(now);
+                     target.setHours(targetHour, targetMinute, targetSecond);
+                     const diff = target - now;
+                     this.setTimeFromDiff(diff);
+                 }
+             },
+             setTimeFromDiff(diff) {
+                 if (diff <= 0) {
+                     this.hours = 0;
+                     this.minutes = 0;
+                     this.seconds = 0;
+                     this.showTimer = false;
+                     return;
+                 }
+                 
+                 this.hours = Math.floor(diff / (1000 * 60 * 60));
+                 this.minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                 this.seconds = Math.floor((diff % (1000 * 60)) / 1000);
+             },
+             updateTimer() {
+                 if (!this.showTimer) {
+                     this.checkAndStartTimer();
+                     return;
+                 }
+                 
+                 if (this.seconds > 0) {
+                     this.seconds--;
+                 } else if (this.minutes > 0) {
+                     this.minutes--;
+                     this.seconds = 59;
+                 } else if (this.hours > 0) {
+                     this.hours--;
+                     this.minutes = 59;
+                     this.seconds = 59;
+                 } else {
+                     // Timer ended, check if we should restart
+                     this.checkAndStartTimer();
+                 }
+             }
+         }"
+         x-show="showTimer"
+         x-cloak
+         x-transition:enter="transition ease-out duration-500"
+         x-transition:enter-start="opacity-0 transform translate-y-4"
+         x-transition:enter-end="opacity-100 transform translate-y-0">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="bg-white rounded-2xl shadow-2xl border-2 border-orange-300 p-8 md:p-10">
+            <div class="text-center">
+                <!-- Header -->
+                <div class="mb-6">
+                    <div class="inline-flex items-center justify-center px-4 py-2 bg-gradient-to-r from-red-500 to-orange-500 rounded-full mb-4">
+                        <svg class="w-5 h-5 text-white mr-2 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <span class="text-white font-bold text-sm uppercase tracking-wider">Limited Time Offer</span>
+                    </div>
+                    <h3 class="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
+                        ⚡ Special Discount Ends Soon!
+                    </h3>
+                    <p class="text-gray-600 text-lg">
+                        Don't miss out on this exclusive pricing. Offer expires in:
+                    </p>
+                </div>
+                
+                <!-- Timer Display -->
+                <div class="flex justify-center items-center gap-4 md:gap-6 mb-6">
+                    <!-- Hours -->
+                    <div class="flex flex-col items-center">
+                        <div class="bg-gradient-to-br from-indigo-600 to-purple-600 rounded-xl p-4 md:p-6 shadow-lg transform hover:scale-105 transition-all duration-300">
+                            <div class="text-4xl md:text-5xl font-bold text-white tabular-nums" x-text="String(hours).padStart(2, '0')">00</div>
+                        </div>
+                        <span class="text-sm md:text-base font-semibold text-gray-600 mt-2 uppercase tracking-wide">Hours</span>
+                    </div>
+                    
+                    <!-- Separator -->
+                    <div class="text-4xl md:text-5xl font-bold text-gray-400">:</div>
+                    
+                    <!-- Minutes -->
+                    <div class="flex flex-col items-center">
+                        <div class="bg-gradient-to-br from-purple-600 to-pink-600 rounded-xl p-4 md:p-6 shadow-lg transform hover:scale-105 transition-all duration-300">
+                            <div class="text-4xl md:text-5xl font-bold text-white tabular-nums" x-text="String(minutes).padStart(2, '0')">00</div>
+                        </div>
+                        <span class="text-sm md:text-base font-semibold text-gray-600 mt-2 uppercase tracking-wide">Minutes</span>
+                    </div>
+                    
+                    <!-- Separator -->
+                    <div class="text-4xl md:text-5xl font-bold text-gray-400">:</div>
+                    
+                    <!-- Seconds -->
+                    <div class="flex flex-col items-center">
+                        <div class="bg-gradient-to-br from-pink-600 to-red-600 rounded-xl p-4 md:p-6 shadow-lg transform hover:scale-105 transition-all duration-300 animate-pulse">
+                            <div class="text-4xl md:text-5xl font-bold text-white tabular-nums" x-text="String(seconds).padStart(2, '0')">00</div>
+                        </div>
+                        <span class="text-sm md:text-base font-semibold text-gray-600 mt-2 uppercase tracking-wide">Seconds</span>
+                    </div>
+                </div>
+                
+                <!-- CTA -->
+                <div class="mt-6">
+                    <a href="#pricing" 
+                       class="inline-block bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold px-8 py-4 rounded-xl transition-all duration-200 transform hover:-translate-y-1 shadow-lg hover:shadow-xl text-lg">
+                        🎯 Claim Your Discount Now
+                    </a>
+                </div>
+            </div>
         </div>
     </div>
 </section>

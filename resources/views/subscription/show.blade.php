@@ -291,9 +291,25 @@
                         @php
                             $razorpayConfigured = config('razorpay.key_id') && config('razorpay.key_secret');
                             $proPlanActive = config('razorpay.pro_plan_mode') === 'active' || $razorpayConfigured;
+                            $hasProMonthly = false;
+                            if ($subscription && $subscription->plan) {
+                                $currentPlan = $subscription->plan;
+                                if ($currentPlan->slug === 'pro' && $currentPlan->billing_cycle === 'monthly') {
+                                    $hasProMonthly = true;
+                                }
+                            }
                         @endphp
                         @if($proPlanActive && $razorpayConfigured)
-                            @if($tenant->hasFreePlan())
+                            @if($planItem->slug === 'pro-yearly' && $hasProMonthly)
+                                <!-- User has Pro monthly, show Opt For Yearly -->
+                                @php
+                                    $displayPrice = $planItem->discount_price ?? $planItem->price;
+                                @endphp
+                                <button onclick="initiatePayment('{{ $planItem->id }}', '{{ $planItem->name }}', {{ $displayPrice }}, '{{ $planItem->currency }}')" 
+                                        class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-200">
+                                    🔄 Opt For Yearly - @subscriptionPrice($displayPrice, $planItem->currency)/{{ $planItem->billing_cycle }}
+                                </button>
+                            @elseif($tenant->hasFreePlan())
                                 @php
                                     $displayPrice = $planItem->discount_price ?? $planItem->price;
                                 @endphp

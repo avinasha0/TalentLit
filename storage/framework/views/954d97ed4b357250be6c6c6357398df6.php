@@ -38,6 +38,9 @@
 <?php unset($__componentOriginal360d002b1b676b6f84d43220f22129e2); ?>
 <?php endif; ?>
      <?php $__env->endSlot(); ?>
+    <style>
+        [x-cloak] { display: none !important; }
+    </style>
 <div class="min-h-screen bg-gray-50 py-8">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <!-- Header -->
@@ -45,6 +48,90 @@
             <h1 class="text-3xl font-bold text-gray-900">Subscription Management</h1>
             <p class="mt-2 text-gray-600">Manage your subscription and view usage statistics.</p>
         </div>
+
+        <!-- Current Subscription Status -->
+        <?php if($subscription): ?>
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-xl font-bold text-gray-900">Current Subscription</h2>
+                <?php if($subscription->status === 'active'): ?>
+                    <span class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-semibold">
+                        ✓ Active
+                    </span>
+                <?php elseif($subscription->status === 'cancelled'): ?>
+                    <span class="px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm font-semibold">
+                        ✗ Cancelled
+                    </span>
+                <?php else: ?>
+                    <span class="px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-sm font-semibold">
+                        <?php echo e(ucfirst($subscription->status)); ?>
+
+                    </span>
+                <?php endif; ?>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <div>
+                    <p class="text-sm text-gray-500 mb-1">Plan</p>
+                    <p class="text-lg font-semibold text-gray-900"><?php echo e($subscription->plan->name ?? 'N/A'); ?></p>
+                </div>
+                
+                <div>
+                    <p class="text-sm text-gray-500 mb-1">Billing Cycle</p>
+                    <p class="text-lg font-semibold text-gray-900"><?php echo e(ucfirst($subscription->plan->billing_cycle ?? 'N/A')); ?></p>
+                </div>
+                
+                <div>
+                    <p class="text-sm text-gray-500 mb-1">Days Until Renewal</p>
+                    <?php if($daysUntilRenewal !== null): ?>
+                        <p class="text-lg font-semibold <?php echo e($daysUntilRenewal <= 7 ? 'text-red-600' : ($daysUntilRenewal <= 30 ? 'text-yellow-600' : 'text-gray-900')); ?>">
+                            <?php echo e($daysUntilRenewal); ?> <?php echo e($daysUntilRenewal == 1 ? 'day' : 'days'); ?>
+
+                        </p>
+                        <?php if($subscription->expires_at): ?>
+                            <p class="text-xs text-gray-500 mt-1">
+                                <?php if($subscription->status === 'cancelled'): ?>
+                                    Expires on <?php echo e($subscription->expires_at->format('M d, Y')); ?>
+
+                                <?php else: ?>
+                                    Renews on <?php echo e($subscription->expires_at->format('M d, Y')); ?>
+
+                                <?php endif; ?>
+                            </p>
+                        <?php endif; ?>
+                    <?php else: ?>
+                        <p class="text-lg font-semibold text-gray-900">No expiration</p>
+                    <?php endif; ?>
+                </div>
+            </div>
+            
+            <?php if($subscription->status === 'active' && !$subscription->plan->isFree()): ?>
+            <div class="border-t border-gray-200 pt-4">
+                <form method="POST" action="<?php echo e(route('subscription.cancel', $tenant->slug)); ?>" onsubmit="return confirm('Are you sure you want to cancel your subscription? You will continue to have access until the end of your current billing period.');">
+                    <?php echo csrf_field(); ?>
+                    <button type="submit" 
+                            class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition duration-200">
+                        Cancel Subscription
+                    </button>
+                    <p class="text-sm text-gray-500 mt-2">
+                        Your subscription will remain active until <?php echo e($subscription->expires_at ? $subscription->expires_at->format('F d, Y') : 'the end of your billing period'); ?>. You will not be charged again.
+                    </p>
+                </form>
+            </div>
+            <?php elseif($subscription->status === 'cancelled'): ?>
+            <div class="border-t border-gray-200 pt-4">
+                <p class="text-sm text-gray-600">
+                    <strong>Subscription Cancelled</strong> - Your subscription was cancelled on <?php echo e($subscription->cancelled_at ? $subscription->cancelled_at->format('M d, Y') : 'N/A'); ?>. 
+                    <?php if($daysUntilRenewal !== null && $daysUntilRenewal > 0): ?>
+                        You will continue to have access for <?php echo e($daysUntilRenewal); ?> more <?php echo e($daysUntilRenewal == 1 ? 'day' : 'days'); ?>.
+                    <?php elseif($daysUntilRenewal === null): ?>
+                        Your subscription has ended.
+                    <?php endif; ?>
+                </p>
+            </div>
+            <?php endif; ?>
+        </div>
+        <?php endif; ?>
 
         <?php if(session('success')): ?>
         <div class="mb-6 bg-green-50 border border-green-200 rounded-lg p-4">
@@ -76,6 +163,27 @@
             <p class="text-gray-600">Choose the plan that best fits your needs. You can upgrade or downgrade at any time.</p>
         </div>
 
+        <div x-data="{ billingCycle: 'yearly' }">
+        <!-- Billing Cycle Toggle -->
+        <div class="flex justify-center mb-8">
+            <div class="inline-flex items-center bg-white rounded-lg p-1 shadow-md border border-gray-200">
+                <button 
+                    @click="billingCycle = 'monthly'"
+                    :class="billingCycle === 'monthly' ? 'bg-indigo-600 text-white shadow-sm' : 'text-gray-600 hover:text-gray-900'"
+                    class="px-6 py-2 rounded-md font-semibold text-sm transition-all duration-200 focus:outline-none"
+                >
+                    Monthly
+                </button>
+                <button 
+                    @click="billingCycle = 'yearly'"
+                    :class="billingCycle === 'yearly' ? 'bg-indigo-600 text-white shadow-sm' : 'text-gray-600 hover:text-gray-900'"
+                    class="px-6 py-2 rounded-md font-semibold text-sm transition-all duration-200 focus:outline-none"
+                >
+                    Yearly
+                </button>
+            </div>
+        </div>
+
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
             <?php
                 $allPlans = \App\Models\SubscriptionPlan::where('is_active', true)->orderBy('price', 'asc')->get();
@@ -83,7 +191,21 @@
             ?>
             
             <?php $__currentLoopData = $allPlans; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $planItem): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-            <div class="bg-white rounded-lg shadow-sm border-2 <?php echo e($currentPlanSlug === $planItem->slug ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200'); ?> p-6 relative">
+            <?php
+                // Determine visibility condition
+                if (in_array($planItem->slug, ['free', 'enterprise'])) {
+                    $showCondition = 'true';
+                } elseif ($planItem->billing_cycle === 'monthly' && $planItem->slug !== 'pro-yearly') {
+                    $showCondition = "billingCycle === 'monthly'";
+                } elseif ($planItem->billing_cycle === 'yearly' || $planItem->slug === 'pro-yearly') {
+                    $showCondition = "billingCycle === 'yearly'";
+                } else {
+                    $showCondition = 'false';
+                }
+            ?>
+            <div x-show="<?php echo e($showCondition); ?>" 
+                 x-cloak 
+                 class="bg-white rounded-lg shadow-sm border-2 <?php echo e($currentPlanSlug === $planItem->slug ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200'); ?> p-6 relative">
                 <?php if($currentPlanSlug === $planItem->slug): ?>
                 <div class="absolute -top-3 left-1/2 transform -translate-x-1/2">
                     <span class="bg-indigo-600 text-white px-4 py-1 rounded-full text-sm font-semibold">Current Plan</span>
@@ -98,10 +220,48 @@
                         <?php if($planItem->requiresContactForPricing()): ?>
                             <span class="text-2xl font-bold text-gray-900">Contact for Pricing</span>
                         <?php else: ?>
+                            <?php
+                                // Use discount_price if available, otherwise use price
+                                $displayPrice = $planItem->discount_price ?? $planItem->price;
+                                // Check if actual_price exists and has a value
+                                $hasActualPrice = !empty($planItem->actual_price) && $planItem->actual_price > 0;
+                                $hasDiscount = $hasActualPrice && $planItem->actual_price > $displayPrice;
+                                
+                                // Calculate savings percentage
+                                $savings = null;
+                                if ($hasDiscount) {
+                                    $savings = round((($planItem->actual_price - $displayPrice) / $planItem->actual_price) * 100);
+                                } elseif ($planItem->billing_cycle === 'yearly') {
+                                    $monthlyPlan = $allPlans->firstWhere('slug', str_replace('-yearly', '', $planItem->slug));
+                                    if ($monthlyPlan && $monthlyPlan->billing_cycle === 'monthly') {
+                                        $monthlyDisplayPrice = $monthlyPlan->discount_price ?? $monthlyPlan->price;
+                                        $yearlyEquivalent = $monthlyDisplayPrice * 12;
+                                        if ($yearlyEquivalent > $displayPrice) {
+                                            $savings = round((($yearlyEquivalent - $displayPrice) / $yearlyEquivalent) * 100);
+                                        }
+                                    }
+                                }
+                            ?>
+                            
+                            <?php if($hasActualPrice): ?>
+                            <div class="mb-2">
+                                <span class="text-xl text-gray-400" style="text-decoration: line-through; text-decoration-thickness: 2px;">
+                                    <?php echo e($planItem->currency === 'INR' ? '₹' : '$'); ?><?php echo e(number_format((float)$planItem->actual_price, 0)); ?>
+
+                                </span>
+                            </div>
+                            <?php endif; ?>
+                            
                             <span class="text-3xl font-bold <?php echo e($currentPlanSlug === $planItem->slug ? 'text-indigo-900' : 'text-gray-900'); ?>">
-                                <?php echo subscriptionPrice($planItem->price, $planItem->currency); ?>
+                                <?php echo subscriptionPrice($displayPrice, $planItem->currency); ?>
                             </span>
                             <span class="text-gray-600">/<?php echo e($planItem->billing_cycle); ?></span>
+                            
+                            <?php if($savings && $savings > 0): ?>
+                            <div class="mt-1">
+                                <span class="text-xs text-green-600 font-semibold">Save <?php echo e($savings); ?>%</span>
+                            </div>
+                            <?php endif; ?>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -160,16 +320,20 @@
                                 Switch to Free
                             </button>
                         </form>
-                    <?php elseif($planItem->slug === 'pro'): ?>
+                    <?php elseif($planItem->slug === 'pro' || $planItem->slug === 'pro-yearly'): ?>
                         <?php
                             $razorpayConfigured = config('razorpay.key_id') && config('razorpay.key_secret');
                             $proPlanActive = config('razorpay.pro_plan_mode') === 'active' || $razorpayConfigured;
                         ?>
                         <?php if($proPlanActive && $razorpayConfigured): ?>
                             <?php if($tenant->hasFreePlan()): ?>
-                                <button onclick="initiatePayment('<?php echo e($planItem->id); ?>', '<?php echo e($planItem->name); ?>', <?php echo e($planItem->price); ?>, '<?php echo e($planItem->currency); ?>')" 
+                                <?php
+                                    $displayPrice = $planItem->discount_price ?? $planItem->price;
+                                ?>
+                                <button onclick="initiatePayment('<?php echo e($planItem->id); ?>', '<?php echo e($planItem->name); ?>', <?php echo e($displayPrice); ?>, '<?php echo e($planItem->currency); ?>')" 
                                         class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-200">
-                                    Upgrade To Pro - ₹<?php echo e(number_format($planItem->price, 0)); ?>/month
+                                    Upgrade To <?php echo e($planItem->name); ?> - <?php echo subscriptionPrice($displayPrice, $planItem->currency); ?>/<?php echo e($planItem->billing_cycle); ?>
+
                                 </button>
                             <?php else: ?>
                                 <div class="w-full bg-gray-100 text-gray-600 font-semibold py-3 px-6 rounded-lg text-center">
@@ -177,9 +341,10 @@
                                 </div>
                             <?php endif; ?>
                         <?php else: ?>
-                            <button onclick="openWaitlistModal('pro')" 
+                            <button onclick="openWaitlistModal('<?php echo e($planItem->slug); ?>')" 
                                     class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-200">
-                                Upgrade To Pro
+                                Upgrade To <?php echo e($planItem->name); ?>
+
                             </button>
                         <?php endif; ?>
                     <?php elseif($planItem->slug === 'enterprise'): ?>
@@ -191,6 +356,7 @@
                 </div>
             </div>
             <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+        </div>
         </div>
 
         <!-- Usage Statistics -->

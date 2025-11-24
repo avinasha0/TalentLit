@@ -12,6 +12,8 @@ class SubscriptionPlan extends Model
         'slug',
         'description',
         'price',
+        'actual_price',
+        'discount_price',
         'currency',
         'billing_cycle',
         'is_active',
@@ -33,6 +35,8 @@ class SubscriptionPlan extends Model
 
     protected $casts = [
         'price' => 'decimal:2',
+        'actual_price' => 'decimal:2',
+        'discount_price' => 'decimal:2',
         'is_active' => 'boolean',
         'is_popular' => 'boolean',
         'max_users' => 'integer',

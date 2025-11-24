@@ -205,7 +205,9 @@
         <!-- Pricing Cards -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-12 max-w-6xl mx-auto">
             @foreach($plans as $plan)
-            <div class="relative bg-white rounded-3xl shadow-2xl border border-gray-200 overflow-hidden hover:shadow-3xl transition-all duration-300 {{ $plan->is_popular ? 'ring-4 ring-indigo-500 scale-105 z-10' : 'hover:scale-105' }}">
+            <div x-show="(billingCycle === 'monthly' && '{{ $plan->billing_cycle }}' === 'monthly' && '{{ $plan->slug }}' !== 'pro-yearly') || (billingCycle === 'yearly' && ('{{ $plan->billing_cycle }}' === 'yearly' || '{{ $plan->slug }}' === 'pro-yearly')) || ('{{ $plan->slug }}' === 'free' || '{{ $plan->slug }}' === 'enterprise')" 
+                 x-cloak 
+                 class="relative bg-white rounded-3xl shadow-2xl border border-gray-200 overflow-hidden hover:shadow-3xl transition-all duration-300 {{ $plan->is_popular ? 'ring-4 ring-indigo-500 scale-105 z-10' : 'hover:scale-105' }}">
                 @if($plan->is_popular)
                 <div class="absolute top-0 left-0 right-0 bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-center py-3 text-sm font-bold">
                     ⭐ Most Popular
@@ -234,43 +236,31 @@
                                 <span class="text-4xl font-bold text-gray-900">Contact for Pricing</span>
                             @else
                                 @php
-                                    // Original and discounted pricing
-                                    $monthlyOriginalPrice = $plan->price > 0 ? 3999 : 0;
-                                    $monthlyDiscountedPrice = $plan->price > 0 ? 997 : 0;
-                                    $yearlyOriginalPrice = $plan->price > 0 ? 47964 : 0;
-                                    $yearlyDiscountedPrice = $plan->price > 0 ? 9997 : 0;
+                                    // Use discount_price if available, otherwise use price
+                                    $displayPrice = $plan->discount_price ?? $plan->price;
+                                    $actualPrice = $plan->actual_price;
+                                    $hasDiscount = !empty($actualPrice) && $actualPrice > 0 && $actualPrice > $displayPrice;
+                                    $savings = $hasDiscount ? round((($actualPrice - $displayPrice) / $actualPrice) * 100) : null;
                                 @endphp
-                                <div x-show="billingCycle === 'monthly'" x-cloak>
-                                    @if($plan->price > 0)
-                                    <div class="mb-2">
-                                        <span class="text-2xl text-gray-400 line-through">
-                                            {{ $plan->currency === 'INR' ? '₹' : '$' }}{{ number_format($monthlyOriginalPrice, 0) }}
-                                        </span>
-                                    </div>
-                                    @endif
-                                    <span class="text-6xl font-bold text-gray-900">
-                                        @subscriptionPrice($monthlyDiscountedPrice, $plan->currency)
+                                
+                                @if($hasDiscount)
+                                <div class="mb-2">
+                                    <span class="text-2xl text-gray-400" style="text-decoration: line-through; text-decoration-thickness: 2px;">
+                                        {{ $plan->currency === 'INR' ? '₹' : '$' }}{{ number_format((float)$actualPrice, 0) }}
                                     </span>
-                                    <span class="text-gray-600 text-lg">/month</span>
                                 </div>
-                                <div x-show="billingCycle === 'yearly'" x-cloak>
-                                    @if($plan->price > 0)
-                                    <div class="mb-2">
-                                        <span class="text-2xl text-gray-400 line-through">
-                                            {{ $plan->currency === 'INR' ? '₹' : '$' }}{{ number_format($yearlyOriginalPrice, 0) }}
-                                        </span>
-                                    </div>
-                                    @endif
-                                    <span class="text-6xl font-bold text-gray-900">
-                                        @subscriptionPrice($yearlyDiscountedPrice, $plan->currency)
-                                    </span>
-                                    <span class="text-gray-600 text-lg">/year</span>
-                                    @if($plan->price > 0)
-                                    <div class="mt-2">
-                                        <span class="text-sm text-green-600 font-semibold">Save 79%</span>
-                                    </div>
-                                    @endif
+                                @endif
+                                
+                                <span class="text-6xl font-bold text-gray-900">
+                                    @subscriptionPrice($displayPrice, $plan->currency)
+                                </span>
+                                <span class="text-gray-600 text-lg">/{{ $plan->billing_cycle }}</span>
+                                
+                                @if($savings && $savings > 0)
+                                <div class="mt-2">
+                                    <span class="text-sm text-green-600 font-semibold">Save {{ $savings }}%</span>
                                 </div>
+                                @endif
                             @endif
                         </div>
                     </div>
@@ -430,12 +420,14 @@
                                         @if($hasFreePlan)
                                             <!-- User has Free plan, can upgrade to Pro -->
                                             @php
-                                                $monthlyPrice = $plan->price > 0 ? 997 : 0;
-                                                $yearlyPrice = $plan->price > 0 ? 9997 : 0;
+                                                $monthlyPlan = $plans->firstWhere('slug', 'pro');
+                                                $yearlyPlan = $plans->firstWhere('slug', 'pro-yearly');
+                                                $monthlyPrice = $monthlyPlan ? ($monthlyPlan->discount_price ?? $monthlyPlan->price) : 0;
+                                                $yearlyPrice = $yearlyPlan ? ($yearlyPlan->discount_price ?? $yearlyPlan->price) : 0;
                                             @endphp
                                             <button 
                                                 x-data="{ monthlyPrice: {{ $monthlyPrice }}, yearlyPrice: {{ $yearlyPrice }}, currency: '{{ $plan->currency }}' }"
-                                                @click="initiatePayment('{{ $plan->id }}', '{{ $plan->name }}', billingCycle === 'monthly' ? monthlyPrice : yearlyPrice, currency)"
+                                                @click="initiatePayment(billingCycle === 'monthly' ? '{{ $monthlyPlan ? $monthlyPlan->id : $plan->id }}' : '{{ $yearlyPlan ? $yearlyPlan->id : $plan->id }}', '{{ $plan->name }}', billingCycle === 'monthly' ? monthlyPrice : yearlyPrice, currency)"
                                                 class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-4 px-6 rounded-xl transition-all duration-200 transform hover:-translate-y-1 shadow-lg hover:shadow-xl">
                                                 <span x-show="billingCycle === 'monthly'" x-cloak>🔄 Upgrade to Pro - {{ $plan->currency === 'INR' ? '₹' : '$' }}{{ number_format($monthlyPrice, 0) }}/month</span>
                                                 <span x-show="billingCycle === 'yearly'" x-cloak>🔄 Upgrade to Pro - {{ $plan->currency === 'INR' ? '₹' : '$' }}{{ number_format($yearlyPrice, 0) }}/year</span>
@@ -455,8 +447,10 @@
                                     @else
                                         <!-- User authenticated but no tenant, redirect to onboarding -->
                                         @php
-                                            $monthlyPrice = $plan->price > 0 ? 997 : 0;
-                                            $yearlyPrice = $plan->price > 0 ? 9997 : 0;
+                                            $monthlyPlan = $plans->firstWhere('slug', 'pro');
+                                            $yearlyPlan = $plans->firstWhere('slug', 'pro-yearly');
+                                            $monthlyPrice = $monthlyPlan ? ($monthlyPlan->discount_price ?? $monthlyPlan->price) : 0;
+                                            $yearlyPrice = $yearlyPlan ? ($yearlyPlan->discount_price ?? $yearlyPlan->price) : 0;
                                         @endphp
                                         <a href="{{ route('onboarding.organization') }}" 
                                            class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-4 px-6 rounded-xl transition-all duration-200 transform hover:-translate-y-1 block text-center shadow-lg hover:shadow-xl">
@@ -470,8 +464,10 @@
                                 @else
                                     <!-- User not authenticated, redirect to register -->
                                     @php
-                                        $monthlyPrice = $plan->price > 0 ? 997 : 0;
-                                        $yearlyPrice = $plan->price > 0 ? 9997 : 0;
+                                        $monthlyPlan = $plans->firstWhere('slug', 'pro');
+                                        $yearlyPlan = $plans->firstWhere('slug', 'pro-yearly');
+                                        $monthlyPrice = $monthlyPlan ? ($monthlyPlan->discount_price ?? $monthlyPlan->price) : 0;
+                                        $yearlyPrice = $yearlyPlan ? ($yearlyPlan->discount_price ?? $yearlyPlan->price) : 0;
                                     @endphp
                                     <a href="{{ route('register') }}" 
                                        class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-4 px-6 rounded-xl transition-all duration-200 transform hover:-translate-y-1 block text-center shadow-lg hover:shadow-xl">

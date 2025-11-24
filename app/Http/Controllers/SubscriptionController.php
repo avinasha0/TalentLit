@@ -26,13 +26,20 @@ class SubscriptionController extends Controller
     public function show(Request $request)
     {
         $tenant = Tenancy::get();
-        $subscription = $tenant->activeSubscription;
+        // Get the latest subscription (including cancelled ones)
+        $subscription = $tenant->subscription ?? $tenant->activeSubscription;
         $plan = $subscription?->plan;
         
         // Get usage statistics
         $usage = $this->getUsageStatistics($tenant);
         
-        return view('subscription.show', compact('subscription', 'plan', 'usage'));
+        // Calculate days until renewal (even if cancelled, show days left for already paid period)
+        $daysUntilRenewal = null;
+        if ($subscription && $subscription->expires_at) {
+            $daysUntilRenewal = max(0, now()->diffInDays($subscription->expires_at, false));
+        }
+        
+        return view('subscription.show', compact('subscription', 'plan', 'usage', 'daysUntilRenewal'));
     }
 
     /**
@@ -100,18 +107,25 @@ class SubscriptionController extends Controller
     public function cancel(Request $request)
     {
         $tenant = Tenancy::get();
-        $subscription = $tenant->activeSubscription;
+        // Get subscription (including recently cancelled ones that might still be active)
+        $subscription = $tenant->subscription ?? $tenant->activeSubscription;
 
         if (!$subscription) {
-            return redirect()->back()->with('error', 'No active subscription found.');
+            return redirect()->back()->with('error', 'No subscription found.');
         }
 
+        if ($subscription->status === 'cancelled') {
+            return redirect()->back()->with('error', 'Subscription is already cancelled.');
+        }
+
+        // Cancel subscription but keep expires_at unchanged (user already paid for the period)
         $subscription->update([
             'status' => 'cancelled',
             'cancelled_at' => now(),
+            // expires_at remains unchanged - user keeps access until the end of paid period
         ]);
 
-        return redirect()->back()->with('success', 'Subscription cancelled successfully.');
+        return redirect()->back()->with('success', 'Subscription cancelled successfully. You will continue to have access until ' . ($subscription->expires_at ? $subscription->expires_at->format('F d, Y') : 'the end of your billing period') . '.');
     }
 
     /**

@@ -7,8 +7,9 @@
 -- ============================================
 
 -- Check if subscription plans exist, if not add them
+-- Note: If actual_price and discount_price columns don't exist, they will be ignored
 INSERT IGNORE INTO subscription_plans (
-    name, slug, description, price, currency, billing_cycle, 
+    name, slug, description, price, actual_price, discount_price, currency, billing_cycle, 
     is_active, is_popular, max_users, max_job_openings, 
     max_candidates, max_applications_per_month, max_interviews_per_month,
     max_storage_gb, analytics_enabled, custom_branding, api_access,
@@ -17,15 +18,19 @@ INSERT IGNORE INTO subscription_plans (
 ) VALUES 
 -- Free Plan (CRITICAL - needed for organization creation)
 ('Free', 'free', 'Perfect for small teams getting started with recruitment', 
- 0.00, 'INR', 'monthly', 1, 0, 2, 3, 50, 25, 10, 1, 0, 0, 0, 0, 0, 0, 0, NOW(), NOW()),
+ 0.00, NULL, NULL, 'INR', 'monthly', 1, 0, 2, 3, 50, 25, 10, 1, 0, 0, 0, 0, 0, 0, 0, NOW(), NOW()),
 
 -- Pro Plan
 ('Pro', 'pro', 'Advanced features for growing recruitment teams', 
- 999.00, 'INR', 'monthly', 1, 1, 10, 25, 500, 200, 100, 10, 1, 1, 1, 1, 1, 1, 0, NOW(), NOW()),
+ 997.00, 3999.00, 997.00, 'INR', 'monthly', 1, 1, 4, 10, 200, 80, 40, 10, 1, 1, 1, 1, 1, 1, 0, NOW(), NOW()),
+
+-- Pro Yearly Plan
+('Pro Yearly', 'pro-yearly', 'Advanced features for growing recruitment teams with enhanced limits', 
+ 9997.00, 47974.00, 9997.00, 'INR', 'yearly', 1, 0, 6, 15, 300, 125, 60, 10, 1, 1, 1, 1, 1, 1, 0, NOW(), NOW()),
 
 -- Enterprise Plan
 ('Enterprise', 'enterprise', 'Unlimited everything for large organizations', 
- -1, 'INR', 'monthly', 1, 0, -1, -1, -1, -1, -1, 100, 1, 1, 1, 1, 1, 1, 1, NOW(), NOW());
+ -1, NULL, NULL, 'INR', 'monthly', 1, 0, -1, -1, -1, -1, -1, 100, 1, 1, 1, 1, 1, 1, 1, NOW(), NOW());
 
 -- ============================================
 -- 2. ADD ACTIVATION_TOKEN COLUMN (if missing)

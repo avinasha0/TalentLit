@@ -28,53 +28,64 @@
             
             
             <div class="mt-4">
-                <button data-mobile-jobs-toggle class="flex items-center justify-between w-full text-left text-sm font-semibold text-gray-500 mb-2 hover:text-gray-700">
-                    <span>Jobs</span>
-                    <svg class="w-4 h-4 transition-transform duration-200" data-mobile-jobs-arrow fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <button type="button" data-mobile-recruiting-toggle class="flex items-center justify-between w-full text-left text-sm font-semibold text-gray-500 mb-2 hover:text-gray-700">
+                    <span>Recruiting</span>
+                    <svg class="w-4 h-4 transition-transform duration-200" data-mobile-recruiting-arrow fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                     </svg>
                 </button>
-                <div data-mobile-jobs-content class="ml-4 space-y-1 hidden">
-                    <a href="<?php echo e(route('tenant.jobs.index', ['tenant' => $tenant->slug ?? tenant()->slug])); ?>" class="block py-1 text-gray-700 hover:text-blue-600">All Jobs</a>
-                    <?php if (app('App\Support\CustomPermissionChecker')->check('create_jobs', $tenant ?? tenant())): ?>
-                    <a href="<?php echo e(route('tenant.jobs.create', ['tenant' => $tenant->slug ?? tenant()->slug])); ?>" class="block py-1 text-gray-700 hover:text-blue-600">Create Job</a>
+                <div data-mobile-recruiting-content class="ml-4 space-y-1 hidden">
+                    
+                    <div class="mt-2">
+                        <button type="button" data-mobile-jobs-toggle class="flex items-center justify-between w-full text-left text-sm font-semibold text-gray-500 mb-2 hover:text-gray-700">
+                            <span>Jobs</span>
+                            <svg class="w-4 h-4 transition-transform duration-200" data-mobile-jobs-arrow fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </button>
+                        <div data-mobile-jobs-content class="ml-4 space-y-1 hidden">
+                            <a href="<?php echo e(route('tenant.jobs.index', ['tenant' => $tenant->slug ?? tenant()->slug])); ?>" class="block py-1 text-gray-700 hover:text-blue-600">All Jobs</a>
+                            <?php if (app('App\Support\CustomPermissionChecker')->check('create_jobs', $tenant ?? tenant())): ?>
+                            <a href="<?php echo e(route('tenant.jobs.create', ['tenant' => $tenant->slug ?? tenant()->slug])); ?>" class="block py-1 text-gray-700 hover:text-blue-600">Create Job</a>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+
+                    
+                    <div class="mt-2">
+                        <button type="button" data-mobile-candidates-toggle class="flex items-center justify-between w-full text-left text-sm font-semibold text-gray-500 mb-2 hover:text-gray-700">
+                            <span>Candidates</span>
+                            <svg class="w-4 h-4 transition-transform duration-200" data-mobile-candidates-arrow fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </button>
+                        <div data-mobile-candidates-content class="ml-4 space-y-1 hidden">
+                            <a href="<?php echo e(route('tenant.candidates.index', ['tenant' => $tenant->slug ?? tenant()->slug])); ?>" class="block py-1 text-gray-700 hover:text-blue-600">All Candidates</a>
+                        </div>
+                    </div>
+
+                    <?php if(request()->route('job')): ?>
+                    <?php
+                        $jobParam = request()->route('job');
+                        $jobId = is_object($jobParam) ? $jobParam->id : $jobParam;
+                    ?>
+                    <a href="<?php echo e(route('tenant.jobs.pipeline', [$tenant->slug ?? tenant()->slug, $jobId])); ?>" class="block py-1 text-gray-700 hover:text-blue-600">Pipeline</a>
+                    <?php endif; ?>
+
+                    <a href="<?php echo e(route('tenant.interviews.index', ['tenant' => $tenant->slug ?? tenant()->slug])); ?>" class="block py-1 text-gray-700 hover:text-blue-600">Interviews</a>
+
+                    <?php if (app('App\Support\CustomPermissionChecker')->check('view_analytics', $tenant ?? tenant())): ?>
+                    <a href="<?php echo e(route('tenant.analytics.index', ['tenant' => $tenant->slug ?? tenant()->slug])); ?>" class="block py-1 text-gray-700 hover:text-blue-600">Analytics</a>
                     <?php endif; ?>
                 </div>
             </div>
-
-            
-            <div class="mt-4">
-                <button data-mobile-candidates-toggle class="flex items-center justify-between w-full text-left text-sm font-semibold text-gray-500 mb-2 hover:text-gray-700">
-                    <span>Candidates</span>
-                    <svg class="w-4 h-4 transition-transform duration-200" data-mobile-candidates-arrow fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                    </svg>
-                </button>
-                <div data-mobile-candidates-content class="ml-4 space-y-1 hidden">
-                    <a href="<?php echo e(route('tenant.candidates.index', ['tenant' => $tenant->slug ?? tenant()->slug])); ?>" class="block py-1 text-gray-700 hover:text-blue-600">All Candidates</a>
-                </div>
-            </div>
-
-            <?php if(request()->route('job')): ?>
-            <?php
-                $jobParam = request()->route('job');
-                $jobId = is_object($jobParam) ? $jobParam->id : $jobParam;
-            ?>
-            <a href="<?php echo e(route('tenant.jobs.pipeline', [$tenant->slug ?? tenant()->slug, $jobId])); ?>" class="block py-2 text-gray-700 hover:text-blue-600">Pipeline</a>
-            <?php endif; ?>
-
-            <a href="<?php echo e(route('tenant.interviews.index', ['tenant' => $tenant->slug ?? tenant()->slug])); ?>" class="block py-2 text-gray-700 hover:text-blue-600">Interviews</a>
-
-            <?php if (app('App\Support\CustomPermissionChecker')->check('view_analytics', $tenant ?? tenant())): ?>
-            <a href="<?php echo e(route('tenant.analytics.index', ['tenant' => $tenant->slug ?? tenant()->slug])); ?>" class="block py-2 text-gray-700 hover:text-blue-600">Analytics</a>
-            <?php endif; ?>
 
             <a href="<?php echo e(route('careers.index', ['tenant' => $tenant->slug ?? tenant()->slug])); ?>" target="_blank" class="block py-2 text-gray-700 hover:text-blue-600">Careers Site</a>
 
             <?php if (app('App\Support\CustomPermissionChecker')->check('manage_settings', $tenant ?? tenant())): ?>
             
             <div class="mt-4">
-                <button data-mobile-settings-toggle class="flex items-center justify-between w-full text-left text-sm font-semibold text-gray-500 mb-2 hover:text-gray-700">
+                <button type="button" data-mobile-settings-toggle class="flex items-center justify-between w-full text-left text-sm font-semibold text-gray-500 mb-2 hover:text-gray-700">
                     <span>Settings</span>
                     <svg class="w-4 h-4 transition-transform duration-200" data-mobile-settings-arrow fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>

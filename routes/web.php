@@ -18,6 +18,7 @@ use App\Http\Controllers\Tenant\CareersSettingsController;
 use App\Http\Controllers\Tenant\DashboardController;
 use App\Http\Controllers\Tenant\InterviewController;
 use App\Http\Controllers\Tenant\JobController;
+use App\Http\Controllers\Tenant\RecruitingController;
 use App\Http\Controllers\Tenant\JobQuestionsController;
 use App\Http\Controllers\Tenant\JobStageController;
 use App\Http\Controllers\Tenant\PipelineController;
@@ -393,6 +394,11 @@ Route::middleware(['capture.tenant', 'tenant', 'auth'])->group(function () {
     Route::middleware('custom.permission:view_dashboard')->group(function () {
         Route::get('/{tenant}/dashboard', [DashboardController::class, 'index'])->name('tenant.dashboard');
         Route::get('/{tenant}/dashboard.json', [DashboardController::class, 'json'])->name('tenant.dashboard.json');
+    });
+
+    // Recruiting - accessible by all authenticated users with view dashboard permission
+    Route::middleware('custom.permission:view_dashboard')->group(function () {
+        Route::get('/{tenant}/recruiting', [RecruitingController::class, 'index'])->name('tenant.recruiting.index');
     });
 
     // Job Management Routes - Owner, Admin, Recruiter

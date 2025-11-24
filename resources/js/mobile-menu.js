@@ -32,6 +32,11 @@ function openMenu() {
     overlay.classList.remove('hidden');
   }
   document.body.style.overflow = 'hidden';
+  
+  // Re-initialize collapsibles when drawer opens (in case elements weren't ready before)
+  setTimeout(() => {
+    initializeCollapsibles();
+  }, 100);
 }
 
 function closeMenu() {
@@ -94,32 +99,58 @@ if (logout && form) {
 
 // Collapsible sections
 function setupCollapsible(toggleSelector, contentSelector, arrowSelector) {
-  const toggle = document.querySelector(toggleSelector);
-  const content = document.querySelector(contentSelector);
-  const arrow = document.querySelector(arrowSelector);
+  // Try to find elements - check both drawer and document
+  let toggle = null;
+  let content = null;
+  let arrow = null;
+  
+  if (drawer) {
+    toggle = drawer.querySelector(toggleSelector);
+    content = drawer.querySelector(contentSelector);
+    arrow = drawer.querySelector(arrowSelector);
+  }
+  
+  // Fallback to document if not found in drawer
+  if (!toggle) toggle = document.querySelector(toggleSelector);
+  if (!content) content = document.querySelector(contentSelector);
+  if (!arrow) arrow = document.querySelector(arrowSelector);
   
   if (toggle && content && arrow) {
-    toggle.addEventListener('click', () => {
-      console.log('Toggle clicked:', toggleSelector);
+    toggle.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      
       const isHidden = content.classList.contains('hidden');
       
       if (isHidden) {
         content.classList.remove('hidden');
         arrow.style.transform = 'rotate(180deg)';
-        console.log('Expanded:', contentSelector);
       } else {
         content.classList.add('hidden');
         arrow.style.transform = 'rotate(0deg)';
-        console.log('Collapsed:', contentSelector);
       }
-    });
+    }, false);
   }
 }
 
-// Setup collapsible sections
-setupCollapsible('[data-mobile-jobs-toggle]', '[data-mobile-jobs-content]', '[data-mobile-jobs-arrow]');
-setupCollapsible('[data-mobile-candidates-toggle]', '[data-mobile-candidates-content]', '[data-mobile-candidates-arrow]');
-setupCollapsible('[data-mobile-settings-toggle]', '[data-mobile-settings-content]', '[data-mobile-settings-arrow]');
+// Setup collapsible sections - use the exact same pattern for all, including Recruiting
+function initializeCollapsibles() {
+  // Use setupCollapsible for ALL sections, including Recruiting (same as Settings)
+  setupCollapsible('[data-mobile-recruiting-toggle]', '[data-mobile-recruiting-content]', '[data-mobile-recruiting-arrow]');
+  setupCollapsible('[data-mobile-jobs-toggle]', '[data-mobile-jobs-content]', '[data-mobile-jobs-arrow]');
+  setupCollapsible('[data-mobile-candidates-toggle]', '[data-mobile-candidates-content]', '[data-mobile-candidates-arrow]');
+  setupCollapsible('[data-mobile-settings-toggle]', '[data-mobile-settings-content]', '[data-mobile-settings-arrow]');
+}
+
+// Initialize immediately and also on DOM ready (same as Settings)
+initializeCollapsibles();
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initializeCollapsibles);
+} else {
+  // DOM already ready, try again after a short delay
+  setTimeout(initializeCollapsibles, 50);
+}
 
 console.log('Mobile menu initialized');
 }

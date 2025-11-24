@@ -205,7 +205,9 @@
         <!-- Pricing Cards -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-12 max-w-6xl mx-auto">
             <?php $__currentLoopData = $plans; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $plan): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-            <div class="relative bg-white rounded-3xl shadow-2xl border border-gray-200 overflow-hidden hover:shadow-3xl transition-all duration-300 <?php echo e($plan->is_popular ? 'ring-4 ring-indigo-500 scale-105 z-10' : 'hover:scale-105'); ?>">
+            <div x-show="(billingCycle === 'monthly' && '<?php echo e($plan->billing_cycle); ?>' === 'monthly' && '<?php echo e($plan->slug); ?>' !== 'pro-yearly') || (billingCycle === 'yearly' && ('<?php echo e($plan->billing_cycle); ?>' === 'yearly' || '<?php echo e($plan->slug); ?>' === 'pro-yearly')) || ('<?php echo e($plan->slug); ?>' === 'free' || '<?php echo e($plan->slug); ?>' === 'enterprise')" 
+                 x-cloak 
+                 class="relative bg-white rounded-3xl shadow-2xl border border-gray-200 overflow-hidden hover:shadow-3xl transition-all duration-300 <?php echo e($plan->is_popular ? 'ring-4 ring-indigo-500 scale-105 z-10' : 'hover:scale-105'); ?>">
                 <?php if($plan->is_popular): ?>
                 <div class="absolute top-0 left-0 right-0 bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-center py-3 text-sm font-bold">
                     ⭐ Most Popular
@@ -234,45 +236,32 @@
                                 <span class="text-4xl font-bold text-gray-900">Contact for Pricing</span>
                             <?php else: ?>
                                 <?php
-                                    // Original and discounted pricing
-                                    $monthlyOriginalPrice = $plan->price > 0 ? 3999 : 0;
-                                    $monthlyDiscountedPrice = $plan->price > 0 ? 997 : 0;
-                                    $yearlyOriginalPrice = $plan->price > 0 ? 47964 : 0;
-                                    $yearlyDiscountedPrice = $plan->price > 0 ? 9997 : 0;
+                                    // Use discount_price if available, otherwise use price
+                                    $displayPrice = $plan->discount_price ?? $plan->price;
+                                    $actualPrice = $plan->actual_price;
+                                    $hasDiscount = !empty($actualPrice) && $actualPrice > 0 && $actualPrice > $displayPrice;
+                                    $savings = $hasDiscount ? round((($actualPrice - $displayPrice) / $actualPrice) * 100) : null;
                                 ?>
-                                <div x-show="billingCycle === 'monthly'" x-cloak>
-                                    <?php if($plan->price > 0): ?>
-                                    <div class="mb-2">
-                                        <span class="text-2xl text-gray-400 line-through">
-                                            <?php echo e($plan->currency === 'INR' ? '₹' : '$'); ?><?php echo e(number_format($monthlyOriginalPrice, 0)); ?>
+                                
+                                <?php if($hasDiscount): ?>
+                                <div class="mb-2">
+                                    <span class="text-2xl text-gray-400" style="text-decoration: line-through; text-decoration-thickness: 2px;">
+                                        <?php echo e($plan->currency === 'INR' ? '₹' : '$'); ?><?php echo e(number_format((float)$actualPrice, 0)); ?>
 
-                                        </span>
-                                    </div>
-                                    <?php endif; ?>
-                                    <span class="text-6xl font-bold text-gray-900">
-                                        <?php echo subscriptionPrice($monthlyDiscountedPrice, $plan->currency); ?>
                                     </span>
-                                    <span class="text-gray-600 text-lg">/month</span>
                                 </div>
-                                <div x-show="billingCycle === 'yearly'" x-cloak>
-                                    <?php if($plan->price > 0): ?>
-                                    <div class="mb-2">
-                                        <span class="text-2xl text-gray-400 line-through">
-                                            <?php echo e($plan->currency === 'INR' ? '₹' : '$'); ?><?php echo e(number_format($yearlyOriginalPrice, 0)); ?>
-
-                                        </span>
-                                    </div>
-                                    <?php endif; ?>
-                                    <span class="text-6xl font-bold text-gray-900">
-                                        <?php echo subscriptionPrice($yearlyDiscountedPrice, $plan->currency); ?>
-                                    </span>
-                                    <span class="text-gray-600 text-lg">/year</span>
-                                    <?php if($plan->price > 0): ?>
-                                    <div class="mt-2">
-                                        <span class="text-sm text-green-600 font-semibold">Save 79%</span>
-                                    </div>
-                                    <?php endif; ?>
+                                <?php endif; ?>
+                                
+                                <span class="text-6xl font-bold text-gray-900">
+                                    <?php echo subscriptionPrice($displayPrice, $plan->currency); ?>
+                                </span>
+                                <span class="text-gray-600 text-lg">/<?php echo e($plan->billing_cycle); ?></span>
+                                
+                                <?php if($savings && $savings > 0): ?>
+                                <div class="mt-2">
+                                    <span class="text-sm text-green-600 font-semibold">Save <?php echo e($savings); ?>%</span>
                                 </div>
+                                <?php endif; ?>
                             <?php endif; ?>
                         </div>
                     </div>
@@ -432,12 +421,14 @@
                                         <?php if($hasFreePlan): ?>
                                             <!-- User has Free plan, can upgrade to Pro -->
                                             <?php
-                                                $monthlyPrice = $plan->price > 0 ? 997 : 0;
-                                                $yearlyPrice = $plan->price > 0 ? 9997 : 0;
+                                                $monthlyPlan = $plans->firstWhere('slug', 'pro');
+                                                $yearlyPlan = $plans->firstWhere('slug', 'pro-yearly');
+                                                $monthlyPrice = $monthlyPlan ? ($monthlyPlan->discount_price ?? $monthlyPlan->price) : 0;
+                                                $yearlyPrice = $yearlyPlan ? ($yearlyPlan->discount_price ?? $yearlyPlan->price) : 0;
                                             ?>
                                             <button 
                                                 x-data="{ monthlyPrice: <?php echo e($monthlyPrice); ?>, yearlyPrice: <?php echo e($yearlyPrice); ?>, currency: '<?php echo e($plan->currency); ?>' }"
-                                                @click="initiatePayment('<?php echo e($plan->id); ?>', '<?php echo e($plan->name); ?>', billingCycle === 'monthly' ? monthlyPrice : yearlyPrice, currency)"
+                                                @click="initiatePayment(billingCycle === 'monthly' ? '<?php echo e($monthlyPlan ? $monthlyPlan->id : $plan->id); ?>' : '<?php echo e($yearlyPlan ? $yearlyPlan->id : $plan->id); ?>', '<?php echo e($plan->name); ?>', billingCycle === 'monthly' ? monthlyPrice : yearlyPrice, currency)"
                                                 class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-4 px-6 rounded-xl transition-all duration-200 transform hover:-translate-y-1 shadow-lg hover:shadow-xl">
                                                 <span x-show="billingCycle === 'monthly'" x-cloak>🔄 Upgrade to Pro - <?php echo e($plan->currency === 'INR' ? '₹' : '$'); ?><?php echo e(number_format($monthlyPrice, 0)); ?>/month</span>
                                                 <span x-show="billingCycle === 'yearly'" x-cloak>🔄 Upgrade to Pro - <?php echo e($plan->currency === 'INR' ? '₹' : '$'); ?><?php echo e(number_format($yearlyPrice, 0)); ?>/year</span>
@@ -457,8 +448,10 @@
                                     <?php else: ?>
                                         <!-- User authenticated but no tenant, redirect to onboarding -->
                                         <?php
-                                            $monthlyPrice = $plan->price > 0 ? 997 : 0;
-                                            $yearlyPrice = $plan->price > 0 ? 9997 : 0;
+                                            $monthlyPlan = $plans->firstWhere('slug', 'pro');
+                                            $yearlyPlan = $plans->firstWhere('slug', 'pro-yearly');
+                                            $monthlyPrice = $monthlyPlan ? ($monthlyPlan->discount_price ?? $monthlyPlan->price) : 0;
+                                            $yearlyPrice = $yearlyPlan ? ($yearlyPlan->discount_price ?? $yearlyPlan->price) : 0;
                                         ?>
                                         <a href="<?php echo e(route('onboarding.organization')); ?>" 
                                            class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-4 px-6 rounded-xl transition-all duration-200 transform hover:-translate-y-1 block text-center shadow-lg hover:shadow-xl">
@@ -472,8 +465,10 @@
                                 <?php else: ?>
                                     <!-- User not authenticated, redirect to register -->
                                     <?php
-                                        $monthlyPrice = $plan->price > 0 ? 997 : 0;
-                                        $yearlyPrice = $plan->price > 0 ? 9997 : 0;
+                                        $monthlyPlan = $plans->firstWhere('slug', 'pro');
+                                        $yearlyPlan = $plans->firstWhere('slug', 'pro-yearly');
+                                        $monthlyPrice = $monthlyPlan ? ($monthlyPlan->discount_price ?? $monthlyPlan->price) : 0;
+                                        $yearlyPrice = $yearlyPlan ? ($yearlyPlan->discount_price ?? $yearlyPlan->price) : 0;
                                     ?>
                                     <a href="<?php echo e(route('register')); ?>" 
                                        class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-4 px-6 rounded-xl transition-all duration-200 transform hover:-translate-y-1 block text-center shadow-lg hover:shadow-xl">

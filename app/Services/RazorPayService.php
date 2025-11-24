@@ -563,6 +563,40 @@ class RazorPayService
                 ];
             }
 
+            // Check if this is an upgrade from monthly to yearly
+            $isYearlyPlan = $plan->billing_cycle === 'yearly' || $plan->slug === 'pro-yearly';
+            $existingSubscription = $tenant->activeSubscription ?? $tenant->subscription;
+            $remainingDays = 0;
+            
+            // If upgrading from monthly to yearly, calculate remaining days
+            if ($isYearlyPlan && $existingSubscription && $existingSubscription->plan) {
+                $currentPlan = $existingSubscription->plan;
+                $isMonthlyPlan = $currentPlan->billing_cycle === 'monthly' && $currentPlan->slug === 'pro';
+                
+                if ($isMonthlyPlan && $existingSubscription->expires_at) {
+                    // Calculate remaining days from current subscription
+                    $remainingDays = max(0, now()->diffInDays($existingSubscription->expires_at, false));
+                    
+                    Log::info('Upgrading from monthly to yearly subscription', [
+                        'tenant_id' => $tenant->id,
+                        'current_plan_id' => $currentPlan->id,
+                        'new_plan_id' => $plan->id,
+                        'remaining_days' => $remainingDays,
+                        'current_expires_at' => $existingSubscription->expires_at->toDateTimeString(),
+                    ]);
+                }
+            }
+
+            // Calculate expiration date based on plan type
+            $expiresAt = null;
+            if ($isYearlyPlan) {
+                // Yearly plan: 366 days + remaining days from monthly subscription
+                $expiresAt = now()->addDays(366 + $remainingDays);
+            } else {
+                // Monthly plan: 1 month
+                $expiresAt = now()->addMonth();
+            }
+
             // Create or update tenant subscription
             $subscription = TenantSubscription::updateOrCreate(
                 ['tenant_id' => $tenant->id],
@@ -570,7 +604,7 @@ class RazorPayService
                     'subscription_plan_id' => $plan->id,
                     'status' => 'active',
                     'starts_at' => now(),
-                    'expires_at' => now()->addMonth(),
+                    'expires_at' => $expiresAt,
                     'payment_method' => 'razorpay',
                     'payment_id' => $paymentData['razorpay_payment_id'] ?? null,
                     'amount_paid' => isset($paymentData['amount']) ? $paymentData['amount'] / 100 : $plan->price, // Convert from paise
@@ -582,6 +616,12 @@ class RazorPayService
             Log::info('Subscription activated', [
                 'tenant_id' => $tenant->id,
                 'plan_id' => $plan->id,
+                'plan_name' => $plan->name,
+                'billing_cycle' => $plan->billing_cycle,
+                'is_yearly' => $isYearlyPlan,
+                'remaining_days_added' => $remainingDays,
+                'total_days' => $isYearlyPlan ? (366 + $remainingDays) : 30,
+                'expires_at' => $expiresAt->toDateTimeString(),
                 'razorpay_subscription_id' => $razorpaySubscriptionId,
             ]);
 

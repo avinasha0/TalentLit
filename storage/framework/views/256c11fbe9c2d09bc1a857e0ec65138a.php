@@ -103,14 +103,8 @@
     </nav>
 
     
-    <div class="flex-shrink-0 p-4 border-t border-gray-300 bg-white">
-        <div class="mb-2">
-            <div class="text-sm font-medium"><?php echo e(Auth::user()->name); ?></div>
-            <div class="text-xs text-gray-500"><?php echo e(Auth::user()->email); ?></div>
-        </div>
-        <a href="<?php echo e(route('account.profile', ['tenant' => $tenant->slug ?? tenant()->slug])); ?>" class="block py-1 text-gray-700 hover:text-blue-600">Profile</a>
-        <form id="logout-form-mobile" action="<?php echo e(route('logout')); ?>" method="POST"><?php echo csrf_field(); ?></form>
-        <button data-mobile-logout class="text-red-600 hover:text-red-800">Sign out</button>
+    <div class="flex-shrink-0 p-3 sm:p-4 border-t border-gray-300 bg-white">
+        <p class="text-xs sm:text-sm font-medium text-gray-700 text-center break-words">TalentLit - HR Recruit Tool</p>
     </div>
 </div>
 <?php /**PATH C:\xampp\htdocs\hirehub2\resources\views/layouts/partials/mobile-menu.blade.php ENDPATH**/ ?>

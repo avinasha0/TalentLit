@@ -103,13 +103,7 @@
     </nav>
 
     {{-- Footer - Fixed at bottom --}}
-    <div class="flex-shrink-0 p-4 border-t border-gray-300 bg-white">
-        <div class="mb-2">
-            <div class="text-sm font-medium">{{ Auth::user()->name }}</div>
-            <div class="text-xs text-gray-500">{{ Auth::user()->email }}</div>
-        </div>
-        <a href="{{ route('account.profile', ['tenant' => $tenant->slug ?? tenant()->slug]) }}" class="block py-1 text-gray-700 hover:text-blue-600">Profile</a>
-        <form id="logout-form-mobile" action="{{ route('logout') }}" method="POST">@csrf</form>
-        <button data-mobile-logout class="text-red-600 hover:text-red-800">Sign out</button>
+    <div class="flex-shrink-0 p-3 sm:p-4 border-t border-gray-300 bg-white">
+        <p class="text-xs sm:text-sm font-medium text-gray-700 text-center break-words">TalentLit - HR Recruit Tool</p>
     </div>
 </div>

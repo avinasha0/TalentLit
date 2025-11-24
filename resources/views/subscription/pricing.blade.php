@@ -495,6 +495,99 @@
                                     </a>
                                 @endif
                             @endif
+                        @elseif($plan->slug === 'pro-yearly')
+                            @php
+                                $yearlyPrice = $plan->discount_price ?? $plan->price;
+                            @endphp
+                            @if(config('razorpay.pro_plan_mode') === 'active' && config('razorpay.key_id'))
+                                <!-- Pro Yearly Plan - Payment Button -->
+                                @if(auth()->check())
+                                    @php
+                                        $user = auth()->user();
+                                        $tenant = $user->tenants->first();
+                                        $hasProMonthly = false;
+                                        if ($tenant) {
+                                            $activeSubscription = $tenant->activeSubscription;
+                                            if ($activeSubscription) {
+                                                $currentPlan = $activeSubscription->plan;
+                                                if ($currentPlan && $currentPlan->slug === 'pro' && $currentPlan->billing_cycle === 'monthly') {
+                                                    $hasProMonthly = true;
+                                                }
+                                            }
+                                        }
+                                    @endphp
+                                    
+                                    @if($tenant)
+                                        @if($hasProMonthly)
+                                            <!-- User has Pro monthly, show Opt For Yearly -->
+                                            <button 
+                                                @click="initiatePayment('{{ $plan->id }}', '{{ $plan->name }}', {{ $yearlyPrice }}, '{{ $plan->currency }}')"
+                                                class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-4 px-6 rounded-xl transition-all duration-200 transform hover:-translate-y-1 shadow-lg hover:shadow-xl">
+                                                🔄 Opt For Yearly - {{ $plan->currency === 'INR' ? '₹' : '$' }}{{ number_format($yearlyPrice, 0) }}/year
+                                            </button>
+                                            <p class="text-center text-sm text-gray-500 mt-3">
+                                                Switch from monthly to yearly billing
+                                            </p>
+                                        @else
+                                            <!-- User doesn't have Pro monthly, show regular upgrade -->
+                                            @php
+                                                $hasFreePlan = $tenant->hasFreePlan();
+                                            @endphp
+                                            @if($hasFreePlan)
+                                                <button 
+                                                    @click="initiatePayment('{{ $plan->id }}', '{{ $plan->name }}', {{ $yearlyPrice }}, '{{ $plan->currency }}')"
+                                                    class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-4 px-6 rounded-xl transition-all duration-200 transform hover:-translate-y-1 shadow-lg hover:shadow-xl">
+                                                    🔄 Upgrade to Pro Yearly - {{ $plan->currency === 'INR' ? '₹' : '$' }}{{ number_format($yearlyPrice, 0) }}/year
+                                                </button>
+                                                <p class="text-center text-sm text-gray-500 mt-3">
+                                                    Upgrade from your Free plan
+                                                </p>
+                                            @else
+                                                <div class="w-full bg-gray-100 text-gray-600 font-bold py-4 px-6 rounded-xl text-center">
+                                                    📋 Start with Free Plan First
+                                                </div>
+                                                <p class="text-center text-sm text-gray-500 mt-3">
+                                                    Subscribe to Free plan to unlock Pro upgrade
+                                                </p>
+                                            @endif
+                                        @endif
+                                    @else
+                                        <!-- User authenticated but no tenant, redirect to onboarding -->
+                                        <a href="{{ route('onboarding.organization') }}" 
+                                           class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-4 px-6 rounded-xl transition-all duration-200 transform hover:-translate-y-1 block text-center shadow-lg hover:shadow-xl">
+                                            🚀 Get Started - {{ $plan->currency === 'INR' ? '₹' : '$' }}{{ number_format($yearlyPrice, 0) }}/year
+                                        </a>
+                                        <p class="text-center text-sm text-gray-500 mt-3">
+                                            Create your organization first
+                                        </p>
+                                    @endif
+                                @else
+                                    <!-- User not authenticated, redirect to register -->
+                                    <a href="{{ route('register') }}" 
+                                       class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-4 px-6 rounded-xl transition-all duration-200 transform hover:-translate-y-1 block text-center shadow-lg hover:shadow-xl">
+                                        🚀 Get Started - {{ $plan->currency === 'INR' ? '₹' : '$' }}{{ number_format($yearlyPrice, 0) }}/year
+                                    </a>
+                                    <p class="text-center text-sm text-gray-500 mt-3">
+                                        Sign up to subscribe
+                                    </p>
+                                @endif
+                            @else
+                                <!-- Pro Yearly Plan - Waitlist Button -->
+                                @if(auth()->check())
+                                    <button onclick="openWaitlistModal('{{ $plan->slug }}')" 
+                                            class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-4 px-6 rounded-xl transition-all duration-200 transform hover:-translate-y-1 shadow-lg hover:shadow-xl">
+                                        📋 Join Waitlist
+                                    </button>
+                                    <p class="text-center text-sm text-gray-500 mt-3">
+                                        Be the first to know when Pro plan launches
+                                    </p>
+                                @else
+                                    <a href="{{ route('login') }}" 
+                                       class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-4 px-6 rounded-xl transition-all duration-200 transform hover:-translate-y-1 block text-center shadow-lg hover:shadow-xl">
+                                        ⚡ Get Started as Pro
+                                    </a>
+                                @endif
+                            @endif
                         @elseif($plan->requiresContactForPricing())
                             <!-- Enterprise Plan - Contact for Pricing -->
                             <a href="{{ route('contact') }}" 

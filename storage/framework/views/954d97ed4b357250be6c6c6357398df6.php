@@ -324,9 +324,26 @@
                         <?php
                             $razorpayConfigured = config('razorpay.key_id') && config('razorpay.key_secret');
                             $proPlanActive = config('razorpay.pro_plan_mode') === 'active' || $razorpayConfigured;
+                            $hasProMonthly = false;
+                            if ($subscription && $subscription->plan) {
+                                $currentPlan = $subscription->plan;
+                                if ($currentPlan->slug === 'pro' && $currentPlan->billing_cycle === 'monthly') {
+                                    $hasProMonthly = true;
+                                }
+                            }
                         ?>
                         <?php if($proPlanActive && $razorpayConfigured): ?>
-                            <?php if($tenant->hasFreePlan()): ?>
+                            <?php if($planItem->slug === 'pro-yearly' && $hasProMonthly): ?>
+                                <!-- User has Pro monthly, show Opt For Yearly -->
+                                <?php
+                                    $displayPrice = $planItem->discount_price ?? $planItem->price;
+                                ?>
+                                <button onclick="initiatePayment('<?php echo e($planItem->id); ?>', '<?php echo e($planItem->name); ?>', <?php echo e($displayPrice); ?>, '<?php echo e($planItem->currency); ?>')" 
+                                        class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-200">
+                                    🔄 Opt For Yearly - <?php echo subscriptionPrice($displayPrice, $planItem->currency); ?>/<?php echo e($planItem->billing_cycle); ?>
+
+                                </button>
+                            <?php elseif($tenant->hasFreePlan()): ?>
                                 <?php
                                     $displayPrice = $planItem->discount_price ?? $planItem->price;
                                 ?>

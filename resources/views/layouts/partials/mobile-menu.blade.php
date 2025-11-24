@@ -26,55 +26,66 @@
         <div class="space-y-2">
             <a href="{{ route('tenant.dashboard', ['tenant' => $tenant->slug ?? tenant()->slug]) }}" class="block py-2 text-gray-700 hover:text-blue-600">Dashboard</a>
             
-            {{-- Jobs Section --}}
+            {{-- Recruiting Section --}}
             <div class="mt-4">
-                <button data-mobile-jobs-toggle class="flex items-center justify-between w-full text-left text-sm font-semibold text-gray-500 mb-2 hover:text-gray-700">
-                    <span>Jobs</span>
-                    <svg class="w-4 h-4 transition-transform duration-200" data-mobile-jobs-arrow fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <button type="button" data-mobile-recruiting-toggle class="flex items-center justify-between w-full text-left text-sm font-semibold text-gray-500 mb-2 hover:text-gray-700">
+                    <span>Recruiting</span>
+                    <svg class="w-4 h-4 transition-transform duration-200" data-mobile-recruiting-arrow fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                     </svg>
                 </button>
-                <div data-mobile-jobs-content class="ml-4 space-y-1 hidden">
-                    <a href="{{ route('tenant.jobs.index', ['tenant' => $tenant->slug ?? tenant()->slug]) }}" class="block py-1 text-gray-700 hover:text-blue-600">All Jobs</a>
-                    @customCan('create_jobs', $tenant ?? tenant())
-                    <a href="{{ route('tenant.jobs.create', ['tenant' => $tenant->slug ?? tenant()->slug]) }}" class="block py-1 text-gray-700 hover:text-blue-600">Create Job</a>
+                <div data-mobile-recruiting-content class="ml-4 space-y-1 hidden">
+                    {{-- Jobs Section --}}
+                    <div class="mt-2">
+                        <button type="button" data-mobile-jobs-toggle class="flex items-center justify-between w-full text-left text-sm font-semibold text-gray-500 mb-2 hover:text-gray-700">
+                            <span>Jobs</span>
+                            <svg class="w-4 h-4 transition-transform duration-200" data-mobile-jobs-arrow fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </button>
+                        <div data-mobile-jobs-content class="ml-4 space-y-1 hidden">
+                            <a href="{{ route('tenant.jobs.index', ['tenant' => $tenant->slug ?? tenant()->slug]) }}" class="block py-1 text-gray-700 hover:text-blue-600">All Jobs</a>
+                            @customCan('create_jobs', $tenant ?? tenant())
+                            <a href="{{ route('tenant.jobs.create', ['tenant' => $tenant->slug ?? tenant()->slug]) }}" class="block py-1 text-gray-700 hover:text-blue-600">Create Job</a>
+                            @endcustomCan
+                        </div>
+                    </div>
+
+                    {{-- Candidates Section --}}
+                    <div class="mt-2">
+                        <button type="button" data-mobile-candidates-toggle class="flex items-center justify-between w-full text-left text-sm font-semibold text-gray-500 mb-2 hover:text-gray-700">
+                            <span>Candidates</span>
+                            <svg class="w-4 h-4 transition-transform duration-200" data-mobile-candidates-arrow fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </button>
+                        <div data-mobile-candidates-content class="ml-4 space-y-1 hidden">
+                            <a href="{{ route('tenant.candidates.index', ['tenant' => $tenant->slug ?? tenant()->slug]) }}" class="block py-1 text-gray-700 hover:text-blue-600">All Candidates</a>
+                        </div>
+                    </div>
+
+                    @if(request()->route('job'))
+                    @php
+                        $jobParam = request()->route('job');
+                        $jobId = is_object($jobParam) ? $jobParam->id : $jobParam;
+                    @endphp
+                    <a href="{{ route('tenant.jobs.pipeline', [$tenant->slug ?? tenant()->slug, $jobId]) }}" class="block py-1 text-gray-700 hover:text-blue-600">Pipeline</a>
+                    @endif
+
+                    <a href="{{ route('tenant.interviews.index', ['tenant' => $tenant->slug ?? tenant()->slug]) }}" class="block py-1 text-gray-700 hover:text-blue-600">Interviews</a>
+
+                    @customCan('view_analytics', $tenant ?? tenant())
+                    <a href="{{ route('tenant.analytics.index', ['tenant' => $tenant->slug ?? tenant()->slug]) }}" class="block py-1 text-gray-700 hover:text-blue-600">Analytics</a>
                     @endcustomCan
                 </div>
             </div>
-
-            {{-- Candidates Section --}}
-            <div class="mt-4">
-                <button data-mobile-candidates-toggle class="flex items-center justify-between w-full text-left text-sm font-semibold text-gray-500 mb-2 hover:text-gray-700">
-                    <span>Candidates</span>
-                    <svg class="w-4 h-4 transition-transform duration-200" data-mobile-candidates-arrow fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                    </svg>
-                </button>
-                <div data-mobile-candidates-content class="ml-4 space-y-1 hidden">
-                    <a href="{{ route('tenant.candidates.index', ['tenant' => $tenant->slug ?? tenant()->slug]) }}" class="block py-1 text-gray-700 hover:text-blue-600">All Candidates</a>
-                </div>
-            </div>
-
-            @if(request()->route('job'))
-            @php
-                $jobParam = request()->route('job');
-                $jobId = is_object($jobParam) ? $jobParam->id : $jobParam;
-            @endphp
-            <a href="{{ route('tenant.jobs.pipeline', [$tenant->slug ?? tenant()->slug, $jobId]) }}" class="block py-2 text-gray-700 hover:text-blue-600">Pipeline</a>
-            @endif
-
-            <a href="{{ route('tenant.interviews.index', ['tenant' => $tenant->slug ?? tenant()->slug]) }}" class="block py-2 text-gray-700 hover:text-blue-600">Interviews</a>
-
-            @customCan('view_analytics', $tenant ?? tenant())
-            <a href="{{ route('tenant.analytics.index', ['tenant' => $tenant->slug ?? tenant()->slug]) }}" class="block py-2 text-gray-700 hover:text-blue-600">Analytics</a>
-            @endcustomCan
 
             <a href="{{ route('careers.index', ['tenant' => $tenant->slug ?? tenant()->slug]) }}" target="_blank" class="block py-2 text-gray-700 hover:text-blue-600">Careers Site</a>
 
             @customCan('manage_settings', $tenant ?? tenant())
             {{-- Settings Section --}}
             <div class="mt-4">
-                <button data-mobile-settings-toggle class="flex items-center justify-between w-full text-left text-sm font-semibold text-gray-500 mb-2 hover:text-gray-700">
+                <button type="button" data-mobile-settings-toggle class="flex items-center justify-between w-full text-left text-sm font-semibold text-gray-500 mb-2 hover:text-gray-700">
                     <span>Settings</span>
                     <svg class="w-4 h-4 transition-transform duration-200" data-mobile-settings-arrow fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>

@@ -489,9 +489,13 @@ class PaymentController extends Controller
         }
         
         // Find the plan based on amount
+        // Check both regular price and discount_price for yearly plans
         $amount = $payment['amount'] / 100; // Convert from paise
-        $plan = SubscriptionPlan::where('price', $amount)
-            ->where('slug', 'pro')
+        $plan = SubscriptionPlan::where(function($query) use ($amount) {
+                $query->where('price', $amount)
+                      ->orWhere('discount_price', $amount);
+            })
+            ->whereIn('slug', ['pro', 'pro-yearly'])
             ->first();
 
         if (!$plan) {
@@ -500,6 +504,7 @@ class PaymentController extends Controller
                 'tenant_id' => $tenant->id,
                 'payment_id' => $request->razorpay_payment_id,
                 'amount' => $amount,
+                'searched_slugs' => ['pro', 'pro-yearly'],
             ]);
             
             return redirect()->route('payment.failure')
@@ -521,11 +526,21 @@ class PaymentController extends Controller
                 ->with('error', 'Failed to process payment');
         }
 
-        // Prepare success message based on payment type
+        // Prepare success message based on payment type and plan
+        $isYearlyPlan = $plan->billing_cycle === 'yearly' || $plan->slug === 'pro-yearly';
+        
         if ($isSubscription) {
-            $successMessage = '🎉 Recurring Subscription Activated! Your Pro plan subscription is now active and will automatically renew monthly. You will be charged automatically each month until you cancel.';
+            if ($isYearlyPlan) {
+                $successMessage = '🎉 Yearly Subscription Activated! Your Pro yearly plan subscription is now active and will automatically renew yearly.';
+            } else {
+                $successMessage = '🎉 Recurring Subscription Activated! Your Pro plan subscription is now active and will automatically renew monthly. You will be charged automatically each month until you cancel.';
+            }
         } else {
-            $successMessage = 'Payment successful! Your Pro subscription has been activated.';
+            if ($isYearlyPlan) {
+                $successMessage = '🎉 Payment successful! Your Pro yearly subscription has been activated.';
+            } else {
+                $successMessage = 'Payment successful! Your Pro subscription has been activated.';
+            }
         }
 
         // Redirect to tenant subscription page

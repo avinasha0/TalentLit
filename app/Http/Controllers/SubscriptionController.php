@@ -36,7 +36,7 @@ class SubscriptionController extends Controller
         // Calculate days until renewal (even if cancelled, show days left for already paid period)
         $daysUntilRenewal = null;
         if ($subscription && $subscription->expires_at) {
-            $daysUntilRenewal = max(0, now()->diffInDays($subscription->expires_at, false));
+            $daysUntilRenewal = max(0, round(now()->diffInDays($subscription->expires_at, false)));
         }
         
         return view('subscription.show', compact('subscription', 'plan', 'usage', 'daysUntilRenewal'));

@@ -30,7 +30,7 @@ x-transition:enter-end="translate-x-0"
 x-transition:leave="transition ease-in duration-300"
 x-transition:leave-start="translate-x-0"
 x-transition:leave-end="-translate-x-full"
-class="fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 text-white transform lg:translate-x-0 lg:static lg:inset-0"
+class="fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 text-white lg:translate-x-0"
 :class="{ 'translate-x-0': sidebarOpen, '-translate-x-full': !sidebarOpen }"
 @click.away="if (window.innerWidth < 1024) $store.sidebar.toggle()"
 @click.stop>
@@ -71,7 +71,7 @@ class="fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 text-white transform lg:tran
   </div>
 
         <!-- Navigation -->
-        <nav class="flex-1 px-4 py-4 space-y-2 overflow-y-auto">
+        <nav class="flex-1 min-h-0 px-4 py-4 space-y-2 overflow-y-auto">
             <?php if($tenant && is_object($tenant)): ?>
             <!-- Dashboard -->
     <a href="<?php echo e(route('tenant.dashboard', $tenant->slug)); ?>"
@@ -264,40 +264,9 @@ class="fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 text-white transform lg:tran
   </nav>
 
         <!-- Footer -->
-        <?php if(Auth::check()): ?>
-        <div class="border-t border-gray-700 p-4">
-            <div class="flex items-center space-x-3 mb-4">
-                <div class="h-8 w-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
-                    <span class="text-white font-bold text-sm"><?php echo e(substr(Auth::user()->name, 0, 1)); ?></span>
-                </div>
-                <div class="flex-1 min-w-0">
-                    <p class="text-sm font-medium text-white truncate"><?php echo e(Auth::user()->name); ?></p>
-                    <p class="text-xs text-gray-400 truncate"><?php echo e(Auth::user()->email); ?></p>
-                </div>
-            </div>
-            
-            <div class="space-y-1">
-                <a href="<?php echo e(route('account.profile', $tenant->slug)); ?>" 
-                   class="flex items-center px-3 py-2 text-sm text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors duration-200">
-                    <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-                    </svg>
-                    Profile
-                </a>
-                
-                <form method="POST" action="<?php echo e(route('logout')); ?>" class="w-full">
-                    <?php echo csrf_field(); ?>
-                    <button type="submit" 
-                            class="flex items-center w-full px-3 py-2 text-sm text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors duration-200">
-                        <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
-                        </svg>
-                        Logout
-                    </button>
-                </form>
-            </div>
+        <div class="border-t border-gray-700 p-3 sm:p-4 mt-auto flex-shrink-0">
+            <p class="text-xs sm:text-sm font-medium text-white text-center break-words">TalentLit - HR Recruit Tool</p>
         </div>
-        <?php endif; ?>
     </div>
 </div>
 <?php /**PATH C:\xampp\htdocs\hirehub2\resources\views/components/sidebar.blade.php ENDPATH**/ ?>

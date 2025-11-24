@@ -1,20 +1,48 @@
-@php
+<?php
     $tenant = tenant();
     $breadcrumbs = [
         ['label' => 'Dashboard', 'url' => route('tenant.dashboard', $tenant->slug)],
         ['label' => 'Settings', 'url' => null],
         ['label' => 'Careers', 'url' => null]
     ];
-@endphp
+?>
 
-<x-app-layout :tenant="$tenant">
-    <x-slot name="breadcrumbs">
-        <x-breadcrumbs :items="$breadcrumbs" />
-    </x-slot>
+<?php if (isset($component)) { $__componentOriginal9ac128a9029c0e4701924bd2d73d7f54 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal9ac128a9029c0e4701924bd2d73d7f54 = $attributes; } ?>
+<?php $component = App\View\Components\AppLayout::resolve([] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('app-layout'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\App\View\Components\AppLayout::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['tenant' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($tenant)]); ?>
+     <?php $__env->slot('breadcrumbs', null, []); ?> 
+        <?php if (isset($component)) { $__componentOriginal360d002b1b676b6f84d43220f22129e2 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal360d002b1b676b6f84d43220f22129e2 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.breadcrumbs','data' => ['items' => $breadcrumbs]] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('breadcrumbs'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['items' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($breadcrumbs)]); ?>
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal360d002b1b676b6f84d43220f22129e2)): ?>
+<?php $attributes = $__attributesOriginal360d002b1b676b6f84d43220f22129e2; ?>
+<?php unset($__attributesOriginal360d002b1b676b6f84d43220f22129e2); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal360d002b1b676b6f84d43220f22129e2)): ?>
+<?php $component = $__componentOriginal360d002b1b676b6f84d43220f22129e2; ?>
+<?php unset($__componentOriginal360d002b1b676b6f84d43220f22129e2); ?>
+<?php endif; ?>
+     <?php $__env->endSlot(); ?>
 
     <div class="space-y-6">
         <!-- Success Message -->
-        @if(session('success'))
+        <?php if(session('success')): ?>
             <div class="bg-green-50 border border-green-200 rounded-md p-4">
                 <div class="flex">
                     <div class="flex-shrink-0">
@@ -23,11 +51,11 @@
                         </svg>
                     </div>
                     <div class="ml-3">
-                        <p class="text-sm font-medium text-green-800">{{ session('success') }}</p>
+                        <p class="text-sm font-medium text-green-800"><?php echo e(session('success')); ?></p>
                     </div>
                 </div>
             </div>
-        @endif
+        <?php endif; ?>
 
         <!-- Page Header -->
         <div class="bg-white shadow rounded-lg">
@@ -38,10 +66,19 @@
         </div>
 
         <!-- Form -->
-        <x-card>
-            <form method="POST" action="{{ route('tenant.settings.careers.update', $tenant->slug) }}" enctype="multipart/form-data" class="space-y-6">
-                @csrf
-                @method('PUT')
+        <?php if (isset($component)) { $__componentOriginal53747ceb358d30c0105769f8471417f6 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal53747ceb358d30c0105769f8471417f6 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.card','data' => []] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('card'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes([]); ?>
+            <form method="POST" action="<?php echo e(route('tenant.settings.careers.update', $tenant->slug)); ?>" enctype="multipart/form-data" class="space-y-6">
+                <?php echo csrf_field(); ?>
+                <?php echo method_field('PUT'); ?>
 
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <!-- Left Column - Form Fields -->
@@ -54,9 +91,16 @@
                                    id="logo"
                                    accept="image/*"
                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            @error('logo')
-                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
+                            <?php $__errorArgs = ['logo'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?>
+                                <p class="mt-1 text-sm text-red-600"><?php echo e($message); ?></p>
+                            <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
                             
                             <!-- Size Requirements -->
                             <div class="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-md">
@@ -71,9 +115,9 @@
                                 </ul>
                             </div>
                             
-                            @if($branding->logo_path)
-                                <p class="mt-2 text-sm text-gray-600">Current: {{ basename($branding->logo_path) }}</p>
-                            @endif
+                            <?php if($branding->logo_path): ?>
+                                <p class="mt-2 text-sm text-gray-600">Current: <?php echo e(basename($branding->logo_path)); ?></p>
+                            <?php endif; ?>
                         </div>
 
                         <!-- Hero Image Upload -->
@@ -84,9 +128,16 @@
                                    id="hero_image"
                                    accept="image/*"
                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            @error('hero_image')
-                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
+                            <?php $__errorArgs = ['hero_image'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?>
+                                <p class="mt-1 text-sm text-red-600"><?php echo e($message); ?></p>
+                            <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
                             
                             <!-- Size Requirements -->
                             <div class="mt-2 p-3 bg-green-50 border border-green-200 rounded-md">
@@ -102,9 +153,9 @@
                                 </ul>
                             </div>
                             
-                            @if($branding->hero_image_path)
-                                <p class="mt-2 text-sm text-gray-600">Current: {{ basename($branding->hero_image_path) }}</p>
-                            @endif
+                            <?php if($branding->hero_image_path): ?>
+                                <p class="mt-2 text-sm text-gray-600">Current: <?php echo e(basename($branding->hero_image_path)); ?></p>
+                            <?php endif; ?>
                         </div>
 
                         <!-- Primary Color -->
@@ -114,17 +165,24 @@
                                 <input type="color"
                                        name="primary_color"
                                        id="primary_color"
-                                       value="{{ $branding->primary_color ?? '#4f46e5' }}"
+                                       value="<?php echo e($branding->primary_color ?? '#4f46e5'); ?>"
                                        class="w-12 h-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                                 <input type="text"
-                                       value="{{ $branding->primary_color ?? '#4f46e5' }}"
+                                       value="<?php echo e($branding->primary_color ?? '#4f46e5'); ?>"
                                        class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                        placeholder="#4f46e5"
                                        readonly>
                             </div>
-                            @error('primary_color')
-                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
+                            <?php $__errorArgs = ['primary_color'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?>
+                                <p class="mt-1 text-sm text-red-600"><?php echo e($message); ?></p>
+                            <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
                         </div>
 
                         <!-- Intro Headline -->
@@ -133,12 +191,19 @@
                             <input type="text"
                                    name="intro_headline"
                                    id="intro_headline"
-                                   value="{{ old('intro_headline', $branding->intro_headline) }}"
+                                   value="<?php echo e(old('intro_headline', $branding->intro_headline)); ?>"
                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                    placeholder="Join Our Amazing Team">
-                            @error('intro_headline')
-                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
+                            <?php $__errorArgs = ['intro_headline'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?>
+                                <p class="mt-1 text-sm text-red-600"><?php echo e($message); ?></p>
+                            <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
                         </div>
 
                         <!-- Intro Subtitle -->
@@ -148,10 +213,17 @@
                                       id="intro_subtitle"
                                       rows="3"
                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                      placeholder="We're looking for talented individuals to join our growing team...">{{ old('intro_subtitle', $branding->intro_subtitle) }}</textarea>
-                            @error('intro_subtitle')
-                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
+                                      placeholder="We're looking for talented individuals to join our growing team..."><?php echo e(old('intro_subtitle', $branding->intro_subtitle)); ?></textarea>
+                            <?php $__errorArgs = ['intro_subtitle'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?>
+                                <p class="mt-1 text-sm text-red-600"><?php echo e($message); ?></p>
+                            <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
                         </div>
 
                         <!-- Company Description -->
@@ -161,10 +233,17 @@
                                       id="company_description"
                                       rows="4"
                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                      placeholder="Tell candidates about your company culture, values, and what makes you unique...">{{ old('company_description', $branding->company_description) }}</textarea>
-                            @error('company_description')
-                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
+                                      placeholder="Tell candidates about your company culture, values, and what makes you unique..."><?php echo e(old('company_description', $branding->company_description)); ?></textarea>
+                            <?php $__errorArgs = ['company_description'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?>
+                                <p class="mt-1 text-sm text-red-600"><?php echo e($message); ?></p>
+                            <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
                         </div>
 
                         <!-- Benefits Section -->
@@ -174,10 +253,17 @@
                                       id="benefits_text"
                                       rows="3"
                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                      placeholder="Health insurance, flexible hours, remote work, professional development...">{{ old('benefits_text', $branding->benefits_text) }}</textarea>
-                            @error('benefits_text')
-                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
+                                      placeholder="Health insurance, flexible hours, remote work, professional development..."><?php echo e(old('benefits_text', $branding->benefits_text)); ?></textarea>
+                            <?php $__errorArgs = ['benefits_text'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?>
+                                <p class="mt-1 text-sm text-red-600"><?php echo e($message); ?></p>
+                            <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
                         </div>
 
                         <!-- Contact Information -->
@@ -187,12 +273,19 @@
                                 <input type="email"
                                        name="contact_email"
                                        id="contact_email"
-                                       value="{{ old('contact_email', $branding->contact_email) }}"
+                                       value="<?php echo e(old('contact_email', $branding->contact_email)); ?>"
                                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                        placeholder="careers@company.com">
-                                @error('contact_email')
-                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                                @enderror
+                                <?php $__errorArgs = ['contact_email'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?>
+                                    <p class="mt-1 text-sm text-red-600"><?php echo e($message); ?></p>
+                                <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
                             </div>
                             
                             <div>
@@ -200,12 +293,19 @@
                                 <input type="tel"
                                        name="contact_phone"
                                        id="contact_phone"
-                                       value="{{ old('contact_phone', $branding->contact_phone) }}"
+                                       value="<?php echo e(old('contact_phone', $branding->contact_phone)); ?>"
                                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                        placeholder="+91 98765 43210">
-                                @error('contact_phone')
-                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                                @enderror
+                                <?php $__errorArgs = ['contact_phone'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?>
+                                    <p class="mt-1 text-sm text-red-600"><?php echo e($message); ?></p>
+                                <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
                             </div>
                         </div>
 
@@ -218,7 +318,7 @@
                                     <input type="url"
                                            name="linkedin_url"
                                            id="linkedin_url"
-                                           value="{{ old('linkedin_url', $branding->linkedin_url) }}"
+                                           value="<?php echo e(old('linkedin_url', $branding->linkedin_url)); ?>"
                                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                            placeholder="https://linkedin.com/company/your-company">
                                 </div>
@@ -228,7 +328,7 @@
                                     <input type="url"
                                            name="twitter_url"
                                            id="twitter_url"
-                                           value="{{ old('twitter_url', $branding->twitter_url) }}"
+                                           value="<?php echo e(old('twitter_url', $branding->twitter_url)); ?>"
                                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                            placeholder="https://twitter.com/yourcompany">
                                 </div>
@@ -238,7 +338,7 @@
                                     <input type="url"
                                            name="facebook_url"
                                            id="facebook_url"
-                                           value="{{ old('facebook_url', $branding->facebook_url) }}"
+                                           value="<?php echo e(old('facebook_url', $branding->facebook_url)); ?>"
                                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                            placeholder="https://facebook.com/yourcompany">
                                 </div>
@@ -255,7 +355,8 @@
                                            name="show_benefits" 
                                            id="show_benefits" 
                                            value="1" 
-                                           {{ old('show_benefits', $branding->show_benefits) ? 'checked' : '' }}
+                                           <?php echo e(old('show_benefits', $branding->show_benefits) ? 'checked' : ''); ?>
+
                                            class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
                                     <label for="show_benefits" class="ml-2 block text-sm text-gray-900">
                                         Show benefits section on careers page
@@ -267,7 +368,8 @@
                                            name="show_company_info" 
                                            id="show_company_info" 
                                            value="1" 
-                                           {{ old('show_company_info', $branding->show_company_info) ? 'checked' : '' }}
+                                           <?php echo e(old('show_company_info', $branding->show_company_info) ? 'checked' : ''); ?>
+
                                            class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
                                     <label for="show_company_info" class="ml-2 block text-sm text-gray-900">
                                         Show company description on careers page
@@ -279,7 +381,8 @@
                                            name="show_social_links" 
                                            id="show_social_links" 
                                            value="1" 
-                                           {{ old('show_social_links', $branding->show_social_links) ? 'checked' : '' }}
+                                           <?php echo e(old('show_social_links', $branding->show_social_links) ? 'checked' : ''); ?>
+
                                            class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
                                     <label for="show_social_links" class="ml-2 block text-sm text-gray-900">
                                         Show social media links
@@ -295,104 +398,106 @@
                         
                         <!-- Hero Section Preview -->
                         <div class="relative bg-gray-200 rounded-lg overflow-hidden" style="height: 300px;">
-                            @if($branding->hero_image_path)
-                                <img src="{{ asset('storage/' . $branding->hero_image_path) }}" 
+                            <?php if($branding->hero_image_path): ?>
+                                <img src="<?php echo e(asset('storage/' . $branding->hero_image_path)); ?>" 
                                      alt="Hero Preview" 
                                      class="w-full h-full object-cover">
-                            @else
+                            <?php else: ?>
                                 <div class="w-full h-full bg-gradient-to-r from-blue-500 to-purple-600"></div>
-                            @endif
+                            <?php endif; ?>
                             
                             <!-- Overlay -->
                             <div class="absolute inset-0 bg-black bg-opacity-40"></div>
                             
                             <!-- Content -->
                             <div class="absolute inset-0 flex flex-col justify-center items-center text-white p-6 text-center">
-                                @if($branding->logo_path)
-                                    <img src="{{ asset('storage/' . $branding->logo_path) }}" 
+                                <?php if($branding->logo_path): ?>
+                                    <img src="<?php echo e(asset('storage/' . $branding->logo_path)); ?>" 
                                          alt="Logo" 
                                          class="h-12 mb-4">
-                                @endif
+                                <?php endif; ?>
                                 
                                 <h2 class="text-2xl font-bold mb-2">
-                                    {{ $branding->intro_headline ?? 'Join Our Amazing Team' }}
+                                    <?php echo e($branding->intro_headline ?? 'Join Our Amazing Team'); ?>
+
                                 </h2>
                                 
                                 <p class="text-lg opacity-90">
-                                    {{ $branding->intro_subtitle ?? 'We\'re looking for talented individuals to join our growing team...' }}
+                                    <?php echo e($branding->intro_subtitle ?? 'We\'re looking for talented individuals to join our growing team...'); ?>
+
                                 </p>
                                 
                                 <button class="mt-4 px-6 py-2 rounded-md text-white font-medium"
-                                        style="background-color: {{ $branding->primary_color ?? '#4f46e5' }}">
+                                        style="background-color: <?php echo e($branding->primary_color ?? '#4f46e5'); ?>">
                                     View Open Positions
                                 </button>
                             </div>
                         </div>
 
                         <!-- Company Info Preview -->
-                        @if($branding->show_company_info && $branding->company_description)
+                        <?php if($branding->show_company_info && $branding->company_description): ?>
                         <div class="bg-white border border-gray-200 rounded-lg p-4">
                             <h4 class="text-lg font-medium text-black mb-2">About Us</h4>
-                            <p class="text-sm text-gray-700">{{ Str::limit($branding->company_description, 150) }}</p>
+                            <p class="text-sm text-gray-700"><?php echo e(Str::limit($branding->company_description, 150)); ?></p>
                         </div>
-                        @endif
+                        <?php endif; ?>
 
                         <!-- Benefits Preview -->
-                        @if($branding->show_benefits && $branding->benefits_text)
+                        <?php if($branding->show_benefits && $branding->benefits_text): ?>
                         <div class="bg-white border border-gray-200 rounded-lg p-4">
                             <h4 class="text-lg font-medium text-black mb-2">Benefits & Perks</h4>
-                            <p class="text-sm text-gray-700">{{ Str::limit($branding->benefits_text, 150) }}</p>
+                            <p class="text-sm text-gray-700"><?php echo e(Str::limit($branding->benefits_text, 150)); ?></p>
                         </div>
-                        @endif
+                        <?php endif; ?>
 
                         <!-- Contact Info Preview -->
                         <div class="bg-white border border-gray-200 rounded-lg p-4">
                             <h4 class="text-lg font-medium text-black mb-2">Contact Us</h4>
                             <div class="space-y-1 text-sm text-gray-700">
-                                @if($branding->contact_email)
-                                    <p><strong>Email:</strong> {{ $branding->contact_email }}</p>
-                                @endif
-                                @if($branding->contact_phone)
-                                    <p><strong>Phone:</strong> {{ $branding->contact_phone }}</p>
-                                @endif
+                                <?php if($branding->contact_email): ?>
+                                    <p><strong>Email:</strong> <?php echo e($branding->contact_email); ?></p>
+                                <?php endif; ?>
+                                <?php if($branding->contact_phone): ?>
+                                    <p><strong>Phone:</strong> <?php echo e($branding->contact_phone); ?></p>
+                                <?php endif; ?>
                             </div>
                         </div>
 
                         <!-- Social Links Preview -->
-                        @if($branding->show_social_links && ($branding->linkedin_url || $branding->twitter_url || $branding->facebook_url))
+                        <?php if($branding->show_social_links && ($branding->linkedin_url || $branding->twitter_url || $branding->facebook_url)): ?>
                         <div class="bg-white border border-gray-200 rounded-lg p-4">
                             <h4 class="text-lg font-medium text-black mb-2">Follow Us</h4>
                             <div class="flex space-x-3">
-                                @if($branding->linkedin_url)
-                                    <a href="{{ $branding->linkedin_url }}" target="_blank" class="text-blue-600 hover:text-blue-800">
+                                <?php if($branding->linkedin_url): ?>
+                                    <a href="<?php echo e($branding->linkedin_url); ?>" target="_blank" class="text-blue-600 hover:text-blue-800">
                                         <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                                             <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
                                         </svg>
                                     </a>
-                                @endif
-                                @if($branding->twitter_url)
-                                    <a href="{{ $branding->twitter_url }}" target="_blank" class="text-blue-400 hover:text-blue-600">
+                                <?php endif; ?>
+                                <?php if($branding->twitter_url): ?>
+                                    <a href="<?php echo e($branding->twitter_url); ?>" target="_blank" class="text-blue-400 hover:text-blue-600">
                                         <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                                             <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/>
                                         </svg>
                                     </a>
-                                @endif
-                                @if($branding->facebook_url)
-                                    <a href="{{ $branding->facebook_url }}" target="_blank" class="text-blue-600 hover:text-blue-800">
+                                <?php endif; ?>
+                                <?php if($branding->facebook_url): ?>
+                                    <a href="<?php echo e($branding->facebook_url); ?>" target="_blank" class="text-blue-600 hover:text-blue-800">
                                         <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                                             <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
                                         </svg>
                                     </a>
-                                @endif
+                                <?php endif; ?>
                             </div>
                         </div>
-                        @endif
+                        <?php endif; ?>
 
                         <!-- Preview Actions -->
                         <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
                             <h4 class="text-lg font-medium text-black mb-2">Preview Actions</h4>
                             <div class="space-y-2">
-                                <a href="{{ route('careers.index', $tenant->slug) }}" 
+                                <a href="<?php echo e(route('careers.index', $tenant->slug)); ?>" 
                                    target="_blank"
                                    class="inline-flex items-center px-3 py-2 text-sm font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100">
                                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -414,7 +519,16 @@
                     </button>
                 </div>
             </form>
-        </x-card>
+         <?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal53747ceb358d30c0105769f8471417f6)): ?>
+<?php $attributes = $__attributesOriginal53747ceb358d30c0105769f8471417f6; ?>
+<?php unset($__attributesOriginal53747ceb358d30c0105769f8471417f6); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal53747ceb358d30c0105769f8471417f6)): ?>
+<?php $component = $__componentOriginal53747ceb358d30c0105769f8471417f6; ?>
+<?php unset($__componentOriginal53747ceb358d30c0105769f8471417f6); ?>
+<?php endif; ?>
     </div>
 
     <script>
@@ -480,4 +594,14 @@
             input.addEventListener('input', autoSave);
         });
     </script>
-</x-app-layout>
+ <?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal9ac128a9029c0e4701924bd2d73d7f54)): ?>
+<?php $attributes = $__attributesOriginal9ac128a9029c0e4701924bd2d73d7f54; ?>
+<?php unset($__attributesOriginal9ac128a9029c0e4701924bd2d73d7f54); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal9ac128a9029c0e4701924bd2d73d7f54)): ?>
+<?php $component = $__componentOriginal9ac128a9029c0e4701924bd2d73d7f54; ?>
+<?php unset($__componentOriginal9ac128a9029c0e4701924bd2d73d7f54); ?>
+<?php endif; ?>
+<?php /**PATH C:\xampp\htdocs\hirehub2\resources\views/tenant/settings/careers.blade.php ENDPATH**/ ?>

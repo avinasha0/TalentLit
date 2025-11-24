@@ -82,11 +82,6 @@
                             <path fill-rule="evenodd" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" clip-rule="evenodd"></path>
                         </svg>
                         <?php echo e($plan->name); ?> Plan
-                        <?php if($plan->isFree()): ?>
-                            <span class="ml-1 text-green-600 font-semibold">(Free)</span>
-                        <?php else: ?>
-                            <span class="ml-1 font-semibold">(<?php echo subscriptionPrice($plan->price, $plan->currency); ?>/month)</span>
-                        <?php endif; ?>
                     </div>
                 <?php endif; ?>
             </div>
@@ -332,11 +327,6 @@
                                 <dd class="text-lg font-medium text-black">
                                     <?php echo e($plan->name); ?>
 
-                                    <?php if($plan->isFree()): ?>
-                                        <span class="text-green-600">(Free)</span>
-                                    <?php else: ?>
-                                        <span class="text-gray-500">(<?php echo subscriptionPrice($plan->price, $plan->currency); ?>)</span>
-                                    <?php endif; ?>
                                 </dd>
                             </dl>
                         </div>

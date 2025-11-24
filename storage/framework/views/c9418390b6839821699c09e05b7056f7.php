@@ -33,11 +33,6 @@
           </svg>
           <?php echo e($plan->name); ?>
 
-          <?php if($plan->isFree()): ?>
-            <span class="ml-1 text-green-600">Free</span>
-          <?php else: ?>
-            <span class="ml-1"><?php echo subscriptionPrice($plan->price, $plan->currency); ?></span>
-          <?php endif; ?>
         </div>
         <?php endif; ?>
       <?php endif; ?>

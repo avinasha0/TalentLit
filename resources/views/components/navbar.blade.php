@@ -32,11 +32,6 @@
             <path fill-rule="evenodd" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" clip-rule="evenodd"></path>
           </svg>
           {{ $plan->name }}
-          @if($plan->isFree())
-            <span class="ml-1 text-green-600">Free</span>
-          @else
-            <span class="ml-1">@subscriptionPrice($plan->price, $plan->currency)</span>
-          @endif
         </div>
         @endcustomCan
       @endif

@@ -31,14 +31,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Fix for Alpine.js collapsible sections that might be causing issues
-    const collapsibleButtons = document.querySelectorAll('[x-data] button[\\@click]');
-    collapsibleButtons.forEach(button => {
-        button.addEventListener('click', function(e) {
-            // Ensure the click event is handled properly
-            e.stopPropagation();
-        });
-    });
+    // Note: Alpine.js handles collapsible sections, so we don't interfere with @click handlers
+    // This prevents conflicts with sidebar menu expansion and other Alpine.js interactions
     
     console.log('Navigation fix applied to', navigationLinks.length, 'links');
 });

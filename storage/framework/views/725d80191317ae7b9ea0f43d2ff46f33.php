@@ -22,19 +22,23 @@
     $analyticsUpgradeUrl = $tenant && is_object($tenant) ? tenantRoute('subscription.show', $tenant->slug) : '#';
 ?>
 
-<div x-data="{ 
+<div x-data='{ 
     sidebarOpen: $store.sidebar?.open ?? (window.innerWidth >= 1024),
     recruitingOpen: <?php echo e(($isRecruiting || $isJobs || $isCandidates || $isInterviews || $isAnalytics) ? 'true' : 'false'); ?>,
     jobsOpen: false,
     candidatesOpen: false,
-    settingsOpen: false,
+    settingsOpen: <?php echo e($isSettings ? 'true' : 'false'); ?>,
     analyticsLocked: <?php echo e($analyticsLocked ? 'true' : 'false'); ?>,
     showAnalyticsUpgradeModal: false,
     analyticsUpgradeUrl: <?php echo json_encode($analyticsUpgradeUrl, 15, 512) ?>
-}" 
+}' 
 x-on:open-analytics-upgrade.window="showAnalyticsUpgradeModal = true"
 x-show="sidebarOpen"
-x-init="sidebarOpen = $store.sidebar?.open ?? (window.innerWidth >= 1024); $watch('$store.sidebar.open', value => sidebarOpen = value)" 
+x-init="
+    sidebarOpen = $store.sidebar?.open ?? (window.innerWidth >= 1024);
+    $watch('$store.sidebar.open', value => sidebarOpen = value);
+    console.log('Sidebar initialized - recruitingOpen:', recruitingOpen, 'settingsOpen:', settingsOpen);
+" 
 x-transition:enter="transition ease-out duration-300"
 x-transition:enter-start="-translate-x-full"
 x-transition:enter-end="translate-x-0"
@@ -43,8 +47,7 @@ x-transition:leave-start="translate-x-0"
 x-transition:leave-end="-translate-x-full"
 class="fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 text-white lg:translate-x-0"
 :class="{ 'translate-x-0': sidebarOpen, '-translate-x-full': !sidebarOpen }"
-@click.away="if (window.innerWidth < 1024) $store.sidebar.toggle()"
-@click.stop>
+@click.away="if (window.innerWidth < 1024) $store.sidebar.toggle()">
     
     <!-- Mobile overlay -->
     <div class="fixed inset-0 bg-gray-600 bg-opacity-75 lg:hidden" 
@@ -96,7 +99,7 @@ class="fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 text-white lg:translate-x-0"
 
             <!-- Recruiting -->
             <div>
-                <button @click="recruitingOpen = !recruitingOpen" 
+                <button type="button" @click="recruitingOpen = !recruitingOpen" 
                         class="flex items-center justify-between w-full px-3 py-2 text-sm font-medium rounded-lg transition-colors duration-200 <?php echo e(($isRecruiting || $isJobs || $isCandidates || $isInterviews || $isAnalytics) ? 'bg-purple-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'); ?>">
                     <div class="flex items-center">
                         <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -111,7 +114,7 @@ class="fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 text-white lg:translate-x-0"
                 <div x-show="recruitingOpen" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 transform -translate-y-2" x-transition:enter-end="opacity-100 transform translate-y-0" class="ml-8 mt-2 space-y-1">
                     <!-- Jobs -->
                     <div>
-                        <button @click="jobsOpen = !jobsOpen" 
+                        <button type="button" @click="jobsOpen = !jobsOpen" 
                                 class="flex items-center justify-between w-full px-3 py-2 text-sm font-medium text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors duration-200">
                             <div class="flex items-center">
                                 <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -145,7 +148,7 @@ class="fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 text-white lg:translate-x-0"
 
                     <!-- Candidates -->
                     <div>
-                        <button @click="candidatesOpen = !candidatesOpen" 
+                        <button type="button" @click="candidatesOpen = !candidatesOpen" 
                                 class="flex items-center justify-between w-full px-3 py-2 text-sm font-medium text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors duration-200">
                             <div class="flex items-center">
                                 <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -233,7 +236,7 @@ class="fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 text-white lg:translate-x-0"
             <!-- Settings (Owner/Admin only) -->
             <?php if (app('App\Support\CustomPermissionChecker')->check('manage_settings', $tenant)): ?>
             <div>
-                <button @click="settingsOpen = !settingsOpen" 
+                <button type="button" @click="settingsOpen = !settingsOpen" 
                         class="flex items-center justify-between w-full px-3 py-2 text-sm font-medium text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors duration-200">
                     <div class="flex items-center">
                         <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">

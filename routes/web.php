@@ -410,6 +410,7 @@ Route::middleware(['capture.tenant', 'tenant', 'auth'])->group(function () {
         Route::get('/{tenant}/employee-onboarding/documents', [EmployeeOnboardingController::class, 'documents'])->name('tenant.employee-onboarding.documents');
         Route::get('/{tenant}/employee-onboarding/it-assets', [EmployeeOnboardingController::class, 'itAssets'])->name('tenant.employee-onboarding.it-assets');
         Route::get('/{tenant}/employee-onboarding/approvals', [EmployeeOnboardingController::class, 'approvals'])->name('tenant.employee-onboarding.approvals');
+        Route::get('/{tenant}/employee-onboarding/export-csv', [EmployeeOnboardingController::class, 'exportCsv'])->name('tenant.employee-onboarding.export.csv');
     });
 
     // Job Management Routes - Owner, Admin, Recruiter
@@ -763,6 +764,7 @@ Route::domain('{subdomain}.' . $appDomain)->middleware(['subdomain.redirect', 's
         Route::get('/employee-onboarding/documents', [EmployeeOnboardingController::class, 'documents'])->name('subdomain.employee-onboarding.documents');
         Route::get('/employee-onboarding/it-assets', [EmployeeOnboardingController::class, 'itAssets'])->name('subdomain.employee-onboarding.it-assets');
         Route::get('/employee-onboarding/approvals', [EmployeeOnboardingController::class, 'approvals'])->name('subdomain.employee-onboarding.approvals');
+        Route::get('/employee-onboarding/export-csv', [EmployeeOnboardingController::class, 'exportCsv'])->name('subdomain.employee-onboarding.export.csv');
     });
 
     // Job Management Routes

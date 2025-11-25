@@ -7,11 +7,9 @@
     'use strict';
 
     // Configuration
-    // Get tenant slug from current URL or data attribute
     const tenantSlug = document.querySelector('[data-tenant-slug]')?.dataset.tenantSlug || 
                        window.location.pathname.split('/')[1] || '';
     const API_BASE = `/${tenantSlug}/api/onboardings`;
-    const USE_MOCK = true; // Set to false when backend is ready
 
     // State
     let state = {
@@ -33,17 +31,46 @@
         isLoading: false
     };
 
+    /**
+     * Log to server
+     */
+    function logToServer(level, message, data) {
+        try {
+            fetch(`/${tenantSlug}/api/log`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify({
+                    level: level,
+                    message: message,
+                    data: data,
+                    url: window.location.href,
+                    timestamp: new Date().toISOString()
+                })
+            }).catch(() => {}); // Silently fail if logging endpoint doesn't exist
+        } catch (e) {
+            // Ignore logging errors
+        }
+    }
+
     // Initialize
     function init() {
-        console.log('Employee Onboarding script initializing...');
-        initializeEventListeners();
-        loadOnboardings();
+        try {
+            logToServer('INFO', 'Script initialized', { tenantSlug, API_BASE });
+            initializeEventListeners();
+            loadOnboardings();
+        } catch (error) {
+            logToServer('ERROR', 'Init failed', { error: error.message, stack: error.stack });
+        }
     }
     
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
     } else {
-        // DOM is already loaded
         init();
     }
 
@@ -51,28 +78,17 @@
      * Initialize all event listeners
      */
     function initializeEventListeners() {
-        // Search - Server-side URL-based search
+        // Search
         const searchInput = document.getElementById('search-input');
         if (searchInput) {
             let searchTimeout;
             searchInput.addEventListener('input', function(e) {
                 clearTimeout(searchTimeout);
                 searchTimeout = setTimeout(() => {
-                    const searchValue = e.target.value.trim();
-                    const url = new URL(window.location.href);
-                    
-                    if (searchValue) {
-                        url.searchParams.set('search', searchValue);
-                    } else {
-                        url.searchParams.delete('search');
-                    }
-                    
-                    // Reset to page 1 when searching
-                    url.searchParams.set('page', '1');
-                    
-                    // Reload page with search parameter
-                    window.location.href = url.toString();
-                }, 500); // 500ms debounce for better UX
+                    state.filters.search = e.target.value;
+                    state.currentPage = 1;
+                    loadOnboardings();
+                }, 300);
             });
         }
 
@@ -168,6 +184,32 @@
     }
 
     /**
+     * Log to server
+     */
+    function logToServer(level, message, data) {
+        try {
+            fetch(`/${tenantSlug}/api/log`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify({
+                    level: level,
+                    message: message,
+                    data: data,
+                    url: window.location.href,
+                    timestamp: new Date().toISOString()
+                })
+            }).catch(() => {}); // Silently fail if logging endpoint doesn't exist
+        } catch (e) {
+            // Ignore logging errors
+        }
+    }
+
+    /**
      * Load onboardings from API
      */
     async function loadOnboardings() {
@@ -177,7 +219,7 @@
         try {
             const params = new URLSearchParams({
                 page: state.currentPage,
-                pageSize: state.pageSize,
+                per_page: state.pageSize,
                 sortBy: state.sortBy,
                 sortDir: state.sortDir,
                 ...Object.fromEntries(
@@ -185,12 +227,31 @@
                 )
             });
 
-            const response = await fetch(`${API_BASE}?${params}`);
+            const apiUrl = `${API_BASE}?${params}`;
+            
+            // Log to server
+            logToServer('INFO', 'loadOnboardings called', { apiUrl, tenantSlug });
+            
+            const response = await fetch(apiUrl, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                credentials: 'same-origin',
+            });
+            
+            logToServer('INFO', 'API response received', { status: response.status, statusText: response.statusText, url: apiUrl });
+            
             if (!response.ok) {
-                throw new Error('Failed to load onboardings');
+                const errorText = await response.text();
+                logToServer('ERROR', 'API response not OK', { status: response.status, errorText, url: apiUrl });
+                throw new Error(`Failed to load onboardings: ${response.status}`);
             }
 
             const data = await response.json();
+            logToServer('INFO', 'API data received', { dataCount: data.data?.length || 0, total: data.meta?.total || 0 });
+            
             state.onboardings = data.data || [];
             state.filteredOnboardings = data.data || [];
             state.total = data.meta?.total || 0;
@@ -199,7 +260,7 @@
             renderTable();
             renderPagination();
         } catch (error) {
-            console.error('Error loading onboardings:', error);
+            logToServer('ERROR', 'loadOnboardings failed', { error: error.message, stack: error.stack, apiUrl: `${API_BASE}?${params}` });
             hideLoading();
             showError('Failed to load onboardings. Please try again.');
         } finally {
@@ -225,14 +286,8 @@
         }
 
         emptyState?.classList.add('hidden');
-
-        // Desktop table
         tbody.innerHTML = state.filteredOnboardings.map(item => createTableRow(item)).join('');
-
-        // Mobile cards
         mobileCards.innerHTML = state.filteredOnboardings.map(item => createMobileCard(item)).join('');
-
-        // Attach event listeners to new elements
         attachRowEventListeners();
     }
 
@@ -945,6 +1000,11 @@
     function getInitials(name) {
         return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
     }
+
+    // Expose loadOnboardings globally for use in inline scripts
+    window.loadOnboardings = loadOnboardings;
+    window.showToast = showToast;
+    window.showError = showError;
 
     /**
      * Utility: Format date to MMM DD, YYYY

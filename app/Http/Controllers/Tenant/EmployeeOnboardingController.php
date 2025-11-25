@@ -43,15 +43,135 @@ class EmployeeOnboardingController extends Controller
 
     public function all(Request $request, string $tenant = null)
     {
+        \Log::info('AllOnboardings: page requested', $request->only(['search','department','manager','status','joiningMonth','sortBy','sortDir','page']));
+
         $tenantModel = tenant();
         
-        if (!$tenantModel) {
-            abort(500, 'Tenant not resolved. Please check your subdomain configuration.');
+        // For freeplan routes, try to get tenant from auth user or use a default
+        if (!$tenantModel && auth()->check()) {
+            $user = auth()->user();
+            if ($user->tenants()->count() > 0) {
+                $tenantModel = $user->tenants()->first();
+            }
         }
         
-        return view('tenant.employee-onboarding.all', [
-            'tenant' => $tenantModel,
-        ]);
+        if (!$tenantModel) {
+            // If no tenant, return empty results instead of aborting
+            $onboardings = new \Illuminate\Pagination\LengthAwarePaginator([], 0, 10, 1);
+            return view('tenant.employee-onboarding.all', compact('onboardings', 'tenantModel'));
+        }
+        
+        // Use Candidate model since Onboarding uses candidates table
+        $query = \App\Models\Candidate::where('tenant_id', $tenantModel->id)
+            ->where(function($q) {
+                $q->where('source', 'Onboarding')
+                  ->orWhere('source', 'Onboarding Import');
+            });
+
+        // SEARCH (name, email - designation column doesn't exist)
+        if ($search = $request->input('search')) {
+            $query->where(function($q) use ($search) {
+                $q->where('first_name', 'like', "%{$search}%")
+                  ->orWhere('last_name', 'like', "%{$search}%")
+                  ->orWhere('primary_email', 'like', "%{$search}%");
+            });
+        }
+
+        // Note: department, manager, status, joining_date columns don't exist in candidates table
+        // We'll fetch all, transform, filter in-memory, then paginate
+        
+        // SORTING - use existing columns only
+        $allowedSort = ['created_at','first_name'];
+        $sortBy = in_array($request->input('sortBy'), $allowedSort) ? $request->input('sortBy') : 'created_at';
+        // Map joining_date to created_at for backward compatibility
+        if ($request->input('sortBy') === 'joining_date') {
+            $sortBy = 'created_at';
+        }
+        $sortDir = $request->input('sortDir') === 'asc' ? 'asc' : 'desc';
+        $query->orderBy($sortBy, $sortDir);
+
+        // Fetch all records (we'll paginate after filtering)
+        $allOnboardings = $query->get();
+
+        // Calculate progress and set default values for non-existent columns
+        $allOnboardings->transform(function($item) {
+            // Set default values for non-existent columns
+            $item->designation = $item->designation ?? 'Not Assigned';
+            $item->department = $item->department ?? 'Not Assigned';
+            $item->manager = $item->manager ?? 'Not Assigned';
+            $item->joining_date = $item->created_at; // Use created_at as joining_date
+            
+            // If your app stores completed_steps/total_steps, use those. Otherwise compute heuristically.
+            $completed = intval($item->completed_steps ?? 0);
+            $total = intval($item->total_steps ?? 5); // default 5 steps
+            $item->progress_percent = $total > 0 ? intval(($completed / $total) * 100) : 0;
+
+            // Status mapping fallback
+            if ($item->progress_percent >= 100) {
+                $item->status = $item->status ?? 'Completed';
+            } else {
+                $item->status = $item->status ?? 'Pre-boarding';
+            }
+
+            return $item;
+        });
+
+        // Apply in-memory filters (since columns don't exist in DB)
+        $filteredCollection = $allOnboardings;
+        
+        if ($department = $request->input('department')) {
+            if ($department !== 'all') {
+                $filteredCollection = $filteredCollection->filter(function($item) use ($department) {
+                    return ($item->department ?? 'Not Assigned') === $department;
+                });
+            }
+        }
+        
+        if ($manager = $request->input('manager')) {
+            if ($manager !== 'all') {
+                $filteredCollection = $filteredCollection->filter(function($item) use ($manager) {
+                    return ($item->manager ?? 'Not Assigned') === $manager;
+                });
+            }
+        }
+        
+        if ($status = $request->input('status')) {
+            if ($status !== 'All') {
+                $filteredCollection = $filteredCollection->filter(function($item) use ($status) {
+                    return ($item->status ?? 'Pre-boarding') === $status;
+                });
+            }
+        }
+        
+        if ($joiningMonth = $request->input('joiningMonth')) {
+            try {
+                [$year,$month] = explode('-', $joiningMonth);
+                $filteredCollection = $filteredCollection->filter(function($item) use ($year, $month) {
+                    $date = $item->joining_date ?? $item->created_at;
+                    if ($date instanceof \Carbon\Carbon) {
+                        return $date->year == $year && $date->month == $month;
+                    }
+                    return false;
+                });
+            } catch (\Exception $e) {}
+        }
+        
+        // Manual pagination after filtering
+        $perPage = (int) $request->input('pageSize', 10);
+        $currentPage = (int) $request->input('page', 1);
+        $total = $filteredCollection->count();
+        $items = $filteredCollection->forPage($currentPage, $perPage)->values();
+        
+        $onboardings = new \Illuminate\Pagination\LengthAwarePaginator(
+            $items,
+            $total,
+            $perPage,
+            $currentPage,
+            ['path' => $request->url(), 'query' => $request->except('page')]
+        );
+        $onboardings->appends($request->except('page'));
+
+        return view('tenant.employee-onboarding.all', compact('onboardings', 'tenantModel'));
     }
 
     public function new(Request $request, string $tenant = null)

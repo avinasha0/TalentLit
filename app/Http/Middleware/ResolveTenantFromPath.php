@@ -20,8 +20,11 @@ class ResolveTenantFromPath
             \Log::info('ResolveTenantFromPath invoked', [
                 'path' => $request->path(),
                 'slug' => $slug,
+                'method' => $request->method(),
                 'route_name' => optional($request->route())->getName(),
                 'route_uri' => optional($request->route())->uri(),
+                'has_file' => $request->hasFile('file'),
+                'is_import_request' => str_contains($request->path(), 'import/candidates'),
             ]);
         }
 

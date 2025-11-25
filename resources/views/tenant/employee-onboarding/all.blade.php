@@ -26,7 +26,8 @@
             <div class="mt-4 sm:mt-0 flex flex-col sm:flex-row gap-2">
                 <button type="button" 
                         id="import-candidates-btn"
-                        class="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-300 hover:text-white">
+                        class="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-300 hover:text-white"
+                        onclick="(function(){ const modal = document.getElementById('import-modal'); if(modal) { modal.classList.remove('hidden'); } })();">
                     Import Candidates
                 </button>
                 <span class="hidden sm:inline text-gray-500">·</span>
@@ -54,6 +55,8 @@
                     <label for="search-input" class="sr-only">Search</label>
                     <input type="text" 
                            id="search-input"
+                           name="search"
+                           value="{{ request('search', '') }}"
                            placeholder="Search by name, email, department or role"
                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
                 </div>
@@ -187,7 +190,7 @@
 
             <!-- Pagination -->
             <div id="pagination-container" class="px-6 py-4 border-t border-gray-200">
-                <!-- Pagination will be populated by JavaScript -->
+                {{ $onboardings->appends(request()->except('page'))->links() }}
             </div>
         </x-card>
 
@@ -273,8 +276,129 @@
 
     <!-- Toast Container -->
     <div id="toast-container" class="fixed bottom-4 right-4 z-50 space-y-2"></div>
+    
+    <!-- Import Modal (hidden by default) -->
+    <div id="import-modal" class="hidden fixed inset-0 z-50 overflow-hidden">
+        <div class="absolute inset-0 bg-gray-500 bg-opacity-75" id="import-modal-backdrop"></div>
+        <div class="fixed inset-0 z-50 overflow-y-auto">
+            <div class="flex min-h-full items-center justify-center p-4">
+                <div class="relative bg-white rounded-lg shadow-xl max-w-lg w-full p-6">
+                    <h3 class="text-lg font-semibold mb-4">Import Candidates</h3>
+                    <form id="import-form" enctype="multipart/form-data">
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Select CSV/Excel File</label>
+                            <input type="file" id="import-file" name="file" accept=".csv,.xlsx,.xls" required class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700">
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <a href="/{{ $tenantSlug }}/api/onboardings/import/template" class="text-sm text-purple-600 hover:text-purple-800">Download Template</a>
+                            <div class="flex gap-2">
+                                <button type="button" id="cancel-import" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">Cancel</button>
+                                <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700">Import</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
 </x-app-layout>
 
 @push('scripts')
-<script src="{{ asset('js/employee-onboarding-all.js') }}"></script>
+<script>
+(function() {
+    'use strict';
+    
+    function openImportModal() {
+        const modal = document.getElementById('import-modal');
+        if (modal) {
+            modal.classList.remove('hidden');
+        }
+    }
+    
+    function closeImportModal() {
+        const modal = document.getElementById('import-modal');
+        if (modal) {
+            modal.classList.add('hidden');
+        }
+    }
+    
+    function initImportButton() {
+        const btn = document.getElementById('import-candidates-btn');
+        if (btn) {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                openImportModal();
+            });
+        }
+    }
+    
+    // Initialize when DOM is ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initImportButton);
+    } else {
+        initImportButton();
+    }
+    
+    // Modal close handlers
+    document.addEventListener('DOMContentLoaded', function() {
+        const backdrop = document.getElementById('import-modal-backdrop');
+        const cancelBtn = document.getElementById('cancel-import');
+        const form = document.getElementById('import-form');
+        
+        if (backdrop) {
+            backdrop.addEventListener('click', closeImportModal);
+        }
+        
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', closeImportModal);
+        }
+        
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const formData = new FormData(this);
+                const submitBtn = this.querySelector('button[type="submit"]');
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Importing...';
+                
+                fetch('/{{ $tenantSlug }}/api/onboardings/import/candidates', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Import';
+                    if (data.success) {
+                        alert(data.message || 'Candidates imported successfully');
+                        closeImportModal();
+                        if (typeof window.loadOnboardings === 'function') {
+                            window.loadOnboardings();
+                        } else {
+                            location.reload();
+                        }
+                    } else {
+                        alert(data.message || 'Import failed');
+                    }
+                })
+                .catch(error => {
+                    console.error('Import error:', error);
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Import';
+                    alert('Import failed. Please try again.');
+                });
+            });
+        }
+    });
+    
+    // Make globally available
+    window.openImportModal = openImportModal;
+    window.closeImportModal = closeImportModal;
+})();
+</script>
+<script src="{{ asset('js/employee-onboarding-all.js') }}?v={{ time() }}" onerror="console.error('Failed to load employee-onboarding-all.js')" onload="console.log('employee-onboarding-all.js loaded successfully')"></script>
 @endpush

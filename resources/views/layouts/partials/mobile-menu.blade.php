@@ -80,14 +80,13 @@
 
                     @customCan('view_analytics', $tenant ?? tenant())
                         @if($mobileAnalyticsLocked)
-                            <button type="button"
-                                    data-analytics-upgrade-trigger
-                                    class="w-full flex items-center justify-between py-1 text-sm font-medium text-purple-600">
+                            <a href="{{ $analyticsUpgradeUrl }}"
+                               class="w-full flex items-center justify-between py-1 text-sm font-medium text-purple-600 hover:text-purple-700">
                                 <span>Analytics (Pro+)</span>
                                 <svg class="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5-5 5M6 12h12"></path>
                                 </svg>
-                            </button>
+                            </a>
                         @else
                             <a href="{{ tenantRoute('tenant.analytics.index', $tenant->slug ?? tenant()->slug) }}" class="block py-1 text-gray-700 hover:text-blue-600">Analytics</a>
                         @endif

@@ -38,12 +38,6 @@
       <?php endif; ?>
 
       
-      <div class="hidden md:flex">
-        <input type="search" placeholder="Search…" class="rounded-md text-sm px-3 py-2 border
-               bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 w-64">
-      </div>
-
-      
       <div class="relative" x-data="{ open: false }" @click.away="open = false">
         <button @click="open = !open"
                 type="button"

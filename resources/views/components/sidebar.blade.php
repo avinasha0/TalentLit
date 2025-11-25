@@ -30,11 +30,8 @@
     candidatesOpen: false,
     settingsOpen: {{ $isSettings ? 'true' : 'false' }},
     employeeOnboardingOpen: {{ $isEmployeeOnboarding ? 'true' : 'false' }},
-    analyticsLocked: {{ $analyticsLocked ? 'true' : 'false' }},
-    showAnalyticsUpgradeModal: false,
-    analyticsUpgradeUrl: @json($analyticsUpgradeUrl)
-}' 
-x-on:open-analytics-upgrade.window="showAnalyticsUpgradeModal = true"
+    analyticsLocked: {{ $analyticsLocked ? 'true' : 'false' }}
+}'
 x-show="sidebarOpen"
 x-init="
     sidebarOpen = $store.sidebar?.open ?? (window.innerWidth >= 1024);
@@ -200,15 +197,14 @@ class="fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 text-white lg:translate-x-0"
                     <!-- Analytics -->
                     @customCan('view_analytics', $tenant)
                         @if($analyticsLocked)
-                            <button type="button"
-                                    @click="showAnalyticsUpgradeModal = true"
-                                    class="flex items-center px-3 py-2 text-sm text-gray-400 rounded-lg border border-dashed border-purple-500/40 hover:bg-gray-800 hover:text-white transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-gray-900">
+                            <a href="{{ $analyticsUpgradeUrl }}"
+                               class="flex items-center px-3 py-2 text-sm text-gray-400 rounded-lg border border-dashed border-purple-500/40 hover:bg-gray-800 hover:text-white transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-gray-900">
                                 <svg class="w-4 h-4 mr-3 text-purple-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
                                 </svg>
                                 <span class="flex-1 text-left">Analytics</span>
                                 <span class="ml-3 px-2 py-0.5 text-xs font-semibold rounded-full bg-purple-600/20 text-purple-200">Pro+</span>
-                            </button>
+                            </a>
                         @else
                             <a href="{{ tenantRoute('tenant.analytics.index', $tenant->slug) }}"
                                class="flex items-center px-3 py-2 text-sm text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors duration-200 {{ $isAnalytics ? 'bg-gray-700 text-white' : '' }}">
@@ -370,65 +366,6 @@ class="fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 text-white lg:translate-x-0"
         <!-- Footer -->
         <div class="border-t border-gray-700 p-3 sm:p-4 mt-auto flex-shrink-0">
             <p class="text-xs sm:text-sm font-medium text-white text-center break-words">TalentLit - HR Recruit Tool</p>
-        </div>
-    </div>
-
-    <!-- Analytics Upgrade Modal -->
-    <div x-cloak
-         x-show="showAnalyticsUpgradeModal"
-         x-transition.opacity
-         class="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-        <div class="absolute inset-0 bg-gray-900 bg-opacity-80" @click="showAnalyticsUpgradeModal = false"></div>
-        <div x-transition
-             class="relative bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 lg:p-8">
-            <div class="flex items-start justify-between space-x-4">
-                <div>
-                    <p class="text-xs font-semibold tracking-widest text-purple-600 uppercase">Pro Feature</p>
-                    <h3 class="mt-1 text-2xl font-bold text-gray-900">Unlock Recruiting Analytics</h3>
-                </div>
-                <button type="button"
-                        class="text-gray-400 hover:text-gray-600"
-                        @click="showAnalyticsUpgradeModal = false">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                    </svg>
-                </button>
-            </div>
-            <p class="mt-4 text-sm text-gray-600">
-                Advanced analytics are available for TalentLit Pro and Enterprise customers. Upgrade to visualize your pipeline, time-to-hire, and source performance.
-            </p>
-            <ul class="mt-4 space-y-2 text-sm text-gray-700">
-                <li class="flex items-center">
-                    <svg class="w-4 h-4 text-purple-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                    </svg>
-                    Applications & hires over time
-                </li>
-                <li class="flex items-center">
-                    <svg class="w-4 h-4 text-purple-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                    </svg>
-                    Real-time pipeline snapshot
-                </li>
-                <li class="flex items-center">
-                    <svg class="w-4 h-4 text-purple-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                    </svg>
-                    Source effectiveness breakdown
-                </li>
-            </ul>
-            <div class="mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3">
-                <button type="button"
-                        class="w-full sm:w-auto px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
-                        @click="showAnalyticsUpgradeModal = false">
-                    Maybe Later
-                </button>
-                <a :href="analyticsUpgradeUrl"
-                   class="w-full sm:w-auto px-5 py-2.5 rounded-lg text-sm font-semibold text-white"
-                   style="background: linear-gradient(90deg, #6E46AE, #00B6B4);">
-                    Upgrade & Unlock
-                </a>
-            </div>
         </div>
     </div>
 </div>

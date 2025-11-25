@@ -98,17 +98,7 @@ if (logout && form) {
   });
 }
 
-// Analytics upgrade CTA
-if (analyticsUpgradeTriggers.length) {
-  analyticsUpgradeTriggers.forEach(trigger => {
-    trigger.addEventListener('click', (e) => {
-      e.preventDefault();
-      console.log('Analytics upgrade prompt opened from mobile menu');
-      window.dispatchEvent(new CustomEvent('open-analytics-upgrade'));
-      closeMenu();
-    });
-  });
-}
+// Analytics upgrade CTA removed - now direct links to subscription page
 
 // Collapsible sections
 function setupCollapsible(toggleSelector, contentSelector, arrowSelector) {

@@ -1,7 +1,11 @@
 // Analytics Dashboard JavaScript
 document.addEventListener('DOMContentLoaded', function() {
     let charts = {};
-    const tenant = window.location.pathname.split('/')[1];
+    const analyticsRoot = document.getElementById('analytics-dashboard');
+    const pathParts = window.location.pathname.split('/').filter(Boolean);
+    const defaultBasePath = pathParts.length > 1 ? `/${pathParts[0]}/analytics` : '/analytics';
+    const dataEndpoint = analyticsRoot?.dataset.dataUrl || `${defaultBasePath}/data`;
+    const exportEndpoint = analyticsRoot?.dataset.exportUrl || `${defaultBasePath}/export`;
     
     // Initialize the dashboard
     init();
@@ -70,8 +74,9 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             const from = document.getElementById('date-from').value;
             const to = document.getElementById('date-to').value;
+            const params = new URLSearchParams({ from, to });
             
-            const response = await fetch(`/${tenant}/analytics/data?from=${from}&to=${to}`, {
+            const response = await fetch(`${dataEndpoint}?${params.toString()}`, {
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest',
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
@@ -334,6 +339,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function exportData() {
         const from = document.getElementById('date-from').value;
         const to = document.getElementById('date-to').value;
-        window.open(`/${tenant}/analytics/export?from=${from}&to=${to}`, '_blank');
+        const params = new URLSearchParams({ from, to });
+        window.open(`${exportEndpoint}?${params.toString()}`, '_blank');
     }
 });

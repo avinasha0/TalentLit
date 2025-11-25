@@ -125,6 +125,8 @@
         </div>
         
         <?php echo $__env->make('layouts.partials.mobile-menu', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+        
+        <?php echo $__env->yieldPushContent('scripts'); ?>
     </body>
 </html>
 <?php /**PATH C:\xampp\htdocs\hirehub2\resources\views/components/app-layout.blade.php ENDPATH**/ ?>

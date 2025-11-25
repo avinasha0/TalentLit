@@ -23,6 +23,14 @@ class AnalyticsController extends Controller
         if (!app('App\\Support\\CustomPermissionChecker')->check('view_analytics', $tenant)) {
             abort(403, 'Unauthorized');
         }
+
+        if (!$this->analyticsFeatureAvailable($tenant)) {
+            $subscriptionUrl = $tenant ? tenantRoute('subscription.show', $tenant->slug) : url('/subscription');
+
+            return redirect()
+                ->to($subscriptionUrl)
+                ->with('error', 'Recruiting analytics is available on Pro and Enterprise plans.');
+        }
         
         return view('tenant.analytics.index', compact('tenant'));
     }
@@ -34,6 +42,10 @@ class AnalyticsController extends Controller
         // Check permission using our custom system
         if (!app('App\\Support\\CustomPermissionChecker')->check('view_analytics', $tenant)) {
             abort(403, 'Unauthorized');
+        }
+
+        if (!$this->analyticsFeatureAvailable($tenant)) {
+            abort(403, 'Recruiting analytics is available on Pro and Enterprise plans.');
         }
         
         $tenantId = tenant_id();
@@ -55,6 +67,10 @@ class AnalyticsController extends Controller
         // Check permission using our custom system
         if (!app('App\\Support\\CustomPermissionChecker')->check('view_analytics', $tenant)) {
             abort(403, 'Unauthorized');
+        }
+
+        if (!$this->analyticsFeatureAvailable($tenant)) {
+            abort(403, 'Recruiting analytics is available on Pro and Enterprise plans.');
         }
         
         $tenantId = tenant_id();
@@ -94,6 +110,25 @@ class AnalyticsController extends Controller
             'open_jobs_by_dept' => $this->getOpenJobsByDepartment($tenantId),
             'pipeline_snapshot' => $this->getPipelineSnapshot($tenantId),
         ];
+    }
+
+    private function analyticsFeatureAvailable($tenant): bool
+    {
+        if (!$tenant || !method_exists($tenant, 'activeSubscription')) {
+            return false;
+        }
+
+        $plan = $tenant->activeSubscription?->plan;
+
+        if (!$plan) {
+            return false;
+        }
+
+        if (!$plan->analytics_enabled) {
+            return false;
+        }
+
+        return $plan->slug !== 'free';
     }
 
     private function getApplicationsOverTime($tenantId, $fromDate, $toDate, $isShortRange)

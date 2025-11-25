@@ -8,6 +8,7 @@ use App\Models\Tenant;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class AuthenticatedSessionController extends Controller
@@ -72,6 +73,11 @@ class AuthenticatedSessionController extends Controller
         $request->session()->forget('last_tenant_slug');
         $request->session()->forget('current_tenant_id');
 
-        return redirect('/');
+        $redirectTo = $request->input('redirect_to', '/');
+        if (! Str::startsWith($redirectTo, '/')) {
+            $redirectTo = '/';
+        }
+
+        return redirect($redirectTo);
     }
 }

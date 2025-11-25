@@ -7,6 +7,7 @@ const openers = document.querySelectorAll('[data-mobile-toggle]');
 const closer = document.querySelector('[data-mobile-close]');
 const logout = document.querySelector('[data-mobile-logout]');
 const form = document.getElementById('logout-form-mobile');
+const analyticsUpgradeTriggers = document.querySelectorAll('[data-analytics-upgrade-trigger]');
 
 if (!drawer) {
   console.log('Mobile drawer not found');
@@ -94,6 +95,18 @@ if (logout && form) {
     e.preventDefault();
     console.log('Logout clicked');
     form.submit();
+  });
+}
+
+// Analytics upgrade CTA
+if (analyticsUpgradeTriggers.length) {
+  analyticsUpgradeTriggers.forEach(trigger => {
+    trigger.addEventListener('click', (e) => {
+      e.preventDefault();
+      console.log('Analytics upgrade prompt opened from mobile menu');
+      window.dispatchEvent(new CustomEvent('open-analytics-upgrade'));
+      closeMenu();
+    });
   });
 }
 

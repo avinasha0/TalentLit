@@ -404,6 +404,12 @@ Route::middleware(['capture.tenant', 'tenant', 'auth'])->group(function () {
     // Employee Onboarding - accessible by all authenticated users with view dashboard permission
     Route::middleware('custom.permission:view_dashboard')->group(function () {
         Route::get('/{tenant}/employee-onboarding', [EmployeeOnboardingController::class, 'index'])->name('tenant.employee-onboarding.index');
+        Route::get('/{tenant}/employee-onboarding/all', [EmployeeOnboardingController::class, 'all'])->name('tenant.employee-onboarding.all');
+        Route::get('/{tenant}/employee-onboarding/new', [EmployeeOnboardingController::class, 'new'])->name('tenant.employee-onboarding.new');
+        Route::get('/{tenant}/employee-onboarding/tasks', [EmployeeOnboardingController::class, 'tasks'])->name('tenant.employee-onboarding.tasks');
+        Route::get('/{tenant}/employee-onboarding/documents', [EmployeeOnboardingController::class, 'documents'])->name('tenant.employee-onboarding.documents');
+        Route::get('/{tenant}/employee-onboarding/it-assets', [EmployeeOnboardingController::class, 'itAssets'])->name('tenant.employee-onboarding.it-assets');
+        Route::get('/{tenant}/employee-onboarding/approvals', [EmployeeOnboardingController::class, 'approvals'])->name('tenant.employee-onboarding.approvals');
     });
 
     // Job Management Routes - Owner, Admin, Recruiter
@@ -740,6 +746,12 @@ Route::domain('{subdomain}.' . $appDomain)->middleware(['subdomain.redirect', 's
     // Employee Onboarding
     Route::middleware('custom.permission:view_dashboard')->group(function () {
         Route::get('/employee-onboarding', [EmployeeOnboardingController::class, 'index'])->name('subdomain.employee-onboarding.index');
+        Route::get('/employee-onboarding/all', [EmployeeOnboardingController::class, 'all'])->name('subdomain.employee-onboarding.all');
+        Route::get('/employee-onboarding/new', [EmployeeOnboardingController::class, 'new'])->name('subdomain.employee-onboarding.new');
+        Route::get('/employee-onboarding/tasks', [EmployeeOnboardingController::class, 'tasks'])->name('subdomain.employee-onboarding.tasks');
+        Route::get('/employee-onboarding/documents', [EmployeeOnboardingController::class, 'documents'])->name('subdomain.employee-onboarding.documents');
+        Route::get('/employee-onboarding/it-assets', [EmployeeOnboardingController::class, 'itAssets'])->name('subdomain.employee-onboarding.it-assets');
+        Route::get('/employee-onboarding/approvals', [EmployeeOnboardingController::class, 'approvals'])->name('subdomain.employee-onboarding.approvals');
     });
 
     // Job Management Routes

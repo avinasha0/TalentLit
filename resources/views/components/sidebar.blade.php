@@ -29,6 +29,7 @@
     jobsOpen: false,
     candidatesOpen: false,
     settingsOpen: {{ $isSettings ? 'true' : 'false' }},
+    employeeOnboardingOpen: {{ $isEmployeeOnboarding ? 'true' : 'false' }},
     analyticsLocked: {{ $analyticsLocked ? 'true' : 'false' }},
     showAnalyticsUpgradeModal: false,
     analyticsUpgradeUrl: @json($analyticsUpgradeUrl)
@@ -222,16 +223,65 @@ class="fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 text-white lg:translate-x-0"
             </div>
 
             <!-- Employee Onboarding -->
-            <a href="{{ tenantRoute('tenant.employee-onboarding.index', $tenant->slug) }}"
-               class="flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-colors duration-200 {{ $isEmployeeOnboarding ? 'bg-purple-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">
-                <div class="flex items-center">
-                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+            <div>
+                <button type="button" @click="employeeOnboardingOpen = !employeeOnboardingOpen" 
+                        class="flex items-center justify-between w-full px-3 py-2 text-sm font-medium rounded-lg transition-colors duration-200 {{ $isEmployeeOnboarding ? 'bg-purple-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">
+                    <div class="flex items-center">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                        </svg>
+                        <span>Employee Onboarding</span>
+                        <span class="ml-2 px-2 py-0.5 text-xs font-semibold rounded-full bg-orange-600/30 text-orange-300 border border-orange-500/50">Under Development</span>
+                    </div>
+                    <svg class="w-4 h-4 transition-transform duration-200" :class="{ 'rotate-180': employeeOnboardingOpen }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                     </svg>
-                    Employee Onboarding
+                </button>
+                <div x-show="employeeOnboardingOpen" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 transform -translate-y-2" x-transition:enter-end="opacity-100 transform translate-y-0" class="ml-8 mt-2 space-y-1">
+                    <a href="{{ tenantRoute('tenant.employee-onboarding.all', $tenant->slug) }}"
+                       class="flex items-center px-3 py-2 text-sm text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors duration-200 {{ (str_starts_with($currentRoute, 'tenant.employee-onboarding.all') || str_starts_with($currentRoute, 'subdomain.employee-onboarding.all')) ? 'bg-gray-700 text-white' : '' }}">
+                        <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
+                        </svg>
+                        All Onboardings
+                    </a>
+                    <a href="{{ tenantRoute('tenant.employee-onboarding.new', $tenant->slug) }}"
+                       class="flex items-center px-3 py-2 text-sm text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors duration-200 {{ (str_starts_with($currentRoute, 'tenant.employee-onboarding.new') || str_starts_with($currentRoute, 'subdomain.employee-onboarding.new')) ? 'bg-gray-700 text-white' : '' }}">
+                        <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                        </svg>
+                        New Onboarding
+                    </a>
+                    <a href="{{ tenantRoute('tenant.employee-onboarding.tasks', $tenant->slug) }}"
+                       class="flex items-center px-3 py-2 text-sm text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors duration-200 {{ (str_starts_with($currentRoute, 'tenant.employee-onboarding.tasks') || str_starts_with($currentRoute, 'subdomain.employee-onboarding.tasks')) ? 'bg-gray-700 text-white' : '' }}">
+                        <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
+                        </svg>
+                        Tasks
+                    </a>
+                    <a href="{{ tenantRoute('tenant.employee-onboarding.documents', $tenant->slug) }}"
+                       class="flex items-center px-3 py-2 text-sm text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors duration-200 {{ (str_starts_with($currentRoute, 'tenant.employee-onboarding.documents') || str_starts_with($currentRoute, 'subdomain.employee-onboarding.documents')) ? 'bg-gray-700 text-white' : '' }}">
+                        <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                        </svg>
+                        Documents
+                    </a>
+                    <a href="{{ tenantRoute('tenant.employee-onboarding.it-assets', $tenant->slug) }}"
+                       class="flex items-center px-3 py-2 text-sm text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors duration-200 {{ (str_starts_with($currentRoute, 'tenant.employee-onboarding.it-assets') || str_starts_with($currentRoute, 'subdomain.employee-onboarding.it-assets')) ? 'bg-gray-700 text-white' : '' }}">
+                        <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"></path>
+                        </svg>
+                        IT & Assets
+                    </a>
+                    <a href="{{ tenantRoute('tenant.employee-onboarding.approvals', $tenant->slug) }}"
+                       class="flex items-center px-3 py-2 text-sm text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors duration-200 {{ (str_starts_with($currentRoute, 'tenant.employee-onboarding.approvals') || str_starts_with($currentRoute, 'subdomain.employee-onboarding.approvals')) ? 'bg-gray-700 text-white' : '' }}">
+                        <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        Approvals
+                    </a>
                 </div>
-                <span class="ml-2 px-2 py-0.5 text-xs font-semibold rounded-full bg-yellow-600/20 text-yellow-400">Under Development</span>
-            </a>
+            </div>
 
             <!-- Careers Site (Public Page) -->
             <a href="{{ tenantRoute('careers.index', $tenant->slug) }}" 

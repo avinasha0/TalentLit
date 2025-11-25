@@ -18,9 +18,92 @@ class EmployeeOnboardingController extends Controller
             abort(500, 'Tenant not resolved. Please check your subdomain configuration.');
         }
         
-        // For now, return a placeholder view
-        // This can be expanded later with employee onboarding functionality
-        return view('tenant.employee-onboarding.index', [
+        // Check if using subdomain routing
+        $currentRoute = request()->route()->getName();
+        $isSubdomain = str_starts_with($currentRoute, 'subdomain.');
+        
+        // Redirect to All Onboardings by default
+        if ($isSubdomain) {
+            return redirect()->route('subdomain.employee-onboarding.all');
+        } else {
+            return redirect()->route('tenant.employee-onboarding.all', $tenantModel->slug);
+        }
+    }
+
+    public function all(Request $request, string $tenant = null)
+    {
+        $tenantModel = tenant();
+        
+        if (!$tenantModel) {
+            abort(500, 'Tenant not resolved. Please check your subdomain configuration.');
+        }
+        
+        return view('tenant.employee-onboarding.all', [
+            'tenant' => $tenantModel,
+        ]);
+    }
+
+    public function new(Request $request, string $tenant = null)
+    {
+        $tenantModel = tenant();
+        
+        if (!$tenantModel) {
+            abort(500, 'Tenant not resolved. Please check your subdomain configuration.');
+        }
+        
+        return view('tenant.employee-onboarding.new', [
+            'tenant' => $tenantModel,
+        ]);
+    }
+
+    public function tasks(Request $request, string $tenant = null)
+    {
+        $tenantModel = tenant();
+        
+        if (!$tenantModel) {
+            abort(500, 'Tenant not resolved. Please check your subdomain configuration.');
+        }
+        
+        return view('tenant.employee-onboarding.tasks', [
+            'tenant' => $tenantModel,
+        ]);
+    }
+
+    public function documents(Request $request, string $tenant = null)
+    {
+        $tenantModel = tenant();
+        
+        if (!$tenantModel) {
+            abort(500, 'Tenant not resolved. Please check your subdomain configuration.');
+        }
+        
+        return view('tenant.employee-onboarding.documents', [
+            'tenant' => $tenantModel,
+        ]);
+    }
+
+    public function itAssets(Request $request, string $tenant = null)
+    {
+        $tenantModel = tenant();
+        
+        if (!$tenantModel) {
+            abort(500, 'Tenant not resolved. Please check your subdomain configuration.');
+        }
+        
+        return view('tenant.employee-onboarding.it-assets', [
+            'tenant' => $tenantModel,
+        ]);
+    }
+
+    public function approvals(Request $request, string $tenant = null)
+    {
+        $tenantModel = tenant();
+        
+        if (!$tenantModel) {
+            abort(500, 'Tenant not resolved. Please check your subdomain configuration.');
+        }
+        
+        return view('tenant.employee-onboarding.approvals', [
             'tenant' => $tenantModel,
         ]);
     }

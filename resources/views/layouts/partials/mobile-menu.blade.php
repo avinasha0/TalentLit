@@ -95,6 +95,11 @@
                 </div>
             </div>
 
+            <a href="{{ tenantRoute('tenant.employee-onboarding.index', $tenant->slug ?? tenant()->slug) }}" class="flex items-center justify-between py-2 text-gray-700 hover:text-blue-600">
+                <span>Employee Onboarding</span>
+                <span class="ml-2 px-2 py-0.5 text-xs font-semibold rounded-full bg-yellow-600/20 text-yellow-600">Under Development</span>
+            </a>
+
             <a href="{{ tenantRoute('careers.index', $tenant->slug ?? tenant()->slug) }}" target="_blank" class="block py-2 text-gray-700 hover:text-blue-600">Careers Site</a>
 
             @customCan('manage_settings', $tenant ?? tenant())

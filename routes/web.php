@@ -22,6 +22,7 @@ use App\Http\Controllers\Tenant\RecruitingController;
 use App\Http\Controllers\Tenant\JobQuestionsController;
 use App\Http\Controllers\Tenant\JobStageController;
 use App\Http\Controllers\Tenant\PipelineController;
+use App\Http\Controllers\Tenant\EmployeeOnboardingController;
 use App\Models\Application;
 use App\Models\Candidate;
 use Illuminate\Http\Request;
@@ -400,6 +401,11 @@ Route::middleware(['capture.tenant', 'tenant', 'auth'])->group(function () {
         Route::get('/{tenant}/recruiting', [RecruitingController::class, 'index'])->name('tenant.recruiting.index');
     });
 
+    // Employee Onboarding - accessible by all authenticated users with view dashboard permission
+    Route::middleware('custom.permission:view_dashboard')->group(function () {
+        Route::get('/{tenant}/employee-onboarding', [EmployeeOnboardingController::class, 'index'])->name('tenant.employee-onboarding.index');
+    });
+
     // Job Management Routes - Owner, Admin, Recruiter
     Route::middleware('custom.permission:view_jobs')->group(function () {
         Route::get('/{tenant}/jobs', [JobController::class, 'index'])->name('tenant.jobs.index');
@@ -729,6 +735,11 @@ Route::domain('{subdomain}.' . $appDomain)->middleware(['subdomain.redirect', 's
     // Recruiting
     Route::middleware('custom.permission:view_dashboard')->group(function () {
         Route::get('/recruiting', [RecruitingController::class, 'index'])->name('subdomain.recruiting.index');
+    });
+
+    // Employee Onboarding
+    Route::middleware('custom.permission:view_dashboard')->group(function () {
+        Route::get('/employee-onboarding', [EmployeeOnboardingController::class, 'index'])->name('subdomain.employee-onboarding.index');
     });
 
     // Job Management Routes

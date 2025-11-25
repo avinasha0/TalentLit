@@ -115,6 +115,11 @@
             showToast('Start Onboarding modal will open here', 'info');
         });
 
+        // Import Candidates
+        document.getElementById('import-candidates-btn')?.addEventListener('click', () => {
+            openImportModal();
+        });
+
         // Export CSV
         document.getElementById('export-csv-btn')?.addEventListener('click', handleExportCSV);
 
@@ -554,11 +559,18 @@
      * Handle export CSV (all filtered results)
      */
     function handleExportCSV() {
-        exportToCSV(state.filteredOnboardings);
+        // Use server-side export for all filtered results
+        const params = new URLSearchParams({
+            ...Object.fromEntries(
+                Object.entries(state.filters).filter(([_, v]) => v !== '')
+            )
+        });
+
+        window.location.href = `${API_BASE}/export/csv?${params}`;
     }
 
     /**
-     * Export data to CSV
+     * Export data to CSV (for selected items only)
      */
     function exportToCSV(data) {
         const headers = ['candidate_name', 'email', 'role', 'department', 'manager', 'joining_date', 'progress_percent', 'status', 'last_updated'];
@@ -583,9 +595,151 @@
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `onboardings-${new Date().toISOString().split('T')[0]}.csv`;
+        a.download = `onboardings-selected-${new Date().toISOString().split('T')[0]}.csv`;
         a.click();
         window.URL.revokeObjectURL(url);
+    }
+
+    /**
+     * Open import modal
+     */
+    function openImportModal() {
+        const modal = document.getElementById('import-modal');
+        if (modal) {
+            modal.classList.remove('hidden');
+        } else {
+            // Create modal if it doesn't exist
+            createImportModal();
+        }
+    }
+
+    /**
+     * Create import modal
+     */
+    function createImportModal() {
+        const modal = document.createElement('div');
+        modal.id = 'import-modal';
+        modal.className = 'fixed inset-0 z-50 overflow-hidden';
+        modal.innerHTML = `
+            <div class="absolute inset-0 bg-gray-500 bg-opacity-75 transition-opacity" id="import-modal-backdrop"></div>
+            <div class="fixed inset-0 z-50 overflow-y-auto">
+                <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+                    <div class="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg">
+                        <div class="bg-white px-4 pb-4 pt-5 sm:p-6 sm:pb-4">
+                            <div class="sm:flex sm:items-start">
+                                <div class="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left w-full">
+                                    <h3 class="text-base font-semibold leading-6 text-gray-900 mb-4">Import Candidates</h3>
+                                    <form id="import-form" enctype="multipart/form-data" class="space-y-4">
+                                        <div>
+                                            <label for="import-file" class="block text-sm font-medium text-gray-700 mb-2">Select CSV/Excel File</label>
+                                            <input type="file" 
+                                                   id="import-file" 
+                                                   name="file" 
+                                                   accept=".csv,.xlsx,.xls"
+                                                   required
+                                                   class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100">
+                                            <p class="mt-1 text-xs text-gray-500">CSV or Excel file (max 10MB)</p>
+                                        </div>
+                                        <div class="flex items-center justify-between">
+                                            <a href="${API_BASE}/import/template" 
+                                               class="text-sm text-purple-600 hover:text-purple-800">
+                                                Download Template
+                                            </a>
+                                            <div class="flex gap-2">
+                                                <button type="button" 
+                                                        id="cancel-import"
+                                                        class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+                                                    Cancel
+                                                </button>
+                                                <button type="submit" 
+                                                        class="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700">
+                                                    Import
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        // Event listeners
+        document.getElementById('import-modal-backdrop')?.addEventListener('click', closeImportModal);
+        document.getElementById('cancel-import')?.addEventListener('click', closeImportModal);
+        document.getElementById('import-form')?.addEventListener('submit', handleImportSubmit);
+
+        // Close on Esc
+        const escHandler = (e) => {
+            if (e.key === 'Escape') {
+                closeImportModal();
+                document.removeEventListener('keydown', escHandler);
+            }
+        };
+        document.addEventListener('keydown', escHandler);
+    }
+
+    /**
+     * Close import modal
+     */
+    function closeImportModal() {
+        const modal = document.getElementById('import-modal');
+        if (modal) {
+            modal.classList.add('hidden');
+            setTimeout(() => modal.remove(), 300);
+        }
+    }
+
+    /**
+     * Handle import form submission
+     */
+    async function handleImportSubmit(e) {
+        e.preventDefault();
+        
+        const form = e.target;
+        const formData = new FormData(form);
+        const fileInput = document.getElementById('import-file');
+        
+        if (!fileInput.files.length) {
+            showError('Please select a file to import');
+            return;
+        }
+
+        formData.append('file', fileInput.files[0]);
+
+        try {
+            const response = await fetch(`${API_BASE}/import/candidates`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                },
+                body: formData
+            });
+
+            if (response.redirected) {
+                // If redirected, follow the redirect
+                window.location.href = response.url;
+                return;
+            }
+
+            const data = await response.json();
+            
+            if (data.success) {
+                showToast(data.message || 'Candidates imported successfully', 'success');
+                closeImportModal();
+                // Reload onboardings after a short delay
+                setTimeout(() => loadOnboardings(), 1000);
+            } else {
+                showError(data.message || 'Import failed');
+            }
+        } catch (error) {
+            console.error('Error importing candidates:', error);
+            showError('Failed to import candidates. Please try again.');
+        }
     }
 
     /**

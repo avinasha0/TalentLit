@@ -3,7 +3,18 @@
 namespace App\Http\Controllers\Tenant;
 
 use App\Http\Controllers\Controller;
+use App\Models\Candidate;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Maatwebsite\Excel\Facades\Excel;
+use Maatwebsite\Excel\Concerns\ToModel;
+use Maatwebsite\Excel\Concerns\WithHeadingRow;
+use Maatwebsite\Excel\Concerns\WithValidation;
+use Maatwebsite\Excel\Concerns\Importable;
+use Maatwebsite\Excel\Concerns\SkipsOnError;
+use Maatwebsite\Excel\Concerns\SkipsErrors;
+use Maatwebsite\Excel\Concerns\SkipsOnFailure;
+use Maatwebsite\Excel\Concerns\SkipsFailures;
 
 class EmployeeOnboardingController extends Controller
 {
@@ -212,6 +223,168 @@ class EmployeeOnboardingController extends Controller
     }
 
     /**
+     * API: Export CSV of all filtered onboardings
+     */
+    public function apiExportCSV(Request $request)
+    {
+        $tenantModel = tenant();
+        
+        if (!$tenantModel) {
+            return response()->json(['error' => 'Tenant not resolved'], 500);
+        }
+
+        // Get filtered data (all pages, no pagination)
+        $useMock = env('USE_MOCK_ONBOARDING_DATA', true);
+        
+        if ($useMock) {
+            $onboardings = $this->getAllOnboardingsForExport($request);
+        } else {
+            // TODO: Implement real database queries
+            $onboardings = [];
+        }
+
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="onboardings-' . date('Y-m-d') . '.csv"',
+        ];
+
+        $callback = function() use ($onboardings) {
+            $file = fopen('php://output', 'w');
+            
+            // Add BOM for UTF-8
+            fwrite($file, "\xEF\xBB\xBF");
+            
+            // Headers
+            fputcsv($file, [
+                'candidate_name',
+                'email',
+                'role',
+                'department',
+                'manager',
+                'joining_date',
+                'progress_percent',
+                'status',
+                'last_updated'
+            ]);
+            
+            // Data rows
+            foreach ($onboardings as $onboarding) {
+                fputcsv($file, [
+                    $onboarding['fullName'] ?? '',
+                    $onboarding['email'] ?? '',
+                    $onboarding['designation'] ?? '',
+                    $onboarding['department'] ?? '',
+                    $onboarding['manager'] ?? '',
+                    $onboarding['joiningDate'] ?? '',
+                    $onboarding['progressPercent'] ?? 0,
+                    $onboarding['status'] ?? '',
+                    $onboarding['lastUpdated'] ?? ''
+                ]);
+            }
+            
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    /**
+     * Import candidates for onboarding
+     */
+    public function importCandidates(Request $request, string $tenant = null)
+    {
+        $tenantModel = tenant();
+        
+        if (!$tenantModel) {
+            return response()->json(['error' => 'Tenant not resolved'], 500);
+        }
+
+        $request->validate([
+            'file' => [
+                'required',
+                'file',
+                'mimetypes:text/plain,text/csv,application/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel.sheet.macroEnabled.12',
+                'mimes:csv,txt,xlsx,xls',
+                'max:10240', // 10MB max
+            ],
+        ]);
+
+        try {
+            // Create a simple import class for onboarding
+            $import = new OnboardingCandidateImport(tenant_id(), 'Onboarding Import');
+            
+            Excel::import($import, $request->file('file'));
+
+            $importedCount = $import->getRowCount();
+
+            return response()->json([
+                'success' => true,
+                'message' => "Successfully imported {$importedCount} candidates for onboarding.",
+                'count' => $importedCount
+            ]);
+        } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
+            $failures = $e->failures();
+            $errors = [];
+            foreach ($failures as $failure) {
+                $errors[] = "Row {$failure->row()}: " . implode(', ', $failure->errors());
+            }
+            return response()->json([
+                'success' => false,
+                'message' => 'Import validation failed',
+                'errors' => $errors
+            ], 400);
+        } catch (\Throwable $e) {
+            Log::error('Onboarding import error', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Import failed: ' . ($e->getMessage() ?? 'Unknown error')
+            ], 400);
+        }
+    }
+
+    /**
+     * Download import template
+     */
+    public function downloadImportTemplate(string $tenant = null)
+    {
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="onboarding_candidates_import_template.csv"',
+        ];
+
+        $callback = function() {
+            $file = fopen('php://output', 'w');
+            
+            // Add BOM for UTF-8
+            fwrite($file, "\xEF\xBB\xBF");
+            
+            // Headers
+            fputcsv($file, [
+                'first_name',
+                'last_name', 
+                'primary_email',
+                'primary_phone',
+                'source',
+                'tags'
+            ]);
+            
+            // Sample data
+            fputcsv($file, [
+                'John',
+                'Doe',
+                'john.doe@example.com',
+                '+1234567890',
+                'Onboarding',
+                'New Hire,Full-time'
+            ]);
+            
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    /**
      * Get mock onboardings data
      */
     private function getMockOnboardings(Request $request)
@@ -379,6 +552,221 @@ class EmployeeOnboardingController extends Controller
                 'total' => $total,
             ],
         ]);
+    }
+
+    /**
+     * Get all onboardings for export (no pagination)
+     */
+    private function getAllOnboardingsForExport(Request $request)
+    {
+        $search = $request->get('search', '');
+        $status = $request->get('status', '');
+        $department = $request->get('department', '');
+        $manager = $request->get('manager', '');
+        $joiningMonth = $request->get('joiningMonth', '');
+
+        // Sample data (same as getMockOnboardings)
+        $sampleData = [
+            [
+                'id' => 123,
+                'firstName' => 'Rahul',
+                'lastName' => 'Sharma',
+                'fullName' => 'Rahul Sharma',
+                'email' => 'rahul@company.com',
+                'avatarUrl' => null,
+                'designation' => 'Product Manager',
+                'department' => 'Product',
+                'manager' => 'Priya Patel',
+                'joiningDate' => '2025-12-01',
+                'progressPercent' => 78,
+                'pendingItems' => 5,
+                'status' => 'Pre-boarding',
+                'lastUpdated' => '2025-11-20T10:30:00+05:30',
+            ],
+            [
+                'id' => 124,
+                'firstName' => 'Ananya',
+                'lastName' => 'Roy',
+                'fullName' => 'Ananya Roy',
+                'email' => 'ananya@company.com',
+                'avatarUrl' => null,
+                'designation' => 'HR Executive',
+                'department' => 'People Ops',
+                'manager' => 'Rajesh Kumar',
+                'joiningDate' => '2025-11-28',
+                'progressPercent' => 100,
+                'pendingItems' => 0,
+                'status' => 'Completed',
+                'lastUpdated' => '2025-11-25T16:00:00+05:30',
+            ],
+            [
+                'id' => 125,
+                'firstName' => 'Vikram',
+                'lastName' => 'Singh',
+                'fullName' => 'Vikram Singh',
+                'email' => 'vikram@company.com',
+                'avatarUrl' => null,
+                'designation' => 'DevOps Engineer',
+                'department' => 'Infrastructure',
+                'manager' => 'Amit Verma',
+                'joiningDate' => '2025-11-30',
+                'progressPercent' => 50,
+                'pendingItems' => 8,
+                'status' => 'IT Pending',
+                'lastUpdated' => '2025-11-19T09:15:00+05:30',
+            ],
+            [
+                'id' => 126,
+                'firstName' => 'Meera',
+                'lastName' => 'Nair',
+                'fullName' => 'Meera Nair',
+                'email' => 'meera@company.com',
+                'avatarUrl' => null,
+                'designation' => 'Sales Manager',
+                'department' => 'Sales',
+                'manager' => 'Suresh Menon',
+                'joiningDate' => '2025-12-05',
+                'progressPercent' => 20,
+                'pendingItems' => 10,
+                'status' => 'Pending Docs',
+                'lastUpdated' => '2025-11-18T11:20:00+05:30',
+            ],
+            [
+                'id' => 127,
+                'firstName' => 'John',
+                'lastName' => 'Doe',
+                'fullName' => 'John Doe',
+                'email' => 'john@company.com',
+                'avatarUrl' => null,
+                'designation' => 'Designer',
+                'department' => 'Product',
+                'manager' => 'Priya Patel',
+                'joiningDate' => '2025-11-20',
+                'progressPercent' => 60,
+                'pendingItems' => 2,
+                'status' => 'Overdue',
+                'lastUpdated' => '2025-11-15T14:45:00+05:30',
+            ],
+            [
+                'id' => 128,
+                'firstName' => 'Priya',
+                'lastName' => 'Patel',
+                'fullName' => 'Priya Patel',
+                'email' => 'priya@company.com',
+                'avatarUrl' => null,
+                'designation' => 'Engineering Manager',
+                'department' => 'Engineering',
+                'manager' => 'CEO',
+                'joiningDate' => '2025-12-10',
+                'progressPercent' => 90,
+                'pendingItems' => 1,
+                'status' => 'Joining Soon',
+                'lastUpdated' => '2025-11-22T13:10:00+05:30',
+            ],
+        ];
+
+        // Apply filters (same logic as getMockOnboardings)
+        $filtered = collect($sampleData);
+        
+        if ($search) {
+            $searchLower = strtolower($search);
+            $filtered = $filtered->filter(function ($item) use ($searchLower) {
+                return str_contains(strtolower($item['fullName']), $searchLower) ||
+                       str_contains(strtolower($item['email']), $searchLower) ||
+                       str_contains(strtolower($item['department']), $searchLower) ||
+                       str_contains(strtolower($item['designation']), $searchLower);
+            });
+        }
+        
+        if ($status && $status !== 'All') {
+            $filtered = $filtered->where('status', $status);
+        }
+        
+        if ($department) {
+            $filtered = $filtered->where('department', $department);
+        }
+        
+        if ($manager) {
+            $filtered = $filtered->where('manager', $manager);
+        }
+        
+        if ($joiningMonth) {
+            $filtered = $filtered->filter(function ($item) use ($joiningMonth) {
+                return date('Y-m', strtotime($item['joiningDate'])) === $joiningMonth;
+            });
+        }
+
+        return $filtered->values()->toArray();
+    }
+}
+
+/**
+ * Onboarding Candidate Import Class
+ */
+class OnboardingCandidateImport implements ToModel, WithHeadingRow, WithValidation, SkipsOnError, SkipsOnFailure
+{
+    use Importable, SkipsErrors, SkipsFailures;
+
+    private $tenantId;
+    private $source;
+    private $rowCount = 0;
+
+    public function __construct($tenantId, $source = 'Onboarding Import')
+    {
+        $this->tenantId = $tenantId;
+        $this->source = $source;
+    }
+
+    public function model(array $row)
+    {
+        $this->rowCount++;
+
+        // Skip if email is empty
+        if (empty($row['primary_email'])) {
+            return null;
+        }
+
+        // Check if candidate already exists
+        $existingCandidate = Candidate::where('tenant_id', $this->tenantId)
+            ->where('primary_email', $row['primary_email'])
+            ->first();
+
+        if ($existingCandidate) {
+            // Update existing candidate
+            $existingCandidate->update([
+                'first_name' => $row['first_name'] ?? $existingCandidate->first_name,
+                'last_name' => $row['last_name'] ?? $existingCandidate->last_name,
+                'primary_phone' => $row['primary_phone'] ?? $existingCandidate->primary_phone,
+                'source' => $row['source'] ?? $existingCandidate->source,
+            ]);
+            return null; // Don't create new model
+        }
+
+        // Create new candidate
+        return new Candidate([
+            'tenant_id' => $this->tenantId,
+            'first_name' => $row['first_name'] ?? '',
+            'last_name' => $row['last_name'] ?? '',
+            'primary_email' => $row['primary_email'],
+            'primary_phone' => $row['primary_phone'] ?? null,
+            'source' => $row['source'] ?? $this->source,
+        ]);
+    }
+
+    public function rules(): array
+    {
+        return [
+            'primary_email' => 'required|email',
+            'first_name' => 'nullable|string|max:255',
+            'last_name' => 'nullable|string|max:255',
+            'primary_phone' => 'nullable|string|max:255',
+            'source' => 'nullable|string|max:255',
+        ];
+    }
+
+    public function getRowCount()
+    {
+        return $this->rowCount;
     }
 }
 

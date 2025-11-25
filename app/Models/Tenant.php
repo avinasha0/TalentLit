@@ -15,6 +15,8 @@ class Tenant extends Model
     protected $fillable = [
         'name',
         'slug',
+        'subdomain',
+        'subdomain_enabled',
         'website',
         'location',
         'company_size',
@@ -167,5 +169,32 @@ class Tenant extends Model
 
         $maxLimit = $plan->$limit ?? 0;
         return max(0, $maxLimit - $currentCount);
+    }
+
+    /**
+     * Get the dashboard URL for this tenant.
+     * Returns subdomain URL if subdomain is enabled, otherwise path-based URL.
+     */
+    public function getDashboardUrl(): string
+    {
+        // Check if tenant has subdomain enabled
+        if ($this->subdomain_enabled && $this->subdomain) {
+            // Build subdomain URL
+            $appUrl = config('app.url');
+            $appDomain = parse_url($appUrl, PHP_URL_HOST) ?? 'localhost';
+            $scheme = parse_url($appUrl, PHP_URL_SCHEME) ?? 'http';
+            $port = parse_url($appUrl, PHP_URL_PORT);
+            
+            // Construct subdomain URL
+            $subdomainUrl = $scheme . '://' . $this->subdomain . '.' . $appDomain;
+            if ($port) {
+                $subdomainUrl .= ':' . $port;
+            }
+            
+            return $subdomainUrl . '/dashboard';
+        }
+        
+        // Use path-based routing for non-subdomain tenants
+        return route('tenant.dashboard', $this->slug);
     }
 }

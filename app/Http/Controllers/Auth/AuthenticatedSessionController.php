@@ -38,14 +38,14 @@ class AuthenticatedSessionController extends Controller
         if ($lastTenantSlug) {
             $tenant = Tenant::where('slug', $lastTenantSlug)->first();
             if ($tenant && $user->tenants->contains($tenant)) {
-                return redirect()->route('tenant.dashboard', $tenant->slug);
+                return redirect($tenant->getDashboardUrl());
             }
         }
         
         // Try to find a tenant that the user has access to
         $userTenant = $user->tenants->first();
         if ($userTenant) {
-            return redirect()->route('tenant.dashboard', $userTenant->slug);
+            return redirect($userTenant->getDashboardUrl());
         }
         
         // In tests, Breeze expects redirect to global dashboard

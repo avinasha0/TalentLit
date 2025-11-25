@@ -36,10 +36,47 @@ class RecaptchaRule implements ValidationRule
             return;
         }
 
-        // Skip validation for localhost development
+        // Skip validation for exact localhost matches (but allow localhost subdomains)
         $host = $this->request->getHost();
-        if (in_array($host, ['localhost', '127.0.0.1', '0.0.0.0']) || strpos($host, 'localhost') !== false) {
+        $hostWithoutPort = explode(':', $host)[0];
+        
+        // Only skip for exact localhost matches, not subdomains
+        if (in_array($hostWithoutPort, ['localhost', '127.0.0.1', '0.0.0.0', '::1'])) {
             \Log::info('reCAPTCHA validation skipped for localhost development', ['host' => $host]);
+            return;
+        }
+        
+        // Skip validation for localhost subdomains in development if configured
+        if (config('recaptcha.skip_localhost_in_dev', true) && 
+            app()->environment(['local', 'development']) &&
+            (str_contains($hostWithoutPort, 'localhost') || str_contains($hostWithoutPort, '127.0.0.1'))) {
+            \Log::info('reCAPTCHA validation skipped for localhost subdomain in development', [
+                'host' => $host,
+                'environment' => app()->environment()
+            ]);
+            return;
+        }
+        
+        // For localhost subdomains in production, reCAPTCHA will be validated
+        // Make sure localhost is registered in Google reCAPTCHA console
+
+        // Handle dev-skip value from component (ONLY in development)
+        if ($value === 'dev-skip') {
+            // Reject dev-skip in production for security
+            if (app()->environment('production')) {
+                \Log::error('reCAPTCHA dev-skip value detected in production - rejecting for security', [
+                    'host' => $host,
+                    'environment' => app()->environment()
+                ]);
+                $fail('reCAPTCHA verification is required. Please complete the reCAPTCHA verification.');
+                return;
+            }
+            
+            // Only allow dev-skip in development environments
+            \Log::info('reCAPTCHA validation skipped: dev-skip value detected', [
+                'host' => $host,
+                'environment' => app()->environment()
+            ]);
             return;
         }
 
@@ -56,9 +93,13 @@ class RecaptchaRule implements ValidationRule
             'user_agent' => $this->request->userAgent()
         ]);
 
-        if (!$this->recaptchaService->verify($value, $this->request->ip())) {
+        // Get the current hostname for subdomain support
+        $hostname = $this->request->getHost();
+        
+        if (!$this->recaptchaService->verify($value, $this->request->ip(), $hostname)) {
             \Log::warning('reCAPTCHA verification failed', [
                 'ip' => $this->request->ip(),
+                'hostname' => $hostname,
                 'user_agent' => $this->request->userAgent(),
                 'value_length' => strlen($value)
             ]);

@@ -55,7 +55,7 @@ class SetupController extends Controller
             'locale' => $request->locale ?? 'en',
         ]);
 
-        return redirect()->route('tenant.dashboard', $tenant->slug)
+        return redirect($tenant->getDashboardUrl())
             ->with('success', 'Setup completed successfully! You can now start creating jobs and managing candidates.');
     }
 

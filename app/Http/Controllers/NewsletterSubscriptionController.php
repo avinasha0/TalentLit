@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Mail;
 use App\Mail\NewsletterOtpMail;
 use App\Models\NewsletterOtp;
 use App\Models\NewsletterSubscription;
+use App\Services\RecaptchaService;
 
 class NewsletterSubscriptionController extends Controller
 {
@@ -36,17 +37,14 @@ class NewsletterSubscriptionController extends Controller
         // Verify reCAPTCHA with Google (optional)
         $recaptchaToken = $request->input('g-recaptcha-response');
         if (!empty($recaptchaToken)) {
-            $response = Http::asForm()->post('https://www.google.com/recaptcha/api/siteverify', [
-                'secret' => config('recaptcha.secret_key'),
-                'response' => $recaptchaToken,
-                'remoteip' => $request->ip(),
-            ])->json();
-
-            if (empty($response['success']) || !$response['success']) {
+            $recaptchaService = app(RecaptchaService::class);
+            $hostname = $request->getHost();
+            
+            if (!$recaptchaService->verify($recaptchaToken, $request->ip(), $hostname)) {
                 // Log the failure but don't block the subscription
                 \Log::warning('reCAPTCHA verification failed but allowing subscription', [
                     'email' => $request->input('email'),
-                    'response' => $response
+                    'hostname' => $hostname
                 ]);
             }
         }

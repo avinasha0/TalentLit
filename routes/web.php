@@ -313,16 +313,12 @@ Route::post('/test-recaptcha', function (\Illuminate\Http\Request $request) {
         ], 422);
     }
     
-    // Verify with Google
-    $response = \Illuminate\Support\Facades\Http::asForm()->post('https://www.google.com/recaptcha/api/siteverify', [
-        'secret' => $secret,
-        'response' => $token,
-        'remoteip' => $request->ip(),
-    ]);
+    // Verify with Google using RecaptchaService
+    $recaptchaService = app(\App\Services\RecaptchaService::class);
+    $hostname = $request->getHost();
+    $verified = $recaptchaService->verify($token, $request->ip(), $hostname);
     
-    $result = $response->json();
-    
-    if ($result['success'] ?? false) {
+    if ($verified) {
         return response()->json([
             'success' => true,
             'message' => 'reCAPTCHA verification successful!',
@@ -333,7 +329,7 @@ Route::post('/test-recaptcha', function (\Illuminate\Http\Request $request) {
         return response()->json([
             'success' => false,
             'message' => 'reCAPTCHA verification failed',
-            'errors' => $result['error-codes'] ?? []
+            'hostname' => $hostname
         ], 422);
     }
 })->name('test.recaptcha.submit');
@@ -348,10 +344,13 @@ Route::get('/simple-dashboard', function () {
 require __DIR__.'/auth.php';
 
 // Global (non-tenant) Breeze compatibility routes
-Route::middleware('auth')->group(function () {
+// Only match on main domain, not subdomains - use domain constraint
+$appUrl = config('app.url');
+$appDomain = parse_url($appUrl, PHP_URL_HOST) ?? 'localhost';
+Route::domain($appDomain)->middleware('auth')->group(function () {
     // Minimal dashboard route used by Breeze tests/controllers
     Route::get('/dashboard', function () {
-        // Redirect authenticated users to their tenant dashboard
+        // Redirect authenticated users to their tenant dashboard (only on main domain)
         if (auth()->check()) {
             $user = auth()->user();
             
@@ -360,14 +359,14 @@ Route::middleware('auth')->group(function () {
             if ($lastTenantSlug) {
                 $tenant = \App\Models\Tenant::where('slug', $lastTenantSlug)->first();
                 if ($tenant && $user->tenants->contains($tenant)) {
-                    return redirect()->route('tenant.dashboard', $tenant->slug);
+                    return redirect($tenant->getDashboardUrl());
                 }
             }
             
             // Fallback to first available tenant
             if ($user->tenants->count() > 0) {
                 $tenant = $user->tenants->first();
-                return redirect()->route('tenant.dashboard', $tenant->slug);
+                return redirect($tenant->getDashboardUrl());
             }
         }
         return view('simple-dashboard');
@@ -654,5 +653,299 @@ Route::middleware(['auth'])->group(function () {
 Route::middleware(['auth', 'capture.tenant', 'tenant'])->group(function () {
     Route::get('/{tenant}/onboarding/setup', [App\Http\Controllers\Onboarding\SetupController::class, 'index'])->name('onboarding.setup');
     Route::post('/{tenant}/onboarding/setup', [App\Http\Controllers\Onboarding\SetupController::class, 'store'])->name('onboarding.setup.store');
+});
+
+// ============================================================================
+// SUBDOMAIN ROUTES FOR ENTERPRISE PLANS (NEW - DOES NOT TOUCH EXISTING ROUTES)
+// ============================================================================
+// These routes work for Enterprise tenants via subdomain (e.g., acme.example.com/dashboard)
+// Existing path-based routes remain unchanged and continue to work
+// Extract domain from APP_URL for subdomain routing
+$appUrl = config('app.url');
+$appDomain = parse_url($appUrl, PHP_URL_HOST) ?? 'localhost';
+
+// Public marketing routes accessible from subdomains (no auth required)
+// These routes use the same route names as main domain so footer links work, but redirect to main domain
+Route::domain('{subdomain}.' . $appDomain)->middleware(['subdomain.tenant'])->group(function () use ($appDomain) {
+    // Company marketing pages - accessible via route names but redirect to main domain
+    // Note: These are defined BEFORE tenant routes to be matched first
+    Route::get('/about', function () use ($appDomain) {
+        $scheme = request()->getScheme();
+        return redirect($scheme . '://' . $appDomain . '/about', 301);
+    })->name('about');
+    
+    Route::get('/press', function () use ($appDomain) {
+        $scheme = request()->getScheme();
+        return redirect($scheme . '://' . $appDomain . '/press', 301);
+    })->name('press');
+    
+    Route::get('/blog', function () use ($appDomain) {
+        $scheme = request()->getScheme();
+        return redirect($scheme . '://' . $appDomain . '/blog', 301);
+    })->name('blog');
+    
+    Route::get('/contact', function () use ($appDomain) {
+        $scheme = request()->getScheme();
+        return redirect($scheme . '://' . $appDomain . '/contact', 301);
+    })->name('contact');
+    
+    // Features pages - redirect to main domain
+    Route::get('/features', function () use ($appDomain) {
+        $scheme = request()->getScheme();
+        return redirect($scheme . '://' . $appDomain . '/features', 301);
+    })->name('features');
+    
+    Route::get('/features/candidate-sourcing.html', function () use ($appDomain) {
+        $scheme = request()->getScheme();
+        return redirect($scheme . '://' . $appDomain . '/features/candidate-sourcing.html', 301);
+    })->name('features.candidate-sourcing');
+    
+    Route::get('/features/hiring-pipeline.html', function () use ($appDomain) {
+        $scheme = request()->getScheme();
+        return redirect($scheme . '://' . $appDomain . '/features/hiring-pipeline.html', 301);
+    })->name('features.hiring-pipeline');
+    
+    Route::get('/features/hiring-analytics.html', function () use ($appDomain) {
+        $scheme = request()->getScheme();
+        return redirect($scheme . '://' . $appDomain . '/features/hiring-analytics.html', 301);
+    })->name('features.hiring-analytics');
+    
+    // Careers marketing page - redirects to main domain
+    // Note: Tenant job listings use /careers path but route name 'subdomain.careers.index'
+    // This route uses route name 'careers' so footer links work, and redirects to main domain
+    Route::get('/careers-marketing', function () use ($appDomain) {
+        $scheme = request()->getScheme();
+        return redirect($scheme . '://' . $appDomain . '/careers', 301);
+    })->name('careers');
+});
+
+Route::domain('{subdomain}.' . $appDomain)->middleware(['subdomain.tenant', 'auth'])->group(function () {
+    // Dashboard
+    Route::middleware('custom.permission:view_dashboard')->group(function () {
+        Route::get('/dashboard', [DashboardController::class, 'index'])->name('subdomain.dashboard');
+        Route::get('/dashboard.json', [DashboardController::class, 'json'])->name('subdomain.dashboard.json');
+    });
+
+    // Recruiting
+    Route::middleware('custom.permission:view_dashboard')->group(function () {
+        Route::get('/recruiting', [RecruitingController::class, 'index'])->name('subdomain.recruiting.index');
+    });
+
+    // Job Management Routes
+    Route::middleware('custom.permission:view_jobs')->group(function () {
+        Route::get('/jobs', [JobController::class, 'index'])->name('subdomain.jobs.index');
+    });
+
+    Route::middleware(['custom.permission:create_jobs', 'subscription.limit:max_job_openings'])->group(function () {
+        Route::get('/jobs/create', [JobController::class, 'create'])->name('subdomain.jobs.create');
+        Route::post('/jobs', [JobController::class, 'store'])->name('subdomain.jobs.store');
+        Route::post('/jobs/ai-generate-description', [JobController::class, 'aiGenerateDescription'])->name('subdomain.jobs.ai-generate-description');
+    });
+
+    Route::middleware('custom.permission:view_jobs')->group(function () {
+        Route::get('/jobs/{job}', [JobController::class, 'show'])->name('subdomain.jobs.show');
+    });
+
+    Route::middleware('custom.permission:edit_jobs')->group(function () {
+        Route::get('/jobs/{job}/edit', [JobController::class, 'edit'])->name('subdomain.jobs.edit');
+        Route::put('/jobs/{job}', [JobController::class, 'update'])->name('subdomain.jobs.update');
+    });
+
+    Route::middleware('custom.permission:publish_jobs')->group(function () {
+        Route::patch('/jobs/{job}/publish', [JobController::class, 'publish'])->name('subdomain.jobs.publish');
+    });
+
+    Route::middleware('custom.permission:close_jobs')->group(function () {
+        Route::patch('/jobs/{job}/close', [JobController::class, 'close'])->name('subdomain.jobs.close');
+    });
+
+    Route::middleware('custom.permission:delete_jobs')->group(function () {
+        Route::delete('/jobs/{job}', [JobController::class, 'destroy'])->name('subdomain.jobs.destroy');
+    });
+
+    // Job Stage Management Routes
+    Route::middleware('custom.permission:view_stages')->group(function () {
+        Route::get('/jobs/{job}/stages', [JobStageController::class, 'index'])->name('subdomain.jobs.stages.index');
+    });
+
+    Route::middleware('custom.permission:manage_stages')->group(function () {
+        Route::post('/jobs/{job}/stages', [JobStageController::class, 'store'])->name('subdomain.jobs.stages.store');
+        Route::put('/jobs/{job}/stages/{stage}', [JobStageController::class, 'update'])->name('subdomain.jobs.stages.update');
+        Route::delete('/jobs/{job}/stages/{stage}', [JobStageController::class, 'destroy'])->name('subdomain.jobs.stages.destroy');
+        Route::patch('/jobs/{job}/stages/reorder', [JobStageController::class, 'reorder'])->name('subdomain.jobs.stages.reorder');
+    });
+
+    // Pipeline Management Routes
+    Route::middleware('custom.permission:view_jobs')->group(function () {
+        Route::get('/jobs/{job}/pipeline', [PipelineController::class, 'index'])->name('subdomain.jobs.pipeline');
+        Route::get('/jobs/{job}/pipeline.json', [PipelineController::class, 'json'])->name('subdomain.jobs.pipeline.json');
+    });
+
+    Route::middleware('custom.permission:edit_jobs')->group(function () {
+        Route::post('/jobs/{job}/pipeline/move', [PipelineController::class, 'move'])->name('subdomain.jobs.pipeline.move');
+    });
+
+    // Candidate Management Routes
+    Route::middleware('custom.permission:view_candidates')->group(function () {
+        Route::get('/candidates', [CandidateController::class, 'index'])->name('subdomain.candidates.index');
+        Route::get('/candidates/job/{job}', [CandidateController::class, 'index'])->name('subdomain.candidates.index.job');
+        Route::get('/candidates/{candidate}', [CandidateController::class, 'show'])->whereUuid('candidate')->name('subdomain.candidates.show');
+        Route::get('/candidates/{candidate}/edit', [CandidateController::class, 'edit'])->whereUuid('candidate')->name('subdomain.candidates.edit');
+        Route::put('/candidates/{candidate}', [CandidateController::class, 'update'])->whereUuid('candidate')->name('subdomain.candidates.update');
+        
+        // Candidate Notes Routes
+        Route::post('/candidates/{candidate}/notes', [CandidateNoteController::class, 'store'])->whereUuid('candidate')->name('subdomain.candidates.notes.store');
+        Route::delete('/candidates/{candidate}/notes/{note}', [CandidateNoteController::class, 'destroy'])->whereUuid('candidate')->name('subdomain.candidates.notes.destroy');
+        
+        // Candidate Tags Routes
+        Route::get('/tags.json', [CandidateTagController::class, 'index'])->name('subdomain.tags.index');
+        Route::post('/candidates/{candidate}/tags', [CandidateTagController::class, 'store'])->whereUuid('candidate')->name('subdomain.candidates.tags.store');
+        Route::delete('/candidates/{candidate}/tags/{tag}', [CandidateTagController::class, 'destroy'])->whereUuid('candidate')->name('subdomain.candidates.tags.destroy');
+        
+        // Candidate Resume Routes
+        Route::post('/candidates/{candidate}/resumes', [CandidateController::class, 'storeResume'])->whereUuid('candidate')->name('subdomain.candidates.resumes.store');
+        Route::delete('/candidates/{candidate}/resumes/{resume}', [CandidateController::class, 'destroyResume'])->whereUuid('candidate')->name('subdomain.candidates.resumes.destroy');
+        
+        // Application Status Update Route
+        Route::patch('/candidates/{candidate}/applications/{application}/status', [CandidateController::class, 'updateApplicationStatus'])->whereUuid(['candidate', 'application'])->name('subdomain.candidates.applications.status.update');
+    });
+
+    // Candidate Import Routes
+    Route::middleware('custom.permission:import_candidates')->group(function () {
+        Route::get('/candidates/import', [App\Http\Controllers\Tenant\CandidateImportController::class, 'index'])->name('subdomain.candidates.import');
+        Route::post('/candidates/import', [App\Http\Controllers\Tenant\CandidateImportController::class, 'store'])->middleware('subscription.limit:max_candidates')->name('subdomain.candidates.import.store');
+        Route::get('/candidates/import/template', [App\Http\Controllers\Tenant\CandidateImportController::class, 'downloadTemplate'])->name('subdomain.candidates.import.template');
+    });
+
+    // Interview Management Routes
+    Route::middleware('custom.permission:view_interviews')->group(function () {
+        Route::get('/interviews', [InterviewController::class, 'index'])->name('subdomain.interviews.index');
+        Route::get('/interviews/{interview}', [InterviewController::class, 'show'])->name('subdomain.interviews.show');
+    });
+
+    Route::middleware(['custom.permission:create_interviews', 'subscription.limit:max_interviews_per_month'])->group(function () {
+        Route::get('/candidates/{candidate}/interviews/create', [InterviewController::class, 'create'])->name('subdomain.interviews.create');
+        Route::post('/candidates/{candidate}/interviews', [InterviewController::class, 'store'])->name('subdomain.interviews.store');
+        Route::post('/interviews/schedule', [InterviewController::class, 'storeDirect'])->name('subdomain.interviews.store-direct');
+    });
+
+    Route::middleware('custom.permission:edit_interviews')->group(function () {
+        Route::get('/interviews/{interview}/edit', [InterviewController::class, 'edit'])->name('subdomain.interviews.edit');
+        Route::put('/interviews/{interview}', [InterviewController::class, 'update'])->name('subdomain.interviews.update');
+        Route::patch('/interviews/{interview}/cancel', [InterviewController::class, 'cancel'])->name('subdomain.interviews.cancel');
+        Route::patch('/interviews/{interview}/complete', [InterviewController::class, 'complete'])->name('subdomain.interviews.complete');
+    });
+
+    Route::middleware('custom.permission:delete_interviews')->group(function () {
+        Route::delete('/interviews/{interview}', [InterviewController::class, 'destroy'])->name('subdomain.interviews.destroy');
+    });
+
+    // Analytics Routes
+    Route::middleware('custom.permission:view_analytics')->group(function () {
+        Route::get('/analytics', [App\Http\Controllers\Tenant\AnalyticsController::class, 'index'])->name('subdomain.analytics.index');
+        Route::get('/analytics/data', [App\Http\Controllers\Tenant\AnalyticsController::class, 'data'])->name('subdomain.analytics.data');
+        Route::get('/analytics/export', [App\Http\Controllers\Tenant\AnalyticsController::class, 'export'])->name('subdomain.analytics.export');
+    });
+
+    // Department Routes
+    Route::middleware('custom.permission:view_jobs')->group(function () {
+        Route::get('/departments', [App\Http\Controllers\Tenant\DepartmentController::class, 'index'])->name('subdomain.departments.index');
+    });
+    Route::middleware('custom.permission:edit_jobs')->group(function () {
+        Route::get('/departments/create', [App\Http\Controllers\Tenant\DepartmentController::class, 'create'])->name('subdomain.departments.create');
+        Route::post('/departments', [App\Http\Controllers\Tenant\DepartmentController::class, 'store'])->name('subdomain.departments.store');
+    });
+
+    // Location Routes
+    Route::middleware('custom.permission:view_jobs')->group(function () {
+        Route::get('/locations', [App\Http\Controllers\Tenant\LocationController::class, 'index'])->name('subdomain.locations.index');
+    });
+    Route::middleware('custom.permission:edit_jobs')->group(function () {
+        Route::get('/locations/create', [App\Http\Controllers\Tenant\LocationController::class, 'create'])->name('subdomain.locations.create');
+        Route::post('/locations', [App\Http\Controllers\Tenant\LocationController::class, 'store'])->name('subdomain.locations.store');
+    });
+
+    // Settings Routes
+    Route::middleware('custom.permission:manage_settings')->group(function () {
+        // Careers Settings
+        Route::get('/settings/careers', [CareersSettingsController::class, 'edit'])->name('subdomain.settings.careers');
+        Route::put('/settings/careers', [CareersSettingsController::class, 'update'])->name('subdomain.settings.careers.update');
+        
+        // Team Management
+        Route::get('/settings/team', [App\Http\Controllers\Tenant\UserManagementController::class, 'index'])->name('subdomain.settings.team');
+        
+        // Roles & Permissions
+        Route::get('/settings/roles', function() {
+            return view('tenant.settings.roles');
+        })->name('subdomain.settings.roles');
+        
+        // General Settings
+        Route::get('/settings/general', [App\Http\Controllers\Tenant\GeneralSettingsController::class, 'edit'])->name('subdomain.settings.general');
+        Route::put('/settings/general', [App\Http\Controllers\Tenant\GeneralSettingsController::class, 'update'])->name('subdomain.settings.general.update');
+        Route::put('/settings/general/smtp', [App\Http\Controllers\Tenant\GeneralSettingsController::class, 'updateSmtp'])->name('subdomain.settings.general.smtp');
+        Route::post('/settings/general/test-email', [App\Http\Controllers\Tenant\GeneralSettingsController::class, 'testEmail'])->name('subdomain.settings.general.test-email');
+        Route::post('/settings/general/get-password', [App\Http\Controllers\Tenant\GeneralSettingsController::class, 'getPassword'])->name('subdomain.settings.general.get-password');
+    });
+
+    // User Management Routes
+    Route::middleware('custom.permission:manage_users')->group(function () {
+        Route::post('/users', [App\Http\Controllers\Tenant\UserManagementController::class, 'store'])->middleware('subscription.limit:max_users')->name('subdomain.users.store');
+        Route::put('/users/{user}', [App\Http\Controllers\Tenant\UserManagementController::class, 'update'])->name('subdomain.users.update');
+        Route::delete('/users/{user}', [App\Http\Controllers\Tenant\UserManagementController::class, 'destroy'])->name('subdomain.users.destroy');
+        Route::post('/users/{user}/resend-invitation', [App\Http\Controllers\Tenant\UserManagementController::class, 'resendInvitation'])->name('subdomain.users.resend-invitation');
+        Route::patch('/users/{user}/toggle-status', [App\Http\Controllers\Tenant\UserManagementController::class, 'toggleStatus'])->name('subdomain.users.toggle-status');
+    });
+
+    // Subscription Management Routes
+    Route::middleware('custom.permission:manage_users')->group(function () {
+        Route::get('/subscription', [SubscriptionController::class, 'show'])->name('subdomain.subscription.show');
+        Route::post('/subscription/subscribe', [SubscriptionController::class, 'subscribe'])->name('subdomain.subscription.subscribe');
+        Route::post('/subscription/cancel', [SubscriptionController::class, 'cancel'])->name('subdomain.subscription.cancel');
+    });
+
+    // Job Questions Routes
+    Route::middleware('custom.permission:edit_jobs')->group(function () {
+        Route::get('/jobs/{job}/questions', [JobQuestionsController::class, 'edit'])->name('subdomain.jobs.questions');
+        Route::put('/jobs/{job}/questions', [JobQuestionsController::class, 'update'])->name('subdomain.jobs.questions.update');
+    });
+
+    // Email Template Routes
+    Route::middleware('custom.permission:manage_email_templates')->group(function () {
+        Route::get('/email-templates', [App\Http\Controllers\Tenant\EmailTemplateController::class, 'index'])->name('subdomain.email-templates.index');
+        Route::get('/email-templates/create', [App\Http\Controllers\Tenant\EmailTemplateController::class, 'create'])->name('subdomain.email-templates.create');
+        Route::post('/email-templates', [App\Http\Controllers\Tenant\EmailTemplateController::class, 'store'])->name('subdomain.email-templates.store');
+        Route::get('/email-templates/{template}', [App\Http\Controllers\Tenant\EmailTemplateController::class, 'show'])->name('subdomain.email-templates.show');
+        Route::get('/email-templates/{template}/edit', [App\Http\Controllers\Tenant\EmailTemplateController::class, 'edit'])->name('subdomain.email-templates.edit');
+        Route::put('/email-templates/{template}', [App\Http\Controllers\Tenant\EmailTemplateController::class, 'update'])->name('subdomain.email-templates.update');
+        Route::delete('/email-templates/{template}', [App\Http\Controllers\Tenant\EmailTemplateController::class, 'destroy'])->name('subdomain.email-templates.destroy');
+        Route::get('/email-templates/{template}/preview', [App\Http\Controllers\Tenant\EmailTemplateController::class, 'preview'])->name('subdomain.email-templates.preview');
+        Route::post('/email-templates/{template}/duplicate', [App\Http\Controllers\Tenant\EmailTemplateController::class, 'duplicate'])->name('subdomain.email-templates.duplicate');
+        Route::post('/email-templates/load-premade', [App\Http\Controllers\Tenant\EmailTemplateController::class, 'loadPremadeTemplate'])->name('subdomain.email-templates.load-premade');
+    });
+
+    // Account Routes
+    Route::prefix('account')->group(function () {
+        // Profile routes
+        Route::get('/profile', [App\Http\Controllers\Tenant\ProfileController::class, 'index'])->name('subdomain.account.profile');
+        Route::put('/profile', [App\Http\Controllers\Tenant\ProfileController::class, 'update'])->name('subdomain.account.profile.update');
+        Route::put('/profile/password', [App\Http\Controllers\Tenant\ProfileController::class, 'updatePassword'])->name('subdomain.account.profile.password');
+        Route::put('/profile/email', [App\Http\Controllers\Tenant\ProfileController::class, 'updateEmail'])->name('subdomain.account.profile.email');
+        Route::put('/profile/notifications', [App\Http\Controllers\Tenant\ProfileController::class, 'updateNotifications'])->name('subdomain.account.profile.notifications');
+        
+        // Settings routes
+        Route::get('/settings', [App\Http\Controllers\Tenant\AccountSettingsController::class, 'index'])->name('subdomain.account.settings');
+        Route::put('/settings/notifications', [App\Http\Controllers\Tenant\AccountSettingsController::class, 'updateNotifications'])->name('subdomain.account.settings.notifications');
+        Route::put('/settings/password', [App\Http\Controllers\Tenant\AccountSettingsController::class, 'updatePassword'])->name('subdomain.account.settings.password');
+        Route::put('/settings/email', [App\Http\Controllers\Tenant\AccountSettingsController::class, 'updateEmail'])->name('subdomain.account.settings.email');
+    });
+});
+
+// Public Career Site Routes for Subdomain
+Route::middleware(['subdomain.tenant'])->group(function () {
+    Route::get('/careers', [CareerJobController::class, 'index'])->name('subdomain.careers.index');
+    Route::get('/careers/{job}', [CareerJobController::class, 'show'])->name('subdomain.careers.show');
+    Route::get('/careers/{job}/apply', [ApplyController::class, 'create'])->name('subdomain.careers.apply.create');
+    Route::post('/careers/{job}/apply', [ApplyController::class, 'store'])->middleware('subscription.limit:max_applications_per_month')->name('subdomain.careers.apply.store');
+    Route::get('/careers/{job}/success', [ApplyController::class, 'success'])->name('subdomain.careers.success');
 });
 

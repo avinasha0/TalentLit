@@ -20,11 +20,16 @@ class CustomPermissionMiddleware
             abort(403, 'Unauthorized');
         }
 
-        // Get tenant from route parameter or session
+        // Get tenant from route parameter, tenant() helper (for subdomain routes), or session
         $tenant = null;
         if ($request->route('tenant')) {
+            // Path-based routing
             $tenant = \App\Models\Tenant::where('slug', $request->route('tenant'))->first();
+        } elseif (function_exists('tenant') && tenant()) {
+            // Subdomain routing - tenant is set by ResolveTenantFromSubdomain middleware
+            $tenant = tenant();
         } elseif (session('current_tenant_id')) {
+            // Fallback to session
             $tenant = \App\Models\Tenant::find(session('current_tenant_id'));
         }
         

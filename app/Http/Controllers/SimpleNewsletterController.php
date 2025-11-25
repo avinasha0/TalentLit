@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use App\Services\RecaptchaService;
 
 class SimpleNewsletterController extends Controller
 {
@@ -23,13 +24,10 @@ class SimpleNewsletterController extends Controller
         }
 
         // Verify reCAPTCHA with Google
-        $response = Http::asForm()->post('https://www.google.com/recaptcha/api/siteverify', [
-            'secret' => config('recaptcha.secret_key'),
-            'response' => $request->input('g-recaptcha-response'),
-            'remoteip' => $request->ip(),
-        ])->json();
-
-        if (empty($response['success']) || !$response['success']) {
+        $recaptchaService = app(RecaptchaService::class);
+        $hostname = $request->getHost();
+        
+        if (!$recaptchaService->verify($request->input('g-recaptcha-response'), $request->ip(), $hostname)) {
             return view('newsletter-simple', [
                 'errors' => collect(['recaptcha' => 'reCAPTCHA verification failed. Please try again.']),
                 'old_email' => $request->input('email')

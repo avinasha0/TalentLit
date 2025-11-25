@@ -49,4 +49,56 @@ return [
     */
 
     'action' => env('RECAPTCHA_ACTION', 'submit'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Allowed Domains (for subdomain support)
+    |--------------------------------------------------------------------------
+    |
+    | List of domains that are allowed for reCAPTCHA verification.
+    | This is useful when you have multiple subdomains. You can specify
+    | the base domain here, and all subdomains will be accepted.
+    |
+    | Example: ['example.com', 'talentlit.com']
+    | This will allow: example.com, subdomain.example.com, etc.
+    |
+    | Leave empty to accept any domain (not recommended for production).
+    |
+    */
+
+    'allowed_domains' => env('RECAPTCHA_ALLOWED_DOMAINS') 
+        ? explode(',', env('RECAPTCHA_ALLOWED_DOMAINS')) 
+        : [],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Auto-accept Subdomains
+    |--------------------------------------------------------------------------
+    |
+    | When set to true, any subdomain of registered domains will be accepted
+    | automatically. This allows you to register only the base domain in
+    | Google reCAPTCHA console (e.g., "example.com") and all subdomains
+    | (e.g., "tenant1.example.com", "tenant2.example.com") will work.
+    |
+    | Set to false to require exact domain matches.
+    |
+    */
+
+    'auto_accept_subdomains' => env('RECAPTCHA_AUTO_ACCEPT_SUBDOMAINS', true),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Skip reCAPTCHA for Localhost in Development
+    |--------------------------------------------------------------------------
+    |
+    | When set to true, reCAPTCHA validation will be skipped for localhost
+    | subdomains in local/development environment. This is useful when localhost
+    | is not registered in Google reCAPTCHA console.
+    |
+    | Set to false to require reCAPTCHA even on localhost (requires localhost
+    | to be registered in Google console).
+    |
+    */
+
+    'skip_localhost_in_dev' => env('RECAPTCHA_SKIP_LOCALHOST_IN_DEV', true),
 ];

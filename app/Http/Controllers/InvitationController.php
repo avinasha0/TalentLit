@@ -47,7 +47,7 @@ class InvitationController extends Controller
         // Redirect to the appropriate dashboard based on tenant
         $tenant = $user->tenants->first();
         if ($tenant) {
-            return redirect("/{$tenant->slug}/dashboard")->with('success', 'Welcome! Your account has been set up successfully.');
+            return redirect($tenant->getDashboardUrl())->with('success', 'Welcome! Your account has been set up successfully.');
         }
 
         return redirect('/dashboard')->with('success', 'Welcome! Your account has been set up successfully.');

@@ -420,6 +420,104 @@ unset($__errorArgs, $__bag); ?>
                 </div>
             </div>
 
+            <!-- Subdomain Configuration (Enterprise Only) -->
+            <?php
+                $currentPlan = $tenant->activeSubscription?->plan;
+                $isEnterprise = $currentPlan && $currentPlan->slug === 'enterprise';
+            ?>
+            <?php if($isEnterprise): ?>
+            <div class="bg-white shadow rounded-lg">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-medium text-gray-900">Custom Subdomain</h3>
+                    <p class="mt-1 text-sm text-gray-600">Configure a custom subdomain for your organization (Enterprise feature)</p>
+                </div>
+                <div class="p-6 space-y-6">
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <div class="flex">
+                            <svg class="w-5 h-5 text-blue-400 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+                            </svg>
+                            <div class="text-sm text-blue-800">
+                                <p class="font-medium">Subdomain Access</p>
+                                <p class="mt-1">Once configured, you can access your dashboard at: <strong><?php echo e($tenant->subdomain ? $tenant->subdomain . '.' . parse_url(config('app.url'), PHP_URL_HOST) : 'your-subdomain.example.com'); ?></strong></p>
+                                <p class="mt-2">You'll still be able to access via the standard path-based URL as well.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- Subdomain -->
+                        <div>
+                            <label for="subdomain" class="block text-sm font-medium text-gray-700">Subdomain</label>
+                            <div class="mt-1 flex rounded-md shadow-sm">
+                                <input type="text" 
+                                       name="subdomain" 
+                                       id="subdomain" 
+                                       value="<?php echo e(old('subdomain', $tenant->subdomain)); ?>"
+                                       placeholder="your-company"
+                                       pattern="[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?"
+                                       class="block w-full rounded-l-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm <?php $__errorArgs = ['subdomain'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?> border-red-300 <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>">
+                                <span class="inline-flex items-center px-3 rounded-r-md border border-l-0 border-gray-300 bg-gray-50 text-gray-500 text-sm">
+                                    .<?php echo e(parse_url(config('app.url'), PHP_URL_HOST) ?? 'example.com'); ?>
+
+                                </span>
+                            </div>
+                            <?php $__errorArgs = ['subdomain'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?>
+                                <p class="mt-1 text-sm text-red-600"><?php echo e($message); ?></p>
+                            <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
+                            <p class="mt-1 text-xs text-gray-500">Only lowercase letters, numbers, and hyphens. Must be unique.</p>
+                        </div>
+
+                        <!-- Subdomain Enabled -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Enable Subdomain</label>
+                            <div class="flex items-center">
+                                <input type="checkbox" 
+                                       name="subdomain_enabled" 
+                                       id="subdomain_enabled" 
+                                       value="1"
+                                       <?php echo e(old('subdomain_enabled', $tenant->subdomain_enabled) ? 'checked' : ''); ?>
+
+                                       class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                <label for="subdomain_enabled" class="ml-2 block text-sm text-gray-700">
+                                    Enable subdomain access
+                                </label>
+                            </div>
+                            <p class="mt-1 text-xs text-gray-500">Subdomain must be set before enabling.</p>
+                        </div>
+                    </div>
+
+                    <?php if($tenant->subdomain && $tenant->subdomain_enabled): ?>
+                    <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                        <div class="flex">
+                            <svg class="w-5 h-5 text-green-400 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                            </svg>
+                            <div class="text-sm text-green-800">
+                                <p class="font-medium">Subdomain Active</p>
+                                <p class="mt-1">Your subdomain is active. Access your dashboard at: <a href="https://<?php echo e($tenant->subdomain); ?>.<?php echo e(parse_url(config('app.url'), PHP_URL_HOST)); ?>/dashboard" target="_blank" class="underline font-medium">https://<?php echo e($tenant->subdomain); ?>.<?php echo e(parse_url(config('app.url'), PHP_URL_HOST)); ?>/dashboard</a></p>
+                            </div>
+                        </div>
+                    </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+            <?php endif; ?>
+
             <!-- SMTP Configuration -->
             <div class="bg-white shadow rounded-lg">
                 <div class="px-6 py-4 border-b border-gray-200">

@@ -679,6 +679,9 @@ Route::middleware(['auth', 'capture.tenant', 'tenant'])->group(function () {
     Route::post('/{tenant}/onboarding/setup', [App\Http\Controllers\Onboarding\SetupController::class, 'store'])->name('onboarding.setup.store');
 });
 
+// Simple onboarding all route
+Route::get('/freeplan/employee-onboarding/all', [App\Http\Controllers\Tenant\EmployeeOnboardingController::class, 'all']);
+
 // ============================================================================
 // SUBDOMAIN ROUTES FOR ENTERPRISE PLANS (NEW - DOES NOT TOUCH EXISTING ROUTES)
 // ============================================================================

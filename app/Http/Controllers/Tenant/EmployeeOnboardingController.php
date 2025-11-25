@@ -43,135 +43,10 @@ class EmployeeOnboardingController extends Controller
 
     public function all(Request $request, string $tenant = null)
     {
-        \Log::info('AllOnboardings: page requested', $request->only(['search','department','manager','status','joiningMonth','sortBy','sortDir','page']));
-
-        $tenantModel = tenant();
+        // Simple method: fetch all onboarding records from database
+        $onboardings = \App\Models\Onboarding::orderBy('created_at', 'desc')->get();
         
-        // For freeplan routes, try to get tenant from auth user or use a default
-        if (!$tenantModel && auth()->check()) {
-            $user = auth()->user();
-            if ($user->tenants()->count() > 0) {
-                $tenantModel = $user->tenants()->first();
-            }
-        }
-        
-        if (!$tenantModel) {
-            // If no tenant, return empty results instead of aborting
-            $onboardings = new \Illuminate\Pagination\LengthAwarePaginator([], 0, 10, 1);
-            return view('tenant.employee-onboarding.all', compact('onboardings', 'tenantModel'));
-        }
-        
-        // Use Candidate model since Onboarding uses candidates table
-        $query = \App\Models\Candidate::where('tenant_id', $tenantModel->id)
-            ->where(function($q) {
-                $q->where('source', 'Onboarding')
-                  ->orWhere('source', 'Onboarding Import');
-            });
-
-        // SEARCH (name, email - designation column doesn't exist)
-        if ($search = $request->input('search')) {
-            $query->where(function($q) use ($search) {
-                $q->where('first_name', 'like', "%{$search}%")
-                  ->orWhere('last_name', 'like', "%{$search}%")
-                  ->orWhere('primary_email', 'like', "%{$search}%");
-            });
-        }
-
-        // Note: department, manager, status, joining_date columns don't exist in candidates table
-        // We'll fetch all, transform, filter in-memory, then paginate
-        
-        // SORTING - use existing columns only
-        $allowedSort = ['created_at','first_name'];
-        $sortBy = in_array($request->input('sortBy'), $allowedSort) ? $request->input('sortBy') : 'created_at';
-        // Map joining_date to created_at for backward compatibility
-        if ($request->input('sortBy') === 'joining_date') {
-            $sortBy = 'created_at';
-        }
-        $sortDir = $request->input('sortDir') === 'asc' ? 'asc' : 'desc';
-        $query->orderBy($sortBy, $sortDir);
-
-        // Fetch all records (we'll paginate after filtering)
-        $allOnboardings = $query->get();
-
-        // Calculate progress and set default values for non-existent columns
-        $allOnboardings->transform(function($item) {
-            // Set default values for non-existent columns
-            $item->designation = $item->designation ?? 'Not Assigned';
-            $item->department = $item->department ?? 'Not Assigned';
-            $item->manager = $item->manager ?? 'Not Assigned';
-            $item->joining_date = $item->created_at; // Use created_at as joining_date
-            
-            // If your app stores completed_steps/total_steps, use those. Otherwise compute heuristically.
-            $completed = intval($item->completed_steps ?? 0);
-            $total = intval($item->total_steps ?? 5); // default 5 steps
-            $item->progress_percent = $total > 0 ? intval(($completed / $total) * 100) : 0;
-
-            // Status mapping fallback
-            if ($item->progress_percent >= 100) {
-                $item->status = $item->status ?? 'Completed';
-            } else {
-                $item->status = $item->status ?? 'Pre-boarding';
-            }
-
-            return $item;
-        });
-
-        // Apply in-memory filters (since columns don't exist in DB)
-        $filteredCollection = $allOnboardings;
-        
-        if ($department = $request->input('department')) {
-            if ($department !== 'all') {
-                $filteredCollection = $filteredCollection->filter(function($item) use ($department) {
-                    return ($item->department ?? 'Not Assigned') === $department;
-                });
-            }
-        }
-        
-        if ($manager = $request->input('manager')) {
-            if ($manager !== 'all') {
-                $filteredCollection = $filteredCollection->filter(function($item) use ($manager) {
-                    return ($item->manager ?? 'Not Assigned') === $manager;
-                });
-            }
-        }
-        
-        if ($status = $request->input('status')) {
-            if ($status !== 'All') {
-                $filteredCollection = $filteredCollection->filter(function($item) use ($status) {
-                    return ($item->status ?? 'Pre-boarding') === $status;
-                });
-            }
-        }
-        
-        if ($joiningMonth = $request->input('joiningMonth')) {
-            try {
-                [$year,$month] = explode('-', $joiningMonth);
-                $filteredCollection = $filteredCollection->filter(function($item) use ($year, $month) {
-                    $date = $item->joining_date ?? $item->created_at;
-                    if ($date instanceof \Carbon\Carbon) {
-                        return $date->year == $year && $date->month == $month;
-                    }
-                    return false;
-                });
-            } catch (\Exception $e) {}
-        }
-        
-        // Manual pagination after filtering
-        $perPage = (int) $request->input('pageSize', 10);
-        $currentPage = (int) $request->input('page', 1);
-        $total = $filteredCollection->count();
-        $items = $filteredCollection->forPage($currentPage, $perPage)->values();
-        
-        $onboardings = new \Illuminate\Pagination\LengthAwarePaginator(
-            $items,
-            $total,
-            $perPage,
-            $currentPage,
-            ['path' => $request->url(), 'query' => $request->except('page')]
-        );
-        $onboardings->appends($request->except('page'));
-
-        return view('tenant.employee-onboarding.all', compact('onboardings', 'tenantModel'));
+        return view('freeplan.employee-onboarding.all', compact('onboardings'));
     }
 
     public function new(Request $request, string $tenant = null)
@@ -251,15 +126,146 @@ class EmployeeOnboardingController extends Controller
         }
 
         // Check if using mock data (set USE_MOCK_ONBOARDING_DATA=true in .env)
-        $useMock = env('USE_MOCK_ONBOARDING_DATA', true);
+        $useMock = env('USE_MOCK_ONBOARDING_DATA', false);
         
         if ($useMock) {
             return $this->getMockOnboardings($request);
         }
 
-        // TODO: Implement real database queries here
-        // For now, return mock data
-        return $this->getMockOnboardings($request);
+        // Use Candidate model since Onboarding uses candidates table
+        $query = \App\Models\Candidate::where('tenant_id', $tenantModel->id)
+            ->where(function($q) {
+                $q->where('source', 'Onboarding')
+                  ->orWhere('source', 'Onboarding Import');
+            });
+        
+        // Log for debugging
+        $countBeforeFilters = $query->count();
+        \Log::info('Employee Onboarding API Query', [
+            'tenant_id' => $tenantModel->id,
+            'tenant_slug' => $tenantModel->slug,
+            'count_before_filters' => $countBeforeFilters,
+            'request_params' => $request->all(),
+        ]);
+
+        // SEARCH (name, email)
+        if ($search = $request->input('search')) {
+            $query->where(function($q) use ($search) {
+                $q->where('first_name', 'like', "%{$search}%")
+                  ->orWhere('last_name', 'like', "%{$search}%")
+                  ->orWhere('primary_email', 'like', "%{$search}%");
+            });
+        }
+
+        // SORTING
+        $allowedSort = ['created_at', 'first_name'];
+        $sortBy = in_array($request->input('sortBy'), $allowedSort) ? $request->input('sortBy') : 'created_at';
+        if ($request->input('sortBy') === 'joiningDate') {
+            $sortBy = 'created_at';
+        }
+        $sortDir = $request->input('sortDir') === 'asc' ? 'asc' : 'desc';
+        $query->orderBy($sortBy, $sortDir);
+
+        // Fetch all records (we'll paginate after filtering)
+        $allOnboardings = $query->get();
+
+        // Transform candidates to onboarding format
+        $allOnboardings->transform(function($item) {
+            // Set default values for non-existent columns
+            $item->designation = $item->designation ?? 'Not Assigned';
+            $item->department = $item->department ?? 'Not Assigned';
+            $item->manager = $item->manager ?? 'Not Assigned';
+            $item->joining_date = $item->created_at; // Use created_at as joining_date
+            
+            // Calculate progress
+            $completed = intval($item->completed_steps ?? 0);
+            $total = intval($item->total_steps ?? 5); // default 5 steps
+            $item->progress_percent = $total > 0 ? intval(($completed / $total) * 100) : 0;
+
+            // Status mapping
+            if ($item->progress_percent >= 100) {
+                $item->status = $item->status ?? 'Completed';
+            } else {
+                $item->status = $item->status ?? 'Pre-boarding';
+            }
+
+            return $item;
+        });
+
+        // Apply in-memory filters
+        $filteredCollection = $allOnboardings;
+        
+        if ($department = $request->input('department')) {
+            if ($department !== 'all' && $department !== '') {
+                $filteredCollection = $filteredCollection->filter(function($item) use ($department) {
+                    return ($item->department ?? 'Not Assigned') === $department;
+                });
+            }
+        }
+        
+        if ($manager = $request->input('manager')) {
+            if ($manager !== 'all' && $manager !== '') {
+                $filteredCollection = $filteredCollection->filter(function($item) use ($manager) {
+                    return ($item->manager ?? 'Not Assigned') === $manager;
+                });
+            }
+        }
+        
+        if ($status = $request->input('status')) {
+            if ($status !== 'All' && $status !== '') {
+                $filteredCollection = $filteredCollection->filter(function($item) use ($status) {
+                    return ($item->status ?? 'Pre-boarding') === $status;
+                });
+            }
+        }
+        
+        if ($joiningMonth = $request->input('joiningMonth')) {
+            try {
+                [$year, $month] = explode('-', $joiningMonth);
+                $filteredCollection = $filteredCollection->filter(function($item) use ($year, $month) {
+                    $date = $item->joining_date ?? $item->created_at;
+                    if ($date instanceof \Carbon\Carbon) {
+                        return $date->year == $year && $date->month == $month;
+                    }
+                    return false;
+                });
+            } catch (\Exception $e) {}
+        }
+
+        // Pagination
+        $page = (int) $request->input('page', 1);
+        $pageSize = (int) $request->input('pageSize', 10);
+        $total = $filteredCollection->count();
+        $items = $filteredCollection->forPage($page, $pageSize)->values();
+
+        // Format data for JavaScript
+        $formattedData = $items->map(function($item) {
+            return [
+                'id' => $item->id,
+                'firstName' => $item->first_name,
+                'lastName' => $item->last_name,
+                'fullName' => $item->full_name ?? trim($item->first_name . ' ' . $item->last_name),
+                'email' => $item->primary_email,
+                'avatarUrl' => null,
+                'designation' => $item->designation ?? 'Not Assigned',
+                'department' => $item->department ?? 'Not Assigned',
+                'manager' => $item->manager ?? 'Not Assigned',
+                'joiningDate' => $item->joining_date ? $item->joining_date->format('Y-m-d') : ($item->created_at ? $item->created_at->format('Y-m-d') : ''),
+                'progressPercent' => $item->progress_percent ?? 0,
+                'pendingItems' => max(0, 5 - intval($item->completed_steps ?? 0)),
+                'status' => $item->status ?? 'Pre-boarding',
+                'lastUpdated' => $item->updated_at ? $item->updated_at->toIso8601String() : ($item->created_at ? $item->created_at->toIso8601String() : '')
+            ];
+        });
+
+        return response()->json([
+            'data' => $formattedData->toArray(),
+            'meta' => [
+                'page' => $page,
+                'pageSize' => $pageSize,
+                'total' => $total,
+            ],
+        ]);
     }
 
     /**
@@ -436,11 +442,26 @@ class EmployeeOnboardingController extends Controller
             Excel::import($import, $request->file('file'));
 
             $importedCount = $import->getRowCount();
+            
+            // Verify candidates were actually created/updated
+            $actualCount = \App\Models\Candidate::where('tenant_id', tenant_id())
+                ->where(function($q) {
+                    $q->where('source', 'Onboarding')
+                      ->orWhere('source', 'Onboarding Import');
+                })
+                ->count();
+            
+            \Log::info('Onboarding Import Completed', [
+                'tenant_id' => tenant_id(),
+                'rows_processed' => $importedCount,
+                'actual_candidates_count' => $actualCount,
+            ]);
 
             return response()->json([
                 'success' => true,
                 'message' => "Successfully imported {$importedCount} candidates for onboarding.",
-                'count' => $importedCount
+                'count' => $importedCount,
+                'actual_count' => $actualCount
             ]);
         } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
             $failures = $e->failures();
@@ -852,12 +873,12 @@ class OnboardingCandidateImport implements ToModel, WithHeadingRow, WithValidati
             ->first();
 
         if ($existingCandidate) {
-            // Update existing candidate
+            // Update existing candidate - always set source to 'Onboarding Import' for onboarding imports
             $existingCandidate->update([
                 'first_name' => $row['first_name'] ?? $existingCandidate->first_name,
                 'last_name' => $row['last_name'] ?? $existingCandidate->last_name,
                 'primary_phone' => $row['primary_phone'] ?? $existingCandidate->primary_phone,
-                'source' => $row['source'] ?? $existingCandidate->source,
+                'source' => $row['source'] ?? $this->source, // Use import source if not provided in CSV
             ]);
             return null; // Don't create new model
         }
@@ -887,6 +908,15 @@ class OnboardingCandidateImport implements ToModel, WithHeadingRow, WithValidati
     public function getRowCount()
     {
         return $this->rowCount;
+    }
+    
+    public function getImportedCount()
+    {
+        // Count actual candidates created/updated
+        return Candidate::where('tenant_id', $this->tenantId)
+            ->where('source', $this->source)
+            ->where('created_at', '>=', now()->subMinutes(5)) // Candidates created in last 5 minutes
+            ->count();
     }
 }
 

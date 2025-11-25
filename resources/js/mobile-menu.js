@@ -153,6 +153,7 @@ function initializeCollapsibles() {
   setupCollapsible('[data-mobile-jobs-toggle]', '[data-mobile-jobs-content]', '[data-mobile-jobs-arrow]');
   setupCollapsible('[data-mobile-candidates-toggle]', '[data-mobile-candidates-content]', '[data-mobile-candidates-arrow]');
   setupCollapsible('[data-mobile-settings-toggle]', '[data-mobile-settings-content]', '[data-mobile-settings-arrow]');
+  setupCollapsible('[data-mobile-onboarding-toggle]', '[data-mobile-onboarding-content]', '[data-mobile-onboarding-arrow]');
 }
 
 // Initialize immediately and also on DOM ready (same as Settings)

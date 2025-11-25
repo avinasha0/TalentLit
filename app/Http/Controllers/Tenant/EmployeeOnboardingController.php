@@ -43,10 +43,18 @@ class EmployeeOnboardingController extends Controller
 
     public function all(Request $request, string $tenant = null)
     {
+        // Get tenant from middleware or user's first tenant for freeplan route
+        $tenantModel = tenant();
+        
+        if (!$tenantModel && auth()->check()) {
+            // For freeplan route, get user's first tenant
+            $tenantModel = auth()->user()->tenants->first();
+        }
+        
         // Simple method: fetch all onboarding records from database
         $onboardings = \App\Models\Onboarding::orderBy('created_at', 'desc')->get();
         
-        return view('freeplan.employee-onboarding.all', compact('onboardings'));
+        return view('freeplan.employee-onboarding.all', compact('onboardings', 'tenantModel'));
     }
 
     public function new(Request $request, string $tenant = null)
@@ -421,8 +429,17 @@ class EmployeeOnboardingController extends Controller
     {
         $tenantModel = tenant();
         
+        // For freeplan route, get tenant from user's first tenant
+        if (!$tenantModel && auth()->check()) {
+            $tenantModel = auth()->user()->tenants->first();
+            if ($tenantModel) {
+                // Set tenant context for the import
+                \App\Support\Tenancy::set($tenantModel);
+            }
+        }
+        
         if (!$tenantModel) {
-            return response()->json(['error' => 'Tenant not resolved'], 500);
+            return response()->json(['error' => 'Tenant not resolved. Please ensure you have access to a tenant.'], 500);
         }
 
         $request->validate([
@@ -436,33 +453,129 @@ class EmployeeOnboardingController extends Controller
         ]);
 
         try {
-            // Create a simple import class for onboarding
-            $import = new OnboardingCandidateImport(tenant_id(), 'Onboarding Import');
-            
-            Excel::import($import, $request->file('file'));
-
-            $importedCount = $import->getRowCount();
-            
-            // Verify candidates were actually created/updated
-            $actualCount = \App\Models\Candidate::where('tenant_id', tenant_id())
+            // Get count before import to verify new records
+            $countBefore = \App\Models\Candidate::where('tenant_id', tenant_id())
                 ->where(function($q) {
                     $q->where('source', 'Onboarding')
                       ->orWhere('source', 'Onboarding Import');
                 })
                 ->count();
             
+            // Use database transaction to ensure all data is saved atomically
+            $import = null;
+            \Illuminate\Support\Facades\DB::transaction(function () use ($request, &$import) {
+                // Create a simple import class for onboarding
+                $import = new OnboardingCandidateImport(tenant_id(), 'Onboarding Import');
+                
+                // Import the file - this will save to database
+                Excel::import($import, $request->file('file'));
+            });
+            
+            // Get counts from import class after transaction
+            $importedCount = $import->getRowCount();
+            $createdCount = $import->getCreatedCount();
+            $updatedCount = $import->getUpdatedCount();
+            
+            // After transaction commits, verify data was actually saved to database
+            // Small delay to ensure database is updated
+            usleep(100000); // 0.1 second
+            
+            $countAfter = \App\Models\Candidate::where('tenant_id', tenant_id())
+                ->where(function($q) {
+                    $q->where('source', 'Onboarding')
+                      ->orWhere('source', 'Onboarding Import');
+                })
+                ->count();
+            
+            // Get the actual number of new records
+            $actualNewCount = $countAfter - $countBefore;
+            $totalSaved = $createdCount + $updatedCount;
+            
+            // Also check for recently updated records (in case all were updates)
+            $recentlyUpdated = \App\Models\Candidate::where('tenant_id', tenant_id())
+                ->where(function($q) {
+                    $q->where('source', 'Onboarding')
+                      ->orWhere('source', 'Onboarding Import');
+                })
+                ->where('updated_at', '>=', now()->subMinutes(2))
+                ->count();
+            
             \Log::info('Onboarding Import Completed', [
                 'tenant_id' => tenant_id(),
                 'rows_processed' => $importedCount,
-                'actual_candidates_count' => $actualCount,
+                'count_before' => $countBefore,
+                'count_after' => $countAfter,
+                'actual_new_count' => $actualNewCount,
+                'created_count' => $createdCount,
+                'updated_count' => $updatedCount,
+                'total_saved' => $totalSaved,
             ]);
 
-            return response()->json([
-                'success' => true,
-                'message' => "Successfully imported {$importedCount} candidates for onboarding.",
-                'count' => $importedCount,
-                'actual_count' => $actualCount
-            ]);
+            // Only return success if data was actually saved/updated in database
+            // Accept success if: rows were processed AND (records were created/updated OR database count increased OR records were recently updated)
+            // This handles cases where all rows were updates (no new records, but data was saved)
+            $hasDataSaved = ($totalSaved > 0 || $actualNewCount > 0 || $countAfter > $countBefore || $recentlyUpdated > 0);
+            
+            // If we processed rows but counts are 0, check if any records were actually saved
+            if ($importedCount > 0 && $totalSaved === 0 && $actualNewCount === 0) {
+                // Try to get counts from the import class directly
+                $importCheck = new OnboardingCandidateImport(tenant_id(), 'Onboarding Import');
+                // We can't re-import, but we can check if the issue is with counting
+                \Log::warning('Onboarding Import: Count mismatch', [
+                    'imported_count' => $importedCount,
+                    'created_count' => $createdCount,
+                    'updated_count' => $updatedCount,
+                    'recently_updated' => $recentlyUpdated
+                ]);
+            }
+            
+            if ($importedCount > 0 && $hasDataSaved) {
+                $message = "Successfully imported {$importedCount} candidate" . ($importedCount !== 1 ? 's' : '') . " for onboarding.";
+                if ($createdCount > 0) {
+                    $message .= " {$createdCount} new candidate" . ($createdCount !== 1 ? 's' : '') . " created.";
+                }
+                if ($updatedCount > 0) {
+                    $message .= " {$updatedCount} candidate" . ($updatedCount !== 1 ? 's' : '') . " updated.";
+                }
+                
+                return response()->json([
+                    'success' => true,
+                    'data_saved' => true,
+                    'message' => $message,
+                    'count' => $importedCount,
+                    'created_count' => $createdCount,
+                    'updated_count' => $updatedCount,
+                    'total_saved' => $totalSaved,
+                    'verified' => true
+                ]);
+            } else {
+                // Log detailed error for debugging
+                \Log::error('Onboarding Import Failed', [
+                    'tenant_id' => tenant_id(),
+                    'imported_count' => $importedCount,
+                    'total_saved' => $totalSaved,
+                    'actual_new_count' => $actualNewCount,
+                    'count_before' => $countBefore,
+                    'count_after' => $countAfter,
+                    'created_count' => $createdCount,
+                    'updated_count' => $updatedCount,
+                ]);
+                
+                return response()->json([
+                    'success' => false,
+                    'data_saved' => false,
+                    'message' => 'No candidates were saved to the database. Please check your file format and ensure it matches the template.',
+                    'count' => $importedCount,
+                    'debug' => [
+                        'rows_processed' => $importedCount,
+                        'created' => $createdCount,
+                        'updated' => $updatedCount,
+                        'total_saved' => $totalSaved,
+                        'count_before' => $countBefore,
+                        'count_after' => $countAfter,
+                    ]
+                ], 400);
+            }
         } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
             $failures = $e->failures();
             $errors = [];
@@ -486,8 +599,13 @@ class EmployeeOnboardingController extends Controller
     /**
      * Download import template
      */
-    public function downloadImportTemplate(string $tenant = null)
+    public function downloadImportTemplate(Request $request, string $tenant = null)
     {
+        // For freeplan route, get tenant from user's first tenant
+        $tenantModel = tenant();
+        if (!$tenantModel && auth()->check()) {
+            $tenantModel = auth()->user()->tenants->first();
+        }
         $headers = [
             'Content-Type' => 'text/csv',
             'Content-Disposition' => 'attachment; filename="onboarding_candidates_import_template.csv"',
@@ -851,6 +969,8 @@ class OnboardingCandidateImport implements ToModel, WithHeadingRow, WithValidati
     private $tenantId;
     private $source;
     private $rowCount = 0;
+    private $createdCount = 0;
+    private $updatedCount = 0;
 
     public function __construct($tenantId, $source = 'Onboarding Import')
     {
@@ -860,38 +980,110 @@ class OnboardingCandidateImport implements ToModel, WithHeadingRow, WithValidati
 
     public function model(array $row)
     {
-        $this->rowCount++;
-
-        // Skip if email is empty
-        if (empty($row['primary_email'])) {
+        // Normalize column names (handle case-insensitive and spaces)
+        $normalizedRow = [];
+        foreach ($row as $key => $value) {
+            $normalizedKey = strtolower(trim(str_replace([' ', '_', '-'], '', $key)));
+            $normalizedRow[$normalizedKey] = $value;
+        }
+        
+        // Try multiple possible column names for email
+        $email = null;
+        $emailKeys = ['primaryemail', 'email', 'e-mail', 'mail'];
+        foreach ($emailKeys as $key) {
+            if (isset($normalizedRow[$key]) && !empty(trim($normalizedRow[$key]))) {
+                $email = trim($normalizedRow[$key]);
+                break;
+            }
+        }
+        
+        // Also try original keys
+        if (empty($email)) {
+            $originalKeys = ['primary_email', 'email', 'e-mail', 'mail'];
+            foreach ($originalKeys as $key) {
+                if (isset($row[$key]) && !empty(trim($row[$key]))) {
+                    $email = trim($row[$key]);
+                    break;
+                }
+            }
+        }
+        
+        // Skip if email is empty or invalid
+        if (empty($email)) {
+            \Log::warning('Onboarding Import: Skipping row with empty email', ['row_keys' => array_keys($row)]);
+            return null;
+        }
+        
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            \Log::warning('Onboarding Import: Skipping row with invalid email format', ['email' => $email]);
             return null;
         }
 
+        // Only count valid rows
+        $this->rowCount++;
+
+        // Normalize email (already extracted above)
+        $email = strtolower(trim($email));
+
         // Check if candidate already exists
         $existingCandidate = Candidate::where('tenant_id', $this->tenantId)
-            ->where('primary_email', $row['primary_email'])
+            ->where('primary_email', $email)
             ->first();
 
         if ($existingCandidate) {
+            // Extract other fields with flexible column names
+            $firstName = $this->getFieldValue($row, $normalizedRow, ['firstname', 'first_name', 'fname', 'name'], $existingCandidate->first_name);
+            $lastName = $this->getFieldValue($row, $normalizedRow, ['lastname', 'last_name', 'lname', 'surname'], $existingCandidate->last_name);
+            $phone = $this->getFieldValue($row, $normalizedRow, ['primaryphone', 'primary_phone', 'phone', 'mobile', 'contact'], $existingCandidate->primary_phone);
+            $source = $this->getFieldValue($row, $normalizedRow, ['source'], $this->source);
+            
             // Update existing candidate - always set source to 'Onboarding Import' for onboarding imports
             $existingCandidate->update([
-                'first_name' => $row['first_name'] ?? $existingCandidate->first_name,
-                'last_name' => $row['last_name'] ?? $existingCandidate->last_name,
-                'primary_phone' => $row['primary_phone'] ?? $existingCandidate->primary_phone,
-                'source' => $row['source'] ?? $this->source, // Use import source if not provided in CSV
+                'first_name' => $firstName,
+                'last_name' => $lastName,
+                'primary_phone' => $phone,
+                'source' => $source,
             ]);
-            return null; // Don't create new model
+            
+            $this->updatedCount++;
+            
+            \Log::debug('Onboarding Import: Updated existing candidate', [
+                'email' => $email,
+                'tenant_id' => $this->tenantId
+            ]);
+            
+            // Return the updated model so Excel knows something was processed
+            return $existingCandidate;
         }
 
-        // Create new candidate
-        return new Candidate([
+        // Extract other fields with flexible column names
+        $firstName = $this->getFieldValue($row, $normalizedRow, ['firstname', 'first_name', 'fname', 'name']);
+        $lastName = $this->getFieldValue($row, $normalizedRow, ['lastname', 'last_name', 'lname', 'surname']);
+        $phone = $this->getFieldValue($row, $normalizedRow, ['primaryphone', 'primary_phone', 'phone', 'mobile', 'contact']);
+        $source = $this->getFieldValue($row, $normalizedRow, ['source'], $this->source);
+        
+        // Create new candidate and explicitly save to database
+        $candidate = new Candidate([
             'tenant_id' => $this->tenantId,
-            'first_name' => $row['first_name'] ?? '',
-            'last_name' => $row['last_name'] ?? '',
-            'primary_email' => $row['primary_email'],
-            'primary_phone' => $row['primary_phone'] ?? null,
-            'source' => $row['source'] ?? $this->source,
+            'first_name' => $firstName ?? '',
+            'last_name' => $lastName ?? '',
+            'primary_email' => $email,
+            'primary_phone' => $phone ?? null,
+            'source' => $source,
         ]);
+        
+        // Explicitly save to ensure it's committed to database
+        $candidate->save();
+        
+        $this->createdCount++;
+
+        \Log::debug('Onboarding Import: Created new candidate', [
+            'email' => $email,
+            'tenant_id' => $this->tenantId,
+            'candidate_id' => $candidate->id
+        ]);
+
+        return $candidate;
     }
 
     public function rules(): array
@@ -908,6 +1100,39 @@ class OnboardingCandidateImport implements ToModel, WithHeadingRow, WithValidati
     public function getRowCount()
     {
         return $this->rowCount;
+    }
+    
+    public function getCreatedCount()
+    {
+        return $this->createdCount;
+    }
+    
+    public function getUpdatedCount()
+    {
+        return $this->updatedCount;
+    }
+    
+    /**
+     * Helper method to get field value with flexible column name matching
+     */
+    private function getFieldValue($row, $normalizedRow, $possibleKeys, $default = null)
+    {
+        // Try normalized keys first
+        foreach ($possibleKeys as $key) {
+            $normalizedKey = strtolower(trim(str_replace([' ', '_', '-'], '', $key)));
+            if (isset($normalizedRow[$normalizedKey]) && !empty(trim($normalizedRow[$normalizedKey]))) {
+                return trim($normalizedRow[$normalizedKey]);
+            }
+        }
+        
+        // Try original keys
+        foreach ($possibleKeys as $key) {
+            if (isset($row[$key]) && !empty(trim($row[$key]))) {
+                return trim($row[$key]);
+            }
+        }
+        
+        return $default;
     }
     
     public function getImportedCount()

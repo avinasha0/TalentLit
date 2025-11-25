@@ -656,6 +656,12 @@ Route::middleware(['capture.tenant', 'tenant', 'auth', 'custom.permission:view_d
     Route::get('/{tenant}/api/onboardings/import/template', [EmployeeOnboardingController::class, 'downloadImportTemplate'])->name('api.onboardings.import.template');
 });
 
+// Freeplan Employee Onboarding API routes (without tenant in path)
+Route::middleware(['auth'])->group(function () {
+    Route::post('/freeplan/api/onboardings/import/candidates', [EmployeeOnboardingController::class, 'importCandidates'])->name('freeplan.onboardings.import.candidates');
+    Route::get('/freeplan/api/onboardings/import/template', [EmployeeOnboardingController::class, 'downloadImportTemplate'])->name('freeplan.onboardings.import.template');
+});
+
 // Add GET logout route for both testing and production
 Route::get('/logout', function() {
     auth()->logout();

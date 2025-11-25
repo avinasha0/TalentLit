@@ -666,7 +666,7 @@ $appDomain = parse_url($appUrl, PHP_URL_HOST) ?? 'localhost';
 
 // Public marketing routes accessible from subdomains (no auth required)
 // These routes use the same route names as main domain so footer links work, but redirect to main domain
-Route::domain('{subdomain}.' . $appDomain)->middleware(['subdomain.tenant'])->group(function () use ($appDomain) {
+Route::domain('{subdomain}.' . $appDomain)->middleware(['subdomain.redirect', 'subdomain.tenant'])->group(function () use ($appDomain) {
     // Company marketing pages - accessible via route names but redirect to main domain
     // Note: These are defined BEFORE tenant routes to be matched first
     Route::get('/about', function () use ($appDomain) {
@@ -719,7 +719,7 @@ Route::domain('{subdomain}.' . $appDomain)->middleware(['subdomain.tenant'])->gr
     })->name('careers');
 });
 
-Route::domain('{subdomain}.' . $appDomain)->middleware(['subdomain.tenant', 'auth'])->group(function () {
+Route::domain('{subdomain}.' . $appDomain)->middleware(['subdomain.redirect', 'subdomain.tenant', 'auth'])->group(function () {
     // Dashboard
     Route::middleware('custom.permission:view_dashboard')->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('subdomain.dashboard');

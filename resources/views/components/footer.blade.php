@@ -31,15 +31,66 @@
                 </div>
             </div>
             
+            @php
+                // Check if we're on a subdomain (for Enterprise tenants)
+                $isSubdomain = false;
+                $host = request()->getHost();
+                $appUrl = config('app.url');
+                $appDomain = parse_url($appUrl, PHP_URL_HOST) ?? $host;
+                
+                // Extract domain without port
+                $hostWithoutPort = explode(':', $host)[0];
+                $appDomainWithoutPort = explode(':', $appDomain)[0];
+                
+                // Check if host is different from app domain (indicating subdomain)
+                if ($hostWithoutPort !== $appDomainWithoutPort && str_ends_with($hostWithoutPort, '.' . $appDomainWithoutPort)) {
+                    $isSubdomain = true;
+                }
+                
+                // For localhost development with subdomains
+                if (($appDomainWithoutPort === 'localhost' || str_contains($appDomainWithoutPort, '127.0.0.1')) && count(explode('.', $hostWithoutPort)) > 1) {
+                    $isSubdomain = true;
+                }
+                
+                // Generate main domain URL helper
+                $mainDomainUrl = function($path) use ($appUrl) {
+                    $parsed = parse_url($appUrl);
+                    $scheme = $parsed['scheme'] ?? 'http';
+                    $host = $parsed['host'] ?? request()->getHost();
+                    $port = isset($parsed['port']) ? ':' . $parsed['port'] : '';
+                    return $scheme . '://' . $host . $port . (str_starts_with($path, '/') ? '' : '/') . $path;
+                };
+                
+                // Route helper that works for both main domain and subdomain
+                $safeRoute = function($name, $fallbackPath = null) use ($isSubdomain, $mainDomainUrl) {
+                    if ($isSubdomain) {
+                        // On subdomain, try to use route first, fallback to main domain
+                        try {
+                            return route($name);
+                        } catch (\Exception $e) {
+                            // Route not found on subdomain, use main domain
+                            return $fallbackPath ? $mainDomainUrl($fallbackPath) : $mainDomainUrl('/');
+                        }
+                    } else {
+                        // On main domain, use route normally
+                        try {
+                            return route($name);
+                        } catch (\Exception $e) {
+                            return $fallbackPath ? url($fallbackPath) : url('/');
+                        }
+                    }
+                };
+            @endphp
+            
             <!-- Product Section -->
             <div>
                 <h3 class="text-lg font-semibold mb-6 text-white">Product</h3>
                 <ul class="space-y-3">
-                    <li><a href="{{ route('features') }}" class="text-gray-400 hover:text-white transition-colors text-sm">Features</a></li>
-                    <li><a href="{{ route('subscription.pricing') }}" class="text-gray-400 hover:text-white transition-colors text-sm">Pricing</a></li>
-                    <li><a href="{{ route('features.candidate-sourcing') }}" class="text-gray-400 hover:text-white transition-colors text-sm">Candidate Sourcing</a></li>
-                    <li><a href="{{ route('features.hiring-pipeline') }}" class="text-gray-400 hover:text-white transition-colors text-sm">Hiring Pipeline</a></li>
-                    <li><a href="{{ route('features.hiring-analytics') }}" class="text-gray-400 hover:text-white transition-colors text-sm">Analytics</a></li>
+                    <li><a href="{{ $safeRoute('features', '/features') }}" class="text-gray-400 hover:text-white transition-colors text-sm">Features</a></li>
+                    <li><a href="{{ $safeRoute('subscription.pricing', '/pricing') }}" class="text-gray-400 hover:text-white transition-colors text-sm">Pricing</a></li>
+                    <li><a href="{{ $safeRoute('features.candidate-sourcing', '/features/candidate-sourcing.html') }}" class="text-gray-400 hover:text-white transition-colors text-sm">Candidate Sourcing</a></li>
+                    <li><a href="{{ $safeRoute('features.hiring-pipeline', '/features/hiring-pipeline.html') }}" class="text-gray-400 hover:text-white transition-colors text-sm">Hiring Pipeline</a></li>
+                    <li><a href="{{ $safeRoute('features.hiring-analytics', '/features/hiring-analytics.html') }}" class="text-gray-400 hover:text-white transition-colors text-sm">Analytics</a></li>
                 </ul>
             </div>
             
@@ -47,11 +98,11 @@
             <div>
                 <h3 class="text-lg font-semibold mb-6 text-white">Company</h3>
                 <ul class="space-y-3">
-                    <li><a href="{{ route('about') }}" class="text-gray-400 hover:text-white transition-colors text-sm">About</a></li>
-                    <li><a href="{{ route('careers') }}" class="text-gray-400 hover:text-white transition-colors text-sm">Careers</a></li>
-                    <li><a href="{{ route('blog') }}" class="text-gray-400 hover:text-white transition-colors text-sm">Blog</a></li>
-                    <li><a href="{{ route('press') }}" class="text-gray-400 hover:text-white transition-colors text-sm">Press</a></li>
-                    <li><a href="{{ route('contact') }}" class="text-gray-400 hover:text-white transition-colors text-sm">Contact</a></li>
+                    <li><a href="{{ $safeRoute('about', '/about') }}" class="text-gray-400 hover:text-white transition-colors text-sm">About</a></li>
+                    <li><a href="{{ $safeRoute('careers', '/careers') }}" class="text-gray-400 hover:text-white transition-colors text-sm">Careers</a></li>
+                    <li><a href="{{ $safeRoute('blog', '/blog') }}" class="text-gray-400 hover:text-white transition-colors text-sm">Blog</a></li>
+                    <li><a href="{{ $safeRoute('press', '/press') }}" class="text-gray-400 hover:text-white transition-colors text-sm">Press</a></li>
+                    <li><a href="{{ $safeRoute('contact', '/contact') }}" class="text-gray-400 hover:text-white transition-colors text-sm">Contact</a></li>
                 </ul>
             </div>
             

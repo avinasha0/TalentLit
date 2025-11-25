@@ -14,6 +14,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'tenant' => \App\Http\Middleware\ResolveTenantFromPath::class,
+            'subdomain.tenant' => \App\Http\Middleware\ResolveTenantFromSubdomain::class,
             'capture.tenant' => \App\Http\Middleware\CaptureLastTenant::class,
             'custom.permission' => \App\Http\Middleware\CustomPermissionMiddleware::class,
             'subscription.limit' => \App\Http\Middleware\CheckSubscriptionLimits::class,

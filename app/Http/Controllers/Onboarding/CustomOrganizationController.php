@@ -30,7 +30,7 @@ class CustomOrganizationController extends Controller
                 if (!$isNewRegistration) {
                     // User already has a tenant and this is not a new registration, redirect to dashboard
                     $firstTenant = $user->tenants()->first();
-                    return redirect()->route('tenant.dashboard', $firstTenant->slug);
+                    return redirect($firstTenant->getDashboardUrl());
                 }
             }
 
@@ -109,11 +109,11 @@ class CustomOrganizationController extends Controller
 
                 Log::info('Custom Organization created successfully, redirecting to dashboard', [
                     'tenant_slug' => $tenant->slug,
-                    'redirect_url' => route('tenant.dashboard', $tenant->slug),
+                    'redirect_url' => $tenant->getDashboardUrl(),
                     'user_id' => $user->id,
                 ]);
 
-                return redirect()->route('tenant.dashboard', $tenant->slug)
+                return redirect($tenant->getDashboardUrl())
                     ->with('success', 'Organization created successfully! Welcome to TalentLit.');
 
             } catch (\Exception $e) {

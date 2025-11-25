@@ -37,7 +37,10 @@
 <?php endif; ?>
      <?php $__env->endSlot(); ?>
 
-    <div class="py-12">
+    <div id="analytics-dashboard"
+         class="py-12"
+         data-data-url="<?php echo e(tenantRoute('tenant.analytics.data', $tenant->slug)); ?>"
+         data-export-url="<?php echo e(tenantRoute('tenant.analytics.export', $tenant->slug)); ?>">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <!-- Filter Bar -->
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg mb-6">

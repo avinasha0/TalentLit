@@ -24,7 +24,7 @@
     <nav class="flex-1 overflow-y-auto p-4">
         @if($tenant && is_object($tenant))
         <div class="space-y-2">
-            <a href="{{ route('tenant.dashboard', ['tenant' => $tenant->slug ?? tenant()->slug]) }}" class="block py-2 text-gray-700 hover:text-blue-600">Dashboard</a>
+            <a href="{{ tenantRoute('tenant.dashboard', $tenant->slug ?? tenant()->slug) }}" class="block py-2 text-gray-700 hover:text-blue-600">Dashboard</a>
             
             {{-- Recruiting Section --}}
             <div class="mt-4">
@@ -44,9 +44,9 @@
                             </svg>
                         </button>
                         <div data-mobile-jobs-content class="ml-4 space-y-1 hidden">
-                            <a href="{{ route('tenant.jobs.index', ['tenant' => $tenant->slug ?? tenant()->slug]) }}" class="block py-1 text-gray-700 hover:text-blue-600">All Jobs</a>
+                            <a href="{{ tenantRoute('tenant.jobs.index', $tenant->slug ?? tenant()->slug) }}" class="block py-1 text-gray-700 hover:text-blue-600">All Jobs</a>
                             @customCan('create_jobs', $tenant ?? tenant())
-                            <a href="{{ route('tenant.jobs.create', ['tenant' => $tenant->slug ?? tenant()->slug]) }}" class="block py-1 text-gray-700 hover:text-blue-600">Create Job</a>
+                            <a href="{{ tenantRoute('tenant.jobs.create', $tenant->slug ?? tenant()->slug) }}" class="block py-1 text-gray-700 hover:text-blue-600">Create Job</a>
                             @endcustomCan
                         </div>
                     </div>
@@ -60,7 +60,7 @@
                             </svg>
                         </button>
                         <div data-mobile-candidates-content class="ml-4 space-y-1 hidden">
-                            <a href="{{ route('tenant.candidates.index', ['tenant' => $tenant->slug ?? tenant()->slug]) }}" class="block py-1 text-gray-700 hover:text-blue-600">All Candidates</a>
+                            <a href="{{ tenantRoute('tenant.candidates.index', $tenant->slug ?? tenant()->slug) }}" class="block py-1 text-gray-700 hover:text-blue-600">All Candidates</a>
                         </div>
                     </div>
 
@@ -69,18 +69,18 @@
                         $jobParam = request()->route('job');
                         $jobId = is_object($jobParam) ? $jobParam->id : $jobParam;
                     @endphp
-                    <a href="{{ route('tenant.jobs.pipeline', [$tenant->slug ?? tenant()->slug, $jobId]) }}" class="block py-1 text-gray-700 hover:text-blue-600">Pipeline</a>
+                    <a href="{{ tenantRoute('tenant.jobs.pipeline', [$tenant->slug ?? tenant()->slug, $jobId]) }}" class="block py-1 text-gray-700 hover:text-blue-600">Pipeline</a>
                     @endif
 
-                    <a href="{{ route('tenant.interviews.index', ['tenant' => $tenant->slug ?? tenant()->slug]) }}" class="block py-1 text-gray-700 hover:text-blue-600">Interviews</a>
+                    <a href="{{ tenantRoute('tenant.interviews.index', $tenant->slug ?? tenant()->slug) }}" class="block py-1 text-gray-700 hover:text-blue-600">Interviews</a>
 
                     @customCan('view_analytics', $tenant ?? tenant())
-                    <a href="{{ route('tenant.analytics.index', ['tenant' => $tenant->slug ?? tenant()->slug]) }}" class="block py-1 text-gray-700 hover:text-blue-600">Analytics</a>
+                    <a href="{{ tenantRoute('tenant.analytics.index', $tenant->slug ?? tenant()->slug) }}" class="block py-1 text-gray-700 hover:text-blue-600">Analytics</a>
                     @endcustomCan
                 </div>
             </div>
 
-            <a href="{{ route('careers.index', ['tenant' => $tenant->slug ?? tenant()->slug]) }}" target="_blank" class="block py-2 text-gray-700 hover:text-blue-600">Careers Site</a>
+            <a href="{{ tenantRoute('careers.index', $tenant->slug ?? tenant()->slug) }}" target="_blank" class="block py-2 text-gray-700 hover:text-blue-600">Careers Site</a>
 
             @customCan('manage_settings', $tenant ?? tenant())
             {{-- Settings Section --}}
@@ -92,13 +92,13 @@
                     </svg>
                 </button>
                 <div data-mobile-settings-content class="ml-4 space-y-1 hidden">
-                    <a href="{{ route('tenant.settings.general', ['tenant' => $tenant->slug ?? tenant()->slug]) }}" class="block py-1 text-gray-700 hover:text-blue-600">General Settings</a>
+                    <a href="{{ tenantRoute('tenant.settings.general', $tenant->slug ?? tenant()->slug) }}" class="block py-1 text-gray-700 hover:text-blue-600">General Settings</a>
                     @customCan('manage_users', $tenant ?? tenant())
-                    <a href="{{ route('subscription.show', ['tenant' => $tenant->slug ?? tenant()->slug]) }}" class="block py-1 text-gray-700 hover:text-blue-600">Subscription</a>
+                    <a href="{{ tenantRoute('subscription.show', $tenant->slug ?? tenant()->slug) }}" class="block py-1 text-gray-700 hover:text-blue-600">Subscription</a>
                     @endcustomCan
-                    <a href="{{ route('tenant.settings.careers', ['tenant' => $tenant->slug ?? tenant()->slug]) }}" class="block py-1 text-gray-700 hover:text-blue-600">Careers Branding</a>
-                    <a href="{{ route('tenant.settings.team', ['tenant' => $tenant->slug ?? tenant()->slug]) }}" class="block py-1 text-gray-700 hover:text-blue-600">Team Management</a>
-                    <a href="{{ route('tenant.settings.roles', ['tenant' => $tenant->slug ?? tenant()->slug]) }}" class="block py-1 text-gray-700 hover:text-blue-600">Roles & Permissions</a>
+                    <a href="{{ tenantRoute('tenant.settings.careers', $tenant->slug ?? tenant()->slug) }}" class="block py-1 text-gray-700 hover:text-blue-600">Careers Branding</a>
+                    <a href="{{ tenantRoute('tenant.settings.team', $tenant->slug ?? tenant()->slug) }}" class="block py-1 text-gray-700 hover:text-blue-600">Team Management</a>
+                    <a href="{{ tenantRoute('tenant.settings.roles', $tenant->slug ?? tenant()->slug) }}" class="block py-1 text-gray-700 hover:text-blue-600">Roles & Permissions</a>
                 </div>
             </div>
             @endcustomCan

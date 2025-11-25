@@ -8,13 +8,14 @@
     
     $branding = $tenant ? $tenant->branding : null;
     $currentRoute = request()->route() ? request()->route()->getName() : '';
-    $isDashboard = $currentRoute === 'tenant.dashboard';
-    $isRecruiting = str_starts_with($currentRoute, 'tenant.recruiting');
-    $isJobs = str_starts_with($currentRoute, 'tenant.jobs');
-    $isCandidates = str_starts_with($currentRoute, 'tenant.candidates');
-    $isInterviews = str_starts_with($currentRoute, 'tenant.interviews');
-    $isAnalytics = str_starts_with($currentRoute, 'tenant.analytics');
-    $isSettings = str_starts_with($currentRoute, 'tenant.settings');
+    // Handle both tenant.* and subdomain.* routes
+    $isDashboard = in_array($currentRoute, ['tenant.dashboard', 'subdomain.dashboard']);
+    $isRecruiting = str_starts_with($currentRoute, 'tenant.recruiting') || str_starts_with($currentRoute, 'subdomain.recruiting');
+    $isJobs = str_starts_with($currentRoute, 'tenant.jobs') || str_starts_with($currentRoute, 'subdomain.jobs');
+    $isCandidates = str_starts_with($currentRoute, 'tenant.candidates') || str_starts_with($currentRoute, 'subdomain.candidates');
+    $isInterviews = str_starts_with($currentRoute, 'tenant.interviews') || str_starts_with($currentRoute, 'subdomain.interviews');
+    $isAnalytics = str_starts_with($currentRoute, 'tenant.analytics') || str_starts_with($currentRoute, 'subdomain.analytics');
+    $isSettings = str_starts_with($currentRoute, 'tenant.settings') || str_starts_with($currentRoute, 'subdomain.settings');
 @endphp
 
 <div x-data="{ 
@@ -76,7 +77,7 @@ class="fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 text-white lg:translate-x-0"
         <nav class="flex-1 min-h-0 px-4 py-4 space-y-2 overflow-y-auto">
             @if($tenant && is_object($tenant))
             <!-- Dashboard -->
-    <a href="{{ route('tenant.dashboard', $tenant->slug) }}"
+    <a href="{{ tenantRoute('tenant.dashboard', $tenant->slug) }}"
                class="flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors duration-200 {{ $isDashboard ? 'bg-purple-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">
                 <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"></path>
@@ -115,16 +116,16 @@ class="fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 text-white lg:translate-x-0"
                             </svg>
                         </button>
                         <div x-show="jobsOpen" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 transform -translate-y-2" x-transition:enter-end="opacity-100 transform translate-y-0" class="ml-8 mt-2 space-y-1">
-                            <a href="{{ route('tenant.jobs.index', $tenant->slug) }}"
-                               class="flex items-center px-3 py-2 text-sm text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors duration-200 {{ str_starts_with($currentRoute, 'tenant.jobs.index') ? 'bg-gray-700 text-white' : '' }}">
+                            <a href="{{ tenantRoute('tenant.jobs.index', $tenant->slug) }}"
+                               class="flex items-center px-3 py-2 text-sm text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors duration-200 {{ (str_starts_with($currentRoute, 'tenant.jobs.index') || str_starts_with($currentRoute, 'subdomain.jobs.index')) ? 'bg-gray-700 text-white' : '' }}">
                                 <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
                                 </svg>
                                 All Jobs
                             </a>
                             @customCan('create_jobs', $tenant)
-                            <a href="{{ route('tenant.jobs.create', $tenant->slug) }}" 
-                               class="flex items-center px-3 py-2 text-sm text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors duration-200 {{ $currentRoute === 'tenant.jobs.create' ? 'bg-gray-700 text-white' : '' }}">
+                            <a href="{{ tenantRoute('tenant.jobs.create', $tenant->slug) }}" 
+                               class="flex items-center px-3 py-2 text-sm text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors duration-200 {{ in_array($currentRoute, ['tenant.jobs.create', 'subdomain.jobs.create']) ? 'bg-gray-700 text-white' : '' }}">
                                 <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                                 </svg>
@@ -149,8 +150,8 @@ class="fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 text-white lg:translate-x-0"
                             </svg>
                         </button>
                         <div x-show="candidatesOpen" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 transform -translate-y-2" x-transition:enter-end="opacity-100 transform translate-y-0" class="ml-8 mt-2 space-y-1">
-                            <a href="{{ route('tenant.candidates.index', $tenant->slug) }}"
-                               class="flex items-center px-3 py-2 text-sm text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors duration-200 {{ str_starts_with($currentRoute, 'tenant.candidates.index') ? 'bg-gray-700 text-white' : '' }}">
+                            <a href="{{ tenantRoute('tenant.candidates.index', $tenant->slug) }}"
+                               class="flex items-center px-3 py-2 text-sm text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors duration-200 {{ (str_starts_with($currentRoute, 'tenant.candidates.index') || str_starts_with($currentRoute, 'subdomain.candidates.index')) ? 'bg-gray-700 text-white' : '' }}">
                                 <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
                                 </svg>
@@ -165,8 +166,8 @@ class="fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 text-white lg:translate-x-0"
                         $jobParam = request()->route('job');
                         $jobId = is_object($jobParam) ? $jobParam->id : $jobParam;
                     @endphp
-                    <a href="{{ route('tenant.jobs.pipeline', [$tenant->slug, $jobId]) }}" 
-                       class="flex items-center px-3 py-2 text-sm text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors duration-200 {{ str_starts_with($currentRoute, 'tenant.jobs.pipeline') ? 'bg-gray-700 text-white' : '' }}">
+                    <a href="{{ tenantRoute('tenant.jobs.pipeline', [$tenant->slug, $jobId]) }}" 
+                       class="flex items-center px-3 py-2 text-sm text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors duration-200 {{ (str_starts_with($currentRoute, 'tenant.jobs.pipeline') || str_starts_with($currentRoute, 'subdomain.jobs.pipeline')) ? 'bg-gray-700 text-white' : '' }}">
                         <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
                         </svg>
@@ -175,7 +176,7 @@ class="fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 text-white lg:translate-x-0"
                     @endif
 
                     <!-- Interviews -->
-                    <a href="{{ route('tenant.interviews.index', $tenant->slug) }}" 
+                    <a href="{{ tenantRoute('tenant.interviews.index', $tenant->slug) }}" 
                        class="flex items-center px-3 py-2 text-sm text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors duration-200 {{ $isInterviews ? 'bg-gray-700 text-white' : '' }}">
                         <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
@@ -185,7 +186,7 @@ class="fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 text-white lg:translate-x-0"
 
                     <!-- Analytics -->
                     @customCan('view_analytics', $tenant)
-                    <a href="{{ route('tenant.analytics.index', $tenant->slug) }}"
+                    <a href="{{ tenantRoute('tenant.analytics.index', $tenant->slug) }}"
                        class="flex items-center px-3 py-2 text-sm text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors duration-200 {{ $isAnalytics ? 'bg-gray-700 text-white' : '' }}">
                         <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
@@ -197,7 +198,7 @@ class="fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 text-white lg:translate-x-0"
             </div>
 
             <!-- Careers Site (Public Page) -->
-            <a href="{{ route('careers.index', $tenant->slug) }}" 
+            <a href="{{ tenantRoute('careers.index', $tenant->slug) }}" 
                target="_blank"
                class="flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors duration-200 text-gray-300 hover:bg-gray-700 hover:text-white">
                 <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -226,8 +227,8 @@ class="fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 text-white lg:translate-x-0"
                     </svg>
                 </button>
                 <div x-show="settingsOpen" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 transform -translate-y-2" x-transition:enter-end="opacity-100 transform translate-y-0" class="ml-8 mt-2 space-y-1">
-                    <a href="{{ route('tenant.settings.general', $tenant->slug) }}" 
-                       class="flex items-center px-3 py-2 text-sm text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors duration-200 {{ $currentRoute === 'tenant.settings.general' ? 'bg-gray-700 text-white' : '' }}">
+                    <a href="{{ tenantRoute('tenant.settings.general', $tenant->slug) }}" 
+                       class="flex items-center px-3 py-2 text-sm text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors duration-200 {{ in_array($currentRoute, ['tenant.settings.general', 'subdomain.settings.general']) ? 'bg-gray-700 text-white' : '' }}">
                         <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
@@ -235,7 +236,7 @@ class="fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 text-white lg:translate-x-0"
                         General Settings
     </a>
                     @customCan('manage_users', $tenant)
-                    <a href="{{ route('subscription.show', $tenant->slug) }}" 
+                    <a href="{{ tenantRoute('subscription.show', $tenant->slug) }}" 
                        class="flex items-center px-3 py-2 text-sm text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors duration-200 {{ str_starts_with($currentRoute, 'subscription') ? 'bg-gray-700 text-white' : '' }}">
                         <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
@@ -243,22 +244,22 @@ class="fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 text-white lg:translate-x-0"
                         Subscription
                     </a>
                     @endcustomCan
-                    <a href="{{ route('tenant.settings.careers', $tenant->slug) }}" 
-                       class="flex items-center px-3 py-2 text-sm text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors duration-200 {{ $currentRoute === 'tenant.settings.careers' ? 'bg-gray-700 text-white' : '' }}">
+                    <a href="{{ tenantRoute('tenant.settings.careers', $tenant->slug) }}" 
+                       class="flex items-center px-3 py-2 text-sm text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors duration-200 {{ in_array($currentRoute, ['tenant.settings.careers', 'subdomain.settings.careers']) ? 'bg-gray-700 text-white' : '' }}">
                         <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zM21 5a2 2 0 00-2-2h-4a2 2 0 00-2 2v12a4 4 0 004 4h4a2 2 0 002-2V5z"></path>
                         </svg>
                         Careers Branding
                     </a>
-                    <a href="{{ route('tenant.settings.team', $tenant->slug) }}" 
-                       class="flex items-center px-3 py-2 text-sm text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors duration-200 {{ $currentRoute === 'tenant.settings.team' ? 'bg-gray-700 text-white' : '' }}">
+                    <a href="{{ tenantRoute('tenant.settings.team', $tenant->slug) }}" 
+                       class="flex items-center px-3 py-2 text-sm text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors duration-200 {{ in_array($currentRoute, ['tenant.settings.team', 'subdomain.settings.team']) ? 'bg-gray-700 text-white' : '' }}">
                         <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
                         </svg>
                         Team Management
                     </a>
-                    <a href="{{ route('tenant.settings.roles', $tenant->slug) }}" 
-                       class="flex items-center px-3 py-2 text-sm text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors duration-200 {{ $currentRoute === 'tenant.settings.roles' ? 'bg-gray-700 text-white' : '' }}">
+                    <a href="{{ tenantRoute('tenant.settings.roles', $tenant->slug) }}" 
+                       class="flex items-center px-3 py-2 text-sm text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors duration-200 {{ in_array($currentRoute, ['tenant.settings.roles', 'subdomain.settings.roles']) ? 'bg-gray-700 text-white' : '' }}">
                         <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
                         </svg>

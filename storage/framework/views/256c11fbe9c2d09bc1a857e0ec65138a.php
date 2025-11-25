@@ -24,7 +24,7 @@
     <nav class="flex-1 overflow-y-auto p-4">
         <?php if($tenant && is_object($tenant)): ?>
         <div class="space-y-2">
-            <a href="<?php echo e(route('tenant.dashboard', ['tenant' => $tenant->slug ?? tenant()->slug])); ?>" class="block py-2 text-gray-700 hover:text-blue-600">Dashboard</a>
+            <a href="<?php echo e(tenantRoute('tenant.dashboard', $tenant->slug ?? tenant()->slug)); ?>" class="block py-2 text-gray-700 hover:text-blue-600">Dashboard</a>
             
             
             <div class="mt-4">
@@ -44,9 +44,9 @@
                             </svg>
                         </button>
                         <div data-mobile-jobs-content class="ml-4 space-y-1 hidden">
-                            <a href="<?php echo e(route('tenant.jobs.index', ['tenant' => $tenant->slug ?? tenant()->slug])); ?>" class="block py-1 text-gray-700 hover:text-blue-600">All Jobs</a>
+                            <a href="<?php echo e(tenantRoute('tenant.jobs.index', $tenant->slug ?? tenant()->slug)); ?>" class="block py-1 text-gray-700 hover:text-blue-600">All Jobs</a>
                             <?php if (app('App\Support\CustomPermissionChecker')->check('create_jobs', $tenant ?? tenant())): ?>
-                            <a href="<?php echo e(route('tenant.jobs.create', ['tenant' => $tenant->slug ?? tenant()->slug])); ?>" class="block py-1 text-gray-700 hover:text-blue-600">Create Job</a>
+                            <a href="<?php echo e(tenantRoute('tenant.jobs.create', $tenant->slug ?? tenant()->slug)); ?>" class="block py-1 text-gray-700 hover:text-blue-600">Create Job</a>
                             <?php endif; ?>
                         </div>
                     </div>
@@ -60,7 +60,7 @@
                             </svg>
                         </button>
                         <div data-mobile-candidates-content class="ml-4 space-y-1 hidden">
-                            <a href="<?php echo e(route('tenant.candidates.index', ['tenant' => $tenant->slug ?? tenant()->slug])); ?>" class="block py-1 text-gray-700 hover:text-blue-600">All Candidates</a>
+                            <a href="<?php echo e(tenantRoute('tenant.candidates.index', $tenant->slug ?? tenant()->slug)); ?>" class="block py-1 text-gray-700 hover:text-blue-600">All Candidates</a>
                         </div>
                     </div>
 
@@ -69,18 +69,18 @@
                         $jobParam = request()->route('job');
                         $jobId = is_object($jobParam) ? $jobParam->id : $jobParam;
                     ?>
-                    <a href="<?php echo e(route('tenant.jobs.pipeline', [$tenant->slug ?? tenant()->slug, $jobId])); ?>" class="block py-1 text-gray-700 hover:text-blue-600">Pipeline</a>
+                    <a href="<?php echo e(tenantRoute('tenant.jobs.pipeline', [$tenant->slug ?? tenant()->slug, $jobId])); ?>" class="block py-1 text-gray-700 hover:text-blue-600">Pipeline</a>
                     <?php endif; ?>
 
-                    <a href="<?php echo e(route('tenant.interviews.index', ['tenant' => $tenant->slug ?? tenant()->slug])); ?>" class="block py-1 text-gray-700 hover:text-blue-600">Interviews</a>
+                    <a href="<?php echo e(tenantRoute('tenant.interviews.index', $tenant->slug ?? tenant()->slug)); ?>" class="block py-1 text-gray-700 hover:text-blue-600">Interviews</a>
 
                     <?php if (app('App\Support\CustomPermissionChecker')->check('view_analytics', $tenant ?? tenant())): ?>
-                    <a href="<?php echo e(route('tenant.analytics.index', ['tenant' => $tenant->slug ?? tenant()->slug])); ?>" class="block py-1 text-gray-700 hover:text-blue-600">Analytics</a>
+                    <a href="<?php echo e(tenantRoute('tenant.analytics.index', $tenant->slug ?? tenant()->slug)); ?>" class="block py-1 text-gray-700 hover:text-blue-600">Analytics</a>
                     <?php endif; ?>
                 </div>
             </div>
 
-            <a href="<?php echo e(route('careers.index', ['tenant' => $tenant->slug ?? tenant()->slug])); ?>" target="_blank" class="block py-2 text-gray-700 hover:text-blue-600">Careers Site</a>
+            <a href="<?php echo e(tenantRoute('careers.index', $tenant->slug ?? tenant()->slug)); ?>" target="_blank" class="block py-2 text-gray-700 hover:text-blue-600">Careers Site</a>
 
             <?php if (app('App\Support\CustomPermissionChecker')->check('manage_settings', $tenant ?? tenant())): ?>
             
@@ -92,13 +92,13 @@
                     </svg>
                 </button>
                 <div data-mobile-settings-content class="ml-4 space-y-1 hidden">
-                    <a href="<?php echo e(route('tenant.settings.general', ['tenant' => $tenant->slug ?? tenant()->slug])); ?>" class="block py-1 text-gray-700 hover:text-blue-600">General Settings</a>
+                    <a href="<?php echo e(tenantRoute('tenant.settings.general', $tenant->slug ?? tenant()->slug)); ?>" class="block py-1 text-gray-700 hover:text-blue-600">General Settings</a>
                     <?php if (app('App\Support\CustomPermissionChecker')->check('manage_users', $tenant ?? tenant())): ?>
-                    <a href="<?php echo e(route('subscription.show', ['tenant' => $tenant->slug ?? tenant()->slug])); ?>" class="block py-1 text-gray-700 hover:text-blue-600">Subscription</a>
+                    <a href="<?php echo e(tenantRoute('subscription.show', $tenant->slug ?? tenant()->slug)); ?>" class="block py-1 text-gray-700 hover:text-blue-600">Subscription</a>
                     <?php endif; ?>
-                    <a href="<?php echo e(route('tenant.settings.careers', ['tenant' => $tenant->slug ?? tenant()->slug])); ?>" class="block py-1 text-gray-700 hover:text-blue-600">Careers Branding</a>
-                    <a href="<?php echo e(route('tenant.settings.team', ['tenant' => $tenant->slug ?? tenant()->slug])); ?>" class="block py-1 text-gray-700 hover:text-blue-600">Team Management</a>
-                    <a href="<?php echo e(route('tenant.settings.roles', ['tenant' => $tenant->slug ?? tenant()->slug])); ?>" class="block py-1 text-gray-700 hover:text-blue-600">Roles & Permissions</a>
+                    <a href="<?php echo e(tenantRoute('tenant.settings.careers', $tenant->slug ?? tenant()->slug)); ?>" class="block py-1 text-gray-700 hover:text-blue-600">Careers Branding</a>
+                    <a href="<?php echo e(tenantRoute('tenant.settings.team', $tenant->slug ?? tenant()->slug)); ?>" class="block py-1 text-gray-700 hover:text-blue-600">Team Management</a>
+                    <a href="<?php echo e(tenantRoute('tenant.settings.roles', $tenant->slug ?? tenant()->slug)); ?>" class="block py-1 text-gray-700 hover:text-blue-600">Roles & Permissions</a>
                 </div>
             </div>
             <?php endif; ?>

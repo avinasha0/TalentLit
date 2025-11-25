@@ -16,6 +16,7 @@
     $isInterviews = str_starts_with($currentRoute, 'tenant.interviews') || str_starts_with($currentRoute, 'subdomain.interviews');
     $isAnalytics = str_starts_with($currentRoute, 'tenant.analytics') || str_starts_with($currentRoute, 'subdomain.analytics');
     $isSettings = str_starts_with($currentRoute, 'tenant.settings') || str_starts_with($currentRoute, 'subdomain.settings');
+    $isEmployeeOnboarding = str_starts_with($currentRoute, 'tenant.employee-onboarding') || str_starts_with($currentRoute, 'subdomain.employee-onboarding');
 
     $currentPlan = $tenant && is_object($tenant) ? $tenant->activeSubscription?->plan : null;
     $analyticsLocked = !$currentPlan || !$currentPlan->analytics_enabled || $currentPlan->slug === 'free';
@@ -219,6 +220,18 @@ class="fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 text-white lg:translate-x-0"
                     <?php endif; ?>
                 </div>
             </div>
+
+            <!-- Employee Onboarding -->
+            <a href="<?php echo e(tenantRoute('tenant.employee-onboarding.index', $tenant->slug)); ?>"
+               class="flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-colors duration-200 <?php echo e($isEmployeeOnboarding ? 'bg-purple-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'); ?>">
+                <div class="flex items-center">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                    </svg>
+                    Employee Onboarding
+                </div>
+                <span class="ml-2 px-2 py-0.5 text-xs font-semibold rounded-full bg-yellow-600/20 text-yellow-400">Under Development</span>
+            </a>
 
             <!-- Careers Site (Public Page) -->
             <a href="<?php echo e(tenantRoute('careers.index', $tenant->slug)); ?>" 

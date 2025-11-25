@@ -84,7 +84,13 @@
                     <a href="{{ route('login') }}" class="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium">
                         Sign In
                     </a>
-                    <a href="{{ route('register') }}" class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-lg">
+                    @auth
+                        <form id="cta-register-logout-form" action="{{ route('logout') }}" method="POST" class="hidden">
+                            @csrf
+                            <input type="hidden" name="redirect_to" value="{{ route('register', [], false) }}">
+                        </form>
+                    @endauth
+                    <a href="{{ route('register') }}" @auth onclick="event.preventDefault(); document.getElementById('cta-register-logout-form').submit();" @endauth class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-lg">
                         Get Started Free
                     </a>
                 </div>
@@ -126,7 +132,7 @@
                         <a href="{{ route('login') }}" class="block px-3 py-3 text-base text-gray-700 hover:text-indigo-600 hover:bg-gray-50 rounded-lg transition-colors duration-200">
                             Sign In
                         </a>
-                        <a href="{{ route('register') }}" class="block px-3 py-3 text-base bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 rounded-lg transition-all duration-200">
+                        <a href="{{ route('register') }}" @auth onclick="event.preventDefault(); document.getElementById('cta-register-logout-form').submit();" @endauth class="block px-3 py-3 text-base bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 rounded-lg transition-all duration-200">
                             Get Started Free
                         </a>
                     </div>

@@ -47,5 +47,7 @@
         </div>
         
         @include('layouts.partials.mobile-menu')
+        
+        @stack('scripts')
     </body>
 </html>

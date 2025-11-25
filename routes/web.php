@@ -644,6 +644,14 @@ Route::prefix('api')->group(function () {
     });
 });
 
+// Employee Onboarding API routes
+Route::middleware(['capture.tenant', 'tenant', 'auth', 'custom.permission:view_dashboard'])->group(function () {
+    Route::get('/{tenant}/api/onboardings', [EmployeeOnboardingController::class, 'apiIndex'])->name('api.onboardings.index');
+    Route::get('/{tenant}/api/onboardings/{id}', [EmployeeOnboardingController::class, 'apiShow'])->name('api.onboardings.show');
+    Route::post('/{tenant}/api/onboardings/bulk/remind', [EmployeeOnboardingController::class, 'apiBulkRemind'])->name('api.onboardings.bulk.remind');
+    Route::post('/{tenant}/api/onboardings/{id}/convert', [EmployeeOnboardingController::class, 'apiConvert'])->name('api.onboardings.convert');
+});
+
 // Add GET logout route for both testing and production
 Route::get('/logout', function() {
     auth()->logout();

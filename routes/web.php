@@ -606,6 +606,17 @@ Route::middleware(['capture.tenant', 'tenant', 'auth'])->group(function () {
         Route::post('/{tenant}/email-templates/load-premade', [App\Http\Controllers\Tenant\EmailTemplateController::class, 'loadPremadeTemplate'])->name('tenant.email-templates.load-premade');
     });
 
+    // Onboarding Email Template Routes - Owner, Admin, Recruiter
+    Route::middleware('custom.permission:manage_email_templates')->group(function () {
+        Route::get('/{tenant}/onboarding-email-templates', [App\Http\Controllers\Tenant\OnboardingEmailTemplateController::class, 'index'])->name('tenant.onboarding-email-templates.index');
+        Route::get('/{tenant}/onboarding-email-templates/create', [App\Http\Controllers\Tenant\OnboardingEmailTemplateController::class, 'create'])->name('tenant.onboarding-email-templates.create');
+        Route::post('/{tenant}/onboarding-email-templates', [App\Http\Controllers\Tenant\OnboardingEmailTemplateController::class, 'store'])->name('tenant.onboarding-email-templates.store');
+        Route::get('/{tenant}/onboarding-email-templates/{template}', [App\Http\Controllers\Tenant\OnboardingEmailTemplateController::class, 'show'])->name('tenant.onboarding-email-templates.show');
+        Route::get('/{tenant}/onboarding-email-templates/{template}/edit', [App\Http\Controllers\Tenant\OnboardingEmailTemplateController::class, 'edit'])->name('tenant.onboarding-email-templates.edit');
+        Route::put('/{tenant}/onboarding-email-templates/{template}', [App\Http\Controllers\Tenant\OnboardingEmailTemplateController::class, 'update'])->name('tenant.onboarding-email-templates.update');
+        Route::delete('/{tenant}/onboarding-email-templates/{template}', [App\Http\Controllers\Tenant\OnboardingEmailTemplateController::class, 'destroy'])->name('tenant.onboarding-email-templates.destroy');
+    });
+
     // Currency Demo Route (for testing)
     Route::get('/{tenant}/currency-demo', function ($tenant) {
         return view('currency-demo');
@@ -968,6 +979,17 @@ Route::domain('{subdomain}.' . $appDomain)->middleware(['subdomain.redirect', 's
         Route::get('/email-templates/{template}/preview', [App\Http\Controllers\Tenant\EmailTemplateController::class, 'preview'])->name('subdomain.email-templates.preview');
         Route::post('/email-templates/{template}/duplicate', [App\Http\Controllers\Tenant\EmailTemplateController::class, 'duplicate'])->name('subdomain.email-templates.duplicate');
         Route::post('/email-templates/load-premade', [App\Http\Controllers\Tenant\EmailTemplateController::class, 'loadPremadeTemplate'])->name('subdomain.email-templates.load-premade');
+    });
+
+    // Onboarding Email Template Routes
+    Route::middleware('custom.permission:manage_email_templates')->group(function () {
+        Route::get('/onboarding-email-templates', [App\Http\Controllers\Tenant\OnboardingEmailTemplateController::class, 'index'])->name('subdomain.onboarding-email-templates.index');
+        Route::get('/onboarding-email-templates/create', [App\Http\Controllers\Tenant\OnboardingEmailTemplateController::class, 'create'])->name('subdomain.onboarding-email-templates.create');
+        Route::post('/onboarding-email-templates', [App\Http\Controllers\Tenant\OnboardingEmailTemplateController::class, 'store'])->name('subdomain.onboarding-email-templates.store');
+        Route::get('/onboarding-email-templates/{template}', [App\Http\Controllers\Tenant\OnboardingEmailTemplateController::class, 'show'])->name('subdomain.onboarding-email-templates.show');
+        Route::get('/onboarding-email-templates/{template}/edit', [App\Http\Controllers\Tenant\OnboardingEmailTemplateController::class, 'edit'])->name('subdomain.onboarding-email-templates.edit');
+        Route::put('/onboarding-email-templates/{template}', [App\Http\Controllers\Tenant\OnboardingEmailTemplateController::class, 'update'])->name('subdomain.onboarding-email-templates.update');
+        Route::delete('/onboarding-email-templates/{template}', [App\Http\Controllers\Tenant\OnboardingEmailTemplateController::class, 'destroy'])->name('subdomain.onboarding-email-templates.destroy');
     });
 
     // Account Routes

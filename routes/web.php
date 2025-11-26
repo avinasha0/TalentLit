@@ -656,13 +656,6 @@ Route::middleware(['capture.tenant', 'tenant', 'auth', 'custom.permission:view_d
     Route::get('/{tenant}/api/onboardings/import/template', [EmployeeOnboardingController::class, 'downloadImportTemplate'])->name('api.onboardings.import.template');
 });
 
-// Freeplan Employee Onboarding API routes (without tenant in path)
-Route::middleware(['auth'])->group(function () {
-    Route::post('/freeplan/api/onboardings/import/candidates', [EmployeeOnboardingController::class, 'importCandidates'])->name('freeplan.onboardings.import.candidates');
-    Route::get('/freeplan/api/onboardings/import/template', [EmployeeOnboardingController::class, 'downloadImportTemplate'])->name('freeplan.onboardings.import.template');
-    Route::get('/freeplan/api/onboardings/export/csv', [EmployeeOnboardingController::class, 'apiExportCSV'])->name('freeplan.onboardings.export.csv');
-});
-
 // Add GET logout route for both testing and production
 Route::get('/logout', function() {
     auth()->logout();
@@ -685,9 +678,6 @@ Route::middleware(['auth', 'capture.tenant', 'tenant'])->group(function () {
     Route::get('/{tenant}/onboarding/setup', [App\Http\Controllers\Onboarding\SetupController::class, 'index'])->name('onboarding.setup');
     Route::post('/{tenant}/onboarding/setup', [App\Http\Controllers\Onboarding\SetupController::class, 'store'])->name('onboarding.setup.store');
 });
-
-// Simple onboarding all route
-Route::get('/freeplan/employee-onboarding/all', [App\Http\Controllers\Tenant\EmployeeOnboardingController::class, 'all']);
 
 // ============================================================================
 // SUBDOMAIN ROUTES FOR ENTERPRISE PLANS (NEW - DOES NOT TOUCH EXISTING ROUTES)

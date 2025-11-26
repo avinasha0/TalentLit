@@ -1,5 +1,5 @@
 @php
-    $tenant = $tenant ?? tenant();
+    $tenant = $tenantModel ?? $tenant ?? tenant();
     $tenantSlug = $tenant->slug;
     
     $breadcrumbs = [
@@ -51,14 +51,26 @@
         <x-card>
             <div class="p-4 space-y-4">
                 <!-- Search -->
-                <div>
-                    <label for="search-input" class="sr-only">Search</label>
-                    <input type="text" 
-                           id="search-input"
-                           name="search"
-                           value="{{ request('search', '') }}"
-                           placeholder="Search by name, email, department or role"
-                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                <div class="flex gap-2">
+                    <div class="flex-1 relative">
+                        <label for="search-input" class="sr-only">Search</label>
+                        <input type="text" 
+                               id="search-input"
+                               name="search"
+                               value="{{ request('search', '') }}"
+                               placeholder="Search by name, email, department or role"
+                               class="w-full px-4 py-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                        <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                    <button type="button" 
+                            id="clear-search-btn"
+                            class="px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 whitespace-nowrap">
+                        Clear
+                    </button>
                 </div>
 
                 <!-- Filters -->
@@ -140,20 +152,20 @@
         </div>
 
         <!-- Table Container -->
+        @if($onboardings->isNotEmpty())
         <x-card>
-            <div class="overflow-x-auto">
-                <!-- Desktop Table -->
-                <div class="hidden lg:block">
-                    <table role="table" aria-label="All onboardings table" class="min-w-full divide-y divide-gray-200">
+            <!-- Desktop Table -->
+            <div class="hidden lg:block overflow-hidden">
+                <table role="table" aria-label="All onboardings table" class="w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">
                                     <input type="checkbox" 
                                            id="select-all-checkbox"
                                            aria-label="Select all on this page"
                                            class="rounded border-gray-300 text-purple-600 focus:ring-purple-500">
                                 </th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[180px]">
                                     <button type="button" class="sort-btn" data-sort="fullName">
                                         Candidate
                                         <svg class="w-4 h-4 inline ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -161,9 +173,9 @@
                                         </svg>
                                     </button>
                                 </th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role / Department</th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[200px]">Email</th>
+                                <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[150px]">Role / Dept</th>
+                                <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[120px]">
                                     <button type="button" class="sort-btn" data-sort="joiningDate">
                                         Joining Date
                                         <svg class="w-4 h-4 inline ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -171,31 +183,233 @@
                                         </svg>
                                     </button>
                                 </th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Progress</th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[120px]">Progress</th>
+                                <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[130px]">Status</th>
+                                <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[80px]">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="onboardings-tbody" class="bg-white divide-y divide-gray-200">
-                            <!-- Table rows will be populated by JavaScript -->
+                            @forelse($onboardings as $item)
+                                <tr class="onboarding-item hover:bg-gray-50 transition-colors"
+                                    data-name="{{ strtolower($item->first_name . ' ' . $item->last_name) }}"
+                                    data-email="{{ strtolower($item->email ?? '') }}"
+                                    data-department="{{ strtolower($item->department ?? 'not assigned') }}"
+                                    data-role="{{ strtolower($item->role ?? 'not assigned') }}">
+                                    <td class="px-3 py-3 whitespace-nowrap">
+                                        <input type="checkbox" 
+                                               class="rounded border-gray-300 text-purple-600 focus:ring-purple-500">
+                                    </td>
+                                    <td class="px-3 py-3">
+                                        <div class="flex items-center min-w-0">
+                                            <div class="flex-shrink-0 h-8 w-8">
+                                                <div class="h-8 w-8 rounded-full bg-purple-600 flex items-center justify-center text-white font-medium text-xs">
+                                                    {{ strtoupper(substr($item->first_name, 0, 1) . substr($item->last_name, 0, 1)) }}
+                                                </div>
+                                            </div>
+                                            <div class="ml-2 min-w-0 flex-1">
+                                                <div class="text-sm font-medium text-gray-900 truncate">
+                                                    {{ $item->first_name }} {{ $item->last_name }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-3 py-3">
+                                        <div class="text-sm text-gray-900 truncate" title="{{ $item->email }}">{{ $item->email }}</div>
+                                    </td>
+                                    <td class="px-3 py-3">
+                                        <div class="text-sm text-gray-900 truncate" title="{{ $item->role ?? 'N/A' }}">{{ $item->role ?? 'N/A' }}</div>
+                                        <div class="text-xs text-gray-500 truncate" title="{{ $item->department ?? 'N/A' }}">{{ $item->department ?? 'N/A' }}</div>
+                                    </td>
+                                    <td class="px-3 py-3 whitespace-nowrap">
+                                        <div class="text-sm text-gray-900">
+                                            @if($item->joining_date)
+                                                {{ \Carbon\Carbon::parse($item->joining_date)->format('M d, Y') }}
+                                            @else
+                                                N/A
+                                            @endif
+                                        </div>
+                                    </td>
+                                    <td class="px-3 py-3">
+                                        <div class="flex items-center space-x-1.5">
+                                            <div class="flex-1 bg-gray-200 rounded-full h-2 min-w-[60px] max-w-[70px]">
+                                                @php
+                                                    $progress = str_replace('%', '', $item->progress ?? '0');
+                                                    $progress = is_numeric($progress) ? (int)$progress : 0;
+                                                @endphp
+                                                <div class="bg-purple-600 h-2 rounded-full transition-all duration-300" 
+                                                     style="width: {{ $progress }}%"
+                                                     role="progressbar" 
+                                                     aria-valuemin="0" 
+                                                     aria-valuemax="100" 
+                                                     aria-valuenow="{{ $progress }}"></div>
+                                            </div>
+                                            <span class="text-xs text-gray-600 whitespace-nowrap">{{ $item->progress ?? '0%' }}</span>
+                                        </div>
+                                    </td>
+                                    <td class="px-3 py-3 whitespace-nowrap">
+                                        @php
+                                            $status = $item->status ?? 'Pre-boarding';
+                                            $statusConfig = [
+                                                'Pre-boarding' => ['bg' => 'bg-yellow-400', 'text' => 'text-yellow-800'],
+                                                'Pending Docs' => ['bg' => 'bg-orange-400', 'text' => 'text-orange-800'],
+                                                'IT Pending' => ['bg' => 'bg-blue-400', 'text' => 'text-blue-800'],
+                                                'Joining Soon' => ['bg' => 'bg-indigo-500', 'text' => 'text-indigo-800'],
+                                                'Completed' => ['bg' => 'bg-green-400', 'text' => 'text-green-800'],
+                                                'Overdue' => ['bg' => 'bg-red-400', 'text' => 'text-red-800']
+                                            ];
+                                            $config = $statusConfig[$status] ?? ['bg' => 'bg-gray-400', 'text' => 'text-gray-800'];
+                                        @endphp
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium {{ $config['bg'] }} {{ $config['text'] }}">
+                                            {{ $status }}
+                                        </span>
+                                    </td>
+                                    <td class="px-3 py-3 whitespace-nowrap text-sm font-medium">
+                                        <a href="#" class="text-blue-600 hover:text-blue-800">View</a>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="8" class="px-6 py-12 text-center">
+                                        <div class="text-sm text-gray-500">No onboardings found</div>
+                                    </td>
+                                </tr>
+                            @endforelse
                         </tbody>
                     </table>
                 </div>
 
                 <!-- Mobile Cards -->
-                <div id="mobile-cards" class="lg:hidden space-y-4 p-4">
-                    <!-- Cards will be populated by JavaScript -->
+                <div id="mobile-cards" class="lg:hidden space-y-3 px-2 py-2">
+                    @forelse($onboardings as $item)
+                        <x-card class="onboarding-item" 
+                                data-name="{{ strtolower($item->first_name . ' ' . $item->last_name) }}"
+                                data-email="{{ strtolower($item->email ?? '') }}"
+                                data-department="{{ strtolower($item->department ?? 'not assigned') }}"
+                                data-role="{{ strtolower($item->role ?? 'not assigned') }}">
+                            <div class="p-3 space-y-2.5">
+                                <!-- Candidate Header -->
+                                <div class="flex items-start justify-between gap-2">
+                                    <div class="flex items-center space-x-2.5 flex-1 min-w-0">
+                                        <div class="flex-shrink-0 h-10 w-10">
+                                            <div class="h-10 w-10 rounded-full bg-purple-600 flex items-center justify-center text-white font-medium text-sm">
+                                                {{ strtoupper(substr($item->first_name, 0, 1) . substr($item->last_name, 0, 1)) }}
+                                            </div>
+                                        </div>
+                                        <div class="flex-1 min-w-0">
+                                            <div class="text-sm font-semibold text-gray-900 truncate">
+                                                {{ $item->first_name }} {{ $item->last_name }}
+                                            </div>
+                                            <div class="text-xs text-gray-500 truncate mt-0.5">{{ $item->email }}</div>
+                                        </div>
+                                    </div>
+                                    @php
+                                        $status = $item->status ?? 'Pre-boarding';
+                                        $statusConfig = [
+                                            'Pre-boarding' => ['bg' => 'bg-yellow-400', 'text' => 'text-yellow-800'],
+                                            'Pending Docs' => ['bg' => 'bg-orange-400', 'text' => 'text-orange-800'],
+                                            'IT Pending' => ['bg' => 'bg-blue-400', 'text' => 'text-blue-800'],
+                                            'Joining Soon' => ['bg' => 'bg-indigo-500', 'text' => 'text-indigo-800'],
+                                            'Completed' => ['bg' => 'bg-green-400', 'text' => 'text-green-800'],
+                                            'Overdue' => ['bg' => 'bg-red-400', 'text' => 'text-red-800']
+                                        ];
+                                        $config = $statusConfig[$status] ?? ['bg' => 'bg-gray-400', 'text' => 'text-gray-800'];
+                                    @endphp
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium {{ $config['bg'] }} {{ $config['text'] }} flex-shrink-0">
+                                        {{ $status }}
+                                    </span>
+                                </div>
+                                
+                                <!-- Details - Compact Layout -->
+                                <div class="grid grid-cols-2 gap-2.5 pt-2 border-t border-gray-100">
+                                    <div class="min-w-0">
+                                        <div class="text-xs font-medium text-gray-500 mb-0.5">Role</div>
+                                        <div class="text-sm font-medium text-gray-900 truncate" title="{{ $item->role ?? 'Not Assigned' }}">
+                                            {{ $item->role ?? 'Not Assigned' }}
+                                        </div>
+                                        <div class="text-xs text-gray-500 truncate mt-0.5" title="{{ $item->department ?? 'Not Assigned' }}">
+                                            {{ $item->department ?? 'Not Assigned' }}
+                                        </div>
+                                    </div>
+                                    <div class="min-w-0">
+                                        <div class="text-xs font-medium text-gray-500 mb-0.5">Joining</div>
+                                        <div class="text-sm font-medium text-gray-900">
+                                            @if($item->joining_date)
+                                                {{ \Carbon\Carbon::parse($item->joining_date)->format('M d, Y') }}
+                                            @else
+                                                N/A
+                                            @endif
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Progress -->
+                                <div class="pt-2 border-t border-gray-100">
+                                    <div class="flex items-center justify-between mb-1.5">
+                                        <span class="text-xs font-medium text-gray-600">Progress</span>
+                                        <span class="text-xs font-semibold text-gray-900">{{ $item->progress ?? '0%' }}</span>
+                                    </div>
+                                    @php
+                                        $progress = str_replace('%', '', $item->progress ?? '0');
+                                        $progress = is_numeric($progress) ? (int)$progress : 0;
+                                    @endphp
+                                    <div class="w-full bg-gray-200 rounded-full h-2.5">
+                                        <div class="bg-purple-600 h-2.5 rounded-full transition-all duration-300" 
+                                             style="width: {{ $progress }}%"
+                                             role="progressbar" 
+                                             aria-valuemin="0" 
+                                             aria-valuemax="100" 
+                                             aria-valuenow="{{ $progress }}"></div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Actions -->
+                                <div class="pt-2 border-t border-gray-100">
+                                    <a href="#" class="inline-flex items-center text-sm font-medium text-purple-600 hover:text-purple-800">
+                                        View Details
+                                        <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                        </svg>
+                                    </a>
+                                </div>
+                            </div>
+                        </x-card>
+                    @empty
+                        <x-card>
+                            <div class="px-4 py-8 text-center">
+                                <div class="text-sm text-gray-500">No onboardings found</div>
+                            </div>
+                        </x-card>
+                    @endforelse
                 </div>
             </div>
 
             <!-- Pagination -->
+            @if(method_exists($onboardings, 'links'))
             <div id="pagination-container" class="px-6 py-4 border-t border-gray-200">
                 {{ $onboardings->appends(request()->except('page'))->links() }}
             </div>
+            @endif
         </x-card>
+        @endif
+
+        <!-- No Search Results State -->
+        <div id="no-results-message" class="hidden">
+            <x-card>
+                <div class="px-6 py-12 text-center">
+                    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                    <h3 class="mt-2 text-sm font-medium text-gray-900">No results found</h3>
+                    <p class="mt-1 text-sm text-gray-500">
+                        No onboardings match your search criteria. Try adjusting your search or filters.
+                    </p>
+                </div>
+            </x-card>
+        </div>
 
         <!-- Empty State -->
-        <div id="empty-state" class="hidden">
+        @if($onboardings->isEmpty())
+        <div id="empty-state">
             <x-card>
                 <div class="text-center py-12">
                     <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -206,15 +420,15 @@
                         There are no active onboarding flows. Click "Start Onboarding" to create the first one.
                     </p>
                     <div class="mt-6">
-                        <button type="button" 
-                                id="start-onboarding-empty"
-                                class="inline-flex items-center px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700">
+                        <a href="{{ route('tenant.employee-onboarding.new', $tenantSlug) }}" 
+                           class="inline-flex items-center px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700">
                             Start Onboarding
-                        </button>
+                        </a>
                     </div>
                 </div>
             </x-card>
         </div>
+        @endif
 
         <!-- Loading Skeleton -->
         <div id="loading-skeleton" class="hidden">
@@ -290,7 +504,7 @@
                             <input type="file" id="import-file" name="file" accept=".csv,.xlsx,.xls" required class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700">
                         </div>
                         <div class="flex items-center justify-between">
-                            <a href="/{{ $tenantSlug }}/api/onboardings/import/template" class="text-sm text-purple-600 hover:text-purple-800">Download Template</a>
+                            <a href="{{ route('api.onboardings.import.template', $tenantSlug) }}" class="text-sm text-purple-600 hover:text-purple-800">Download Template</a>
                             <div class="flex gap-2">
                                 <button type="button" id="cancel-import" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">Cancel</button>
                                 <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700">Import</button>
@@ -362,7 +576,8 @@
                 submitBtn.disabled = true;
                 submitBtn.textContent = 'Importing...';
                 
-                fetch('/{{ $tenantSlug }}/api/onboardings/import/candidates', {
+                const importUrl = @json(route('api.onboardings.import.candidates', $tenantSlug));
+                fetch(importUrl, {
                     method: 'POST',
                     headers: {
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
@@ -376,11 +591,8 @@
                     if (data.success) {
                         alert(data.message || 'Candidates imported successfully');
                         closeImportModal();
-                        if (typeof window.loadOnboardings === 'function') {
-                            window.loadOnboardings();
-                        } else {
-                            location.reload();
-                        }
+                        // Reload page to show updated data
+                        location.reload();
                     } else {
                         alert(data.message || 'Import failed');
                     }
@@ -400,5 +612,116 @@
     window.closeImportModal = closeImportModal;
 })();
 </script>
-<script src="{{ asset('js/employee-onboarding-all.js') }}?v={{ time() }}" onerror="console.error('Failed to load employee-onboarding-all.js')" onload="console.log('employee-onboarding-all.js loaded successfully')"></script>
+{{-- JavaScript for interactive features (search, filters) - works with already-rendered data --}}
+<script>
+(function() {
+    'use strict';
+    
+    // Client-side search functionality (works with rendered data)
+    const searchInput = document.getElementById('search-input');
+    const onboardingItems = document.querySelectorAll('.onboarding-item');
+    const mobileCardsContainer = document.getElementById('mobile-cards');
+    const tableBody = document.getElementById('onboardings-tbody');
+    const noResultsMessage = document.getElementById('no-results-message');
+    
+    function performSearch() {
+        const searchTerm = (searchInput?.value || '').trim().toLowerCase();
+        let visibleCount = 0;
+        
+        if (onboardingItems.length === 0) return;
+        
+        onboardingItems.forEach(item => {
+            const name = item.getAttribute('data-name') || '';
+            const email = item.getAttribute('data-email') || '';
+            const department = item.getAttribute('data-department') || '';
+            const role = item.getAttribute('data-role') || '';
+            
+            const matches = !searchTerm || 
+                name.includes(searchTerm) || 
+                email.includes(searchTerm) || 
+                department.includes(searchTerm) || 
+                role.includes(searchTerm);
+            
+            if (matches) {
+                item.style.display = '';
+                visibleCount++;
+            } else {
+                item.style.display = 'none';
+            }
+        });
+        
+        // Show/hide empty state
+        if (visibleCount === 0 && noResultsMessage) {
+            noResultsMessage.classList.remove('hidden');
+            if (tableBody) tableBody.closest('table').style.display = 'none';
+            if (mobileCardsContainer) mobileCardsContainer.style.display = 'none';
+        } else {
+            if (noResultsMessage) noResultsMessage.classList.add('hidden');
+            if (tableBody) tableBody.closest('table').style.display = '';
+            if (mobileCardsContainer) mobileCardsContainer.style.display = '';
+        }
+    }
+    
+    // Search on input (debounced)
+    if (searchInput) {
+        let searchTimeout;
+        searchInput.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(performSearch, 300);
+        });
+        
+        // Search on Enter
+        searchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                performSearch();
+            }
+        });
+    }
+    
+    // Clear search button
+    const clearSearchBtn = document.getElementById('clear-search-btn');
+    if (clearSearchBtn) {
+        clearSearchBtn.addEventListener('click', function() {
+            if (searchInput) {
+                searchInput.value = '';
+                performSearch();
+            }
+        });
+    }
+    
+    // Import modal handlers (keep existing functionality)
+    const importBtn = document.getElementById('import-candidates-btn');
+    const importModal = document.getElementById('import-modal');
+    const closeModalBtn = document.getElementById('close-import-modal');
+    const cancelBtn = document.getElementById('cancel-import-btn');
+    
+    function openImportModal() {
+        if (importModal) importModal.classList.remove('hidden');
+    }
+    
+    function closeImportModal() {
+        if (importModal) importModal.classList.add('hidden');
+    }
+    
+    if (importBtn) {
+        importBtn.addEventListener('click', openImportModal);
+    }
+    if (closeModalBtn) {
+        closeModalBtn.addEventListener('click', closeImportModal);
+    }
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', closeImportModal);
+    }
+    
+    // Export CSV button
+    const exportBtn = document.getElementById('export-csv-btn');
+    if (exportBtn) {
+        exportBtn.addEventListener('click', function() {
+            const tenantSlug = @json($tenantSlug);
+            window.location.href = `/${tenantSlug}/api/onboardings/export/csv`;
+        });
+    }
+})();
+</script>
 @endpush

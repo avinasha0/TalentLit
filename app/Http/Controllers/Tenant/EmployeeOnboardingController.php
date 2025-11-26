@@ -43,12 +43,11 @@ class EmployeeOnboardingController extends Controller
 
     public function all(Request $request, string $tenant = null)
     {
-        // Get tenant from middleware or user's first tenant for freeplan route
+        // Get tenant from middleware (tenant is resolved from route parameter)
         $tenantModel = tenant();
         
-        if (!$tenantModel && auth()->check()) {
-            // For freeplan route, get user's first tenant
-            $tenantModel = auth()->user()->tenants->first();
+        if (!$tenantModel) {
+            abort(500, 'Tenant not resolved. Please check your subdomain configuration.');
         }
         
         // Fetch onboarding candidates from candidates table (same approach as API)
@@ -106,7 +105,7 @@ class EmployeeOnboardingController extends Controller
             ];
         });
         
-        return view('freeplan.employee-onboarding.all', compact('onboardings', 'tenantModel'));
+        return view('tenant.employee-onboarding.all', compact('onboardings', 'tenantModel'));
     }
 
     public function new(Request $request, string $tenant = null)
@@ -595,15 +594,6 @@ class EmployeeOnboardingController extends Controller
     {
         $tenantModel = tenant();
         
-        // For freeplan route, get tenant from user's first tenant
-        if (!$tenantModel && auth()->check()) {
-            $tenantModel = auth()->user()->tenants->first();
-            if ($tenantModel) {
-                // Set tenant context for the import
-                \App\Support\Tenancy::set($tenantModel);
-            }
-        }
-        
         if (!$tenantModel) {
             return response()->json(['error' => 'Tenant not resolved. Please ensure you have access to a tenant.'], 500);
         }
@@ -781,10 +771,10 @@ class EmployeeOnboardingController extends Controller
      */
     public function downloadImportTemplate(Request $request, string $tenant = null)
     {
-        // For freeplan route, get tenant from user's first tenant
         $tenantModel = tenant();
-        if (!$tenantModel && auth()->check()) {
-            $tenantModel = auth()->user()->tenants->first();
+        
+        if (!$tenantModel) {
+            abort(500, 'Tenant not resolved. Please check your subdomain configuration.');
         }
         $headers = [
             'Content-Type' => 'text/csv',

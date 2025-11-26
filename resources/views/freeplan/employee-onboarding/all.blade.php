@@ -70,14 +70,31 @@
         <x-card>
             <div class="p-4 space-y-4">
                 <!-- Search -->
-                <div>
-                    <label for="search-input" class="sr-only">Search</label>
-                    <input type="text" 
-                           id="search-input"
-                           name="search"
-                           value="{{ request('search', '') }}"
-                           placeholder="Search by name, email, department or role"
-                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                <div class="flex gap-2">
+                    <div class="flex-1 relative">
+                        <label for="search-input" class="sr-only">Search</label>
+                        <input type="text" 
+                               id="search-input"
+                               name="search"
+                               value="{{ request('search', '') }}"
+                               placeholder="Search by name, email, department or role"
+                               class="w-full px-4 py-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                        <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                    <button type="button" 
+                            id="search-btn"
+                            class="px-6 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 whitespace-nowrap">
+                        Search
+                    </button>
+                    <button type="button" 
+                            id="clear-search-btn"
+                            class="px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 whitespace-nowrap">
+                        Clear
+                    </button>
                 </div>
 
                 <!-- Filters -->
@@ -134,9 +151,13 @@
 
         @if($onboardings->count() > 0)
             <!-- Mobile: Card View -->
-            <div class="block lg:hidden space-y-3">
+            <div id="mobile-cards-container" class="block lg:hidden space-y-3">
                 @foreach($onboardings as $item)
-                    <x-card>
+                    <x-card class="onboarding-item" 
+                            data-name="{{ strtolower($item->first_name . ' ' . $item->last_name) }}"
+                            data-email="{{ strtolower($item->email ?? '') }}"
+                            data-department="{{ strtolower($item->department ?? 'not assigned') }}"
+                            data-role="{{ strtolower($item->role ?? 'not assigned') }}">
                         <div class="p-4 space-y-3">
                             <!-- Candidate Header -->
                             <div class="flex items-center justify-between">
@@ -243,9 +264,13 @@
                                 <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                             </tr>
                         </thead>
-                        <tbody class="bg-white divide-y divide-gray-200">
+                        <tbody id="table-body" class="bg-white divide-y divide-gray-200">
                             @foreach($onboardings as $item)
-                                <tr class="hover:bg-gray-50 transition-colors">
+                                <tr class="onboarding-item hover:bg-gray-50 transition-colors"
+                                    data-name="{{ strtolower($item->first_name . ' ' . $item->last_name) }}"
+                                    data-email="{{ strtolower($item->email ?? '') }}"
+                                    data-department="{{ strtolower($item->department ?? 'not assigned') }}"
+                                    data-role="{{ strtolower($item->role ?? 'not assigned') }}">
                                     <td class="px-4 py-3 whitespace-nowrap">
                                         <input type="checkbox" 
                                                class="rounded border-gray-300 text-purple-600 focus:ring-purple-500">
@@ -337,6 +362,21 @@
                 </div>
             </x-card>
         @endif
+
+        <!-- No Search Results State -->
+        <div id="no-results-message" class="hidden">
+            <x-card>
+                <div class="px-6 py-12 text-center">
+                    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                    <h3 class="mt-2 text-sm font-medium text-gray-900">No results found</h3>
+                    <p class="mt-1 text-sm text-gray-500">
+                        No onboardings match your search criteria. Try adjusting your search or filters.
+                    </p>
+                </div>
+            </x-card>
+        </div>
     </div>
 
     <!-- Import Candidates Modal -->
@@ -648,6 +688,103 @@
                     
                     // Trigger download
                     window.location.href = exportUrlWithParams;
+                });
+            }
+
+            // Client-side search functionality
+            const searchInput = document.getElementById('search-input');
+            const searchBtn = document.getElementById('search-btn');
+            const clearSearchBtn = document.getElementById('clear-search-btn');
+            const onboardingItems = document.querySelectorAll('.onboarding-item');
+            const mobileCardsContainer = document.getElementById('mobile-cards-container');
+            const tableBody = document.getElementById('table-body');
+            const noResultsMessage = document.getElementById('no-results-message');
+
+            function performSearch() {
+                const searchTerm = (searchInput?.value || '').trim().toLowerCase();
+                let visibleCount = 0;
+
+                // Only perform search if there are items to search
+                if (onboardingItems.length === 0) {
+                    return;
+                }
+
+                onboardingItems.forEach(item => {
+                    const name = item.getAttribute('data-name') || '';
+                    const email = item.getAttribute('data-email') || '';
+                    const department = item.getAttribute('data-department') || '';
+                    const role = item.getAttribute('data-role') || '';
+
+                    // Check if search term matches any field
+                    const matches = !searchTerm || 
+                        name.includes(searchTerm) || 
+                        email.includes(searchTerm) || 
+                        department.includes(searchTerm) || 
+                        role.includes(searchTerm);
+
+                    if (matches) {
+                        item.style.display = '';
+                        visibleCount++;
+                    } else {
+                        item.style.display = 'none';
+                    }
+                });
+
+                // Show/hide empty state messages
+                if (visibleCount === 0) {
+                    // Hide original content, show no results message
+                    if (mobileCardsContainer) mobileCardsContainer.style.display = 'none';
+                    if (tableBody) {
+                        // Hide the table by hiding its parent table element
+                        const table = tableBody.closest('table');
+                        if (table) {
+                            table.style.display = 'none';
+                        }
+                    }
+                    if (noResultsMessage) noResultsMessage.classList.remove('hidden');
+                } else {
+                    // Show original content, hide no results message
+                    if (mobileCardsContainer) mobileCardsContainer.style.display = '';
+                    if (tableBody) {
+                        // Show the table
+                        const table = tableBody.closest('table');
+                        if (table) {
+                            table.style.display = '';
+                        }
+                    }
+                    if (noResultsMessage) noResultsMessage.classList.add('hidden');
+                }
+            }
+
+            // Search button click
+            if (searchBtn) {
+                searchBtn.addEventListener('click', performSearch);
+            }
+
+            // Clear search button
+            if (clearSearchBtn) {
+                clearSearchBtn.addEventListener('click', function() {
+                    if (searchInput) {
+                        searchInput.value = '';
+                        performSearch();
+                    }
+                });
+            }
+
+            // Search on Enter key
+            if (searchInput) {
+                searchInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        performSearch();
+                    }
+                });
+
+                // Optional: Real-time search as user types (debounced for performance)
+                let searchTimeout;
+                searchInput.addEventListener('input', function() {
+                    clearTimeout(searchTimeout);
+                    searchTimeout = setTimeout(performSearch, 300); // Wait 300ms after user stops typing
                 });
             }
         })();

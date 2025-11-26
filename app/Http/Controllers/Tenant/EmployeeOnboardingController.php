@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Tenant;
 use App\Http\Controllers\Controller;
 use App\Models\Candidate;
 use App\Models\AssetRequest;
+use App\Services\OnboardingViewLogService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Maatwebsite\Excel\Facades\Excel;
@@ -49,6 +50,21 @@ class EmployeeOnboardingController extends Controller
         
         if (!$tenantModel) {
             abort(500, 'Tenant not resolved. Please check your subdomain configuration.');
+        }
+        
+        // Log Page.View event
+        try {
+            $queryParams = $request->only(['search', 'department', 'manager', 'status', 'joiningMonth']);
+            OnboardingViewLogService::log(
+                'Page.View',
+                $request,
+                array_filter($queryParams), // Only include non-empty query params
+                null,
+                'page'
+            );
+        } catch (\Exception $e) {
+            // Logging failure should not break the page
+            Log::warning('Failed to log Page.View event', ['error' => $e->getMessage()]);
         }
         
         // Fetch onboarding candidates from candidates table (same approach as API)
@@ -373,6 +389,20 @@ class EmployeeOnboardingController extends Controller
             \Log::error('Tenant not resolved in apiShow');
             return response()->json(['error' => 'Tenant not resolved'], 500);
         }
+        
+        // Log Onboarding.SlideOver.Open event
+        try {
+            OnboardingViewLogService::log(
+                'Onboarding.SlideOver.Open',
+                $request,
+                [],
+                $candidateId,
+                'onboarding'
+            );
+        } catch (\Exception $e) {
+            // Logging failure should not break the API
+            Log::warning('Failed to log SlideOver.Open event', ['error' => $e->getMessage()]);
+        }
 
         // First, try to find the candidate without source filter (in case source wasn't set)
         $candidate = \App\Models\Candidate::where('tenant_id', $tenantModel->id)->find($candidateId);
@@ -556,6 +586,20 @@ class EmployeeOnboardingController extends Controller
         if (!$candidate) {
             return response()->json(['error' => 'Candidate not found'], 404);
         }
+        
+        // Log Onboarding.Tab.View event
+        try {
+            OnboardingViewLogService::log(
+                'Onboarding.Tab.View',
+                $request,
+                ['tab' => 'Documents'],
+                $candidateId,
+                'tab'
+            );
+        } catch (\Exception $e) {
+            // Logging failure should not break the API
+            Log::warning('Failed to log Tab.View event', ['error' => $e->getMessage()]);
+        }
 
         // For now, return mock document data
         // In a real implementation, this would fetch from a documents table
@@ -632,19 +676,19 @@ class EmployeeOnboardingController extends Controller
             return response()->json(['error' => 'Candidate not found'], 404);
         }
 
-        // Detect tenant format for logging
-        $isSubdomain = str_starts_with(request()->route()->getName() ?? '', 'subdomain.');
-        $tenantFormat = $isSubdomain ? 'subdomain' : 'slug';
-        
-        // Log task load
-        Log::info('Onboarding tasks loaded', [
-            'candidate_id' => $candidateId,
-            'tenant_id' => $tenantModel->id,
-            'tenant_slug' => $tenantModel->slug,
-            'tenant_format' => $tenantFormat,
-            'operation' => 'load_tasks',
-            'status' => 'success'
-        ]);
+        // Log Onboarding.Tab.View event
+        try {
+            OnboardingViewLogService::log(
+                'Onboarding.Tab.View',
+                $request,
+                ['tab' => 'Tasks'],
+                $candidateId,
+                'tab'
+            );
+        } catch (\Exception $e) {
+            // Logging failure should not break the API
+            Log::warning('Failed to log Tab.View event', ['error' => $e->getMessage()]);
+        }
 
         // For now, return mock task data
         // In a real implementation, this would fetch from a tasks table
@@ -1655,16 +1699,19 @@ class EmployeeOnboardingController extends Controller
             return response()->json(['error' => 'Candidate not found'], 404);
         }
 
-        // Detect tenant format for logging
-        $isSubdomain = str_starts_with(request()->route()->getName() ?? '', 'subdomain.');
-        $tenantFormat = $isSubdomain ? 'subdomain' : 'slug';
-        
-        // Log tab open
-        Log::info('ITTab.Open', [
-            'candidateID' => $candidateId,
-            'tenant' => $tenantModel->slug,
-            'tenant_format' => $tenantFormat,
-        ]);
+        // Log Onboarding.Tab.View event
+        try {
+            OnboardingViewLogService::log(
+                'Onboarding.Tab.View',
+                $request,
+                ['tab' => 'ITAssets'],
+                $candidateId,
+                'tab'
+            );
+        } catch (\Exception $e) {
+            // Logging failure should not break the API
+            Log::warning('Failed to log Tab.View event', ['error' => $e->getMessage()]);
+        }
 
         try {
             // Get asset requests for this candidate
@@ -1714,6 +1761,71 @@ class EmployeeOnboardingController extends Controller
     }
 
     /**
+     * API: Log slide-over close event
+     */
+    public function apiLogSlideOverClose(Request $request, $id = null)
+    {
+        $tenantModel = tenant();
+        
+        if (!$tenantModel) {
+            return response()->json(['error' => 'Tenant not resolved'], 500);
+        }
+
+        // Get ID from route parameter
+        $candidateId = $request->route('id') ?? $request->input('id') ?? $id;
+        
+        // Log Onboarding.SlideOver.Close event
+        try {
+            OnboardingViewLogService::log(
+                'Onboarding.SlideOver.Close',
+                $request,
+                [],
+                $candidateId,
+                'onboarding'
+            );
+        } catch (\Exception $e) {
+            // Logging failure should not break the API
+            Log::warning('Failed to log SlideOver.Close event', ['error' => $e->getMessage()]);
+        }
+        
+        // Return success (fire-and-forget endpoint)
+        return response()->json(['success' => true], 200);
+    }
+
+    /**
+     * API: Log tab view event (for Overview tab which doesn't have its own API endpoint)
+     */
+    public function apiLogTabView(Request $request, $id = null)
+    {
+        $tenantModel = tenant();
+        
+        if (!$tenantModel) {
+            return response()->json(['error' => 'Tenant not resolved'], 500);
+        }
+
+        // Get ID from route parameter
+        $candidateId = $request->route('id') ?? $request->input('id') ?? $id;
+        $tabName = $request->input('tab', 'Overview');
+        
+        // Log Onboarding.Tab.View event
+        try {
+            OnboardingViewLogService::log(
+                'Onboarding.Tab.View',
+                $request,
+                ['tab' => $tabName],
+                $candidateId,
+                'tab'
+            );
+        } catch (\Exception $e) {
+            // Logging failure should not break the API
+            Log::warning('Failed to log Tab.View event', ['error' => $e->getMessage()]);
+        }
+        
+        // Return success (fire-and-forget endpoint)
+        return response()->json(['success' => true], 200);
+    }
+
+    /**
      * API: Get approvals for a candidate
      */
     public function apiGetApprovals(Request $request, $id = null)
@@ -1743,16 +1855,19 @@ class EmployeeOnboardingController extends Controller
             return response()->json(['error' => 'Candidate not found'], 404);
         }
 
-        // Detect tenant format for logging
-        $isSubdomain = str_starts_with(request()->route()->getName() ?? '', 'subdomain.');
-        $tenantFormat = $isSubdomain ? 'subdomain' : 'slug';
-        
-        // Log tab open
-        Log::info('ApprovalsTab.Opened', [
-            'tenant' => $tenantModel->slug,
-            'candidateID' => $candidateId,
-            'source' => $tenantFormat,
-        ]);
+        // Log Onboarding.Tab.View event
+        try {
+            OnboardingViewLogService::log(
+                'Onboarding.Tab.View',
+                $request,
+                ['tab' => 'Approvals'],
+                $candidateId,
+                'tab'
+            );
+        } catch (\Exception $e) {
+            // Logging failure should not break the API
+            Log::warning('Failed to log Tab.View event', ['error' => $e->getMessage()]);
+        }
 
         try {
             // For now, return mock approval data

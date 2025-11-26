@@ -934,6 +934,26 @@
                 document.body.style.overflow = '';
                 if (slideOverLoading) slideOverLoading.classList.add('hidden');
                 if (slideOverError) slideOverError.classList.add('hidden');
+                
+                // Log slide-over close event
+                if (currentCandidateId) {
+                    const tenantSlug = document.getElementById('onboardings-page')?.getAttribute('data-tenant-slug');
+                    if (tenantSlug) {
+                        const closeUrl = `/${tenantSlug}/api/onboardings/${currentCandidateId}/close`;
+                        // Fire-and-forget request to log close event
+                        fetch(closeUrl, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                            },
+                            credentials: 'same-origin',
+                        }).catch(err => {
+                            console.warn('[Slide-over] Failed to log close event:', err);
+                        });
+                    }
+                }
+                
                 currentCandidateId = null;
                 // Reset to Overview tab
                 switchTab('overview');
@@ -1311,6 +1331,26 @@
             if (tabBtn) {
                 tabBtn.classList.add('active', 'border-purple-500', 'text-purple-600');
                 tabBtn.classList.remove('border-transparent', 'text-gray-500');
+            }
+            
+            // Log tab view for Overview tab (other tabs are logged via their API endpoints)
+            if (tabName === 'overview' && currentCandidateId) {
+                const tenantSlug = document.getElementById('onboardings-page')?.getAttribute('data-tenant-slug');
+                if (tenantSlug) {
+                    const logUrl = `/${tenantSlug}/api/onboardings/${currentCandidateId}/log-tab-view`;
+                    // Fire-and-forget request to log Overview tab view
+                    fetch(logUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                        },
+                        credentials: 'same-origin',
+                        body: JSON.stringify({ tab: 'Overview' }),
+                    }).catch(err => {
+                        console.warn('[Slide-over] Failed to log Overview tab view:', err);
+                    });
+                }
             }
             
             // Load documents if Documents tab is clicked

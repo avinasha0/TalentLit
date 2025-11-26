@@ -833,9 +833,9 @@ class EmployeeOnboardingController extends Controller
     }
 
     /**
-     * API: Convert onboarding to employee
+     * API: Check preconditions for converting onboarding to employee
      */
-    public function apiConvert(Request $request, $id)
+    public function apiCheckConvert(Request $request, $id = null)
     {
         $tenantModel = tenant();
         
@@ -843,12 +843,358 @@ class EmployeeOnboardingController extends Controller
             return response()->json(['error' => 'Tenant not resolved'], 500);
         }
 
-        // TODO: Implement actual conversion logic
-        // For now, return mock success
-        return response()->json([
-            'ok' => true,
-            'employeeId' => rand(900, 999), // Mock employee ID
+        // Get ID from route parameter
+        $candidateId = $request->route('id') ?? $request->input('id') ?? $id;
+        
+        if (!$candidateId) {
+            return response()->json(['error' => 'Candidate ID is required'], 400);
+        }
+
+        // Find the candidate
+        $candidate = \App\Models\Candidate::where('tenant_id', $tenantModel->id)
+            ->where(function($q) {
+                $q->where('source', 'Onboarding')
+                  ->orWhere('source', 'Onboarding Import');
+            })
+            ->find($candidateId);
+
+        if (!$candidate) {
+            return response()->json(['error' => 'Candidate not found'], 404);
+        }
+
+        // Check preconditions
+        $preconditionsData = $this->checkPreconditions($candidate);
+
+        return response()->json($preconditionsData);
+    }
+
+    /**
+     * API: Convert onboarding to employee
+     */
+    public function apiConvert(Request $request, $id = null)
+    {
+        $tenantModel = tenant();
+        
+        if (!$tenantModel) {
+            Log::error('Convert.Error', [
+                'candidateID' => $id,
+                'tenant' => 'unknown',
+                'error' => 'Tenant not resolved'
+            ]);
+            return response()->json(['error' => 'Tenant not resolved'], 500);
+        }
+
+        // Get ID from route parameter
+        $candidateId = $request->route('id') ?? $request->input('id') ?? $id;
+        
+        if (!$candidateId) {
+            Log::error('Convert.Error', [
+                'candidateID' => 'missing',
+                'tenant' => $tenantModel->slug,
+                'error' => 'Candidate ID is required'
+            ]);
+            return response()->json(['error' => 'Candidate ID is required'], 400);
+        }
+
+        // Find the candidate
+        $candidate = \App\Models\Candidate::where('tenant_id', $tenantModel->id)
+            ->where(function($q) {
+                $q->where('source', 'Onboarding')
+                  ->orWhere('source', 'Onboarding Import');
+            })
+            ->find($candidateId);
+
+        if (!$candidate) {
+            Log::error('Convert.Error', [
+                'candidateID' => $candidateId,
+                'tenant' => $tenantModel->slug,
+                'error' => 'Candidate not found'
+            ]);
+            return response()->json(['error' => 'Candidate not found'], 404);
+        }
+
+        // Check permissions
+        $user = auth()->user();
+        if (!$this->hasConvertPermission($user, $tenantModel)) {
+            Log::warning('Convert.Unauthorized', [
+                'user' => $user->id,
+                'candidateID' => $candidateId,
+                'tenant' => $tenantModel->slug
+            ]);
+            return response()->json(['error' => 'Unauthorized. You do not have permission to convert onboardings.'], 403);
+        }
+
+        // Check preconditions
+        $preconditionsData = $this->checkPreconditions($candidate);
+        
+        if (!$preconditionsData['canConvert']) {
+            $missing = [];
+            if ($preconditionsData['missingProgress']) $missing[] = 'progress incomplete';
+            if ($preconditionsData['missingApprovals'] > 0) $missing[] = "{$preconditionsData['missingApprovals']} approval(s) pending";
+            if ($preconditionsData['missingDocuments'] > 0) $missing[] = "{$preconditionsData['missingDocuments']} document(s) pending";
+            if ($preconditionsData['missingAssets'] > 0) $missing[] = "{$preconditionsData['missingAssets']} asset(s) pending";
+            
+            Log::info('Convert.Blocked', [
+                'candidateID' => $candidateId,
+                'tenant' => $tenantModel->slug,
+                'missing' => implode(', ', $missing)
+            ]);
+            
+            return response()->json([
+                'error' => 'Preconditions not met. Cannot convert.',
+                'missing' => $missing
+            ], 400);
+        }
+
+        // Log conversion attempt
+        Log::info('Convert.Attempt', [
+            'candidateID' => $candidateId,
+            'tenant' => $tenantModel->slug,
+            'user' => $user->id,
+            'preconditions' => 'passed'
         ]);
+
+        try {
+            // Create employee (User) from candidate
+            $employee = \App\Models\User::create([
+                'name' => trim(($candidate->first_name ?? '') . ' ' . ($candidate->last_name ?? '')),
+                'email' => $candidate->primary_email,
+                'password' => \Illuminate\Support\Facades\Hash::make(\Illuminate\Support\Str::random(12)), // Temporary password
+                'email_verified_at' => null, // Will need email verification
+            ]);
+
+            // Add user to tenant
+            $employee->tenants()->attach($tenantModel->id);
+
+            // Assign default employee role if exists (or basic permissions)
+            // For now, we'll just mark the candidate as converted
+            $candidate->update([
+                'status' => 'Converted',
+                'source' => 'Onboarding Converted' // Mark as converted
+            ]);
+
+            // Log success
+            Log::info('Convert.Success', [
+                'candidateID' => $candidateId,
+                'employeeID' => $employee->id,
+                'tenant' => $tenantModel->slug,
+                'user' => $user->id
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'employeeId' => $employee->id,
+                'message' => 'Onboarding converted to employee successfully'
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Convert.Error', [
+                'candidateID' => $candidateId,
+                'tenant' => $tenantModel->slug,
+                'user' => $user->id,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'error' => 'Conversion failed: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Helper: Check preconditions for conversion
+     */
+    private function checkPreconditions($candidate)
+    {
+        // Check progress
+        $completed = intval($candidate->completed_steps ?? 0);
+        $total = intval($candidate->total_steps ?? 5);
+        $progressPercent = $total > 0 ? intval(($completed / $total) * 100) : 0;
+        $isProgressComplete = $progressPercent >= 100;
+
+        // Check approvals
+        $approvals = $this->getApprovalsForCandidate($candidate->id);
+        $missingApprovals = 0;
+        foreach ($approvals as $approval) {
+            if ($approval['status'] !== 'Approved') {
+                $missingApprovals++;
+            }
+        }
+
+        // Check documents
+        $documents = $this->getDocumentsForCandidate($candidate->id);
+        $mandatoryDocs = array_filter($documents, function($doc) {
+            return in_array($doc['name'], ['ID Proof', 'Address Proof', 'Educational Certificates', 'Employment Contract']);
+        });
+        $missingDocuments = 0;
+        foreach ($mandatoryDocs as $doc) {
+            if (!in_array($doc['status'], ['Uploaded', 'Verified'])) {
+                $missingDocuments++;
+            }
+        }
+
+        // Check IT assets
+        $assets = $this->getAssetRequestsForCandidate($candidate->id);
+        $criticalAssets = array_filter($assets, function($asset) {
+            return in_array($asset['asset_type'], ['Laptop', 'Access Card']); // Critical assets
+        });
+        $missingAssets = 0;
+        foreach ($criticalAssets as $asset) {
+            if (!in_array($asset['status'], ['Approved', 'Assigned'])) {
+                $missingAssets++;
+            }
+        }
+
+        $canConvert = $isProgressComplete && $missingApprovals === 0 && $missingDocuments === 0 && $missingAssets === 0;
+
+        return [
+            'canConvert' => $canConvert,
+            'missingProgress' => !$isProgressComplete,
+            'missingApprovals' => $missingApprovals,
+            'missingDocuments' => $missingDocuments,
+            'missingAssets' => $missingAssets,
+        ];
+    }
+
+    /**
+     * Helper: Check if user has convert permission
+     */
+    private function hasConvertPermission($user, $tenant)
+    {
+        // Check custom permissions
+        $userRole = \Illuminate\Support\Facades\DB::table('custom_user_roles')
+            ->where('user_id', $user->id)
+            ->where('tenant_id', $tenant->id)
+            ->value('role_name');
+
+        if (!$userRole) {
+            return false;
+        }
+
+        $rolePermissions = \Illuminate\Support\Facades\DB::table('custom_tenant_roles')
+            ->where('tenant_id', $tenant->id)
+            ->where('name', $userRole)
+            ->value('permissions');
+
+        if (!$rolePermissions) {
+            return false;
+        }
+
+        $permissions = json_decode($rolePermissions, true);
+        
+        // Check for explicit permission or HR/Admin roles
+        return in_array('can_convert_onboarding', $permissions) 
+            || in_array($userRole, ['Owner', 'Admin']) 
+            || in_array('manage_users', $permissions);
+    }
+
+    /**
+     * Helper: Get approvals for candidate
+     */
+    private function getApprovalsForCandidate($candidateId)
+    {
+        // Use the same logic as apiGetApprovals but return data directly
+        // For now, return mock data - in production, fetch from approvals table
+        $mockApprovals = [
+            [
+                'id' => 'approval-1',
+                'step_name' => 'HR Manager Approval',
+                'approver_name' => 'Sarah Johnson',
+                'status' => 'Approved',
+                'timestamp' => now()->subDays(2)->toIso8601String(),
+                'comments' => 'All documents verified. Approved for onboarding.'
+            ],
+            [
+                'id' => 'approval-2',
+                'step_name' => 'Department Head Approval',
+                'approver_name' => 'Michael Chen',
+                'status' => 'Approved',
+                'timestamp' => now()->subDays(1)->toIso8601String(),
+                'comments' => 'Role requirements confirmed.'
+            ],
+            [
+                'id' => 'approval-3',
+                'step_name' => 'Finance Approval',
+                'approver_name' => 'Emily Davis',
+                'status' => 'Pending',
+                'timestamp' => null,
+                'comments' => ''
+            ],
+        ];
+        
+        // TODO: Replace with actual database query when approvals table exists
+        // $approvals = Approval::where('candidate_id', $candidateId)->get();
+        // return $approvals->toArray();
+        
+        return $mockApprovals;
+    }
+
+    /**
+     * Helper: Get documents for candidate
+     */
+    private function getDocumentsForCandidate($candidateId)
+    {
+        // Use the same logic as apiGetDocuments but return data directly
+        // For now, return mock data - in production, fetch from documents table
+        $mockDocuments = [
+            [
+                'id' => 'doc-1',
+                'name' => 'ID Proof',
+                'status' => 'Uploaded',
+                'uploaded_at' => now()->subDays(2)->toIso8601String(),
+                'file_url' => '#'
+            ],
+            [
+                'id' => 'doc-2',
+                'name' => 'Address Proof',
+                'status' => 'Pending',
+                'uploaded_at' => null,
+                'file_url' => null
+            ],
+            [
+                'id' => 'doc-3',
+                'name' => 'Educational Certificates',
+                'status' => 'Missing',
+                'uploaded_at' => null,
+                'file_url' => null
+            ],
+            [
+                'id' => 'doc-4',
+                'name' => 'Employment Contract',
+                'status' => 'Uploaded',
+                'uploaded_at' => now()->subDays(1)->toIso8601String(),
+                'file_url' => '#'
+            ],
+        ];
+        
+        // TODO: Replace with actual database query when documents table exists
+        // $documents = Document::where('candidate_id', $candidateId)->get();
+        // return $documents->toArray();
+        
+        return $mockDocuments;
+    }
+
+    /**
+     * Helper: Get asset requests for candidate
+     */
+    private function getAssetRequestsForCandidate($candidateId)
+    {
+        $tenantModel = tenant();
+        if (!$tenantModel) {
+            return [];
+        }
+
+        $assetRequests = AssetRequest::where('tenant_id', $tenantModel->id)
+            ->where('candidate_id', $candidateId)
+            ->get();
+
+        return $assetRequests->map(function($asset) {
+            return [
+                'id' => $asset->id,
+                'asset_type' => $asset->asset_type,
+                'status' => $asset->status,
+            ];
+        })->toArray();
     }
 
     /**

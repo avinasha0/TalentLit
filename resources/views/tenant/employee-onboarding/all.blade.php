@@ -752,6 +752,30 @@
                             </div>
                         </div>
                     </div>
+                    
+                    <!-- Footer with Convert Button -->
+                    <div class="flex-shrink-0 px-4 py-4 sm:px-6 border-t border-gray-200 bg-gray-50">
+                        <div class="flex items-center justify-between gap-3">
+                            <button type="button" 
+                                    id="close-slide-over-footer"
+                                    class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500">
+                                Close
+                            </button>
+                            <button type="button" 
+                                    id="convert-to-employee-btn"
+                                    class="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    disabled
+                                    title="Convert disabled — checking requirements...">
+                                <span id="convert-btn-text">Convert to Employee</span>
+                                <span id="convert-btn-loader" class="hidden ml-2">
+                                    <svg class="animate-spin h-4 w-4 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                </span>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -827,6 +851,35 @@
                             </button>
                         </div>
                     </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Convert to Employee Confirmation Modal -->
+    <div id="convert-confirm-modal" class="hidden fixed inset-0 z-50 overflow-hidden">
+        <div class="absolute inset-0 bg-gray-500 bg-opacity-75" id="convert-confirm-modal-backdrop"></div>
+        <div class="fixed inset-0 z-50 overflow-y-auto">
+            <div class="flex min-h-full items-center justify-center p-4">
+                <div class="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Confirm conversion</h3>
+                    <p class="text-sm text-gray-600 mb-6">Convert this onboarding into an employee account? This action will create an employee profile and cannot be undone.</p>
+                    <div id="convert-error-message" class="hidden mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+                        <p class="text-sm text-red-800"></p>
+                    </div>
+                    <div class="flex justify-end gap-2">
+                        <button type="button" id="cancel-convert" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">Cancel</button>
+                        <button type="button" id="confirm-convert" class="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <span id="confirm-convert-text">Confirm Convert</span>
+                            <span id="confirm-convert-loader" class="hidden ml-2">
+                                <svg class="animate-spin h-4 w-4 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                <span class="ml-1">Converting…</span>
+                            </span>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -968,6 +1021,9 @@
                 // Store candidate ID for send reminder button
                 currentCandidateId = candidateId;
                 
+                // Check preconditions for convert button
+                checkConvertPreconditions(candidateId, data);
+                
                 // Show Overview tab content
                 const overviewContent = document.getElementById('tab-content-overview');
                 if (overviewContent) {
@@ -1006,6 +1062,174 @@
                     toast.remove();
                 }
             }, 5000);
+        }
+        
+        function checkConvertPreconditions(candidateId, candidateData) {
+            const convertBtn = document.getElementById('convert-to-employee-btn');
+            if (!convertBtn) return;
+            
+            // Initially disable and show checking state
+            convertBtn.disabled = true;
+            convertBtn.title = 'Checking requirements...';
+            
+            // Check basic progress condition first (client-side quick check)
+            const progressPercent = candidateData.progressPercent || 0;
+            const isProgressComplete = progressPercent >= 100;
+            
+            if (!isProgressComplete) {
+                convertBtn.disabled = true;
+                convertBtn.title = `Convert disabled — Progress incomplete (${progressPercent}%)`;
+                return;
+            }
+            
+            // Fetch detailed preconditions from API
+            const apiUrl = `/${tenantSlug}/api/onboardings/${candidateId}/check-convert`;
+            
+            fetch(apiUrl, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.canConvert) {
+                    convertBtn.disabled = false;
+                    convertBtn.title = 'Convert this onboarding to an employee account';
+                } else {
+                    convertBtn.disabled = true;
+                    const missingItems = [];
+                    if (data.missingProgress) missingItems.push('progress incomplete');
+                    if (data.missingApprovals > 0) missingItems.push(`${data.missingApprovals} approval${data.missingApprovals !== 1 ? 's' : ''} pending`);
+                    if (data.missingDocuments > 0) missingItems.push(`${data.missingDocuments} document${data.missingDocuments !== 1 ? 's' : ''} pending`);
+                    if (data.missingAssets > 0) missingItems.push(`${data.missingAssets} asset${data.missingAssets !== 1 ? 's' : ''} pending`);
+                    convertBtn.title = `Convert disabled — ${missingItems.join(', ')}`;
+                }
+            })
+            .catch(error => {
+                console.error('[Convert] Error checking preconditions:', error);
+                convertBtn.disabled = true;
+                convertBtn.title = 'Convert disabled — Unable to verify requirements';
+            });
+        }
+        
+        function showConvertConfirmModal() {
+            const modal = document.getElementById('convert-confirm-modal');
+            const backdrop = document.getElementById('convert-confirm-modal-backdrop');
+            const errorDiv = document.getElementById('convert-error-message');
+            
+            if (modal) {
+                // Hide error message
+                if (errorDiv) {
+                    errorDiv.classList.add('hidden');
+                }
+                modal.classList.remove('hidden');
+                document.body.style.overflow = 'hidden';
+            }
+        }
+        
+        function closeConvertConfirmModal() {
+            const modal = document.getElementById('convert-confirm-modal');
+            const errorDiv = document.getElementById('convert-error-message');
+            
+            if (modal) {
+                modal.classList.add('hidden');
+                document.body.style.overflow = '';
+                // Reset error state
+                if (errorDiv) {
+                    errorDiv.classList.add('hidden');
+                }
+                // Reset confirm button state
+                const confirmBtn = document.getElementById('confirm-convert');
+                const confirmText = document.getElementById('confirm-convert-text');
+                const confirmLoader = document.getElementById('confirm-convert-loader');
+                if (confirmBtn) confirmBtn.disabled = false;
+                if (confirmText) confirmText.textContent = 'Confirm Convert';
+                if (confirmLoader) confirmLoader.classList.add('hidden');
+            }
+        }
+        
+        function convertToEmployee() {
+            if (!currentCandidateId) {
+                showToast('No candidate selected', 'error');
+                return;
+            }
+            
+            const confirmBtn = document.getElementById('confirm-convert');
+            const confirmText = document.getElementById('confirm-convert-text');
+            const confirmLoader = document.getElementById('confirm-convert-loader');
+            const errorDiv = document.getElementById('convert-error-message');
+            const errorText = errorDiv ? errorDiv.querySelector('p') : null;
+            
+            // Disable button and show loading
+            if (confirmBtn) confirmBtn.disabled = true;
+            if (confirmText) confirmText.textContent = '';
+            if (confirmLoader) confirmLoader.classList.remove('hidden');
+            if (errorDiv) errorDiv.classList.add('hidden');
+            
+            const apiUrl = `/${tenantSlug}/api/onboardings/${currentCandidateId}/convert`;
+            
+            fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(err => {
+                        throw new Error(err.error || err.message || 'Conversion failed');
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Success - close modal and slide-over
+                closeConvertConfirmModal();
+                closeSlideOver();
+                
+                // Show success toast with employee ID if available
+                let message = 'Onboarding converted to employee.';
+                if (data.employeeId) {
+                    message += ` Employee ID: ${data.employeeId}.`;
+                }
+                showToast(message, 'success');
+                
+                // Update the row in the table if visible
+                const row = document.querySelector(`[data-candidate-id="${currentCandidateId}"]`);
+                if (row) {
+                    const statusCell = row.closest('tr')?.querySelector('.status-cell');
+                    if (statusCell) {
+                        statusCell.innerHTML = '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-500 text-blue-800">Converted</span>';
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('[Convert] Error converting to employee:', error);
+                
+                // Re-enable button
+                if (confirmBtn) confirmBtn.disabled = false;
+                if (confirmText) confirmText.textContent = 'Confirm Convert';
+                if (confirmLoader) confirmLoader.classList.add('hidden');
+                
+                // Show error message in modal
+                if (errorDiv && errorText) {
+                    errorText.textContent = `Conversion failed: ${error.message}. Try again.`;
+                    errorDiv.classList.remove('hidden');
+                } else {
+                    showToast(`Conversion failed: ${error.message}`, 'error');
+                }
+            });
         }
         
         function sendReminder() {
@@ -1853,6 +2077,47 @@
             const sendReminderBtn = document.getElementById('send-reminder-btn');
             if (sendReminderBtn) {
                 sendReminderBtn.addEventListener('click', sendReminder);
+            }
+            
+            // Convert to employee button handler
+            const convertBtn = document.getElementById('convert-to-employee-btn');
+            if (convertBtn) {
+                convertBtn.addEventListener('click', function() {
+                    if (!convertBtn.disabled && currentCandidateId) {
+                        showConvertConfirmModal();
+                    }
+                });
+            }
+            
+            // Close slide-over footer button
+            const closeFooterBtn = document.getElementById('close-slide-over-footer');
+            if (closeFooterBtn) {
+                closeFooterBtn.addEventListener('click', closeSlideOver);
+            }
+            
+            // Convert confirmation modal handlers
+            const convertConfirmModal = document.getElementById('convert-confirm-modal');
+            const convertConfirmBackdrop = document.getElementById('convert-confirm-modal-backdrop');
+            const cancelConvertBtn = document.getElementById('cancel-convert');
+            const confirmConvertBtn = document.getElementById('confirm-convert');
+            
+            if (convertConfirmBackdrop) {
+                convertConfirmBackdrop.addEventListener('click', closeConvertConfirmModal);
+            }
+            if (cancelConvertBtn) {
+                cancelConvertBtn.addEventListener('click', closeConvertConfirmModal);
+            }
+            if (confirmConvertBtn) {
+                confirmConvertBtn.addEventListener('click', convertToEmployee);
+            }
+            
+            // Close modal on Escape key
+            if (convertConfirmModal) {
+                document.addEventListener('keydown', function(e) {
+                    if (e.key === 'Escape' && convertConfirmModal && !convertConfirmModal.classList.contains('hidden')) {
+                        closeConvertConfirmModal();
+                    }
+                });
             }
             
             // Tab click handlers

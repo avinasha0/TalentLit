@@ -563,6 +563,11 @@
                                     class="tab-btn py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">
                                 Documents
                             </button>
+                            <button type="button" 
+                                    id="tab-tasks"
+                                    class="tab-btn py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">
+                                Tasks
+                            </button>
                         </nav>
                     </div>
                     <div class="flex-1 px-4 py-6 sm:px-6">
@@ -656,6 +661,29 @@
                             <!-- Documents List -->
                             <div id="documents-list" class="space-y-3">
                                 <!-- Documents will be loaded here -->
+                            </div>
+                        </div>
+                        
+                        <!-- Tasks Tab Content -->
+                        <div id="tab-content-tasks" class="tab-content hidden">
+                            <!-- Tasks Loading State -->
+                            <div id="tasks-loading" class="hidden">
+                                <div class="flex items-center justify-center py-12">
+                                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+                                    <span class="ml-3 text-gray-600">Loading tasks...</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Tasks Error State -->
+                            <div id="tasks-error" class="hidden">
+                                <div class="text-center py-12">
+                                    <p class="text-sm text-gray-600">Unable to load tasks. Try again.</p>
+                                </div>
+                            </div>
+                            
+                            <!-- Tasks List -->
+                            <div id="tasks-list" class="space-y-3">
+                                <!-- Tasks will be loaded here -->
                             </div>
                         </div>
                     </div>
@@ -953,6 +981,11 @@
             if (tabName === 'documents' && currentCandidateId) {
                 loadDocuments(currentCandidateId);
             }
+            
+            // Load tasks if Tasks tab is clicked
+            if (tabName === 'tasks' && currentCandidateId) {
+                loadTasks(currentCandidateId);
+            }
         }
         
         function loadDocuments(candidateId) {
@@ -1116,6 +1149,219 @@
             });
         }
         
+        function loadTasks(candidateId) {
+            if (!candidateId) {
+                console.error('[Slide-over INLINE] Cannot load tasks: no candidate ID');
+                return;
+            }
+            
+            const tasksLoading = document.getElementById('tasks-loading');
+            const tasksError = document.getElementById('tasks-error');
+            const tasksList = document.getElementById('tasks-list');
+            
+            // Show loading state
+            if (tasksLoading) tasksLoading.classList.remove('hidden');
+            if (tasksError) tasksError.classList.add('hidden');
+            if (tasksList) tasksList.innerHTML = '';
+            
+            // Detect tenant format (slug or subdomain)
+            const tenantSlug = @json($tenantSlug);
+            const isSubdomain = window.location.hostname.split('.').length > 2 && !window.location.pathname.includes('/' + tenantSlug);
+            const tenantFormat = isSubdomain ? 'subdomain' : 'slug';
+            
+            const apiUrl = `/${tenantSlug}/api/onboardings/${candidateId}/tasks`;
+            
+            // Log task load attempt
+            console.log('[Slide-over INLINE] Loading tasks', {
+                candidateId: candidateId,
+                tenantSlug: tenantSlug,
+                tenantFormat: tenantFormat,
+                apiUrl: apiUrl
+            });
+            
+            fetch(apiUrl, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                }
+            })
+            .then(response => {
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                return response.json();
+            })
+            .then(data => {
+                if (tasksLoading) tasksLoading.classList.add('hidden');
+                if (tasksError) tasksError.classList.add('hidden');
+                
+                if (!tasksList) return;
+                
+                // Log successful task load
+                console.log('[Slide-over INLINE] Tasks loaded successfully', {
+                    candidateId: candidateId,
+                    tenantSlug: tenantSlug,
+                    tenantFormat: tenantFormat,
+                    taskCount: data.tasks ? data.tasks.length : 0
+                });
+                
+                if (!data.tasks || data.tasks.length === 0) {
+                    tasksList.innerHTML = '<p class="text-sm text-gray-500 text-center py-8">No tasks found.</p>';
+                    return;
+                }
+                
+                // Render tasks
+                tasksList.innerHTML = data.tasks.map(task => {
+                    const isCompleted = task.status === 'Completed';
+                    const dueDate = task.due_date ? formatDate(task.due_date) : 'N/A';
+                    const assignedTo = task.assigned_to || 'N/A';
+                    
+                    let statusBadge = '';
+                    let actionButton = '';
+                    
+                    if (isCompleted) {
+                        statusBadge = '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Completed</span>';
+                    } else {
+                        statusBadge = '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Pending</span>';
+                        actionButton = `
+                            <button type="button" 
+                                    class="mark-task-complete-btn text-sm px-3 py-1 text-purple-600 hover:text-purple-800 border border-purple-300 rounded-md hover:bg-purple-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    data-task-id="${task.id || ''}">
+                                <span class="mark-complete-text">Mark Complete</span>
+                                <span class="mark-complete-loader hidden ml-1">
+                                    <svg class="animate-spin h-3 w-3 inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                </span>
+                            </button>`;
+                    }
+                    
+                    return `
+                        <div class="flex items-center justify-between py-3 border-b border-gray-200 task-item" data-task-id="${task.id || ''}">
+                            <div class="flex-1 min-w-0">
+                                <div class="text-sm font-medium text-gray-900">${task.title || 'Untitled Task'}</div>
+                                <div class="mt-1 flex items-center space-x-2">
+                                    <span class="text-xs text-gray-500">Assigned to: ${assignedTo}</span>
+                                    <span class="text-xs text-gray-400">•</span>
+                                    <span class="text-xs text-gray-500">Due: ${dueDate}</span>
+                                </div>
+                                <div class="mt-1">
+                                    ${statusBadge}
+                                </div>
+                            </div>
+                            <div class="ml-4 flex-shrink-0">
+                                ${actionButton}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                
+                // Attach event listeners to Mark Complete buttons
+                tasksList.querySelectorAll('.mark-task-complete-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const taskId = this.getAttribute('data-task-id');
+                        markTaskComplete(candidateId, taskId, this);
+                    });
+                });
+            })
+            .catch(error => {
+                console.error('[Slide-over INLINE] Error loading tasks:', error);
+                if (tasksLoading) tasksLoading.classList.add('hidden');
+                if (tasksError) tasksError.classList.remove('hidden');
+                
+                // Log error
+                console.error('[Slide-over INLINE] Task load failed', {
+                    candidateId: candidateId,
+                    tenantSlug: tenantSlug,
+                    tenantFormat: tenantFormat,
+                    error: error.message
+                });
+            });
+        }
+        
+        function markTaskComplete(candidateId, taskId, buttonElement) {
+            if (!candidateId || !taskId) {
+                showToast('Task information is missing', 'error');
+                return;
+            }
+            
+            const markCompleteText = buttonElement.querySelector('.mark-complete-text');
+            const markCompleteLoader = buttonElement.querySelector('.mark-complete-loader');
+            
+            // Disable button and show loading
+            buttonElement.disabled = true;
+            if (markCompleteText) markCompleteText.textContent = 'Updating…';
+            if (markCompleteLoader) markCompleteLoader.classList.remove('hidden');
+            
+            // Detect tenant format
+            const tenantSlug = @json($tenantSlug);
+            const isSubdomain = window.location.hostname.split('.').length > 2 && !window.location.pathname.includes('/' + tenantSlug);
+            const tenantFormat = isSubdomain ? 'subdomain' : 'slug';
+            
+            const apiUrl = `/${tenantSlug}/api/onboardings/${candidateId}/tasks/${taskId}/complete`;
+            
+            // Log task complete attempt
+            console.log('[Slide-over INLINE] Marking task complete', {
+                candidateId: candidateId,
+                taskId: taskId,
+                tenantSlug: tenantSlug,
+                tenantFormat: tenantFormat,
+                apiUrl: apiUrl
+            });
+            
+            fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Log success
+                console.log('[Slide-over INLINE] Task marked complete successfully', {
+                    candidateId: candidateId,
+                    taskId: taskId,
+                    tenantSlug: tenantSlug,
+                    tenantFormat: tenantFormat
+                });
+                
+                // Reload tasks to update UI
+                loadTasks(candidateId);
+                
+                // Show success toast
+                showToast('Task marked as completed.', 'success');
+            })
+            .catch(error => {
+                console.error('[Slide-over INLINE] Error marking task complete:', error);
+                
+                // Log error
+                console.error('[Slide-over INLINE] Task complete failed', {
+                    candidateId: candidateId,
+                    taskId: taskId,
+                    tenantSlug: tenantSlug,
+                    tenantFormat: tenantFormat,
+                    error: error.message
+                });
+                
+                // Re-enable button
+                buttonElement.disabled = false;
+                if (markCompleteText) markCompleteText.textContent = 'Mark Complete';
+                if (markCompleteLoader) markCompleteLoader.classList.add('hidden');
+                
+                // Show error message
+                showToast('Failed. Try again.', 'error');
+            });
+        }
+        
         function handleViewClick(e) {
             console.log('=== [Slide-over INLINE] Click event detected! ===');
             console.log('[Slide-over INLINE] Event target:', e.target);
@@ -1203,6 +1449,7 @@
             // Tab click handlers
             const tabOverview = document.getElementById('tab-overview');
             const tabDocuments = document.getElementById('tab-documents');
+            const tabTasks = document.getElementById('tab-tasks');
             if (tabOverview) {
                 tabOverview.addEventListener('click', function() {
                     switchTab('overview');
@@ -1211,6 +1458,11 @@
             if (tabDocuments) {
                 tabDocuments.addEventListener('click', function() {
                     switchTab('documents');
+                });
+            }
+            if (tabTasks) {
+                tabTasks.addEventListener('click', function() {
+                    switchTab('tasks');
                 });
             }
             

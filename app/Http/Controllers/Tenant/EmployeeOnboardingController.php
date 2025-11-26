@@ -602,6 +602,170 @@ class EmployeeOnboardingController extends Controller
     }
 
     /**
+     * API: Get tasks for a candidate
+     */
+    public function apiGetTasks(Request $request, $id = null)
+    {
+        $tenantModel = tenant();
+        
+        if (!$tenantModel) {
+            return response()->json(['error' => 'Tenant not resolved'], 500);
+        }
+
+        // Get ID from route parameter
+        $candidateId = $request->route('id') ?? $request->input('id') ?? $id;
+        
+        if (!$candidateId) {
+            return response()->json(['error' => 'Candidate ID is required'], 400);
+        }
+
+        // Find the candidate
+        $candidate = \App\Models\Candidate::where('tenant_id', $tenantModel->id)
+            ->where(function($q) {
+                $q->where('source', 'Onboarding')
+                  ->orWhere('source', 'Onboarding Import');
+            })
+            ->find($candidateId);
+
+        if (!$candidate) {
+            return response()->json(['error' => 'Candidate not found'], 404);
+        }
+
+        // Detect tenant format for logging
+        $isSubdomain = str_starts_with(request()->route()->getName() ?? '', 'subdomain.');
+        $tenantFormat = $isSubdomain ? 'subdomain' : 'slug';
+        
+        // Log task load
+        Log::info('Onboarding tasks loaded', [
+            'candidate_id' => $candidateId,
+            'tenant_id' => $tenantModel->id,
+            'tenant_slug' => $tenantModel->slug,
+            'tenant_format' => $tenantFormat,
+            'operation' => 'load_tasks',
+            'status' => 'success'
+        ]);
+
+        // For now, return mock task data
+        // In a real implementation, this would fetch from a tasks table
+        $tasks = [
+            [
+                'id' => 'task-1',
+                'title' => 'Complete background verification',
+                'assigned_to' => 'HR Team',
+                'due_date' => now()->addDays(5)->toIso8601String(),
+                'status' => 'Pending'
+            ],
+            [
+                'id' => 'task-2',
+                'title' => 'Submit bank account details',
+                'assigned_to' => 'Finance Team',
+                'due_date' => now()->addDays(3)->toIso8601String(),
+                'status' => 'Pending'
+            ],
+            [
+                'id' => 'task-3',
+                'title' => 'Attend orientation session',
+                'assigned_to' => 'People Ops',
+                'due_date' => now()->addDays(7)->toIso8601String(),
+                'status' => 'Completed'
+            ],
+            [
+                'id' => 'task-4',
+                'title' => 'Complete IT setup form',
+                'assigned_to' => 'IT Team',
+                'due_date' => now()->addDays(2)->toIso8601String(),
+                'status' => 'Pending'
+            ],
+            [
+                'id' => 'task-5',
+                'title' => 'Review employee handbook',
+                'assigned_to' => 'HR Team',
+                'due_date' => now()->addDays(4)->toIso8601String(),
+                'status' => 'Pending'
+            ]
+        ];
+
+        return response()->json([
+            'tasks' => $tasks
+        ]);
+    }
+
+    /**
+     * API: Mark task as completed
+     */
+    public function apiMarkTaskComplete(Request $request, $id = null, $taskId = null)
+    {
+        $tenantModel = tenant();
+        
+        if (!$tenantModel) {
+            return response()->json(['error' => 'Tenant not resolved'], 500);
+        }
+
+        // Get IDs from route parameters
+        $candidateId = $request->route('id') ?? $request->input('id') ?? $id;
+        $taskIdParam = $request->route('taskId') ?? $request->input('taskId') ?? $taskId;
+        
+        if (!$candidateId || !$taskIdParam) {
+            return response()->json(['error' => 'Candidate ID and Task ID are required'], 400);
+        }
+
+        // Find the candidate
+        $candidate = \App\Models\Candidate::where('tenant_id', $tenantModel->id)
+            ->where(function($q) {
+                $q->where('source', 'Onboarding')
+                  ->orWhere('source', 'Onboarding Import');
+            })
+            ->find($candidateId);
+
+        if (!$candidate) {
+            return response()->json(['error' => 'Candidate not found'], 404);
+        }
+
+        // Detect tenant format for logging
+        $isSubdomain = str_starts_with(request()->route()->getName() ?? '', 'subdomain.');
+        $tenantFormat = $isSubdomain ? 'subdomain' : 'slug';
+        
+        try {
+            // TODO: Implement actual task completion logic
+            // For now, this is a placeholder that returns success
+            // In a real implementation, this would update a tasks table
+            
+            // Log task completion
+            Log::info('Onboarding task marked complete', [
+                'candidate_id' => $candidateId,
+                'task_id' => $taskIdParam,
+                'tenant_id' => $tenantModel->id,
+                'tenant_slug' => $tenantModel->slug,
+                'tenant_format' => $tenantFormat,
+                'operation' => 'mark_task_complete',
+                'status' => 'success'
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Task marked as completed'
+            ]);
+        } catch (\Exception $e) {
+            // Log error
+            Log::error('Failed to mark task complete', [
+                'candidate_id' => $candidateId,
+                'task_id' => $taskIdParam,
+                'tenant_id' => $tenantModel->id,
+                'tenant_slug' => $tenantModel->slug,
+                'tenant_format' => $tenantFormat,
+                'operation' => 'mark_task_complete',
+                'status' => 'failed',
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => 'Failed to mark task as completed'
+            ], 500);
+        }
+    }
+
+    /**
      * API: Send document-specific reminder
      */
     public function apiSendDocumentReminder(Request $request, $id = null, $documentId = null)

@@ -653,6 +653,8 @@ Route::middleware(['capture.tenant', 'tenant', 'auth', 'custom.permission:view_d
     Route::post('/{tenant}/api/onboardings/{id}/remind', [EmployeeOnboardingController::class, 'apiSendReminder'])->whereUuid('id')->name('api.onboardings.remind');
     Route::get('/{tenant}/api/onboardings/{id}/documents', [EmployeeOnboardingController::class, 'apiGetDocuments'])->whereUuid('id')->name('api.onboardings.documents');
     Route::post('/{tenant}/api/onboardings/{id}/documents/{documentId}/remind', [EmployeeOnboardingController::class, 'apiSendDocumentReminder'])->whereUuid('id')->name('api.onboardings.documents.remind');
+    Route::get('/{tenant}/api/onboardings/{id}/tasks', [EmployeeOnboardingController::class, 'apiGetTasks'])->whereUuid('id')->name('api.onboardings.tasks');
+    Route::post('/{tenant}/api/onboardings/{id}/tasks/{taskId}/complete', [EmployeeOnboardingController::class, 'apiMarkTaskComplete'])->whereUuid('id')->name('api.onboardings.tasks.complete');
     Route::post('/{tenant}/api/onboardings/{id}/convert', [EmployeeOnboardingController::class, 'apiConvert'])->name('api.onboardings.convert');
     Route::get('/{tenant}/api/onboardings/export/csv', [EmployeeOnboardingController::class, 'apiExportCSV'])->name('api.onboardings.export.csv');
     Route::post('/{tenant}/api/onboardings/import/candidates', [EmployeeOnboardingController::class, 'importCandidates'])->name('api.onboardings.import.candidates');

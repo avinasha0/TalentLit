@@ -149,11 +149,29 @@ class EmployeeOnboardingController extends Controller
         
         // Log for debugging
         $countBeforeFilters = $query->count();
+        
+        // Also log all candidates with their sources for debugging
+        $allCandidates = \App\Models\Candidate::where('tenant_id', $tenantModel->id)
+            ->select('id', 'first_name', 'last_name', 'primary_email', 'source', 'created_at', 'updated_at')
+            ->orderBy('updated_at', 'desc')
+            ->limit(10)
+            ->get();
+        
         \Log::info('Employee Onboarding API Query', [
             'tenant_id' => $tenantModel->id,
             'tenant_slug' => $tenantModel->slug,
             'count_before_filters' => $countBeforeFilters,
             'request_params' => $request->all(),
+            'recent_candidates' => $allCandidates->map(function($c) {
+                return [
+                    'id' => $c->id,
+                    'name' => $c->first_name . ' ' . $c->last_name,
+                    'email' => $c->primary_email,
+                    'source' => $c->source,
+                    'created_at' => $c->created_at,
+                    'updated_at' => $c->updated_at,
+                ];
+            })->toArray(),
         ]);
 
         // SEARCH (name, email)
@@ -475,6 +493,7 @@ class EmployeeOnboardingController extends Controller
             $importedCount = $import->getRowCount();
             $createdCount = $import->getCreatedCount();
             $updatedCount = $import->getUpdatedCount();
+            $skippedRows = $import->getSkippedRows();
             
             // After transaction commits, verify data was actually saved to database
             // Small delay to ensure database is updated
@@ -509,25 +528,13 @@ class EmployeeOnboardingController extends Controller
                 'created_count' => $createdCount,
                 'updated_count' => $updatedCount,
                 'total_saved' => $totalSaved,
+                'skipped_rows_count' => count($skippedRows),
             ]);
 
             // Only return success if data was actually saved/updated in database
             // Accept success if: rows were processed AND (records were created/updated OR database count increased OR records were recently updated)
             // This handles cases where all rows were updates (no new records, but data was saved)
             $hasDataSaved = ($totalSaved > 0 || $actualNewCount > 0 || $countAfter > $countBefore || $recentlyUpdated > 0);
-            
-            // If we processed rows but counts are 0, check if any records were actually saved
-            if ($importedCount > 0 && $totalSaved === 0 && $actualNewCount === 0) {
-                // Try to get counts from the import class directly
-                $importCheck = new OnboardingCandidateImport(tenant_id(), 'Onboarding Import');
-                // We can't re-import, but we can check if the issue is with counting
-                \Log::warning('Onboarding Import: Count mismatch', [
-                    'imported_count' => $importedCount,
-                    'created_count' => $createdCount,
-                    'updated_count' => $updatedCount,
-                    'recently_updated' => $recentlyUpdated
-                ]);
-            }
             
             if ($importedCount > 0 && $hasDataSaved) {
                 $message = "Successfully imported {$importedCount} candidate" . ($importedCount !== 1 ? 's' : '') . " for onboarding.";
@@ -536,6 +543,9 @@ class EmployeeOnboardingController extends Controller
                 }
                 if ($updatedCount > 0) {
                     $message .= " {$updatedCount} candidate" . ($updatedCount !== 1 ? 's' : '') . " updated.";
+                }
+                if (count($skippedRows) > 0) {
+                    $message .= " " . count($skippedRows) . " row" . (count($skippedRows) !== 1 ? 's' : '') . " skipped (missing or invalid email).";
                 }
                 
                 return response()->json([
@@ -549,6 +559,24 @@ class EmployeeOnboardingController extends Controller
                     'verified' => true
                 ]);
             } else {
+                // Build helpful error message
+                $errorMessage = 'No candidates were saved to the database. ';
+                
+                if ($importedCount === 0 && count($skippedRows) > 0) {
+                    $errorMessage .= 'All rows were skipped because they are missing a valid email address. ';
+                    $errorMessage .= 'Please ensure your Excel file has a column with email addresses (e.g., "email", "primary_email", "e-mail"). ';
+                } elseif ($importedCount === 0) {
+                    $errorMessage .= 'No valid rows were found in the file. ';
+                    $errorMessage .= 'Please check that your file has: ';
+                    $errorMessage .= '1) A header row with column names, ';
+                    $errorMessage .= '2) At least one data row, ';
+                    $errorMessage .= '3) A column containing email addresses. ';
+                } else {
+                    $errorMessage .= 'Rows were processed but could not be saved. ';
+                }
+                
+                $errorMessage .= 'Please download the template and ensure your file format matches it.';
+                
                 // Log detailed error for debugging
                 \Log::error('Onboarding Import Failed', [
                     'tenant_id' => tenant_id(),
@@ -559,13 +587,16 @@ class EmployeeOnboardingController extends Controller
                     'count_after' => $countAfter,
                     'created_count' => $createdCount,
                     'updated_count' => $updatedCount,
+                    'skipped_rows_count' => count($skippedRows),
+                    'skipped_rows_sample' => array_slice($skippedRows, 0, 3),
                 ]);
                 
                 return response()->json([
                     'success' => false,
                     'data_saved' => false,
-                    'message' => 'No candidates were saved to the database. Please check your file format and ensure it matches the template.',
+                    'message' => $errorMessage,
                     'count' => $importedCount,
+                    'skipped_count' => count($skippedRows),
                     'debug' => [
                         'rows_processed' => $importedCount,
                         'created' => $createdCount,
@@ -573,6 +604,7 @@ class EmployeeOnboardingController extends Controller
                         'total_saved' => $totalSaved,
                         'count_before' => $countBefore,
                         'count_after' => $countAfter,
+                        'skipped_rows' => count($skippedRows) > 0 ? array_slice($skippedRows, 0, 5) : [],
                     ]
                 ], 400);
             }
@@ -962,7 +994,7 @@ class EmployeeOnboardingController extends Controller
 /**
  * Onboarding Candidate Import Class
  */
-class OnboardingCandidateImport implements ToModel, WithHeadingRow, WithValidation, SkipsOnError, SkipsOnFailure
+class OnboardingCandidateImport implements ToModel, WithHeadingRow, SkipsOnError, SkipsOnFailure
 {
     use Importable, SkipsErrors, SkipsFailures;
 
@@ -971,6 +1003,8 @@ class OnboardingCandidateImport implements ToModel, WithHeadingRow, WithValidati
     private $rowCount = 0;
     private $createdCount = 0;
     private $updatedCount = 0;
+    private $skippedRows = [];
+    private $firstRowProcessed = false;
 
     public function __construct($tenantId, $source = 'Onboarding Import')
     {
@@ -980,29 +1014,67 @@ class OnboardingCandidateImport implements ToModel, WithHeadingRow, WithValidati
 
     public function model(array $row)
     {
+        // Log first row to see what columns we're getting
+        if (!$this->firstRowProcessed) {
+            $this->firstRowProcessed = true;
+            \Log::info('Onboarding Import: First row columns', [
+                'columns' => array_keys($row),
+                'sample_values' => array_map(function($v) {
+                    return is_string($v) ? substr($v, 0, 50) : $v;
+                }, $row)
+            ]);
+        }
+
         // Normalize column names (handle case-insensitive and spaces)
         $normalizedRow = [];
         foreach ($row as $key => $value) {
-            $normalizedKey = strtolower(trim(str_replace([' ', '_', '-'], '', $key)));
+            if ($key === null || $key === '') {
+                continue; // Skip null or empty keys
+            }
+            $normalizedKey = strtolower(trim(str_replace([' ', '_', '-'], '', (string)$key)));
             $normalizedRow[$normalizedKey] = $value;
         }
         
-        // Try multiple possible column names for email
+        // Try multiple possible column names for email (most common variations)
         $email = null;
-        $emailKeys = ['primaryemail', 'email', 'e-mail', 'mail'];
+        $emailKeys = ['primaryemail', 'email', 'e-mail', 'mail', 'emailaddress', 'email_address'];
         foreach ($emailKeys as $key) {
-            if (isset($normalizedRow[$key]) && !empty(trim($normalizedRow[$key]))) {
-                $email = trim($normalizedRow[$key]);
-                break;
+            if (isset($normalizedRow[$key])) {
+                $value = $normalizedRow[$key];
+                if (!empty($value) && is_string($value)) {
+                    $email = trim($value);
+                    if (!empty($email)) {
+                        break;
+                    }
+                }
             }
         }
         
-        // Also try original keys
+        // Also try original keys (case-sensitive)
         if (empty($email)) {
-            $originalKeys = ['primary_email', 'email', 'e-mail', 'mail'];
+            $originalKeys = ['primary_email', 'email', 'e-mail', 'mail', 'Email', 'EMAIL', 'Primary Email', 'Primary_Email'];
             foreach ($originalKeys as $key) {
-                if (isset($row[$key]) && !empty(trim($row[$key]))) {
-                    $email = trim($row[$key]);
+                if (isset($row[$key])) {
+                    $value = $row[$key];
+                    if (!empty($value) && is_string($value)) {
+                        $email = trim($value);
+                        if (!empty($email)) {
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Try to find email in any column if still not found (last resort)
+        if (empty($email)) {
+            foreach ($row as $key => $value) {
+                if (is_string($value) && filter_var(trim($value), FILTER_VALIDATE_EMAIL)) {
+                    $email = trim($value);
+                    \Log::info('Onboarding Import: Found email in unexpected column', [
+                        'column' => $key,
+                        'email' => $email
+                    ]);
                     break;
                 }
             }
@@ -1010,19 +1082,37 @@ class OnboardingCandidateImport implements ToModel, WithHeadingRow, WithValidati
         
         // Skip if email is empty or invalid
         if (empty($email)) {
-            \Log::warning('Onboarding Import: Skipping row with empty email', ['row_keys' => array_keys($row)]);
+            $this->skippedRows[] = [
+                'reason' => 'Empty email',
+                'columns' => array_keys($row),
+                'row_data' => $row
+            ];
+            \Log::warning('Onboarding Import: Skipping row with empty email', [
+                'row_keys' => array_keys($row),
+                'row_sample' => array_slice($row, 0, 5)
+            ]);
             return null;
         }
         
+        // Validate email format
+        $email = trim($email);
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            \Log::warning('Onboarding Import: Skipping row with invalid email format', ['email' => $email]);
+            $this->skippedRows[] = [
+                'reason' => 'Invalid email format',
+                'email' => $email,
+                'columns' => array_keys($row)
+            ];
+            \Log::warning('Onboarding Import: Skipping row with invalid email format', [
+                'email' => $email,
+                'row_keys' => array_keys($row)
+            ]);
             return null;
         }
 
-        // Only count valid rows
+        // Only count valid rows that have email
         $this->rowCount++;
 
-        // Normalize email (already extracted above)
+        // Normalize email
         $email = strtolower(trim($email));
 
         // Check if candidate already exists
@@ -1032,24 +1122,30 @@ class OnboardingCandidateImport implements ToModel, WithHeadingRow, WithValidati
 
         if ($existingCandidate) {
             // Extract other fields with flexible column names
-            $firstName = $this->getFieldValue($row, $normalizedRow, ['firstname', 'first_name', 'fname', 'name'], $existingCandidate->first_name);
-            $lastName = $this->getFieldValue($row, $normalizedRow, ['lastname', 'last_name', 'lname', 'surname'], $existingCandidate->last_name);
-            $phone = $this->getFieldValue($row, $normalizedRow, ['primaryphone', 'primary_phone', 'phone', 'mobile', 'contact'], $existingCandidate->primary_phone);
-            $source = $this->getFieldValue($row, $normalizedRow, ['source'], $this->source);
+            $firstName = $this->getFieldValue($row, $normalizedRow, ['firstname', 'first_name', 'fname', 'name', 'first'], $existingCandidate->first_name);
+            $lastName = $this->getFieldValue($row, $normalizedRow, ['lastname', 'last_name', 'lname', 'surname', 'last'], $existingCandidate->last_name);
+            $phone = $this->getFieldValue($row, $normalizedRow, ['primaryphone', 'primary_phone', 'phone', 'mobile', 'contact', 'phonenumber', 'phone_number'], $existingCandidate->primary_phone);
+            
+            // Always set source to 'Onboarding Import' for onboarding imports (regardless of what's in the file)
+            // This ensures the candidate will show up in the onboarding list
+            $source = $this->source; // Always use 'Onboarding Import'
             
             // Update existing candidate - always set source to 'Onboarding Import' for onboarding imports
             $existingCandidate->update([
-                'first_name' => $firstName,
-                'last_name' => $lastName,
-                'primary_phone' => $phone,
-                'source' => $source,
+                'first_name' => $firstName ?? $existingCandidate->first_name,
+                'last_name' => $lastName ?? $existingCandidate->last_name,
+                'primary_phone' => $phone ?? $existingCandidate->primary_phone,
+                'source' => $source, // Always set to 'Onboarding Import'
             ]);
             
             $this->updatedCount++;
             
             \Log::debug('Onboarding Import: Updated existing candidate', [
                 'email' => $email,
-                'tenant_id' => $this->tenantId
+                'tenant_id' => $this->tenantId,
+                'old_source' => $existingCandidate->getOriginal('source'),
+                'new_source' => $source,
+                'candidate_id' => $existingCandidate->id
             ]);
             
             // Return the updated model so Excel knows something was processed
@@ -1057,9 +1153,9 @@ class OnboardingCandidateImport implements ToModel, WithHeadingRow, WithValidati
         }
 
         // Extract other fields with flexible column names
-        $firstName = $this->getFieldValue($row, $normalizedRow, ['firstname', 'first_name', 'fname', 'name']);
-        $lastName = $this->getFieldValue($row, $normalizedRow, ['lastname', 'last_name', 'lname', 'surname']);
-        $phone = $this->getFieldValue($row, $normalizedRow, ['primaryphone', 'primary_phone', 'phone', 'mobile', 'contact']);
+        $firstName = $this->getFieldValue($row, $normalizedRow, ['firstname', 'first_name', 'fname', 'name', 'first']);
+        $lastName = $this->getFieldValue($row, $normalizedRow, ['lastname', 'last_name', 'lname', 'surname', 'last']);
+        $phone = $this->getFieldValue($row, $normalizedRow, ['primaryphone', 'primary_phone', 'phone', 'mobile', 'contact', 'phonenumber', 'phone_number']);
         $source = $this->getFieldValue($row, $normalizedRow, ['source'], $this->source);
         
         // Create new candidate and explicitly save to database
@@ -1069,7 +1165,7 @@ class OnboardingCandidateImport implements ToModel, WithHeadingRow, WithValidati
             'last_name' => $lastName ?? '',
             'primary_email' => $email,
             'primary_phone' => $phone ?? null,
-            'source' => $source,
+            'source' => $source ?? $this->source,
         ]);
         
         // Explicitly save to ensure it's committed to database
@@ -1084,17 +1180,6 @@ class OnboardingCandidateImport implements ToModel, WithHeadingRow, WithValidati
         ]);
 
         return $candidate;
-    }
-
-    public function rules(): array
-    {
-        return [
-            'primary_email' => 'required|email',
-            'first_name' => 'nullable|string|max:255',
-            'last_name' => 'nullable|string|max:255',
-            'primary_phone' => 'nullable|string|max:255',
-            'source' => 'nullable|string|max:255',
-        ];
     }
 
     public function getRowCount()
@@ -1112,6 +1197,11 @@ class OnboardingCandidateImport implements ToModel, WithHeadingRow, WithValidati
         return $this->updatedCount;
     }
     
+    public function getSkippedRows()
+    {
+        return $this->skippedRows;
+    }
+    
     /**
      * Helper method to get field value with flexible column name matching
      */
@@ -1119,16 +1209,22 @@ class OnboardingCandidateImport implements ToModel, WithHeadingRow, WithValidati
     {
         // Try normalized keys first
         foreach ($possibleKeys as $key) {
-            $normalizedKey = strtolower(trim(str_replace([' ', '_', '-'], '', $key)));
-            if (isset($normalizedRow[$normalizedKey]) && !empty(trim($normalizedRow[$normalizedKey]))) {
-                return trim($normalizedRow[$normalizedKey]);
+            $normalizedKey = strtolower(trim(str_replace([' ', '_', '-'], '', (string)$key)));
+            if (isset($normalizedRow[$normalizedKey])) {
+                $value = $normalizedRow[$normalizedKey];
+                if (!empty($value) && is_string($value) && trim($value) !== '') {
+                    return trim($value);
+                }
             }
         }
         
-        // Try original keys
+        // Try original keys (case-sensitive)
         foreach ($possibleKeys as $key) {
-            if (isset($row[$key]) && !empty(trim($row[$key]))) {
-                return trim($row[$key]);
+            if (isset($row[$key])) {
+                $value = $row[$key];
+                if (!empty($value) && is_string($value) && trim($value) !== '') {
+                    return trim($value);
+                }
             }
         }
         

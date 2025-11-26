@@ -40,6 +40,9 @@
         loadOnboardings();
     }
     
+    // Make loadOnboardings available globally so the view can call it after import
+    window.loadOnboardings = loadOnboardings;
+    
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
     } else {

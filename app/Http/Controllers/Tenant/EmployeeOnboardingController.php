@@ -686,7 +686,7 @@ class EmployeeOnboardingController extends Controller
                     $message .= " " . count($skippedRows) . " row" . (count($skippedRows) !== 1 ? 's' : '') . " skipped (missing or invalid email).";
                 }
                 
-                return response()->json([
+                $responseData = [
                     'success' => true,
                     'data_saved' => true,
                     'message' => $message,
@@ -695,7 +695,15 @@ class EmployeeOnboardingController extends Controller
                     'updated_count' => $updatedCount,
                     'total_saved' => $totalSaved,
                     'verified' => true
+                ];
+                
+                \Log::info('Onboarding Import: Sending success response', [
+                    'response_data' => $responseData,
+                    'success_type' => gettype($responseData['success']),
+                    'success_value' => $responseData['success']
                 ]);
+                
+                return response()->json($responseData);
             } else {
                 // Build helpful error message
                 $errorMessage = 'No candidates were saved to the database. ';
@@ -729,7 +737,7 @@ class EmployeeOnboardingController extends Controller
                     'skipped_rows_sample' => array_slice($skippedRows, 0, 3),
                 ]);
                 
-                return response()->json([
+                $errorResponse = [
                     'success' => false,
                     'data_saved' => false,
                     'message' => $errorMessage,
@@ -744,7 +752,15 @@ class EmployeeOnboardingController extends Controller
                         'count_after' => $countAfter,
                         'skipped_rows' => count($skippedRows) > 0 ? array_slice($skippedRows, 0, 5) : [],
                     ]
-                ], 400);
+                ];
+                
+                \Log::info('Onboarding Import: Sending error response', [
+                    'response_data' => $errorResponse,
+                    'success_type' => gettype($errorResponse['success']),
+                    'success_value' => $errorResponse['success']
+                ]);
+                
+                return response()->json($errorResponse, 400);
             }
         } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
             $failures = $e->failures();

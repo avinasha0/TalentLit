@@ -348,38 +348,97 @@ class EmployeeOnboardingController extends Controller
     /**
      * API: Get single onboarding details
      */
-    public function apiShow(Request $request, $id)
+    public function apiShow(Request $request, $id = null)
     {
+        // Get ID from route parameter first (method injection is getting wrong value)
+        // Route parameter is the most reliable source
+        $candidateId = $request->route('id') ?? $request->input('id') ?? $id;
+        
+        \Log::info('apiShow called', [
+            'method_param_id' => $id,
+            'route_id' => $request->route('id'),
+            'request_id' => $request->input('id'),
+            'final_candidate_id' => $candidateId,
+            'request_url' => $request->fullUrl(),
+            'request_path' => $request->path(),
+            'route_params' => $request->route()->parameters(),
+            'tenant_id' => tenant()?->id,
+            'tenant_slug' => tenant()?->slug
+        ]);
+        
         $tenantModel = tenant();
         
         if (!$tenantModel) {
+            \Log::error('Tenant not resolved in apiShow');
             return response()->json(['error' => 'Tenant not resolved'], 500);
         }
 
-        // Mock response
-        $mockData = $this->getMockOnboardings($request);
-        $onboarding = collect($mockData['data'])->firstWhere('id', (int)$id);
+        // First, try to find the candidate without source filter (in case source wasn't set)
+        $candidate = \App\Models\Candidate::where('tenant_id', $tenantModel->id)->find($candidateId);
         
-        if (!$onboarding) {
-            return response()->json(['error' => 'Onboarding not found'], 404);
+        // If found but doesn't have onboarding source, still allow it (might be a data issue)
+        if ($candidate && !in_array($candidate->source, ['Onboarding', 'Onboarding Import'])) {
+            \Log::info('Candidate found but source is not Onboarding', [
+                'id' => $candidateId,
+                'source' => $candidate->source,
+                'allowing anyway'
+            ]);
+        }
+        
+        // If not found, try with source filter
+        if (!$candidate) {
+            $candidate = \App\Models\Candidate::where('tenant_id', $tenantModel->id)
+                ->where(function($q) {
+                    $q->where('source', 'Onboarding')
+                      ->orWhere('source', 'Onboarding Import');
+                })
+                ->find($candidateId);
+        }
+        
+        \Log::info('Candidate lookup result', [
+            'id' => $candidateId,
+            'found' => !!$candidate,
+            'candidate_id' => $candidate?->id,
+            'candidate_source' => $candidate?->source,
+            'candidate_name' => $candidate ? ($candidate->first_name . ' ' . $candidate->last_name) : null,
+            'tenant_id' => $tenantModel->id,
+            'total_candidates' => \App\Models\Candidate::where('tenant_id', $tenantModel->id)->count(),
+            'total_onboarding_candidates' => \App\Models\Candidate::where('tenant_id', $tenantModel->id)
+                ->where(function($q) {
+                    $q->where('source', 'Onboarding')
+                      ->orWhere('source', 'Onboarding Import');
+                })->count()
+        ]);
+        
+        if (!$candidate) {
+            \Log::warning('Candidate not found', [
+                'id' => $candidateId,
+                'tenant_id' => $tenantModel->id,
+                'tenant_slug' => $tenantModel->slug,
+                'sample_candidate_ids' => \App\Models\Candidate::where('tenant_id', $tenantModel->id)
+                    ->limit(5)->pluck('id')->toArray()
+            ]);
+            return response()->json(['error' => 'Onboarding not found', 'id' => $candidateId], 404);
         }
 
-        // Add detailed tabs data
-        $onboarding['tabs'] = [
-            'overview' => [
-                'startedAt' => '2025-11-15T10:00:00+05:30',
-                'lastActivity' => '2025-11-20T14:30:00+05:30',
-                'manager' => $onboarding['manager'],
-                'department' => $onboarding['department'],
-            ],
-            'tasks' => [
-                'total' => 12,
-                'completed' => $onboarding['progressPercent'] / 100 * 12,
-                'pending' => $onboarding['pendingItems'],
-            ],
-            'documents' => [],
-            'itAssets' => [],
-            'approvals' => [],
+        // Calculate progress
+        $completed = intval($candidate->completed_steps ?? 0);
+        $total = intval($candidate->total_steps ?? 5);
+        $progressPercent = $total > 0 ? intval(($completed / $total) * 100) : 0;
+
+        // Format response
+        $onboarding = [
+            'id' => $candidate->id,
+            'firstName' => $candidate->first_name ?? '',
+            'lastName' => $candidate->last_name ?? '',
+            'email' => $candidate->primary_email ?? '',
+            'phone' => $candidate->primary_phone ?? null,
+            'designation' => $candidate->designation ?? 'Not Assigned',
+            'department' => $candidate->department ?? 'Not Assigned',
+            'manager' => $candidate->manager ?? 'Not Assigned',
+            'joiningDate' => $candidate->joining_date ? $candidate->joining_date->format('Y-m-d') : null,
+            'status' => $candidate->status ?? 'Pre-boarding',
+            'progressPercent' => $progressPercent,
         ];
 
         return response()->json($onboarding);

@@ -325,7 +325,9 @@
                                         </span>
                                     </td>
                                     <td class="px-3 py-3 whitespace-nowrap text-sm font-medium">
-                                        <a href="#" class="text-blue-600 hover:text-blue-800">View</a>
+                                        <a href="javascript:void(0)" 
+                                           class="view-candidate-btn text-blue-600 hover:text-blue-800" 
+                                           data-candidate-id="{{ $item->id }}">View</a>
                                     </td>
                                 </tr>
                             @empty
@@ -425,7 +427,9 @@
                                 
                                 <!-- Actions -->
                                 <div class="pt-2 border-t border-gray-100">
-                                    <a href="#" class="inline-flex items-center text-sm font-medium text-purple-600 hover:text-purple-800">
+                                    <a href="javascript:void(0)" 
+                                       class="view-candidate-btn inline-flex items-center text-sm font-medium text-purple-600 hover:text-purple-800" 
+                                       data-candidate-id="{{ $item->id }}">
                                         View Details
                                         <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
@@ -509,11 +513,29 @@
         </div>
     </div>
 
+    <!-- Inline test script to verify JavaScript is working -->
+    <script>
+    console.log('=== INLINE TEST SCRIPT RUNNING ===');
+    console.log('Timestamp:', new Date().toISOString());
+    console.log('Page URL:', window.location.href);
+    console.log('Document ready state:', document.readyState);
+    
+    // Test if buttons exist
+    setTimeout(function() {
+        const testButtons = document.querySelectorAll('.view-candidate-btn');
+        console.log('=== INLINE TEST: Found', testButtons.length, 'View buttons ===');
+        if (testButtons.length > 0) {
+            console.log('First button:', testButtons[0]);
+            console.log('First button ID:', testButtons[0].getAttribute('data-candidate-id'));
+        }
+    }, 500);
+    </script>
+
     <!-- Slide-over for View Details -->
     <div id="slide-over" class="hidden fixed inset-0 z-50 overflow-hidden" aria-labelledby="slide-over-title" role="dialog" aria-modal="true">
         <div class="absolute inset-0 bg-gray-500 bg-opacity-75 transition-opacity" id="slide-over-backdrop"></div>
-        <div class="fixed inset-y-0 right-0 pl-10 max-w-full flex">
-            <div class="relative w-screen max-w-2xl">
+        <div class="fixed inset-y-0 right-0 pl-10 max-w-full flex sm:pl-0">
+            <div class="relative w-screen max-w-md">
                 <div class="absolute top-0 left-0 -ml-8 pt-4 pr-2 flex sm:-ml-10 sm:pr-4">
                     <button type="button" 
                             id="close-slide-over"
@@ -526,22 +548,62 @@
                 </div>
                 <div class="h-full flex flex-col bg-white shadow-xl overflow-y-scroll">
                     <div class="px-4 py-6 sm:px-6 border-b border-gray-200">
-                        <h2 class="text-lg font-medium text-gray-900" id="slide-over-title">Onboarding Details</h2>
+                        <h2 class="text-lg font-medium text-gray-900" id="slide-over-title">Candidate Details</h2>
                     </div>
                     <div class="flex-1 px-4 py-6 sm:px-6">
-                        <!-- Tabs -->
-                        <div class="border-b border-gray-200">
-                            <nav class="-mb-px flex space-x-8" aria-label="Tabs">
-                                <button type="button" class="tab-btn active border-purple-500 text-purple-600 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" data-tab="overview">Overview</button>
-                                <button type="button" class="tab-btn border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" data-tab="tasks">Tasks</button>
-                                <button type="button" class="tab-btn border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" data-tab="documents">Documents</button>
-                                <button type="button" class="tab-btn border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" data-tab="it-assets">IT & Assets</button>
-                                <button type="button" class="tab-btn border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" data-tab="approvals">Approvals</button>
-                            </nav>
+                        <!-- Loading State -->
+                        <div id="slide-over-loading" class="hidden">
+                            <div class="flex items-center justify-center py-12">
+                                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+                                <span class="ml-3 text-gray-600">Loading...</span>
+                            </div>
                         </div>
-                        <!-- Tab Content -->
-                        <div id="tab-content" class="mt-6">
-                            <!-- Content will be populated by JavaScript -->
+                        
+                        <!-- Error State -->
+                        <div id="slide-over-error" class="hidden">
+                            <div class="text-center py-12">
+                                <p class="text-sm text-gray-600">Unable to load candidate details. Try again.</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Content -->
+                        <div id="slide-over-content" class="hidden space-y-6">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-500 mb-1">Name</label>
+                                <p class="text-sm text-gray-900" id="candidate-name">-</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-500 mb-1">Email</label>
+                                <p class="text-sm text-gray-900" id="candidate-email">-</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-500 mb-1">Phone</label>
+                                <p class="text-sm text-gray-900" id="candidate-phone">-</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-500 mb-1">Designation</label>
+                                <p class="text-sm text-gray-900" id="candidate-designation">-</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-500 mb-1">Department</label>
+                                <p class="text-sm text-gray-900" id="candidate-department">-</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-500 mb-1">Manager</label>
+                                <p class="text-sm text-gray-900" id="candidate-manager">-</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-500 mb-1">Joining Date</label>
+                                <p class="text-sm text-gray-900" id="candidate-joining-date">-</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-500 mb-1">Status</label>
+                                <p class="text-sm text-gray-900" id="candidate-status">-</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-500 mb-1">Progress</label>
+                                <p class="text-sm text-gray-900" id="candidate-progress">-</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -576,6 +638,250 @@
             </div>
         </div>
     </div>
+
+    <!-- Slide-over JavaScript - Inline to ensure it runs -->
+    <script>
+    console.log('=== SLIDE-OVER SCRIPT LOADING (INLINE) ===');
+    console.log('Timestamp:', new Date().toISOString());
+    console.log('Document ready state:', document.readyState);
+    
+    // Move the entire slide-over script here to ensure it runs
+    (function() {
+        'use strict';
+        
+        const tenantSlug = @json($tenantSlug);
+        console.log('[Slide-over INLINE] IIFE executing, tenantSlug:', tenantSlug);
+        let slideOver, slideOverBackdrop, closeSlideOverBtn, slideOverLoading, slideOverError, slideOverContent;
+        
+        function initSlideOver() {
+            console.log('[Slide-over INLINE] Initializing slide-over elements...');
+            slideOver = document.getElementById('slide-over');
+            slideOverBackdrop = document.getElementById('slide-over-backdrop');
+            closeSlideOverBtn = document.getElementById('close-slide-over');
+            slideOverLoading = document.getElementById('slide-over-loading');
+            slideOverError = document.getElementById('slide-over-error');
+            slideOverContent = document.getElementById('slide-over-content');
+            
+            console.log('[Slide-over INLINE] Elements found:', {
+                slideOver: !!slideOver,
+                slideOverBackdrop: !!slideOverBackdrop,
+                closeSlideOverBtn: !!closeSlideOverBtn,
+                slideOverLoading: !!slideOverLoading,
+                slideOverError: !!slideOverError,
+                slideOverContent: !!slideOverContent
+            });
+        }
+        
+        function openSlideOver() {
+            console.log('[Slide-over INLINE] Opening slide-over, element exists:', !!slideOver);
+            if (slideOver) {
+                slideOver.classList.remove('hidden');
+                document.body.style.overflow = 'hidden';
+                console.log('[Slide-over INLINE] Slide-over opened successfully');
+            } else {
+                console.error('[Slide-over INLINE] Cannot open: slide-over element not found');
+            }
+        }
+        
+        function closeSlideOver() {
+            if (slideOver) {
+                slideOver.classList.add('hidden');
+                document.body.style.overflow = '';
+                if (slideOverLoading) slideOverLoading.classList.add('hidden');
+                if (slideOverError) slideOverError.classList.add('hidden');
+                if (slideOverContent) slideOverContent.classList.add('hidden');
+            }
+        }
+        
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            try {
+                const date = new Date(dateString);
+                return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+            } catch (e) {
+                return dateString;
+            }
+        }
+        
+        function formatStatus(status) {
+            const statusConfig = {
+                'Pre-boarding': { bg: 'bg-yellow-400', text: 'text-yellow-800' },
+                'Pending Docs': { bg: 'bg-orange-400', text: 'text-orange-800' },
+                'IT Pending': { bg: 'bg-blue-400', text: 'text-blue-800' },
+                'Joining Soon': { bg: 'bg-indigo-500', text: 'text-indigo-800' },
+                'Completed': { bg: 'bg-green-400', text: 'text-green-800' },
+                'Overdue': { bg: 'bg-red-400', text: 'text-red-800' }
+            };
+            const config = statusConfig[status] || { bg: 'bg-gray-400', text: 'text-gray-800' };
+            return `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${config.bg} ${config.text}">${status}</span>`;
+        }
+        
+        function loadCandidateDetails(candidateId) {
+            console.log('[Slide-over INLINE] loadCandidateDetails called with ID:', candidateId);
+            if (!candidateId) {
+                console.error('[Slide-over INLINE] Candidate ID is missing');
+                return;
+            }
+            
+            if (slideOverLoading) slideOverLoading.classList.remove('hidden');
+            if (slideOverError) slideOverError.classList.add('hidden');
+            if (slideOverContent) slideOverContent.classList.add('hidden');
+            
+            const apiUrl = `/${tenantSlug}/api/onboardings/${candidateId}`;
+            console.log('[Slide-over INLINE] Fetching from URL:', apiUrl);
+            
+            fetch(apiUrl, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                }
+            })
+            .then(response => {
+                console.log('[Slide-over INLINE] API response status:', response.status);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                return response.json();
+            })
+            .then(data => {
+                console.log('[Slide-over INLINE] API response data:', data);
+                if (slideOverLoading) slideOverLoading.classList.add('hidden');
+                if (slideOverError) slideOverError.classList.add('hidden');
+                if (slideOverContent) slideOverContent.classList.remove('hidden');
+                
+                const fullName = `${data.firstName || ''} ${data.lastName || ''}`.trim() || 'N/A';
+                document.getElementById('candidate-name').textContent = fullName;
+                document.getElementById('candidate-email').textContent = data.email || 'N/A';
+                
+                const phoneElement = document.getElementById('candidate-phone');
+                if (phoneElement) phoneElement.textContent = data.phone || 'N/A';
+                
+                document.getElementById('candidate-designation').textContent = data.designation || 'N/A';
+                document.getElementById('candidate-department').textContent = data.department || 'N/A';
+                document.getElementById('candidate-manager').textContent = data.manager || 'N/A';
+                document.getElementById('candidate-joining-date').textContent = formatDate(data.joiningDate);
+                document.getElementById('candidate-status').innerHTML = formatStatus(data.status || 'Pre-boarding');
+                
+                const progressElement = document.getElementById('candidate-progress');
+                if (progressElement) {
+                    progressElement.textContent = (data.progressPercent !== undefined && data.progressPercent !== null) 
+                        ? `${data.progressPercent}%` : 'N/A';
+                }
+            })
+            .catch(error => {
+                console.error('[Slide-over INLINE] Error loading candidate details:', error);
+                if (slideOverLoading) slideOverLoading.classList.add('hidden');
+                if (slideOverError) slideOverError.classList.remove('hidden');
+                if (slideOverContent) slideOverContent.classList.add('hidden');
+            });
+        }
+        
+        function handleViewClick(e) {
+            console.log('=== [Slide-over INLINE] Click event detected! ===');
+            console.log('[Slide-over INLINE] Event target:', e.target);
+            console.log('[Slide-over INLINE] Target tagName:', e.target.tagName);
+            console.log('[Slide-over INLINE] Target className:', e.target.className);
+            
+            const btn = e.target.closest('.view-candidate-btn');
+            console.log('[Slide-over INLINE] Button found via closest:', !!btn);
+            
+            if (!btn) {
+                console.log('[Slide-over INLINE] No .view-candidate-btn found, ignoring click');
+                return;
+            }
+            
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const candidateId = btn.getAttribute('data-candidate-id');
+            console.log('[Slide-over INLINE] Candidate ID:', candidateId);
+            
+            if (candidateId) {
+                console.log('[Slide-over INLINE] Opening slide-over...');
+                openSlideOver();
+                loadCandidateDetails(candidateId);
+            } else {
+                console.error('[Slide-over INLINE] No candidate ID found on button');
+            }
+        }
+        
+        function init() {
+            console.log('[Slide-over INLINE] Init function called');
+            initSlideOver();
+            
+            const viewButtons = document.querySelectorAll('.view-candidate-btn');
+            console.log('[Slide-over INLINE] Found View buttons:', viewButtons.length);
+            
+            if (viewButtons.length > 0) {
+                console.log('[Slide-over INLINE] First button:', viewButtons[0]);
+                console.log('[Slide-over INLINE] First button ID:', viewButtons[0].getAttribute('data-candidate-id'));
+            } else {
+                console.warn('[Slide-over INLINE] WARNING: No View buttons found!');
+            }
+            
+            const onboardingPage = document.getElementById('onboardings-page');
+            console.log('[Slide-over INLINE] onboarding-page element found:', !!onboardingPage);
+            
+            if (onboardingPage) {
+                console.log('[Slide-over INLINE] Attaching click handler to onboarding-page');
+                onboardingPage.addEventListener('click', handleViewClick);
+            } else {
+                console.log('[Slide-over INLINE] Attaching click handler to document');
+                document.addEventListener('click', handleViewClick);
+            }
+            
+            // Direct attachment as fallback
+            viewButtons.forEach((btn, index) => {
+                console.log(`[Slide-over INLINE] Attaching direct handler to button ${index}`);
+                btn.addEventListener('click', function(e) {
+                    console.log('[Slide-over INLINE] Direct button click handler fired');
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const candidateId = this.getAttribute('data-candidate-id');
+                    if (candidateId) {
+                        openSlideOver();
+                        loadCandidateDetails(candidateId);
+                    }
+                });
+            });
+            
+            if (closeSlideOverBtn) {
+                closeSlideOverBtn.addEventListener('click', closeSlideOver);
+            }
+            if (slideOverBackdrop) {
+                slideOverBackdrop.addEventListener('click', closeSlideOver);
+            }
+            
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && slideOver && !slideOver.classList.contains('hidden')) {
+                    closeSlideOver();
+                }
+            });
+            
+            console.log('[Slide-over INLINE] Initialization complete');
+        }
+        
+        // Run when DOM is ready
+        console.log('[Slide-over INLINE] Document ready state:', document.readyState);
+        if (document.readyState === 'loading') {
+            console.log('[Slide-over INLINE] Waiting for DOMContentLoaded');
+            document.addEventListener('DOMContentLoaded', function() {
+                console.log('[Slide-over INLINE] DOMContentLoaded fired');
+                init();
+            });
+        } else {
+            console.log('[Slide-over INLINE] DOM already ready, calling init');
+            init();
+        }
+        
+        // Test after delay
+        setTimeout(function() {
+            console.log('[Slide-over INLINE] TEST: Checking buttons after 1 second');
+            const testButtons = document.querySelectorAll('.view-candidate-btn');
+            console.log('[Slide-over INLINE] TEST: Found', testButtons.length, 'buttons');
+        }, 1000);
+    })();
+    </script>
 </x-app-layout>
 
 @push('scripts')
@@ -778,5 +1084,330 @@ console.log('Employee Onboarding page script loading...');
         cancelBtn.addEventListener('click', closeImportModal);
     }
 })();
+</script>
+{{-- JavaScript for slide-over panel --}}
+<script>
+console.log('========================================');
+console.log('[Slide-over] Script starting...');
+console.log('[Slide-over] Timestamp:', new Date().toISOString());
+console.log('========================================');
+
+(function() {
+    'use strict';
+    
+    const tenantSlug = @json($tenantSlug);
+    console.log('[Slide-over] IIFE executing, tenantSlug:', tenantSlug);
+    let slideOver, slideOverBackdrop, closeSlideOverBtn, slideOverLoading, slideOverError, slideOverContent;
+    
+    function initSlideOver() {
+        console.log('[Slide-over] Initializing slide-over elements...');
+        slideOver = document.getElementById('slide-over');
+        slideOverBackdrop = document.getElementById('slide-over-backdrop');
+        closeSlideOverBtn = document.getElementById('close-slide-over');
+        slideOverLoading = document.getElementById('slide-over-loading');
+        slideOverError = document.getElementById('slide-over-error');
+        slideOverContent = document.getElementById('slide-over-content');
+        
+        console.log('[Slide-over] Elements found:', {
+            slideOver: !!slideOver,
+            slideOverBackdrop: !!slideOverBackdrop,
+            closeSlideOverBtn: !!closeSlideOverBtn,
+            slideOverLoading: !!slideOverLoading,
+            slideOverError: !!slideOverError,
+            slideOverContent: !!slideOverContent
+        });
+    }
+    
+    function openSlideOver() {
+        console.log('[Slide-over] Opening slide-over, element exists:', !!slideOver);
+        if (slideOver) {
+            slideOver.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+            console.log('[Slide-over] Slide-over opened successfully');
+        } else {
+            console.error('[Slide-over] Cannot open: slide-over element not found');
+        }
+    }
+    
+    function closeSlideOver() {
+        if (slideOver) {
+            slideOver.classList.add('hidden');
+            document.body.style.overflow = '';
+            // Reset states
+            if (slideOverLoading) slideOverLoading.classList.add('hidden');
+            if (slideOverError) slideOverError.classList.add('hidden');
+            if (slideOverContent) slideOverContent.classList.add('hidden');
+        }
+    }
+    
+    function formatDate(dateString) {
+        if (!dateString) return 'N/A';
+        try {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+        } catch (e) {
+            return dateString;
+        }
+    }
+    
+    function formatStatus(status) {
+        const statusConfig = {
+            'Pre-boarding': { bg: 'bg-yellow-400', text: 'text-yellow-800' },
+            'Pending Docs': { bg: 'bg-orange-400', text: 'text-orange-800' },
+            'IT Pending': { bg: 'bg-blue-400', text: 'text-blue-800' },
+            'Joining Soon': { bg: 'bg-indigo-500', text: 'text-indigo-800' },
+            'Completed': { bg: 'bg-green-400', text: 'text-green-800' },
+            'Overdue': { bg: 'bg-red-400', text: 'text-red-800' }
+        };
+        const config = statusConfig[status] || { bg: 'bg-gray-400', text: 'text-gray-800' };
+        return `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${config.bg} ${config.text}">${status}</span>`;
+    }
+    
+    function loadCandidateDetails(candidateId) {
+        console.log('[Slide-over] loadCandidateDetails called with ID:', candidateId);
+        if (!candidateId) {
+            console.error('[Slide-over] Candidate ID is missing');
+            return;
+        }
+        
+        // Show loading state
+        console.log('[Slide-over] Showing loading state');
+        if (slideOverLoading) slideOverLoading.classList.remove('hidden');
+        if (slideOverError) slideOverError.classList.add('hidden');
+        if (slideOverContent) slideOverContent.classList.add('hidden');
+        
+        // Build API URL
+        const apiUrl = `/${tenantSlug}/api/onboardings/${candidateId}`;
+        console.log('[Slide-over] Fetching from URL:', apiUrl);
+        
+        // Fetch candidate details
+        fetch(apiUrl, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+            }
+        })
+        .then(response => {
+            console.log('[Slide-over] API response status:', response.status);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('[Slide-over] API response data:', data);
+            // Hide loading, show content
+            if (slideOverLoading) slideOverLoading.classList.add('hidden');
+            if (slideOverError) slideOverError.classList.add('hidden');
+            if (slideOverContent) slideOverContent.classList.remove('hidden');
+            
+            // Populate fields
+            const fullName = `${data.firstName || ''} ${data.lastName || ''}`.trim() || 'N/A';
+            document.getElementById('candidate-name').textContent = fullName;
+            document.getElementById('candidate-email').textContent = data.email || 'N/A';
+            
+            // Phone
+            const phoneElement = document.getElementById('candidate-phone');
+            if (phoneElement) {
+                phoneElement.textContent = data.phone || 'N/A';
+            }
+            
+            document.getElementById('candidate-designation').textContent = data.designation || 'N/A';
+            document.getElementById('candidate-department').textContent = data.department || 'N/A';
+            document.getElementById('candidate-manager').textContent = data.manager || 'N/A';
+            document.getElementById('candidate-joining-date').textContent = formatDate(data.joiningDate);
+            document.getElementById('candidate-status').innerHTML = formatStatus(data.status || 'Pre-boarding');
+            
+            // Progress
+            const progressElement = document.getElementById('candidate-progress');
+            if (progressElement) {
+                if (data.progressPercent !== undefined && data.progressPercent !== null) {
+                    progressElement.textContent = `${data.progressPercent}%`;
+                } else {
+                    progressElement.textContent = 'N/A';
+                }
+            }
+        })
+        .catch(error => {
+            console.error('[Slide-over] Error loading candidate details:', error);
+            // Hide loading, show error
+            if (slideOverLoading) slideOverLoading.classList.add('hidden');
+            if (slideOverError) slideOverError.classList.remove('hidden');
+            if (slideOverContent) slideOverContent.classList.add('hidden');
+        });
+    }
+    
+    // Use event delegation to handle clicks on View buttons
+    function handleViewClick(e) {
+        console.log('========================================');
+        console.log('[Slide-over] Click event detected!');
+        console.log('[Slide-over] Event target:', e.target);
+        console.log('[Slide-over] Event currentTarget:', e.currentTarget);
+        console.log('[Slide-over] Event type:', e.type);
+        console.log('[Slide-over] Target tagName:', e.target.tagName);
+        console.log('[Slide-over] Target className:', e.target.className);
+        
+        const btn = e.target.closest('.view-candidate-btn');
+        console.log('[Slide-over] Button found via closest:', !!btn);
+        if (btn) {
+            console.log('[Slide-over] Button element:', btn);
+        }
+        
+        if (!btn) {
+            console.log('[Slide-over] No .view-candidate-btn found, ignoring click');
+            return;
+        }
+        
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('[Slide-over] Default prevented, event stopped');
+        
+        const candidateId = btn.getAttribute('data-candidate-id');
+        console.log('[Slide-over] View clicked, candidate ID:', candidateId);
+        console.log('[Slide-over] Button element:', btn);
+        console.log('[Slide-over] Button classes:', btn.className);
+        console.log('[Slide-over] Button attributes:', Array.from(btn.attributes).map(attr => `${attr.name}="${attr.value}"`));
+        
+        if (candidateId) {
+            console.log('[Slide-over] Candidate ID found, opening slide-over...');
+            openSlideOver();
+            loadCandidateDetails(candidateId);
+        } else {
+            console.error('[Slide-over] No candidate ID found on button');
+        }
+    }
+    
+    // Initialize when DOM is ready
+    function init() {
+        console.log('[Slide-over] Init function called');
+        initSlideOver();
+        
+        // Check for View buttons
+        const viewButtons = document.querySelectorAll('.view-candidate-btn');
+        console.log('========================================');
+        console.log('[Slide-over] Searching for View buttons...');
+        console.log('[Slide-over] Found View buttons:', viewButtons.length);
+        
+        if (viewButtons.length > 0) {
+            console.log('[Slide-over] First button element:', viewButtons[0]);
+            console.log('[Slide-over] First button HTML:', viewButtons[0].outerHTML);
+            console.log('[Slide-over] First button ID:', viewButtons[0].getAttribute('data-candidate-id'));
+            console.log('[Slide-over] First button classes:', viewButtons[0].className);
+            console.log('[Slide-over] First button href:', viewButtons[0].getAttribute('href'));
+        } else {
+            console.warn('[Slide-over] WARNING: No View buttons found!');
+            console.log('[Slide-over] Searching for any links with view-candidate-btn class...');
+            const allLinks = document.querySelectorAll('a');
+            console.log('[Slide-over] Total links on page:', allLinks.length);
+            allLinks.forEach((link, idx) => {
+                if (link.className && link.className.includes('view')) {
+                    console.log(`[Slide-over] Link ${idx} with "view" in class:`, link.className, link);
+                }
+            });
+        }
+        console.log('========================================');
+        
+        // Use event delegation on the document or a parent container
+        const onboardingPage = document.getElementById('onboardings-page');
+        console.log('[Slide-over] onboarding-page element found:', !!onboardingPage);
+        
+        if (onboardingPage) {
+            console.log('[Slide-over] Attaching click handler to onboarding-page container');
+            onboardingPage.addEventListener('click', handleViewClick);
+        } else {
+            console.log('[Slide-over] onboarding-page not found, attaching to document');
+            // Fallback to document if container not found
+            document.addEventListener('click', handleViewClick);
+        }
+        
+        // Also try direct attachment to buttons as fallback
+        viewButtons.forEach((btn, index) => {
+            console.log(`[Slide-over] Attaching direct handler to button ${index}`);
+            btn.addEventListener('click', function(e) {
+                console.log('[Slide-over] Direct button click handler fired');
+                e.preventDefault();
+                e.stopPropagation();
+                const candidateId = this.getAttribute('data-candidate-id');
+                console.log('[Slide-over] Direct handler - candidate ID:', candidateId);
+                if (candidateId) {
+                    openSlideOver();
+                    loadCandidateDetails(candidateId);
+                }
+            });
+        });
+        
+        // Close handlers
+        if (closeSlideOverBtn) {
+            console.log('[Slide-over] Attaching close button handler');
+            closeSlideOverBtn.addEventListener('click', closeSlideOver);
+        }
+        
+        if (slideOverBackdrop) {
+            console.log('[Slide-over] Attaching backdrop click handler');
+            slideOverBackdrop.addEventListener('click', closeSlideOver);
+        }
+        
+        // Close on Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && slideOver && !slideOver.classList.contains('hidden')) {
+                closeSlideOver();
+            }
+        });
+        
+        console.log('[Slide-over] Initialization complete');
+    }
+    
+    // Run when DOM is ready
+    console.log('[Slide-over] Document ready state:', document.readyState);
+    if (document.readyState === 'loading') {
+        console.log('[Slide-over] DOM still loading, waiting for DOMContentLoaded');
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('[Slide-over] DOMContentLoaded fired, calling init');
+            init();
+        });
+    } else {
+        console.log('[Slide-over] DOM already ready, calling init immediately');
+        // DOM is already ready
+        init();
+    }
+    
+    console.log('[Slide-over] Script setup complete');
+    console.log('========================================');
+    
+    // Test: Log all clickable elements after a short delay
+    setTimeout(function() {
+        console.log('[Slide-over] TEST: Checking page after 1 second...');
+        const testButtons = document.querySelectorAll('.view-candidate-btn');
+        console.log('[Slide-over] TEST: Found buttons:', testButtons.length);
+        if (testButtons.length === 0) {
+            console.error('[Slide-over] TEST FAILED: No buttons found!');
+            console.log('[Slide-over] TEST: Checking if script is in correct location...');
+            console.log('[Slide-over] TEST: Current script location:', window.location.href);
+        } else {
+            console.log('[Slide-over] TEST PASSED: Buttons found!');
+            testButtons.forEach((btn, idx) => {
+                console.log(`[Slide-over] TEST: Button ${idx}:`, {
+                    id: btn.getAttribute('data-candidate-id'),
+                    href: btn.getAttribute('href'),
+                    classes: btn.className,
+                    text: btn.textContent.trim()
+                });
+            });
+        }
+    }, 1000);
+})();
+
+// Global test function - can be called from console
+window.testSlideOver = function() {
+    console.log('[Slide-over] TEST FUNCTION CALLED');
+    const buttons = document.querySelectorAll('.view-candidate-btn');
+    console.log('Found buttons:', buttons.length);
+    buttons.forEach((btn, idx) => {
+        console.log(`Button ${idx}:`, btn);
+    });
+    return buttons.length;
+};
 </script>
 @endpush

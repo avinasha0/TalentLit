@@ -527,6 +527,147 @@ class EmployeeOnboardingController extends Controller
     }
 
     /**
+     * API: Get documents for a candidate
+     */
+    public function apiGetDocuments(Request $request, $id = null)
+    {
+        $tenantModel = tenant();
+        
+        if (!$tenantModel) {
+            return response()->json(['error' => 'Tenant not resolved'], 500);
+        }
+
+        // Get ID from route parameter
+        $candidateId = $request->route('id') ?? $request->input('id') ?? $id;
+        
+        if (!$candidateId) {
+            return response()->json(['error' => 'Candidate ID is required'], 400);
+        }
+
+        // Find the candidate
+        $candidate = \App\Models\Candidate::where('tenant_id', $tenantModel->id)
+            ->where(function($q) {
+                $q->where('source', 'Onboarding')
+                  ->orWhere('source', 'Onboarding Import');
+            })
+            ->find($candidateId);
+
+        if (!$candidate) {
+            return response()->json(['error' => 'Candidate not found'], 404);
+        }
+
+        // For now, return mock document data
+        // In a real implementation, this would fetch from a documents table
+        $documents = [
+            [
+                'id' => 'doc-1',
+                'name' => 'ID Proof',
+                'status' => 'Uploaded',
+                'uploaded_at' => now()->subDays(2)->toIso8601String(),
+                'file_url' => '#'
+            ],
+            [
+                'id' => 'doc-2',
+                'name' => 'Address Proof',
+                'status' => 'Pending',
+                'uploaded_at' => null,
+                'file_url' => null
+            ],
+            [
+                'id' => 'doc-3',
+                'name' => 'Educational Certificates',
+                'status' => 'Missing',
+                'uploaded_at' => null,
+                'file_url' => null
+            ],
+            [
+                'id' => 'doc-4',
+                'name' => 'Employment Contract',
+                'status' => 'Uploaded',
+                'uploaded_at' => now()->subDays(1)->toIso8601String(),
+                'file_url' => '#'
+            ],
+            [
+                'id' => 'doc-5',
+                'name' => 'Medical Certificate',
+                'status' => 'Pending',
+                'uploaded_at' => null,
+                'file_url' => null
+            ]
+        ];
+
+        return response()->json([
+            'documents' => $documents
+        ]);
+    }
+
+    /**
+     * API: Send document-specific reminder
+     */
+    public function apiSendDocumentReminder(Request $request, $id = null, $documentId = null)
+    {
+        $tenantModel = tenant();
+        
+        if (!$tenantModel) {
+            return response()->json(['error' => 'Tenant not resolved'], 500);
+        }
+
+        // Get IDs from route parameters
+        $candidateId = $request->route('id') ?? $request->input('id') ?? $id;
+        $docId = $request->route('documentId') ?? $request->input('documentId') ?? $documentId;
+        $documentName = $request->input('document_name', 'document');
+        
+        if (!$candidateId || !$docId) {
+            return response()->json(['error' => 'Candidate ID and Document ID are required'], 400);
+        }
+
+        // Find the candidate
+        $candidate = \App\Models\Candidate::where('tenant_id', $tenantModel->id)
+            ->where(function($q) {
+                $q->where('source', 'Onboarding')
+                  ->orWhere('source', 'Onboarding Import');
+            })
+            ->find($candidateId);
+
+        if (!$candidate) {
+            return response()->json(['error' => 'Candidate not found'], 404);
+        }
+
+        try {
+            // TODO: Implement actual reminder sending logic
+            // The reminder message should be: "Please upload your pending document: {document_name}."
+            
+            // Example implementation (commented out until email service is configured):
+            // $message = "Please upload your pending document: {$documentName}.";
+            // Mail::to($candidate->primary_email)->send(new DocumentReminderMail($candidate, $documentName, $message));
+            
+            Log::info('Document reminder sent', [
+                'candidate_id' => $candidateId,
+                'document_id' => $docId,
+                'document_name' => $documentName,
+                'tenant_id' => $tenantModel->id,
+                'email' => $candidate->primary_email
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Reminder sent successfully'
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to send document reminder', [
+                'candidate_id' => $candidateId,
+                'document_id' => $docId,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => 'Failed to send reminder'
+            ], 500);
+        }
+    }
+
+    /**
      * API: Convert onboarding to employee
      */
     public function apiConvert(Request $request, $id)

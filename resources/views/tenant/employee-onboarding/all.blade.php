@@ -550,6 +550,21 @@
                     <div class="px-4 py-6 sm:px-6 border-b border-gray-200">
                         <h2 class="text-lg font-medium text-gray-900" id="slide-over-title">Candidate Details</h2>
                     </div>
+                    <!-- Tabs -->
+                    <div class="border-b border-gray-200">
+                        <nav class="flex -mb-px px-4 sm:px-6" aria-label="Tabs">
+                            <button type="button" 
+                                    id="tab-overview"
+                                    class="tab-btn active py-4 px-1 border-b-2 font-medium text-sm border-purple-500 text-purple-600">
+                                Overview
+                            </button>
+                            <button type="button" 
+                                    id="tab-documents"
+                                    class="tab-btn py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">
+                                Documents
+                            </button>
+                        </nav>
+                    </div>
                     <div class="flex-1 px-4 py-6 sm:px-6">
                         <!-- Loading State -->
                         <div id="slide-over-loading" class="hidden">
@@ -566,8 +581,8 @@
                             </div>
                         </div>
                         
-                        <!-- Content -->
-                        <div id="slide-over-content" class="hidden space-y-6">
+                        <!-- Overview Tab Content -->
+                        <div id="tab-content-overview" class="tab-content space-y-6">
                             <div>
                                 <label class="block text-sm font-medium text-gray-500 mb-1">Name</label>
                                 <p class="text-sm text-gray-900" id="candidate-name">-</p>
@@ -620,6 +635,29 @@
                                 </button>
                             </div>
                         </div>
+                        
+                        <!-- Documents Tab Content -->
+                        <div id="tab-content-documents" class="tab-content hidden">
+                            <!-- Documents Loading State -->
+                            <div id="documents-loading" class="hidden">
+                                <div class="flex items-center justify-center py-12">
+                                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+                                    <span class="ml-3 text-gray-600">Loading documents...</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Documents Error State -->
+                            <div id="documents-error" class="hidden">
+                                <div class="text-center py-12">
+                                    <p class="text-sm text-gray-600">Unable to load documents. Try again.</p>
+                                </div>
+                            </div>
+                            
+                            <!-- Documents List -->
+                            <div id="documents-list" class="space-y-3">
+                                <!-- Documents will be loaded here -->
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -666,7 +704,7 @@
         
         const tenantSlug = @json($tenantSlug);
         console.log('[Slide-over INLINE] IIFE executing, tenantSlug:', tenantSlug);
-        let slideOver, slideOverBackdrop, closeSlideOverBtn, slideOverLoading, slideOverError, slideOverContent;
+        let slideOver, slideOverBackdrop, closeSlideOverBtn, slideOverLoading, slideOverError;
         let currentCandidateId = null;
         
         function initSlideOver() {
@@ -676,15 +714,13 @@
             closeSlideOverBtn = document.getElementById('close-slide-over');
             slideOverLoading = document.getElementById('slide-over-loading');
             slideOverError = document.getElementById('slide-over-error');
-            slideOverContent = document.getElementById('slide-over-content');
             
             console.log('[Slide-over INLINE] Elements found:', {
                 slideOver: !!slideOver,
                 slideOverBackdrop: !!slideOverBackdrop,
                 closeSlideOverBtn: !!closeSlideOverBtn,
                 slideOverLoading: !!slideOverLoading,
-                slideOverError: !!slideOverError,
-                slideOverContent: !!slideOverContent
+                slideOverError: !!slideOverError
             });
         }
         
@@ -705,8 +741,9 @@
                 document.body.style.overflow = '';
                 if (slideOverLoading) slideOverLoading.classList.add('hidden');
                 if (slideOverError) slideOverError.classList.add('hidden');
-                if (slideOverContent) slideOverContent.classList.add('hidden');
                 currentCandidateId = null;
+                // Reset to Overview tab
+                switchTab('overview');
             }
         }
         
@@ -742,7 +779,11 @@
             
             if (slideOverLoading) slideOverLoading.classList.remove('hidden');
             if (slideOverError) slideOverError.classList.add('hidden');
-            if (slideOverContent) slideOverContent.classList.add('hidden');
+            
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.add('hidden');
+            });
             
             const apiUrl = `/${tenantSlug}/api/onboardings/${candidateId}`;
             console.log('[Slide-over INLINE] Fetching from URL:', apiUrl);
@@ -764,7 +805,6 @@
                 console.log('[Slide-over INLINE] API response data:', data);
                 if (slideOverLoading) slideOverLoading.classList.add('hidden');
                 if (slideOverError) slideOverError.classList.add('hidden');
-                if (slideOverContent) slideOverContent.classList.remove('hidden');
                 
                 const fullName = `${data.firstName || ''} ${data.lastName || ''}`.trim() || 'N/A';
                 document.getElementById('candidate-name').textContent = fullName;
@@ -787,12 +827,17 @@
                 
                 // Store candidate ID for send reminder button
                 currentCandidateId = candidateId;
+                
+                // Show Overview tab content
+                const overviewContent = document.getElementById('tab-content-overview');
+                if (overviewContent) {
+                    overviewContent.classList.remove('hidden');
+                }
             })
             .catch(error => {
                 console.error('[Slide-over INLINE] Error loading candidate details:', error);
                 if (slideOverLoading) slideOverLoading.classList.add('hidden');
                 if (slideOverError) slideOverError.classList.remove('hidden');
-                if (slideOverContent) slideOverContent.classList.add('hidden');
                 currentCandidateId = null;
             });
         }
@@ -879,6 +924,198 @@
             });
         }
         
+        function switchTab(tabName) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.add('hidden');
+            });
+            
+            // Remove active class from all tabs
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active', 'border-purple-500', 'text-purple-600');
+                btn.classList.add('border-transparent', 'text-gray-500');
+            });
+            
+            // Show selected tab content
+            const tabContent = document.getElementById(`tab-content-${tabName}`);
+            if (tabContent) {
+                tabContent.classList.remove('hidden');
+            }
+            
+            // Activate selected tab button
+            const tabBtn = document.getElementById(`tab-${tabName}`);
+            if (tabBtn) {
+                tabBtn.classList.add('active', 'border-purple-500', 'text-purple-600');
+                tabBtn.classList.remove('border-transparent', 'text-gray-500');
+            }
+            
+            // Load documents if Documents tab is clicked
+            if (tabName === 'documents' && currentCandidateId) {
+                loadDocuments(currentCandidateId);
+            }
+        }
+        
+        function loadDocuments(candidateId) {
+            if (!candidateId) {
+                console.error('[Slide-over INLINE] Cannot load documents: no candidate ID');
+                return;
+            }
+            
+            const documentsLoading = document.getElementById('documents-loading');
+            const documentsError = document.getElementById('documents-error');
+            const documentsList = document.getElementById('documents-list');
+            
+            // Show loading state
+            if (documentsLoading) documentsLoading.classList.remove('hidden');
+            if (documentsError) documentsError.classList.add('hidden');
+            if (documentsList) documentsList.innerHTML = '';
+            
+            const apiUrl = `/${tenantSlug}/api/onboardings/${candidateId}/documents`;
+            
+            fetch(apiUrl, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                }
+            })
+            .then(response => {
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                return response.json();
+            })
+            .then(data => {
+                if (documentsLoading) documentsLoading.classList.add('hidden');
+                if (documentsError) documentsError.classList.add('hidden');
+                
+                if (!documentsList) return;
+                
+                if (!data.documents || data.documents.length === 0) {
+                    documentsList.innerHTML = '<p class="text-sm text-gray-500 text-center py-8">No documents found.</p>';
+                    return;
+                }
+                
+                // Render documents
+                documentsList.innerHTML = data.documents.map(doc => {
+                    const statusBadge = getDocumentStatusBadge(doc.status);
+                    const uploadedDate = doc.uploaded_at ? formatDate(doc.uploaded_at) : 'N/A';
+                    
+                    let actionButton = '';
+                    if (doc.status === 'Uploaded' && doc.file_url) {
+                        actionButton = `<a href="${doc.file_url}" target="_blank" class="text-sm text-blue-600 hover:text-blue-800">View</a>`;
+                    } else if (doc.status === 'Pending' || doc.status === 'Missing') {
+                        actionButton = `<button type="button" 
+                                                class="remind-document-btn text-sm px-3 py-1 text-purple-600 hover:text-purple-800 border border-purple-300 rounded-md hover:bg-purple-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                data-document-id="${doc.id || ''}"
+                                                data-document-name="${doc.name || ''}">
+                                            <span class="remind-text">Remind</span>
+                                            <span class="remind-loader hidden ml-1">
+                                                <svg class="animate-spin h-3 w-3 inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                </svg>
+                                            </span>
+                                        </button>`;
+                    }
+                    
+                    return `
+                        <div class="flex items-center justify-between py-3 border-b border-gray-200">
+                            <div class="flex-1 min-w-0">
+                                <div class="text-sm font-medium text-gray-900">${doc.name || 'Untitled Document'}</div>
+                                <div class="mt-1 flex items-center space-x-2">
+                                    ${statusBadge}
+                                    <span class="text-xs text-gray-500">${uploadedDate}</span>
+                                </div>
+                            </div>
+                            <div class="ml-4 flex-shrink-0">
+                                ${actionButton}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                
+                // Attach event listeners to Remind buttons
+                documentsList.querySelectorAll('.remind-document-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const documentId = this.getAttribute('data-document-id');
+                        const documentName = this.getAttribute('data-document-name');
+                        sendDocumentReminder(candidateId, documentId, documentName, this);
+                    });
+                });
+            })
+            .catch(error => {
+                console.error('[Slide-over INLINE] Error loading documents:', error);
+                if (documentsLoading) documentsLoading.classList.add('hidden');
+                if (documentsError) documentsError.classList.remove('hidden');
+            });
+        }
+        
+        function getDocumentStatusBadge(status) {
+            const statusConfig = {
+                'Uploaded': { bg: 'bg-green-100', text: 'text-green-800' },
+                'Pending': { bg: 'bg-yellow-100', text: 'text-yellow-800' },
+                'Missing': { bg: 'bg-red-100', text: 'text-red-800' }
+            };
+            const config = statusConfig[status] || { bg: 'bg-gray-100', text: 'text-gray-800' };
+            return `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${config.bg} ${config.text}">${status}</span>`;
+        }
+        
+        function sendDocumentReminder(candidateId, documentId, documentName, buttonElement) {
+            if (!candidateId || !documentId) {
+                showToast('Document information is missing', 'error');
+                return;
+            }
+            
+            const remindText = buttonElement.querySelector('.remind-text');
+            const remindLoader = buttonElement.querySelector('.remind-loader');
+            
+            // Disable button and show loading
+            buttonElement.disabled = true;
+            if (remindText) remindText.textContent = 'Sending…';
+            if (remindLoader) remindLoader.classList.remove('hidden');
+            
+            const apiUrl = `/${tenantSlug}/api/onboardings/${candidateId}/documents/${documentId}/remind`;
+            
+            fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                },
+                body: JSON.stringify({
+                    document_name: documentName
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Re-enable button
+                buttonElement.disabled = false;
+                if (remindText) remindText.textContent = 'Remind';
+                if (remindLoader) remindLoader.classList.add('hidden');
+                
+                // Show success toast
+                showToast('Reminder sent.', 'success');
+            })
+            .catch(error => {
+                console.error('[Slide-over INLINE] Error sending document reminder:', error);
+                
+                // Re-enable button
+                buttonElement.disabled = false;
+                if (remindText) remindText.textContent = 'Remind';
+                if (remindLoader) remindLoader.classList.add('hidden');
+                
+                // Show error message
+                showToast('Could not send reminder.', 'error');
+            });
+        }
+        
         function handleViewClick(e) {
             console.log('=== [Slide-over INLINE] Click event detected! ===');
             console.log('[Slide-over INLINE] Event target:', e.target);
@@ -903,6 +1140,8 @@
                 console.log('[Slide-over INLINE] Opening slide-over...');
                 openSlideOver();
                 loadCandidateDetails(candidateId);
+                // Reset to Overview tab when opening
+                switchTab('overview');
             } else {
                 console.error('[Slide-over INLINE] No candidate ID found on button');
             }
@@ -959,6 +1198,20 @@
             const sendReminderBtn = document.getElementById('send-reminder-btn');
             if (sendReminderBtn) {
                 sendReminderBtn.addEventListener('click', sendReminder);
+            }
+            
+            // Tab click handlers
+            const tabOverview = document.getElementById('tab-overview');
+            const tabDocuments = document.getElementById('tab-documents');
+            if (tabOverview) {
+                tabOverview.addEventListener('click', function() {
+                    switchTab('overview');
+                });
+            }
+            if (tabDocuments) {
+                tabDocuments.addEventListener('click', function() {
+                    switchTab('documents');
+                });
             }
             
             document.addEventListener('keydown', function(e) {

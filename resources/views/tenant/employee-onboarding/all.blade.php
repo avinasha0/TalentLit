@@ -15,6 +15,66 @@
     </x-slot>
 
     <div class="space-y-6" id="onboardings-page" data-tenant-slug="{{ $tenantSlug }}">
+        <!-- Export function - defined early so onclick can access it -->
+        <script>
+        window.exportOnboardingsCSV = function(e) {
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            
+            console.log('Export CSV button clicked!');
+            
+            try {
+                const tenantSlug = @json($tenantSlug);
+                console.log('Tenant slug:', tenantSlug);
+                
+                if (!tenantSlug) {
+                    console.error('Tenant slug is missing');
+                    alert('Error: Unable to determine tenant. Please refresh the page.');
+                    return false;
+                }
+                
+                // Get current filter values
+                const searchInput = document.getElementById('search-input');
+                const departmentSelect = document.getElementById('filter-department');
+                const managerSelect = document.getElementById('filter-manager');
+                const statusSelect = document.getElementById('filter-status');
+                const joiningMonthInput = document.getElementById('filter-joining-month');
+                
+                const searchValue = searchInput?.value?.trim() || '';
+                const departmentValue = departmentSelect?.value || '';
+                const managerValue = managerSelect?.value || '';
+                const statusValue = statusSelect?.value || '';
+                const joiningMonthValue = joiningMonthInput?.value || '';
+                
+                console.log('Filter values:', { searchValue, departmentValue, managerValue, statusValue, joiningMonthValue });
+                
+                // Build query string with current filters
+                const params = new URLSearchParams();
+                if (searchValue) params.append('search', searchValue);
+                if (departmentValue) params.append('department', departmentValue);
+                if (managerValue) params.append('manager', managerValue);
+                if (statusValue) params.append('status', statusValue);
+                if (joiningMonthValue) params.append('joiningMonth', joiningMonthValue);
+                
+                // Build export URL with filters
+                const queryString = params.toString();
+                const exportUrl = `/${tenantSlug}/api/onboardings/export/csv${queryString ? '?' + queryString : ''}`;
+                
+                console.log('Exporting CSV to:', exportUrl);
+                
+                // Trigger download
+                window.location.href = exportUrl;
+                return false;
+            } catch (error) {
+                console.error('Export CSV error:', error);
+                alert('An error occurred while exporting. Please try again.');
+                return false;
+            }
+        };
+        </script>
+        
         <!-- Page Header -->
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
             <div>
@@ -33,6 +93,7 @@
                 <span class="hidden sm:inline text-gray-500">·</span>
                 <button type="button" 
                         id="export-csv-btn"
+                        onclick="exportOnboardingsCSV(event)"
                         class="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-300 hover:text-white">
                     Export CSV
                 </button>
@@ -519,8 +580,11 @@
 
 @push('scripts')
 <script>
+console.log('Employee Onboarding page script loading...');
 (function() {
     'use strict';
+    
+    console.log('Employee Onboarding script initialized');
     
     function openImportModal() {
         const modal = document.getElementById('import-modal');
@@ -712,15 +776,6 @@
     }
     if (cancelBtn) {
         cancelBtn.addEventListener('click', closeImportModal);
-    }
-    
-    // Export CSV button
-    const exportBtn = document.getElementById('export-csv-btn');
-    if (exportBtn) {
-        exportBtn.addEventListener('click', function() {
-            const tenantSlug = @json($tenantSlug);
-            window.location.href = `/${tenantSlug}/api/onboardings/export/csv`;
-        });
     }
 })();
 </script>

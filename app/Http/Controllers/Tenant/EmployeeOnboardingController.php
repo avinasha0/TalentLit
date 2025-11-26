@@ -430,11 +430,22 @@ class EmployeeOnboardingController extends Controller
      */
     public function apiExportCSV(Request $request)
     {
+        \Log::info('CSV Export: Method called', [
+            'request_params' => $request->all(),
+            'url' => $request->fullUrl()
+        ]);
+        
         $tenantModel = tenant();
         
         if (!$tenantModel) {
+            \Log::error('CSV Export: Tenant not resolved');
             return response()->json(['error' => 'Tenant not resolved'], 500);
         }
+        
+        \Log::info('CSV Export: Tenant resolved', [
+            'tenant_id' => $tenantModel->id,
+            'tenant_slug' => $tenantModel->slug
+        ]);
 
         // Use Candidate model since Onboarding uses candidates table
         $query = \App\Models\Candidate::where('tenant_id', $tenantModel->id)
@@ -583,6 +594,11 @@ class EmployeeOnboardingController extends Controller
             
             fclose($file);
         };
+
+        \Log::info('CSV Export: Generating CSV file', [
+            'record_count' => $formattedData->count(),
+            'filename' => 'onboardings-' . date('Y-m-d') . '.csv'
+        ]);
 
         return response()->stream($callback, 200, $headers);
     }

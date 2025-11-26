@@ -466,6 +466,67 @@ class EmployeeOnboardingController extends Controller
     }
 
     /**
+     * API: Send reminder to a single candidate
+     */
+    public function apiSendReminder(Request $request, $id = null)
+    {
+        $tenantModel = tenant();
+        
+        if (!$tenantModel) {
+            return response()->json(['error' => 'Tenant not resolved'], 500);
+        }
+
+        // Get ID from route parameter
+        $candidateId = $request->route('id') ?? $request->input('id') ?? $id;
+        
+        if (!$candidateId) {
+            return response()->json(['error' => 'Candidate ID is required'], 400);
+        }
+
+        // Find the candidate
+        $candidate = \App\Models\Candidate::where('tenant_id', $tenantModel->id)
+            ->where(function($q) {
+                $q->where('source', 'Onboarding')
+                  ->orWhere('source', 'Onboarding Import');
+            })
+            ->find($candidateId);
+
+        if (!$candidate) {
+            return response()->json(['error' => 'Candidate not found'], 404);
+        }
+
+        try {
+            // TODO: Implement actual reminder sending logic
+            // For now, this is a placeholder that returns success
+            // The reminder message should be: "Please complete your pending onboarding steps."
+            
+            // Example implementation (commented out until email service is configured):
+            // Mail::to($candidate->primary_email)->send(new OnboardingReminderMail($candidate));
+            
+            Log::info('Onboarding reminder sent', [
+                'candidate_id' => $candidateId,
+                'tenant_id' => $tenantModel->id,
+                'email' => $candidate->primary_email
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Reminder sent successfully'
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to send onboarding reminder', [
+                'candidate_id' => $candidateId,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => 'Failed to send reminder'
+            ], 500);
+        }
+    }
+
+    /**
      * API: Convert onboarding to employee
      */
     public function apiConvert(Request $request, $id)

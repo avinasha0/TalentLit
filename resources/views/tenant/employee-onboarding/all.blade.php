@@ -604,6 +604,21 @@
                                 <label class="block text-sm font-medium text-gray-500 mb-1">Progress</label>
                                 <p class="text-sm text-gray-900" id="candidate-progress">-</p>
                             </div>
+                            
+                            <!-- Send Reminder Button -->
+                            <div class="pt-4 border-t border-gray-200">
+                                <button type="button" 
+                                        id="send-reminder-btn"
+                                        class="w-full inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                                    <span id="send-reminder-text">Send Reminder</span>
+                                    <span id="send-reminder-loader" class="hidden ml-2">
+                                        <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                    </span>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -652,6 +667,7 @@
         const tenantSlug = @json($tenantSlug);
         console.log('[Slide-over INLINE] IIFE executing, tenantSlug:', tenantSlug);
         let slideOver, slideOverBackdrop, closeSlideOverBtn, slideOverLoading, slideOverError, slideOverContent;
+        let currentCandidateId = null;
         
         function initSlideOver() {
             console.log('[Slide-over INLINE] Initializing slide-over elements...');
@@ -690,6 +706,7 @@
                 if (slideOverLoading) slideOverLoading.classList.add('hidden');
                 if (slideOverError) slideOverError.classList.add('hidden');
                 if (slideOverContent) slideOverContent.classList.add('hidden');
+                currentCandidateId = null;
             }
         }
         
@@ -767,12 +784,98 @@
                     progressElement.textContent = (data.progressPercent !== undefined && data.progressPercent !== null) 
                         ? `${data.progressPercent}%` : 'N/A';
                 }
+                
+                // Store candidate ID for send reminder button
+                currentCandidateId = candidateId;
             })
             .catch(error => {
                 console.error('[Slide-over INLINE] Error loading candidate details:', error);
                 if (slideOverLoading) slideOverLoading.classList.add('hidden');
                 if (slideOverError) slideOverError.classList.remove('hidden');
                 if (slideOverContent) slideOverContent.classList.add('hidden');
+                currentCandidateId = null;
+            });
+        }
+        
+        function showToast(message, type = 'success') {
+            const toastContainer = document.getElementById('toast-container');
+            if (!toastContainer) return;
+            
+            const toast = document.createElement('div');
+            const bgColor = type === 'success' ? 'bg-green-500' : 'bg-red-500';
+            toast.className = `${bgColor} text-white px-4 py-3 rounded-lg shadow-lg flex items-center justify-between min-w-[300px] max-w-md`;
+            toast.innerHTML = `
+                <span>${message}</span>
+                <button type="button" class="ml-4 text-white hover:text-gray-200" onclick="this.parentElement.remove()">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            `;
+            
+            toastContainer.appendChild(toast);
+            
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                if (toast.parentElement) {
+                    toast.remove();
+                }
+            }, 5000);
+        }
+        
+        function sendReminder() {
+            if (!currentCandidateId) {
+                showToast('No candidate selected', 'error');
+                return;
+            }
+            
+            const btn = document.getElementById('send-reminder-btn');
+            const text = document.getElementById('send-reminder-text');
+            const loader = document.getElementById('send-reminder-loader');
+            
+            if (!btn || !text || !loader) return;
+            
+            // Disable button and show loading state
+            btn.disabled = true;
+            text.textContent = 'Sending...';
+            loader.classList.remove('hidden');
+            
+            const apiUrl = `/${tenantSlug}/api/onboardings/${currentCandidateId}/remind`;
+            
+            fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Re-enable button
+                btn.disabled = false;
+                text.textContent = 'Send Reminder';
+                loader.classList.add('hidden');
+                
+                // Show success toast
+                showToast('Reminder sent successfully.', 'success');
+            })
+            .catch(error => {
+                console.error('[Slide-over INLINE] Error sending reminder:', error);
+                
+                // Re-enable button
+                btn.disabled = false;
+                text.textContent = 'Send Reminder';
+                loader.classList.add('hidden');
+                
+                // Show error toast
+                showToast('Failed to send reminder. Try again.', 'error');
             });
         }
         
@@ -850,6 +953,12 @@
             }
             if (slideOverBackdrop) {
                 slideOverBackdrop.addEventListener('click', closeSlideOver);
+            }
+            
+            // Send reminder button handler
+            const sendReminderBtn = document.getElementById('send-reminder-btn');
+            if (sendReminderBtn) {
+                sendReminderBtn.addEventListener('click', sendReminder);
             }
             
             document.addEventListener('keydown', function(e) {
@@ -1098,6 +1207,7 @@ console.log('========================================');
     const tenantSlug = @json($tenantSlug);
     console.log('[Slide-over] IIFE executing, tenantSlug:', tenantSlug);
     let slideOver, slideOverBackdrop, closeSlideOverBtn, slideOverLoading, slideOverError, slideOverContent;
+    let currentCandidateId = null;
     
     function initSlideOver() {
         console.log('[Slide-over] Initializing slide-over elements...');
@@ -1137,6 +1247,7 @@ console.log('========================================');
             if (slideOverLoading) slideOverLoading.classList.add('hidden');
             if (slideOverError) slideOverError.classList.add('hidden');
             if (slideOverContent) slideOverContent.classList.add('hidden');
+            currentCandidateId = null;
         }
     }
     
@@ -1229,6 +1340,9 @@ console.log('========================================');
                     progressElement.textContent = 'N/A';
                 }
             }
+            
+            // Store candidate ID for send reminder button
+            currentCandidateId = candidateId;
         })
         .catch(error => {
             console.error('[Slide-over] Error loading candidate details:', error);
@@ -1236,6 +1350,89 @@ console.log('========================================');
             if (slideOverLoading) slideOverLoading.classList.add('hidden');
             if (slideOverError) slideOverError.classList.remove('hidden');
             if (slideOverContent) slideOverContent.classList.add('hidden');
+            currentCandidateId = null;
+        });
+    }
+    
+    function showToast(message, type = 'success') {
+        const toastContainer = document.getElementById('toast-container');
+        if (!toastContainer) return;
+        
+        const toast = document.createElement('div');
+        const bgColor = type === 'success' ? 'bg-green-500' : 'bg-red-500';
+        toast.className = `${bgColor} text-white px-4 py-3 rounded-lg shadow-lg flex items-center justify-between min-w-[300px] max-w-md`;
+        toast.innerHTML = `
+            <span>${message}</span>
+            <button type="button" class="ml-4 text-white hover:text-gray-200" onclick="this.parentElement.remove()">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        `;
+        
+        toastContainer.appendChild(toast);
+        
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+            if (toast.parentElement) {
+                toast.remove();
+            }
+        }, 5000);
+    }
+    
+    function sendReminder() {
+        if (!currentCandidateId) {
+            showToast('No candidate selected', 'error');
+            return;
+        }
+        
+        const btn = document.getElementById('send-reminder-btn');
+        const text = document.getElementById('send-reminder-text');
+        const loader = document.getElementById('send-reminder-loader');
+        
+        if (!btn || !text || !loader) return;
+        
+        // Disable button and show loading state
+        btn.disabled = true;
+        text.textContent = 'Sending...';
+        loader.classList.remove('hidden');
+        
+        const apiUrl = `/${tenantSlug}/api/onboardings/${currentCandidateId}/remind`;
+        
+        fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Re-enable button
+            btn.disabled = false;
+            text.textContent = 'Send Reminder';
+            loader.classList.add('hidden');
+            
+            // Show success toast
+            showToast('Reminder sent successfully.', 'success');
+        })
+        .catch(error => {
+            console.error('[Slide-over] Error sending reminder:', error);
+            
+            // Re-enable button
+            btn.disabled = false;
+            text.textContent = 'Send Reminder';
+            loader.classList.add('hidden');
+            
+            // Show error toast
+            showToast('Failed to send reminder. Try again.', 'error');
         });
     }
     
@@ -1347,6 +1544,12 @@ console.log('========================================');
         if (slideOverBackdrop) {
             console.log('[Slide-over] Attaching backdrop click handler');
             slideOverBackdrop.addEventListener('click', closeSlideOver);
+        }
+        
+        // Send reminder button handler
+        const sendReminderBtn = document.getElementById('send-reminder-btn');
+        if (sendReminderBtn) {
+            sendReminderBtn.addEventListener('click', sendReminder);
         }
         
         // Close on Escape key

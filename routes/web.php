@@ -650,6 +650,7 @@ Route::middleware(['capture.tenant', 'tenant', 'auth', 'custom.permission:view_d
     Route::get('/{tenant}/api/onboardings', [EmployeeOnboardingController::class, 'apiIndex'])->name('api.onboardings.index');
     Route::get('/{tenant}/api/onboardings/{id}', [EmployeeOnboardingController::class, 'apiShow'])->whereUuid('id')->name('api.onboardings.show');
     Route::post('/{tenant}/api/onboardings/bulk/remind', [EmployeeOnboardingController::class, 'apiBulkRemind'])->name('api.onboardings.bulk.remind');
+    Route::post('/{tenant}/api/onboardings/{id}/remind', [EmployeeOnboardingController::class, 'apiSendReminder'])->whereUuid('id')->name('api.onboardings.remind');
     Route::post('/{tenant}/api/onboardings/{id}/convert', [EmployeeOnboardingController::class, 'apiConvert'])->name('api.onboardings.convert');
     Route::get('/{tenant}/api/onboardings/export/csv', [EmployeeOnboardingController::class, 'apiExportCSV'])->name('api.onboardings.export.csv');
     Route::post('/{tenant}/api/onboardings/import/candidates', [EmployeeOnboardingController::class, 'importCandidates'])->name('api.onboardings.import.candidates');

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Tenant;
 
 use App\Http\Controllers\Controller;
 use App\Models\Candidate;
+use App\Models\AssetRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Maatwebsite\Excel\Facades\Excel;
@@ -1276,6 +1277,185 @@ class EmployeeOnboardingController extends Controller
         };
 
         return response()->stream($callback, 200, $headers);
+    }
+
+    /**
+     * API: Get asset requests for a candidate
+     */
+    public function apiGetAssetRequests(Request $request, $id = null)
+    {
+        $tenantModel = tenant();
+        
+        if (!$tenantModel) {
+            return response()->json(['error' => 'Tenant not resolved'], 500);
+        }
+
+        // Get ID from route parameter
+        $candidateId = $request->route('id') ?? $request->input('id') ?? $id;
+        
+        if (!$candidateId) {
+            return response()->json(['error' => 'Candidate ID is required'], 400);
+        }
+
+        // Find the candidate
+        $candidate = Candidate::where('tenant_id', $tenantModel->id)
+            ->where(function($q) {
+                $q->where('source', 'Onboarding')
+                  ->orWhere('source', 'Onboarding Import');
+            })
+            ->find($candidateId);
+
+        if (!$candidate) {
+            return response()->json(['error' => 'Candidate not found'], 404);
+        }
+
+        // Detect tenant format for logging
+        $isSubdomain = str_starts_with(request()->route()->getName() ?? '', 'subdomain.');
+        $tenantFormat = $isSubdomain ? 'subdomain' : 'slug';
+        
+        // Log tab open
+        Log::info('ITTab.Open', [
+            'candidateID' => $candidateId,
+            'tenant' => $tenantModel->slug,
+            'tenant_format' => $tenantFormat,
+        ]);
+
+        try {
+            // Get asset requests for this candidate
+            $assetRequests = AssetRequest::where('tenant_id', $tenantModel->id)
+                ->where('candidate_id', $candidateId)
+                ->orderBy('requested_on', 'desc')
+                ->get();
+
+            // Format response
+            $formattedAssets = $assetRequests->map(function($asset) {
+                return [
+                    'id' => $asset->id,
+                    'asset_type' => $asset->asset_type,
+                    'requested_on' => $asset->requested_on ? $asset->requested_on->format('Y-m-d') : null,
+                    'assigned_to' => $asset->assigned_to,
+                    'serial_tag' => $asset->serial_tag,
+                    'status' => $asset->status,
+                    'notes' => $asset->notes,
+                ];
+            });
+
+            // Log fetch success
+            Log::info('ITTab.Fetch.Success', [
+                'candidateID' => $candidateId,
+                'tenant' => $tenantModel->slug,
+                'tenant_format' => $tenantFormat,
+                'count' => $formattedAssets->count(),
+            ]);
+
+            return response()->json([
+                'assets' => $formattedAssets
+            ]);
+        } catch (\Exception $e) {
+            // Log fetch error
+            Log::error('ITTab.Fetch.Error', [
+                'candidateID' => $candidateId,
+                'tenant' => $tenantModel->slug,
+                'tenant_format' => $tenantFormat,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'error' => 'Failed to load asset requests',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * API: Create asset request
+     */
+    public function apiCreateAssetRequest(Request $request, $id = null)
+    {
+        $tenantModel = tenant();
+        
+        if (!$tenantModel) {
+            return response()->json(['error' => 'Tenant not resolved'], 500);
+        }
+
+        // Get ID from route parameter
+        $candidateId = $request->route('id') ?? $request->input('id') ?? $id;
+        
+        if (!$candidateId) {
+            return response()->json(['error' => 'Candidate ID is required'], 400);
+        }
+
+        // Validate request
+        $request->validate([
+            'asset_type' => 'required|string|max:255',
+            'notes' => 'nullable|string|max:1000',
+        ]);
+
+        // Find the candidate
+        $candidate = Candidate::where('tenant_id', $tenantModel->id)
+            ->where(function($q) {
+                $q->where('source', 'Onboarding')
+                  ->orWhere('source', 'Onboarding Import');
+            })
+            ->find($candidateId);
+
+        if (!$candidate) {
+            return response()->json(['error' => 'Candidate not found'], 404);
+        }
+
+        // Detect tenant format for logging
+        $isSubdomain = str_starts_with(request()->route()->getName() ?? '', 'subdomain.');
+        $tenantFormat = $isSubdomain ? 'subdomain' : 'slug';
+
+        try {
+            // Create asset request
+            $assetRequest = AssetRequest::create([
+                'tenant_id' => $tenantModel->id,
+                'candidate_id' => $candidateId,
+                'asset_type' => $request->input('asset_type'),
+                'notes' => $request->input('notes'),
+                'status' => 'Requested',
+                'requested_on' => now(),
+            ]);
+
+            // Log submit success
+            Log::info('ITTab.Request.Submit', [
+                'candidateID' => $candidateId,
+                'tenant' => $tenantModel->slug,
+                'tenant_format' => $tenantFormat,
+                'assetType' => $request->input('asset_type'),
+                'result' => 'success',
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'asset' => [
+                    'id' => $assetRequest->id,
+                    'asset_type' => $assetRequest->asset_type,
+                    'requested_on' => $assetRequest->requested_on ? $assetRequest->requested_on->format('Y-m-d') : null,
+                    'assigned_to' => $assetRequest->assigned_to,
+                    'serial_tag' => $assetRequest->serial_tag,
+                    'status' => $assetRequest->status,
+                    'notes' => $assetRequest->notes,
+                ]
+            ]);
+        } catch (\Exception $e) {
+            // Log submit error
+            Log::error('ITTab.Request.Submit', [
+                'candidateID' => $candidateId,
+                'tenant' => $tenantModel->slug,
+                'tenant_format' => $tenantFormat,
+                'assetType' => $request->input('asset_type'),
+                'result' => 'error',
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => 'Failed to submit asset request',
+                'message' => $e->getMessage()
+            ], 500);
+        }
     }
 
     /**

@@ -568,6 +568,11 @@
                                     class="tab-btn py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">
                                 Tasks
                             </button>
+                            <button type="button" 
+                                    id="tab-it-assets"
+                                    class="tab-btn py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">
+                                IT & Assets
+                            </button>
                         </nav>
                     </div>
                     <div class="flex-1 px-4 py-6 sm:px-6">
@@ -686,6 +691,38 @@
                                 <!-- Tasks will be loaded here -->
                             </div>
                         </div>
+                        
+                        <!-- IT & Assets Tab Content -->
+                        <div id="tab-content-it-assets" class="tab-content hidden">
+                            <!-- IT Assets Loading State -->
+                            <div id="it-assets-loading" class="hidden">
+                                <div class="flex items-center justify-center py-12">
+                                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+                                    <span class="ml-3 text-gray-600">Loading asset requests...</span>
+                                </div>
+                            </div>
+                            
+                            <!-- IT Assets Error State -->
+                            <div id="it-assets-error" class="hidden">
+                                <div class="text-center py-12">
+                                    <p class="text-sm text-gray-600">Unable to load asset requests. Try again.</p>
+                                </div>
+                            </div>
+                            
+                            <!-- Request Asset Button -->
+                            <div class="mb-4">
+                                <button type="button" 
+                                        id="request-asset-btn"
+                                        class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500">
+                                    Request Asset
+                                </button>
+                            </div>
+                            
+                            <!-- Asset Requests List -->
+                            <div id="it-assets-list" class="space-y-3">
+                                <!-- Asset requests will be loaded here -->
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -713,6 +750,53 @@
                                 <button type="button" id="cancel-import" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">Cancel</button>
                                 <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700">Import</button>
                             </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Request Asset Modal (hidden by default) -->
+    <div id="request-asset-modal" class="hidden fixed inset-0 z-50 overflow-hidden">
+        <div class="absolute inset-0 bg-gray-500 bg-opacity-75" id="request-asset-modal-backdrop"></div>
+        <div class="fixed inset-0 z-50 overflow-y-auto">
+            <div class="flex min-h-full items-center justify-center p-4">
+                <div class="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+                    <h3 class="text-lg font-semibold mb-4">Request Asset</h3>
+                    <form id="request-asset-form">
+                        <div class="mb-4">
+                            <label for="asset-type" class="block text-sm font-medium text-gray-700 mb-2">Asset Type <span class="text-red-500">*</span></label>
+                            <select id="asset-type" name="asset_type" required class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500">
+                                <option value="">Select asset type</option>
+                                <option value="Laptop">Laptop</option>
+                                <option value="Monitor">Monitor</option>
+                                <option value="Access Card">Access Card</option>
+                                <option value="Keyboard">Keyboard</option>
+                                <option value="Mouse">Mouse</option>
+                                <option value="Headset">Headset</option>
+                                <option value="Phone">Phone</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div class="mb-4">
+                            <label for="asset-notes" class="block text-sm font-medium text-gray-700 mb-2">Notes (Optional)</label>
+                            <textarea id="asset-notes" name="notes" rows="3" class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500" placeholder="Any additional information..."></textarea>
+                        </div>
+                        <div id="request-asset-error" class="hidden mb-4">
+                            <p class="text-sm text-red-600">Failed to submit request. Try again.</p>
+                        </div>
+                        <div class="flex justify-end gap-2">
+                            <button type="button" id="cancel-request-asset" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">Cancel</button>
+                            <button type="submit" id="submit-request-asset" class="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                                <span id="submit-request-asset-text">Submit</span>
+                                <span id="submit-request-asset-loader" class="hidden ml-2">
+                                    <svg class="animate-spin h-4 w-4 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                </span>
+                            </button>
                         </div>
                     </form>
                 </div>
@@ -986,6 +1070,181 @@
             if (tabName === 'tasks' && currentCandidateId) {
                 loadTasks(currentCandidateId);
             }
+            
+            // Load assets if IT & Assets tab is clicked
+            if (tabName === 'it-assets' && currentCandidateId) {
+                loadAssetRequests(currentCandidateId);
+            }
+        }
+        
+        function loadAssetRequests(candidateId) {
+            if (!candidateId) {
+                console.error('[Slide-over INLINE] Cannot load asset requests: no candidate ID');
+                return;
+            }
+            
+            const assetsLoading = document.getElementById('it-assets-loading');
+            const assetsError = document.getElementById('it-assets-error');
+            const assetsList = document.getElementById('it-assets-list');
+            
+            // Show loading state
+            if (assetsLoading) assetsLoading.classList.remove('hidden');
+            if (assetsError) assetsError.classList.add('hidden');
+            if (assetsList) assetsList.innerHTML = '';
+            
+            const apiUrl = `/${tenantSlug}/api/onboardings/${candidateId}/assets`;
+            
+            fetch(apiUrl, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                }
+            })
+            .then(response => {
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                return response.json();
+            })
+            .then(data => {
+                if (assetsLoading) assetsLoading.classList.add('hidden');
+                if (assetsError) assetsError.classList.add('hidden');
+                
+                if (!assetsList) return;
+                
+                if (!data.assets || data.assets.length === 0) {
+                    assetsList.innerHTML = '<p class="text-sm text-gray-500 text-center py-8">No asset requests found.</p>';
+                    return;
+                }
+                
+                // Render asset requests
+                assetsList.innerHTML = data.assets.map(asset => {
+                    const statusBadge = getAssetStatusBadge(asset.status);
+                    const requestedDate = asset.requested_on ? formatDate(asset.requested_on) : 'N/A';
+                    const assignedTo = asset.assigned_to || '-';
+                    const serialTag = asset.serial_tag || '-';
+                    
+                    return `
+                        <div class="flex items-start justify-between py-3 border-b border-gray-200">
+                            <div class="flex-1 min-w-0">
+                                <div class="text-sm font-medium text-gray-900">${asset.asset_type || 'Unknown Asset'}</div>
+                                <div class="mt-1 space-y-1">
+                                    <div class="text-xs text-gray-500">Requested On: ${requestedDate}</div>
+                                    <div class="text-xs text-gray-500">Assigned To: ${assignedTo}</div>
+                                    <div class="text-xs text-gray-500">Serial/Tag: ${serialTag}</div>
+                                </div>
+                                <div class="mt-2">
+                                    ${statusBadge}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            })
+            .catch(error => {
+                console.error('[Slide-over INLINE] Error loading asset requests:', error);
+                if (assetsLoading) assetsLoading.classList.add('hidden');
+                if (assetsError) assetsError.classList.remove('hidden');
+            });
+        }
+        
+        function getAssetStatusBadge(status) {
+            const statusConfig = {
+                'Requested': { bg: 'bg-yellow-100', text: 'text-yellow-800' },
+                'Approved': { bg: 'bg-blue-100', text: 'text-blue-800' },
+                'Assigned': { bg: 'bg-green-100', text: 'text-green-800' },
+                'Returned': { bg: 'bg-gray-100', text: 'text-gray-800' }
+            };
+            const config = statusConfig[status] || { bg: 'bg-gray-100', text: 'text-gray-800' };
+            return `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${config.bg} ${config.text}">${status}</span>`;
+        }
+        
+        function submitAssetRequest() {
+            if (!currentCandidateId) {
+                showToast('No candidate selected', 'error');
+                return;
+            }
+            
+            const submitBtn = document.getElementById('submit-request-asset');
+            const submitText = document.getElementById('submit-request-asset-text');
+            const submitLoader = document.getElementById('submit-request-asset-loader');
+            const errorDiv = document.getElementById('request-asset-error');
+            const assetType = document.getElementById('asset-type');
+            const assetNotes = document.getElementById('asset-notes');
+            
+            if (!submitBtn || !assetType) return;
+            
+            const assetTypeValue = assetType.value.trim();
+            if (!assetTypeValue) {
+                if (errorDiv) {
+                    errorDiv.textContent = 'Asset type is required';
+                    errorDiv.classList.remove('hidden');
+                }
+                return;
+            }
+            
+            // Show loading state
+            submitBtn.disabled = true;
+            if (submitText) submitText.textContent = 'Submitting…';
+            if (submitLoader) submitLoader.classList.remove('hidden');
+            if (errorDiv) errorDiv.classList.add('hidden');
+            
+            const apiUrl = `/${tenantSlug}/api/onboardings/${currentCandidateId}/assets`;
+            
+            fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                },
+                body: JSON.stringify({
+                    asset_type: assetTypeValue,
+                    notes: assetNotes ? assetNotes.value.trim() : null
+                })
+            })
+            .then(response => {
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    // Close modal
+                    const requestAssetModal = document.getElementById('request-asset-modal');
+                    if (requestAssetModal) {
+                        requestAssetModal.classList.add('hidden');
+                    }
+                    
+                    // Reset form
+                    const requestAssetForm = document.getElementById('request-asset-form');
+                    if (requestAssetForm) {
+                        requestAssetForm.reset();
+                    }
+                    
+                    // Show success toast
+                    showToast('Asset request submitted.', 'success');
+                    
+                    // Reload asset requests to show new one
+                    loadAssetRequests(currentCandidateId);
+                } else {
+                    throw new Error(data.error || 'Failed to submit request');
+                }
+            })
+            .catch(error => {
+                console.error('[Slide-over INLINE] Error submitting asset request:', error);
+                
+                // Re-enable button
+                submitBtn.disabled = false;
+                if (submitText) submitText.textContent = 'Submit';
+                if (submitLoader) submitLoader.classList.add('hidden');
+                
+                // Show error
+                if (errorDiv) {
+                    errorDiv.textContent = 'Failed to submit request. Try again.';
+                    errorDiv.classList.remove('hidden');
+                }
+            });
         }
         
         function loadDocuments(candidateId) {
@@ -1450,6 +1709,7 @@
             const tabOverview = document.getElementById('tab-overview');
             const tabDocuments = document.getElementById('tab-documents');
             const tabTasks = document.getElementById('tab-tasks');
+            const tabItAssets = document.getElementById('tab-it-assets');
             if (tabOverview) {
                 tabOverview.addEventListener('click', function() {
                     switchTab('overview');
@@ -1463,6 +1723,63 @@
             if (tabTasks) {
                 tabTasks.addEventListener('click', function() {
                     switchTab('tasks');
+                });
+            }
+            if (tabItAssets) {
+                tabItAssets.addEventListener('click', function() {
+                    switchTab('it-assets');
+                });
+            }
+            
+            // Request Asset modal handlers
+            const requestAssetBtn = document.getElementById('request-asset-btn');
+            const requestAssetModal = document.getElementById('request-asset-modal');
+            const requestAssetModalBackdrop = document.getElementById('request-asset-modal-backdrop');
+            const cancelRequestAssetBtn = document.getElementById('cancel-request-asset');
+            const requestAssetForm = document.getElementById('request-asset-form');
+            
+            if (requestAssetBtn) {
+                requestAssetBtn.addEventListener('click', function() {
+                    if (requestAssetModal) {
+                        requestAssetModal.classList.remove('hidden');
+                    }
+                });
+            }
+            
+            if (cancelRequestAssetBtn) {
+                cancelRequestAssetBtn.addEventListener('click', function() {
+                    if (requestAssetModal) {
+                        requestAssetModal.classList.add('hidden');
+                    }
+                    if (requestAssetForm) {
+                        requestAssetForm.reset();
+                    }
+                    const errorDiv = document.getElementById('request-asset-error');
+                    if (errorDiv) {
+                        errorDiv.classList.add('hidden');
+                    }
+                });
+            }
+            
+            if (requestAssetModalBackdrop) {
+                requestAssetModalBackdrop.addEventListener('click', function() {
+                    if (requestAssetModal) {
+                        requestAssetModal.classList.add('hidden');
+                    }
+                    if (requestAssetForm) {
+                        requestAssetForm.reset();
+                    }
+                    const errorDiv = document.getElementById('request-asset-error');
+                    if (errorDiv) {
+                        errorDiv.classList.add('hidden');
+                    }
+                });
+            }
+            
+            if (requestAssetForm) {
+                requestAssetForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    submitAssetRequest();
                 });
             }
             

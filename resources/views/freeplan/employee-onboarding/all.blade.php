@@ -465,6 +465,9 @@
             const importUrl = tenantSlug && tenantSlug !== 'freeplan' 
                 ? `/{{ $tenantSlug }}/api/onboardings/import/candidates`
                 : '/freeplan/api/onboardings/import/candidates';
+            const exportUrl = tenantSlug && tenantSlug !== 'freeplan' 
+                ? `/{{ $tenantSlug }}/api/onboardings/export/csv`
+                : '/freeplan/api/onboardings/export/csv';
 
             // Open modal
             if (importBtn) {
@@ -618,6 +621,33 @@
                         const changeEvent = new Event('change');
                         fileInput.dispatchEvent(changeEvent);
                     }
+                });
+            }
+
+            // Export CSV button handler
+            const exportBtn = document.getElementById('export-csv-btn');
+            if (exportBtn) {
+                exportBtn.addEventListener('click', function() {
+                    // Get current filter values
+                    const search = document.getElementById('search-input')?.value || '';
+                    const department = document.getElementById('filter-department')?.value || '';
+                    const manager = document.getElementById('filter-manager')?.value || '';
+                    const status = document.getElementById('filter-status')?.value || '';
+                    const joiningMonth = document.getElementById('filter-joining-month')?.value || '';
+
+                    // Build query parameters
+                    const params = new URLSearchParams();
+                    if (search) params.append('search', search);
+                    if (department && department !== 'all') params.append('department', department);
+                    if (manager && manager !== 'all') params.append('manager', manager);
+                    if (status && status !== 'All') params.append('status', status);
+                    if (joiningMonth) params.append('joiningMonth', joiningMonth);
+
+                    // Build export URL
+                    const exportUrlWithParams = exportUrl + (params.toString() ? '?' + params.toString() : '');
+                    
+                    // Trigger download
+                    window.location.href = exportUrlWithParams;
                 });
             }
         })();

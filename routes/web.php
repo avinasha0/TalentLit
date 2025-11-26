@@ -660,6 +660,7 @@ Route::middleware(['capture.tenant', 'tenant', 'auth', 'custom.permission:view_d
 Route::middleware(['auth'])->group(function () {
     Route::post('/freeplan/api/onboardings/import/candidates', [EmployeeOnboardingController::class, 'importCandidates'])->name('freeplan.onboardings.import.candidates');
     Route::get('/freeplan/api/onboardings/import/template', [EmployeeOnboardingController::class, 'downloadImportTemplate'])->name('freeplan.onboardings.import.template');
+    Route::get('/freeplan/api/onboardings/export/csv', [EmployeeOnboardingController::class, 'apiExportCSV'])->name('freeplan.onboardings.export.csv');
 });
 
 // Add GET logout route for both testing and production

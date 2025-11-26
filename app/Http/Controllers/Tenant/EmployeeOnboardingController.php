@@ -437,52 +437,148 @@ class EmployeeOnboardingController extends Controller
             return response()->json(['error' => 'Tenant not resolved'], 500);
         }
 
-        // Get filtered data (all pages, no pagination)
-        $useMock = env('USE_MOCK_ONBOARDING_DATA', true);
+        // Use Candidate model since Onboarding uses candidates table
+        $query = \App\Models\Candidate::where('tenant_id', $tenantModel->id)
+            ->where(function($q) {
+                $q->where('source', 'Onboarding')
+                  ->orWhere('source', 'Onboarding Import');
+            });
         
-        if ($useMock) {
-            $onboardings = $this->getAllOnboardingsForExport($request);
-        } else {
-            // TODO: Implement real database queries
-            $onboardings = [];
+        // SEARCH (name, email)
+        if ($search = $request->input('search')) {
+            $query->where(function($q) use ($search) {
+                $q->where('first_name', 'like', "%{$search}%")
+                  ->orWhere('last_name', 'like', "%{$search}%")
+                  ->orWhere('primary_email', 'like', "%{$search}%");
+            });
         }
 
+        // SORTING
+        $allowedSort = ['created_at', 'first_name'];
+        $sortBy = in_array($request->input('sortBy'), $allowedSort) ? $request->input('sortBy') : 'created_at';
+        if ($request->input('sortBy') === 'joiningDate') {
+            $sortBy = 'created_at';
+        }
+        $sortDir = $request->input('sortDir') === 'asc' ? 'asc' : 'desc';
+        $query->orderBy($sortBy, $sortDir);
+
+        // Fetch all records (no pagination for export)
+        $allOnboardings = $query->get();
+
+        // Transform candidates to onboarding format
+        $allOnboardings->transform(function($item) {
+            // Set default values for non-existent columns
+            $item->designation = $item->designation ?? 'Not Assigned';
+            $item->department = $item->department ?? 'Not Assigned';
+            $item->manager = $item->manager ?? 'Not Assigned';
+            $item->joining_date = $item->joining_date ?? $item->created_at;
+            
+            // Calculate progress
+            $completed = intval($item->completed_steps ?? 0);
+            $total = intval($item->total_steps ?? 5); // default 5 steps
+            $item->progress_percent = $total > 0 ? intval(($completed / $total) * 100) : 0;
+
+            // Status mapping
+            if ($item->progress_percent >= 100) {
+                $item->status = $item->status ?? 'Completed';
+            } else {
+                $item->status = $item->status ?? 'Pre-boarding';
+            }
+
+            return $item;
+        });
+
+        // Apply in-memory filters
+        $filteredCollection = $allOnboardings;
+        
+        if ($department = $request->input('department')) {
+            if ($department !== 'all' && $department !== '') {
+                $filteredCollection = $filteredCollection->filter(function($item) use ($department) {
+                    return ($item->department ?? 'Not Assigned') === $department;
+                });
+            }
+        }
+        
+        if ($manager = $request->input('manager')) {
+            if ($manager !== 'all' && $manager !== '') {
+                $filteredCollection = $filteredCollection->filter(function($item) use ($manager) {
+                    return ($item->manager ?? 'Not Assigned') === $manager;
+                });
+            }
+        }
+        
+        if ($status = $request->input('status')) {
+            if ($status !== 'All' && $status !== '') {
+                $filteredCollection = $filteredCollection->filter(function($item) use ($status) {
+                    return ($item->status ?? 'Pre-boarding') === $status;
+                });
+            }
+        }
+        
+        if ($joiningMonth = $request->input('joiningMonth')) {
+            try {
+                [$year, $month] = explode('-', $joiningMonth);
+                $filteredCollection = $filteredCollection->filter(function($item) use ($year, $month) {
+                    $date = $item->joining_date ?? $item->created_at;
+                    if ($date instanceof \Carbon\Carbon) {
+                        return $date->year == $year && $date->month == $month;
+                    }
+                    return false;
+                });
+            } catch (\Exception $e) {}
+        }
+
+        // Format data for CSV export
+        $formattedData = $filteredCollection->map(function($item) {
+            return [
+                'fullName' => trim($item->first_name . ' ' . $item->last_name),
+                'email' => $item->primary_email ?? '',
+                'designation' => $item->designation ?? 'Not Assigned',
+                'department' => $item->department ?? 'Not Assigned',
+                'manager' => $item->manager ?? 'Not Assigned',
+                'joiningDate' => $item->joining_date ? $item->joining_date->format('Y-m-d') : ($item->created_at ? $item->created_at->format('Y-m-d') : ''),
+                'progressPercent' => $item->progress_percent ?? 0,
+                'status' => $item->status ?? 'Pre-boarding',
+                'lastUpdated' => $item->updated_at ? $item->updated_at->format('Y-m-d H:i:s') : ($item->created_at ? $item->created_at->format('Y-m-d H:i:s') : '')
+            ];
+        })->values();
+
         $headers = [
-            'Content-Type' => 'text/csv',
+            'Content-Type' => 'text/csv; charset=UTF-8',
             'Content-Disposition' => 'attachment; filename="onboardings-' . date('Y-m-d') . '.csv"',
         ];
 
-        $callback = function() use ($onboardings) {
+        $callback = function() use ($formattedData) {
             $file = fopen('php://output', 'w');
             
-            // Add BOM for UTF-8
+            // Add BOM for UTF-8 (helps Excel recognize UTF-8 encoding)
             fwrite($file, "\xEF\xBB\xBF");
             
             // Headers
             fputcsv($file, [
-                'candidate_name',
-                'email',
-                'role',
-                'department',
-                'manager',
-                'joining_date',
-                'progress_percent',
-                'status',
-                'last_updated'
+                'Candidate Name',
+                'Email',
+                'Role',
+                'Department',
+                'Manager',
+                'Joining Date',
+                'Progress (%)',
+                'Status',
+                'Last Updated'
             ]);
             
             // Data rows
-            foreach ($onboardings as $onboarding) {
+            foreach ($formattedData as $onboarding) {
                 fputcsv($file, [
-                    $onboarding['fullName'] ?? '',
-                    $onboarding['email'] ?? '',
-                    $onboarding['designation'] ?? '',
-                    $onboarding['department'] ?? '',
-                    $onboarding['manager'] ?? '',
-                    $onboarding['joiningDate'] ?? '',
-                    $onboarding['progressPercent'] ?? 0,
-                    $onboarding['status'] ?? '',
-                    $onboarding['lastUpdated'] ?? ''
+                    $onboarding['fullName'],
+                    $onboarding['email'],
+                    $onboarding['designation'],
+                    $onboarding['department'],
+                    $onboarding['manager'],
+                    $onboarding['joiningDate'],
+                    $onboarding['progressPercent'],
+                    $onboarding['status'],
+                    $onboarding['lastUpdated']
                 ]);
             }
             

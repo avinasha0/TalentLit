@@ -573,6 +573,11 @@
                                     class="tab-btn py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">
                                 IT & Assets
                             </button>
+                            <button type="button" 
+                                    id="tab-approvals"
+                                    class="tab-btn py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">
+                                Approvals
+                            </button>
                         </nav>
                     </div>
                     <div class="flex-1 px-4 py-6 sm:px-6">
@@ -721,6 +726,29 @@
                             <!-- Asset Requests List -->
                             <div id="it-assets-list" class="space-y-3">
                                 <!-- Asset requests will be loaded here -->
+                            </div>
+                        </div>
+                        
+                        <!-- Approvals Tab Content -->
+                        <div id="tab-content-approvals" class="tab-content hidden">
+                            <!-- Approvals Loading State -->
+                            <div id="approvals-loading" class="hidden">
+                                <div class="flex items-center justify-center py-12">
+                                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+                                    <span class="ml-3 text-gray-600">Loading approvals...</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Approvals Error State -->
+                            <div id="approvals-error" class="hidden">
+                                <div class="text-center py-12">
+                                    <p class="text-sm text-gray-600">Unable to load approvals. Try again.</p>
+                                </div>
+                            </div>
+                            
+                            <!-- Approvals List -->
+                            <div id="approvals-list" class="space-y-3">
+                                <!-- Approvals will be loaded here -->
                             </div>
                         </div>
                     </div>
@@ -1074,6 +1102,11 @@
             // Load assets if IT & Assets tab is clicked
             if (tabName === 'it-assets' && currentCandidateId) {
                 loadAssetRequests(currentCandidateId);
+            }
+            
+            // Load approvals if Approvals tab is clicked
+            if (tabName === 'approvals' && currentCandidateId) {
+                loadApprovals(currentCandidateId);
             }
         }
         
@@ -1621,6 +1654,123 @@
             });
         }
         
+        function loadApprovals(candidateId) {
+            if (!candidateId) {
+                console.error('[Slide-over INLINE] Cannot load approvals: no candidate ID');
+                return;
+            }
+            
+            const approvalsLoading = document.getElementById('approvals-loading');
+            const approvalsError = document.getElementById('approvals-error');
+            const approvalsList = document.getElementById('approvals-list');
+            
+            // Show loading state
+            if (approvalsLoading) approvalsLoading.classList.remove('hidden');
+            if (approvalsError) approvalsError.classList.add('hidden');
+            if (approvalsList) approvalsList.innerHTML = '';
+            
+            // Detect tenant format (slug or subdomain)
+            const tenantSlug = @json($tenantSlug);
+            const isSubdomain = window.location.hostname.split('.').length > 2 && !window.location.pathname.includes('/' + tenantSlug);
+            const tenantFormat = isSubdomain ? 'subdomain' : 'slug';
+            
+            // Log tab opened
+            console.log('ApprovalsTab.Opened', {
+                tenant: tenantSlug,
+                candidateID: candidateId,
+                source: tenantFormat
+            });
+            
+            const apiUrl = `/${tenantSlug}/api/onboardings/${candidateId}/approvals`;
+            
+            fetch(apiUrl, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                }
+            })
+            .then(response => {
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                return response.json();
+            })
+            .then(data => {
+                if (approvalsLoading) approvalsLoading.classList.add('hidden');
+                if (approvalsError) approvalsError.classList.add('hidden');
+                
+                if (!approvalsList) return;
+                
+                // Log fetch success
+                const stepsCount = data.approvals ? data.approvals.length : 0;
+                console.log('ApprovalsTab.Fetch.Success', {
+                    count: stepsCount
+                });
+                
+                if (!data.approvals || data.approvals.length === 0) {
+                    approvalsList.innerHTML = '<p class="text-sm text-gray-500 text-center py-8">No approvals configured for this onboarding.</p>';
+                    return;
+                }
+                
+                // Render approvals
+                approvalsList.innerHTML = data.approvals.map(approval => {
+                    const statusBadge = getApprovalStatusBadge(approval.status);
+                    const approverName = approval.approver_name || 'N/A';
+                    const stepName = approval.step_name || 'Untitled Step';
+                    const timestamp = approval.timestamp ? formatDate(approval.timestamp) : 'N/A';
+                    const comments = approval.comments || '';
+                    
+                    return `
+                        <div class="py-3 border-b border-gray-200">
+                            <div class="flex items-start justify-between">
+                                <div class="flex-1 min-w-0">
+                                    <div class="text-sm font-medium text-gray-900">${stepName}</div>
+                                    <div class="mt-1 text-sm text-gray-600">
+                                        <span class="font-medium">Approver:</span> ${approverName}
+                                    </div>
+                                    ${timestamp !== 'N/A' ? `
+                                    <div class="mt-1 text-xs text-gray-500">
+                                        ${timestamp}
+                                    </div>
+                                    ` : ''}
+                                    ${comments ? `
+                                    <div class="mt-2 text-sm text-gray-600">
+                                        <span class="font-medium">Comments:</span> ${comments}
+                                    </div>
+                                    ` : ''}
+                                </div>
+                                <div class="ml-4 flex-shrink-0">
+                                    ${statusBadge}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            })
+            .catch(error => {
+                console.error('[Slide-over INLINE] Error loading approvals:', error);
+                if (approvalsLoading) approvalsLoading.classList.add('hidden');
+                if (approvalsError) approvalsError.classList.remove('hidden');
+                
+                // Log fetch error
+                console.error('ApprovalsTab.Fetch.Error', {
+                    error: error.message || 'Unknown error',
+                    tenant: tenantSlug,
+                    candidateID: candidateId
+                });
+            });
+        }
+        
+        function getApprovalStatusBadge(status) {
+            const statusConfig = {
+                'Approved': { bg: 'bg-green-100', text: 'text-green-800' },
+                'Pending': { bg: 'bg-yellow-100', text: 'text-yellow-800' },
+                'Rejected': { bg: 'bg-red-100', text: 'text-red-800' }
+            };
+            const config = statusConfig[status] || { bg: 'bg-gray-100', text: 'text-gray-800' };
+            return `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${config.bg} ${config.text}">${status}</span>`;
+        }
+        
         function handleViewClick(e) {
             console.log('=== [Slide-over INLINE] Click event detected! ===');
             console.log('[Slide-over INLINE] Event target:', e.target);
@@ -1710,6 +1860,7 @@
             const tabDocuments = document.getElementById('tab-documents');
             const tabTasks = document.getElementById('tab-tasks');
             const tabItAssets = document.getElementById('tab-it-assets');
+            const tabApprovals = document.getElementById('tab-approvals');
             if (tabOverview) {
                 tabOverview.addEventListener('click', function() {
                     switchTab('overview');
@@ -1728,6 +1879,11 @@
             if (tabItAssets) {
                 tabItAssets.addEventListener('click', function() {
                     switchTab('it-assets');
+                });
+            }
+            if (tabApprovals) {
+                tabApprovals.addEventListener('click', function() {
+                    switchTab('approvals');
                 });
             }
             

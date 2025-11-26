@@ -657,6 +657,7 @@ Route::middleware(['capture.tenant', 'tenant', 'auth', 'custom.permission:view_d
     Route::post('/{tenant}/api/onboardings/{id}/tasks/{taskId}/complete', [EmployeeOnboardingController::class, 'apiMarkTaskComplete'])->whereUuid('id')->name('api.onboardings.tasks.complete');
     Route::get('/{tenant}/api/onboardings/{id}/assets', [EmployeeOnboardingController::class, 'apiGetAssetRequests'])->whereUuid('id')->name('api.onboardings.assets');
     Route::post('/{tenant}/api/onboardings/{id}/assets', [EmployeeOnboardingController::class, 'apiCreateAssetRequest'])->whereUuid('id')->name('api.onboardings.assets.create');
+    Route::get('/{tenant}/api/onboardings/{id}/approvals', [EmployeeOnboardingController::class, 'apiGetApprovals'])->whereUuid('id')->name('api.onboardings.approvals');
     Route::post('/{tenant}/api/onboardings/{id}/convert', [EmployeeOnboardingController::class, 'apiConvert'])->name('api.onboardings.convert');
     Route::get('/{tenant}/api/onboardings/export/csv', [EmployeeOnboardingController::class, 'apiExportCSV'])->name('api.onboardings.export.csv');
     Route::post('/{tenant}/api/onboardings/import/candidates', [EmployeeOnboardingController::class, 'importCandidates'])->name('api.onboardings.import.candidates');

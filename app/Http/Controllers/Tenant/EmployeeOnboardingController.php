@@ -1368,6 +1368,108 @@ class EmployeeOnboardingController extends Controller
     }
 
     /**
+     * API: Get approvals for a candidate
+     */
+    public function apiGetApprovals(Request $request, $id = null)
+    {
+        $tenantModel = tenant();
+        
+        if (!$tenantModel) {
+            return response()->json(['error' => 'Tenant not resolved'], 500);
+        }
+
+        // Get ID from route parameter
+        $candidateId = $request->route('id') ?? $request->input('id') ?? $id;
+        
+        if (!$candidateId) {
+            return response()->json(['error' => 'Candidate ID is required'], 400);
+        }
+
+        // Find the candidate
+        $candidate = Candidate::where('tenant_id', $tenantModel->id)
+            ->where(function($q) {
+                $q->where('source', 'Onboarding')
+                  ->orWhere('source', 'Onboarding Import');
+            })
+            ->find($candidateId);
+
+        if (!$candidate) {
+            return response()->json(['error' => 'Candidate not found'], 404);
+        }
+
+        // Detect tenant format for logging
+        $isSubdomain = str_starts_with(request()->route()->getName() ?? '', 'subdomain.');
+        $tenantFormat = $isSubdomain ? 'subdomain' : 'slug';
+        
+        // Log tab open
+        Log::info('ApprovalsTab.Opened', [
+            'tenant' => $tenantModel->slug,
+            'candidateID' => $candidateId,
+            'source' => $tenantFormat,
+        ]);
+
+        try {
+            // For now, return mock approval data
+            // In a real implementation, this would fetch from an approvals table
+            $approvals = [
+                [
+                    'id' => 'approval-1',
+                    'step_name' => 'HR Manager Approval',
+                    'approver_name' => 'Sarah Johnson',
+                    'status' => 'Approved',
+                    'timestamp' => now()->subDays(2)->toIso8601String(),
+                    'comments' => 'All documents verified. Approved for onboarding.'
+                ],
+                [
+                    'id' => 'approval-2',
+                    'step_name' => 'Department Head Approval',
+                    'approver_name' => 'Michael Chen',
+                    'status' => 'Approved',
+                    'timestamp' => now()->subDays(1)->toIso8601String(),
+                    'comments' => 'Role requirements confirmed.'
+                ],
+                [
+                    'id' => 'approval-3',
+                    'step_name' => 'Finance Approval',
+                    'approver_name' => 'Emily Davis',
+                    'status' => 'Pending',
+                    'timestamp' => null,
+                    'comments' => ''
+                ],
+                [
+                    'id' => 'approval-4',
+                    'step_name' => 'IT Security Clearance',
+                    'approver_name' => 'David Wilson',
+                    'status' => 'Pending',
+                    'timestamp' => null,
+                    'comments' => ''
+                ]
+            ];
+
+            // Log fetch success
+            Log::info('ApprovalsTab.Fetch.Success', [
+                'count' => count($approvals),
+            ]);
+
+            return response()->json([
+                'approvals' => $approvals
+            ]);
+        } catch (\Exception $e) {
+            // Log fetch error
+            Log::error('ApprovalsTab.Fetch.Error', [
+                'error' => $e->getMessage(),
+                'tenant' => $tenantModel->slug,
+                'candidateID' => $candidateId,
+            ]);
+
+            return response()->json([
+                'error' => 'Failed to load approvals',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * API: Create asset request
      */
     public function apiCreateAssetRequest(Request $request, $id = null)

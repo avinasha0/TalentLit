@@ -234,6 +234,22 @@ class="fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 text-white lg:translate-x-0"
                     </svg>
                 </button>
                 <div x-show="employeeOnboardingOpen" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 transform -translate-y-2" x-transition:enter-end="opacity-100 transform translate-y-0" class="ml-8 mt-2 space-y-1">
+                    @php
+                        $permissionService = app(\App\Services\PermissionService::class);
+                        $user = auth()->user();
+                        $userRole = $user ? $permissionService->getUserRole($user->id, $tenant->id) : null;
+                        $allowedRoles = ['Owner', 'Admin', 'Recruiter', 'Hiring Manager'];
+                        $canViewDashboard = $userRole && in_array($userRole, $allowedRoles);
+                    @endphp
+                    @if($canViewDashboard)
+                    <a href="{{ tenantRoute('tenant.employee-onboarding.dashboard', $tenant->slug) }}"
+                       class="flex items-center px-3 py-2 text-sm text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors duration-200 {{ (str_starts_with($currentRoute, 'tenant.employee-onboarding.dashboard') || str_starts_with($currentRoute, 'subdomain.employee-onboarding.dashboard')) ? 'bg-gray-700 text-white' : '' }}">
+                        <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                        </svg>
+                        Dashboard
+                    </a>
+                    @endif
                     <a href="{{ tenantRoute('tenant.employee-onboarding.all', $tenant->slug) }}"
                        class="flex items-center px-3 py-2 text-sm text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors duration-200 {{ (str_starts_with($currentRoute, 'tenant.employee-onboarding.all') || str_starts_with($currentRoute, 'subdomain.employee-onboarding.all')) ? 'bg-gray-700 text-white' : '' }}">
                         <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -19,6 +19,12 @@ return Application::configure(basePath: dirname(__DIR__))
             'capture.tenant' => \App\Http\Middleware\CaptureLastTenant::class,
             'custom.permission' => \App\Http\Middleware\CustomPermissionMiddleware::class,
             'subscription.limit' => \App\Http\Middleware\CheckSubscriptionLimits::class,
+            'log.route' => \App\Http\Middleware\LogRouteMatching::class,
+        ]);
+        
+        // Add route logging middleware early in the stack
+        $middleware->web(append: [
+            \App\Http\Middleware\LogRouteMatching::class,
         ]);
         
         // Disable problematic middleware that can cause 500 errors

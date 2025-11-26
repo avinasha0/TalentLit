@@ -8,6 +8,7 @@ use App\Models\AssetRequest;
 use App\Services\OnboardingViewLogService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
 use Maatwebsite\Excel\Concerns\ToModel;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
@@ -123,6 +124,48 @@ class EmployeeOnboardingController extends Controller
         });
         
         return view('tenant.employee-onboarding.all', compact('onboardings', 'tenantModel'));
+    }
+
+    public function dashboard(Request $request, string $tenant = null)
+    {
+        $tenantModel = tenant();
+        
+        if (!$tenantModel) {
+            abort(500, 'Tenant not resolved. Please check your subdomain configuration.');
+        }
+
+        // Check RBAC - only Owner, Admin, Recruiter, Hiring Manager can access
+        $user = auth()->user();
+        $permissionService = app(\App\Services\PermissionService::class);
+        $userRole = $permissionService->getUserRole($user->id, $tenantModel->id);
+        
+        $allowedRoles = ['Owner', 'Admin', 'Recruiter', 'Hiring Manager'];
+        if (!$userRole || !in_array($userRole, $allowedRoles)) {
+            abort(403, 'You do not have permission to access this page.');
+        }
+
+        // Log dashboard view
+        try {
+            $queryParams = $request->only(['status', 'department', 'manager', 'dateRange']);
+            $currentRoute = request()->route()->getName();
+            $isSubdomain = str_starts_with($currentRoute ?? '', 'subdomain.');
+            \Log::info('Onboarding.Dashboard.View', [
+                'user' => $user->id,
+                'tenant' => $tenantModel->id,
+                'tenant_slug' => $tenantModel->slug,
+                'role' => $userRole,
+                'filters' => json_encode(array_filter($queryParams)),
+                'is_subdomain' => $isSubdomain,
+            ]);
+        } catch (\Exception $e) {
+            \Log::warning('Failed to log dashboard view', ['error' => $e->getMessage()]);
+        }
+
+        return view('tenant.employee-onboarding.dashboard', [
+            'tenantModel' => $tenantModel,
+            'userRole' => $userRole,
+            'isSubdomain' => $isSubdomain ?? false,
+        ]);
     }
 
     public function new(Request $request, string $tenant = null)
@@ -2335,6 +2378,553 @@ class EmployeeOnboardingController extends Controller
 
         return $filtered->values()->toArray();
     }
+
+    /**
+     * API: Get dashboard KPIs
+     */
+    public function apiDashboardKPIs(Request $request)
+    {
+        \Log::info('apiDashboardKPIs called', [
+            'path' => $request->path(),
+            'url' => $request->url(),
+            'route' => $request->route() ? $request->route()->getName() : 'none',
+        ]);
+        
+        $startTime = microtime(true);
+        $tenantModel = tenant();
+        
+        if (!$tenantModel) {
+            \Log::error('apiDashboardKPIs: Tenant not resolved');
+            return response()->json(['error' => 'Tenant not resolved'], 500);
+        }
+
+        try {
+            // Get filters
+            $filters = $this->getDashboardFilters($request);
+            
+            // Base query for onboarding candidates
+            $baseQuery = Candidate::where('tenant_id', $tenantModel->id)
+                ->where(function($q) {
+                    $q->where('source', 'Onboarding')
+                      ->orWhere('source', 'Onboarding Import');
+                });
+
+            // Apply filters
+            $this->applyDashboardFilters($baseQuery, $filters);
+
+            // Active Onboardings (status != Converted/Completed)
+            $activeOnboardings = (clone $baseQuery)
+                ->whereNotIn('status', ['Converted', 'Completed'])
+                ->count();
+
+            // Pending Documents - count candidates with missing required documents
+            // For now, we'll use a simple heuristic: candidates with low progress or specific status
+            $pendingDocuments = (clone $baseQuery)
+                ->where(function($q) {
+                    $q->where('status', 'Pending Docs')
+                      ->orWhere(function($q2) {
+                          $q2->whereRaw('(COALESCE(completed_steps, 0) / NULLIF(COALESCE(total_steps, 5), 0)) < 0.5');
+                      });
+                })
+                ->count();
+
+            // Overdue Tasks - count tasks past due and not completed
+            // Using activities table for tasks
+            $overdueTasks = \App\Models\Activity::where('tenant_id', $tenantModel->id)
+                ->where('type', 'task')
+                ->whereNotNull('due_at')
+                ->where('due_at', '<', now())
+                ->whereNull('completed_at')
+                ->whereHas('candidate', function($q) use ($baseQuery) {
+                    $candidateIds = (clone $baseQuery)->pluck('id');
+                    $q->whereIn('id', $candidateIds);
+                })
+                ->count();
+
+            // Approvals Pending - count pending approval steps
+            // For now, using a simple count based on status
+            $approvalsPending = (clone $baseQuery)
+                ->where('status', 'IT Pending')
+                ->count();
+
+            // Calculate trends (7 days ago)
+            $sevenDaysAgo = now()->subDays(7);
+            $previousActive = Candidate::where('tenant_id', $tenantModel->id)
+                ->where(function($q) {
+                    $q->where('source', 'Onboarding')
+                      ->orWhere('source', 'Onboarding Import');
+                })
+                ->whereNotIn('status', ['Converted', 'Completed'])
+                ->where('created_at', '<', $sevenDaysAgo)
+                ->count();
+
+            $activeTrend = $previousActive > 0 
+                ? round((($activeOnboardings - $previousActive) / $previousActive) * 100, 1)
+                : 0;
+
+            $responseTime = round((microtime(true) - $startTime) * 1000, 2);
+            
+            if ($responseTime > 500) {
+                \Log::warning('Onboarding.Dashboard.SlowQuery', [
+                    'tenant' => $tenantModel->id,
+                    'response_time_ms' => $responseTime,
+                    'endpoint' => 'kpis',
+                ]);
+            }
+
+            return response()->json([
+                'active_onboardings' => $activeOnboardings,
+                'active_trend' => $activeTrend,
+                'pending_documents' => $pendingDocuments,
+                'overdue_tasks' => $overdueTasks,
+                'approvals_pending' => $approvalsPending,
+                'last_updated' => now()->toIso8601String(),
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Onboarding.Dashboard.FetchError', [
+                'tenant' => $tenantModel->id,
+                'endpoint' => 'kpis',
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            
+            return response()->json(['error' => 'Failed to fetch KPIs'], 500);
+        }
+    }
+
+    /**
+     * API: Get bottleneck lists
+     */
+    public function apiDashboardBottlenecks(Request $request)
+    {
+        \Log::info('apiDashboardBottlenecks called', [
+            'path' => $request->path(),
+            'url' => $request->url(),
+            'route' => $request->route() ? $request->route()->getName() : 'none',
+        ]);
+        
+        $startTime = microtime(true);
+        $tenantModel = tenant();
+        
+        if (!$tenantModel) {
+            \Log::error('apiDashboardBottlenecks: Tenant not resolved');
+            return response()->json(['error' => 'Tenant not resolved'], 500);
+        }
+
+        try {
+            $user = auth()->user();
+            $permissionService = app(\App\Services\PermissionService::class);
+            $userRole = $permissionService->getUserRole($user->id, $tenantModel->id);
+            $isHiringManager = $userRole === 'Hiring Manager';
+
+            $filters = $this->getDashboardFilters($request);
+            $baseQuery = Candidate::where('tenant_id', $tenantModel->id)
+                ->where(function($q) {
+                    $q->where('source', 'Onboarding')
+                      ->orWhere('source', 'Onboarding Import');
+                });
+
+            $this->applyDashboardFilters($baseQuery, $filters);
+
+            // A. Candidates missing documents
+            $missingDocsQuery = (clone $baseQuery)
+                ->where(function($q) {
+                    $q->where('status', 'Pending Docs')
+                      ->orWhere(function($q2) {
+                          $q2->whereRaw('(COALESCE(total_steps, 5) - COALESCE(completed_steps, 0)) > 0')
+                             ->whereRaw('(COALESCE(completed_steps, 0) / NULLIF(COALESCE(total_steps, 5), 0)) < 0.5');
+                      });
+                });
+            
+            // Use orderBy with DB::raw for better compatibility
+            $missingDocs = $missingDocsQuery
+                ->orderBy(DB::raw('(COALESCE(total_steps, 5) - COALESCE(completed_steps, 0))'), 'desc')
+                ->limit(10)
+                ->get()
+                ->map(function($candidate) use ($isHiringManager) {
+                    $total = $candidate->total_steps ?? 5;
+                    $completed = $candidate->completed_steps ?? 0;
+                    $missingCount = max(0, $total - $completed);
+                    $name = trim(($candidate->first_name ?? '') . ' ' . ($candidate->last_name ?? ''));
+                    if (empty($name)) {
+                        $name = 'Unknown';
+                    }
+                    $email = $candidate->primary_email ?? '';
+                    $joiningDate = '';
+                    if ($candidate->joining_date) {
+                        $joiningDate = $candidate->joining_date->format('Y-m-d');
+                    } elseif ($candidate->created_at) {
+                        $joiningDate = $candidate->created_at->format('Y-m-d');
+                    }
+                    return [
+                        'id' => $candidate->id,
+                        'name' => $name,
+                        'email' => $isHiringManager ? $this->maskEmail($email) : $email,
+                        'missing_docs_count' => $missingCount,
+                        'joining_date' => $joiningDate,
+                    ];
+                });
+
+            // B. Candidates with overdue tasks
+            $overdueTasksQuery = (clone $baseQuery);
+            
+            // Check if activities relationship exists
+            if (method_exists(Candidate::class, 'activities')) {
+                $overdueTasks = $overdueTasksQuery
+                    ->whereHas('activities', function($q) {
+                        $q->where('type', 'task')
+                          ->whereNotNull('due_at')
+                          ->where('due_at', '<', now())
+                          ->whereNull('completed_at');
+                    })
+                    ->with(['activities' => function($q) {
+                        $q->where('type', 'task')
+                          ->whereNotNull('due_at')
+                          ->where('due_at', '<', now())
+                          ->whereNull('completed_at')
+                          ->orderBy('due_at', 'asc');
+                    }])
+                    ->get()
+                    ->map(function($candidate) use ($isHiringManager) {
+                        $overdueCount = $candidate->activities ? $candidate->activities->count() : 0;
+                        $oldestDue = $candidate->activities && $candidate->activities->count() > 0 
+                            ? $candidate->activities->first()->due_at 
+                            : null;
+                        $name = trim(($candidate->first_name ?? '') . ' ' . ($candidate->last_name ?? ''));
+                        if (empty($name)) {
+                            $name = 'Unknown';
+                        }
+                        return [
+                            'id' => $candidate->id,
+                            'name' => $name,
+                            'email' => $isHiringManager ? $this->maskEmail($candidate->primary_email ?? '') : ($candidate->primary_email ?? ''),
+                            'overdue_task_count' => $overdueCount,
+                            'oldest_overdue_date' => $oldestDue ? $oldestDue->format('Y-m-d') : null,
+                        ];
+                    })
+                    ->sortByDesc('overdue_task_count')
+                    ->take(10)
+                    ->values();
+            } else {
+                // Fallback if activities relationship doesn't exist
+                $overdueTasks = collect([]);
+            }
+
+            // C. Candidates waiting for approvals
+            $pendingApprovals = (clone $baseQuery)
+                ->where('status', 'IT Pending')
+                ->orderBy('created_at', 'asc')
+                ->limit(10)
+                ->get()
+                ->map(function($candidate) use ($isHiringManager) {
+                    $name = trim(($candidate->first_name ?? '') . ' ' . ($candidate->last_name ?? ''));
+                    if (empty($name)) {
+                        $name = 'Unknown';
+                    }
+                    return [
+                        'id' => $candidate->id,
+                        'name' => $name,
+                        'email' => $isHiringManager ? $this->maskEmail($candidate->primary_email ?? '') : ($candidate->primary_email ?? ''),
+                        'pending_approvals_count' => 1, // Simplified for now
+                        'first_pending_approver' => $candidate->manager ?? 'Not Assigned',
+                    ];
+                });
+
+            $responseTime = round((microtime(true) - $startTime) * 1000, 2);
+            if ($responseTime > 500) {
+                \Log::warning('Onboarding.Dashboard.SlowQuery', [
+                    'tenant' => $tenantModel->id,
+                    'response_time_ms' => $responseTime,
+                    'endpoint' => 'bottlenecks',
+                ]);
+            }
+
+            return response()->json([
+                'missing_documents' => $missingDocs,
+                'overdue_tasks' => $overdueTasks,
+                'pending_approvals' => $pendingApprovals,
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Onboarding.Dashboard.FetchError', [
+                'tenant' => $tenantModel->id ?? 'unknown',
+                'tenant_slug' => $tenantModel->slug ?? 'unknown',
+                'endpoint' => 'bottlenecks',
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            
+            return response()->json(['error' => 'Failed to fetch bottlenecks: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * API: Get dashboard charts data
+     */
+    public function apiDashboardCharts(Request $request)
+    {
+        \Log::info('apiDashboardCharts called', [
+            'path' => $request->path(),
+            'url' => $request->url(),
+            'route' => $request->route() ? $request->route()->getName() : 'none',
+        ]);
+        
+        $tenantModel = tenant();
+        
+        if (!$tenantModel) {
+            \Log::error('apiDashboardCharts: Tenant not resolved');
+            return response()->json(['error' => 'Tenant not resolved'], 500);
+        }
+
+        try {
+            $filters = $this->getDashboardFilters($request);
+            $baseQuery = Candidate::where('tenant_id', $tenantModel->id)
+                ->where(function($q) {
+                    $q->where('source', 'Onboarding')
+                      ->orWhere('source', 'Onboarding Import');
+                });
+
+            $this->applyDashboardFilters($baseQuery, $filters);
+
+            // Last 30 days data
+            $thirtyDaysAgo = now()->subDays(30);
+            
+            // Onboardings created vs converted - daily counts
+            $created = (clone $baseQuery)
+                ->where('created_at', '>=', $thirtyDaysAgo)
+                ->selectRaw('DATE(created_at) as date, COUNT(*) as count')
+                ->groupBy('date')
+                ->orderBy('date')
+                ->get()
+                ->mapWithKeys(function($item) {
+                    // Ensure date is formatted as string Y-m-d
+                    $date = is_string($item->date) ? $item->date : $item->date->format('Y-m-d');
+                    return [$date => (int)$item->count];
+                });
+
+            $converted = (clone $baseQuery)
+                ->where('status', 'Converted')
+                ->where('updated_at', '>=', $thirtyDaysAgo)
+                ->selectRaw('DATE(updated_at) as date, COUNT(*) as count')
+                ->groupBy('date')
+                ->orderBy('date')
+                ->get()
+                ->mapWithKeys(function($item) {
+                    // Ensure date is formatted as string Y-m-d
+                    $date = is_string($item->date) ? $item->date : $item->date->format('Y-m-d');
+                    return [$date => (int)$item->count];
+                });
+
+            // Avg days to convert - rolling 30-day average
+            $convertedCandidates = (clone $baseQuery)
+                ->where('status', 'Converted')
+                ->where('updated_at', '>=', $thirtyDaysAgo)
+                ->get();
+
+            $avgDaysToConvert = 0;
+            if ($convertedCandidates->count() > 0) {
+                $days = $convertedCandidates->map(function($c) {
+                    if ($c->created_at && $c->updated_at) {
+                        return $c->created_at->diffInDays($c->updated_at);
+                    }
+                    return 0;
+                })->filter(function($days) {
+                    return $days > 0;
+                });
+                
+                if ($days->count() > 0) {
+                    $avgDaysToConvert = round($days->avg(), 1);
+                }
+            }
+
+            return response()->json([
+                'created_vs_converted' => [
+                    'created' => $created->toArray(),
+                    'converted' => $converted->toArray(),
+                ],
+                'avg_days_to_convert' => $avgDaysToConvert,
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Onboarding.Dashboard.FetchError', [
+                'tenant' => $tenantModel->id ?? 'unknown',
+                'tenant_slug' => $tenantModel->slug ?? 'unknown',
+                'endpoint' => 'charts',
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            
+            return response()->json(['error' => 'Failed to fetch charts: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * API: Export dashboard data to CSV
+     */
+    public function apiDashboardExport(Request $request)
+    {
+        $tenantModel = tenant();
+        
+        if (!$tenantModel) {
+            return response()->json(['error' => 'Tenant not resolved'], 500);
+        }
+
+        $user = auth()->user();
+        $permissionService = app(\App\Services\PermissionService::class);
+        $userRole = $permissionService->getUserRole($user->id, $tenantModel->id);
+        
+        // Hiring Manager cannot export
+        if ($userRole === 'Hiring Manager') {
+            abort(403, 'You do not have permission to export data.');
+        }
+
+        try {
+            $filters = $this->getDashboardFilters($request);
+            
+            // Log export
+            \Log::info('Onboarding.Dashboard.Export', [
+                'user' => $user->id,
+                'tenant' => $tenantModel->id,
+                'tenant_slug' => $tenantModel->slug,
+                'role' => $userRole,
+                'filters' => json_encode($filters),
+            ]);
+
+            // Get bottleneck data
+            $baseQuery = Candidate::where('tenant_id', $tenantModel->id)
+                ->where(function($q) {
+                    $q->where('source', 'Onboarding')
+                      ->orWhere('source', 'Onboarding Import');
+                });
+
+            $this->applyDashboardFilters($baseQuery, $filters);
+
+            $candidates = (clone $baseQuery)->limit(1000)->get();
+
+            $filename = 'onboarding_dashboard_' . date('Y-m-d_His') . '.csv';
+            $headers = [
+                'Content-Type' => 'text/csv',
+                'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+            ];
+
+            $callback = function() use ($candidates) {
+                $file = fopen('php://output', 'w');
+                
+                fputcsv($file, [
+                    'Candidate Name',
+                    'Email',
+                    'Department',
+                    'Manager',
+                    'Joining Date',
+                    'Status',
+                    'Progress %',
+                    'Missing Docs',
+                    'Overdue Tasks',
+                ]);
+
+                foreach ($candidates as $candidate) {
+                    $missingDocs = max(0, ($candidate->total_steps ?? 5) - ($candidate->completed_steps ?? 0));
+                    $overdueTasks = $candidate->activities()
+                        ->where('type', 'task')
+                        ->whereNotNull('due_at')
+                        ->where('due_at', '<', now())
+                        ->whereNull('completed_at')
+                        ->count();
+
+                    fputcsv($file, [
+                        $candidate->first_name . ' ' . $candidate->last_name,
+                        $candidate->primary_email,
+                        $candidate->department ?? 'Not Assigned',
+                        $candidate->manager ?? 'Not Assigned',
+                        $candidate->joining_date ? $candidate->joining_date->format('Y-m-d') : '',
+                        $candidate->status ?? 'Pre-boarding',
+                        round((($candidate->completed_steps ?? 0) / max(1, ($candidate->total_steps ?? 5))) * 100),
+                        $missingDocs,
+                        $overdueTasks,
+                    ]);
+                }
+
+                fclose($file);
+            };
+
+            return response()->stream($callback, 200, $headers);
+        } catch (\Exception $e) {
+            \Log::error('Onboarding.Dashboard.ExportError', [
+                'tenant' => $tenantModel->id,
+                'error' => $e->getMessage(),
+            ]);
+            
+            return response()->json(['error' => 'Failed to export data'], 500);
+        }
+    }
+
+    /**
+     * Helper: Get dashboard filters from request
+     */
+    private function getDashboardFilters(Request $request): array
+    {
+        return [
+            'status' => $request->input('status'),
+            'department' => $request->input('department'),
+            'manager' => $request->input('manager'),
+            'dateRange' => $request->input('dateRange'),
+            'startDate' => $request->input('startDate'),
+            'endDate' => $request->input('endDate'),
+        ];
+    }
+
+    /**
+     * Helper: Apply dashboard filters to query
+     */
+    private function applyDashboardFilters($query, array $filters): void
+    {
+        if (!empty($filters['status']) && $filters['status'] !== 'All') {
+            $query->where('status', $filters['status']);
+        }
+
+        if (!empty($filters['department'])) {
+            $query->where('department', $filters['department']);
+        }
+
+        if (!empty($filters['manager'])) {
+            $query->where('manager', $filters['manager']);
+        }
+
+        if (!empty($filters['dateRange'])) {
+            switch ($filters['dateRange']) {
+                case '7':
+                    $query->where('created_at', '>=', now()->subDays(7));
+                    break;
+                case '30':
+                    $query->where('created_at', '>=', now()->subDays(30));
+                    break;
+                case '90':
+                    $query->where('created_at', '>=', now()->subDays(90));
+                    break;
+            }
+        }
+
+        if (!empty($filters['startDate'])) {
+            $query->where('created_at', '>=', $filters['startDate']);
+        }
+
+        if (!empty($filters['endDate'])) {
+            $query->where('created_at', '<=', $filters['endDate']);
+        }
+    }
+
+    /**
+     * Helper: Mask email for Hiring Manager
+     */
+    private function maskEmail(string $email): string
+    {
+        if (strpos($email, '@') === false) {
+            return $email;
+        }
+        
+        [$local, $domain] = explode('@', $email, 2);
+        $maskedLocal = substr($local, 0, 1) . str_repeat('*', max(0, strlen($local) - 1));
+        
+        return $maskedLocal . '@' . $domain;
+    }
 }
 
 /**
@@ -2622,4 +3212,3 @@ class OnboardingCandidateImport implements ToModel, WithHeadingRow, SkipsOnError
             ->count();
     }
 }
-

@@ -132,60 +132,147 @@
             </div>
         </x-card>
 
-        <!-- Table Container -->
-        <x-card>
-            <div class="overflow-x-auto">
-                <!-- Desktop Table -->
-                <div class="hidden lg:block">
-                    <table role="table" aria-label="All onboardings table" class="min-w-full divide-y divide-gray-200">
+        @if($onboardings->count() > 0)
+            <!-- Mobile: Card View -->
+            <div class="block lg:hidden space-y-3">
+                @foreach($onboardings as $item)
+                    <x-card>
+                        <div class="p-4 space-y-3">
+                            <!-- Candidate Header -->
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-3 flex-1 min-w-0">
+                                    <div class="flex-shrink-0 h-10 w-10">
+                                        <div class="h-10 w-10 rounded-full bg-purple-600 flex items-center justify-center text-white font-medium text-sm">
+                                            {{ strtoupper(substr($item->first_name, 0, 1) . substr($item->last_name, 0, 1)) }}
+                                        </div>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <div class="text-sm font-medium text-gray-900 truncate">
+                                            {{ $item->first_name }} {{ $item->last_name }}
+                                        </div>
+                                        <div class="text-xs text-gray-500 truncate">{{ $item->email }}</div>
+                                    </div>
+                                </div>
+                                @php
+                                    $status = $item->status ?? 'Pre-boarding';
+                                    $statusConfig = [
+                                        'Pre-boarding' => ['bg' => 'bg-yellow-400', 'text' => 'text-yellow-800'],
+                                        'Pending Docs' => ['bg' => 'bg-orange-400', 'text' => 'text-orange-800'],
+                                        'IT Pending' => ['bg' => 'bg-blue-400', 'text' => 'text-blue-800'],
+                                        'Joining Soon' => ['bg' => 'bg-indigo-500', 'text' => 'text-indigo-800'],
+                                        'Completed' => ['bg' => 'bg-green-400', 'text' => 'text-green-800'],
+                                        'Overdue' => ['bg' => 'bg-red-400', 'text' => 'text-red-800']
+                                    ];
+                                    $config = $statusConfig[$status] ?? ['bg' => 'bg-gray-400', 'text' => 'text-gray-800'];
+                                @endphp
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium {{ $config['bg'] }} {{ $config['text'] }} flex-shrink-0">
+                                    {{ $status }}
+                                </span>
+                            </div>
+                            
+                            <!-- Details -->
+                            <div class="grid grid-cols-2 gap-3 pt-2 border-t border-gray-200">
+                                <div>
+                                    <div class="text-xs text-gray-500">Role / Department</div>
+                                    <div class="text-sm font-medium text-gray-900 mt-0.5">
+                                        {{ $item->role ?? 'Not Assigned' }}<br>
+                                        <span class="text-gray-500">{{ $item->department ?? 'Not Assigned' }}</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="text-xs text-gray-500">Joining Date</div>
+                                    <div class="text-sm font-medium text-gray-900 mt-0.5">
+                                        @if($item->joining_date)
+                                            {{ \Carbon\Carbon::parse($item->joining_date)->format('M d, Y') }}
+                                        @else
+                                            N/A
+                                        @endif
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Progress -->
+                            <div class="pt-2 border-t border-gray-200">
+                                <div class="flex items-center justify-between mb-1">
+                                    <span class="text-xs text-gray-500">Progress</span>
+                                    <span class="text-xs font-medium text-gray-700">{{ $item->progress ?? '0%' }}</span>
+                                </div>
+                                @php
+                                    $progress = str_replace('%', '', $item->progress ?? '0');
+                                    $progress = is_numeric($progress) ? (int)$progress : 0;
+                                @endphp
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-purple-600 h-2 rounded-full transition-all duration-300" 
+                                         style="width: {{ $progress }}%"
+                                         role="progressbar" 
+                                         aria-valuemin="0" 
+                                         aria-valuemax="100" 
+                                         aria-valuenow="{{ $progress }}"></div>
+                                </div>
+                            </div>
+                            
+                            <!-- Actions -->
+                            <div class="pt-2 border-t border-gray-200">
+                                <a href="#" class="text-sm font-medium text-blue-600 hover:text-blue-800">View Details →</a>
+                            </div>
+                        </div>
+                    </x-card>
+                @endforeach
+            </div>
+
+            <!-- Desktop: Table View (No Horizontal Scroll) -->
+            <x-card class="hidden lg:block overflow-x-hidden">
+                <div class="overflow-x-hidden w-full">
+                    <table role="table" aria-label="All onboardings table" class="w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">
                                     <input type="checkbox" 
                                            id="select-all-checkbox"
                                            aria-label="Select all on this page"
                                            class="rounded border-gray-300 text-purple-600 focus:ring-purple-500">
                                 </th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     Candidate
                                 </th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role / Department</th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Joining Date</th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Progress</th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                                <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role / Dept</th>
+                                <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Joining Date</th>
+                                <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Progress</th>
+                                <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
-                            @forelse($onboardings as $item)
-                                <tr class="border-b hover:bg-gray-50">
-                                    <td class="px-6 py-4 whitespace-nowrap">
+                            @foreach($onboardings as $item)
+                                <tr class="hover:bg-gray-50 transition-colors">
+                                    <td class="px-4 py-3 whitespace-nowrap">
                                         <input type="checkbox" 
                                                class="rounded border-gray-300 text-purple-600 focus:ring-purple-500">
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
+                                    <td class="px-4 py-3">
                                         <div class="flex items-center">
-                                            <div class="flex-shrink-0 h-10 w-10">
-                                                <div class="h-10 w-10 rounded-full bg-purple-600 flex items-center justify-center text-white font-medium text-sm">
+                                            <div class="flex-shrink-0 h-8 w-8">
+                                                <div class="h-8 w-8 rounded-full bg-purple-600 flex items-center justify-center text-white font-medium text-xs">
                                                     {{ strtoupper(substr($item->first_name, 0, 1) . substr($item->last_name, 0, 1)) }}
                                                 </div>
                                             </div>
-                                            <div class="ml-4">
+                                            <div class="ml-3">
                                                 <div class="text-sm font-medium text-gray-900">
                                                     {{ $item->first_name }} {{ $item->last_name }}
                                                 </div>
                                             </div>
                                         </div>
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <div class="text-sm text-gray-900">{{ $item->email }}</div>
+                                    <td class="px-4 py-3">
+                                        <div class="text-sm text-gray-900 truncate max-w-[150px]">{{ $item->email }}</div>
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <div class="text-sm text-gray-500">{{ $item->role ?? 'Not Assigned' }} / {{ $item->department ?? 'Not Assigned' }}</div>
+                                    <td class="px-4 py-3">
+                                        <div class="text-sm text-gray-900">{{ $item->role ?? 'N/A' }}</div>
+                                        <div class="text-xs text-gray-500">{{ $item->department ?? 'N/A' }}</div>
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <div class="text-sm text-gray-500">
+                                    <td class="px-4 py-3 whitespace-nowrap">
+                                        <div class="text-sm text-gray-900">
                                             @if($item->joining_date)
                                                 {{ \Carbon\Carbon::parse($item->joining_date)->format('M d, Y') }}
                                             @else
@@ -193,9 +280,9 @@
                                             @endif
                                         </div>
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <div class="flex items-center">
-                                            <div class="w-full bg-gray-200 rounded-full h-2 mr-2">
+                                    <td class="px-4 py-3">
+                                        <div class="flex items-center space-x-2">
+                                            <div class="flex-1 bg-gray-200 rounded-full h-2 max-w-[80px]">
                                                 @php
                                                     $progress = str_replace('%', '', $item->progress ?? '0');
                                                     $progress = is_numeric($progress) ? (int)$progress : 0;
@@ -207,10 +294,10 @@
                                                      aria-valuemax="100" 
                                                      aria-valuenow="{{ $progress }}"></div>
                                             </div>
-                                            <span class="text-sm text-gray-700">{{ $item->progress ?? '0%' }}</span>
+                                            <span class="text-xs text-gray-600 whitespace-nowrap">{{ $item->progress ?? '0%' }}</span>
                                         </div>
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
+                                    <td class="px-4 py-3 whitespace-nowrap">
                                         @php
                                             $status = $item->status ?? 'Pre-boarding';
                                             $statusConfig = [
@@ -227,28 +314,29 @@
                                             {{ $status }}
                                         </span>
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                    <td class="px-4 py-3 whitespace-nowrap text-sm font-medium">
                                         <a href="#" class="text-blue-600 hover:text-blue-800">View</a>
                                     </td>
                                 </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="8" class="px-6 py-12 text-center">
-                                        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
-                                        </svg>
-                                        <h3 class="mt-2 text-sm font-medium text-gray-900">No onboardings found</h3>
-                                        <p class="mt-1 text-sm text-gray-500">
-                                            There are no active onboarding flows. Click "Start Onboarding" to create the first one.
-                                        </p>
-                                    </td>
-                                </tr>
-                            @endforelse
+                            @endforeach
                         </tbody>
                     </table>
                 </div>
-            </div>
-        </x-card>
+            </x-card>
+        @else
+            <!-- Empty State -->
+            <x-card>
+                <div class="px-6 py-12 text-center">
+                    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                    </svg>
+                    <h3 class="mt-2 text-sm font-medium text-gray-900">No onboardings found</h3>
+                    <p class="mt-1 text-sm text-gray-500">
+                        There are no active onboarding flows. Click "Start Onboarding" to create the first one.
+                    </p>
+                </div>
+            </x-card>
+        @endif
     </div>
 
     <!-- Import Candidates Modal -->
@@ -326,7 +414,7 @@
                         <h4 class="text-sm font-medium text-gray-900 mb-2">Format Requirements</h4>
                         <div class="text-xs text-gray-600 space-y-1">
                             <p><strong>Required:</strong> primary_email</p>
-                            <p><strong>Optional:</strong> first_name, last_name, primary_phone, source, tags</p>
+                            <p><strong>Optional:</strong> first_name, last_name, primary_phone, designation, department, manager, joining_date, source, tags</p>
                             <p class="mt-2">• Use the first row for column headers</p>
                             <p>• Duplicate emails will update existing candidates</p>
                             <p>• Maximum file size: 10MB</p>

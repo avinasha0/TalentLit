@@ -51,8 +51,60 @@ class EmployeeOnboardingController extends Controller
             $tenantModel = auth()->user()->tenants->first();
         }
         
-        // Simple method: fetch all onboarding records from database
-        $onboardings = \App\Models\Onboarding::orderBy('created_at', 'desc')->get();
+        // Fetch onboarding candidates from candidates table (same approach as API)
+        $query = Candidate::where(function($q) use ($tenantModel) {
+            if ($tenantModel) {
+                $q->where('tenant_id', $tenantModel->id);
+            }
+        })
+        ->where(function($q) {
+            $q->where('source', 'Onboarding')
+              ->orWhere('source', 'Onboarding Import');
+        });
+        
+        $candidates = $query->orderBy('created_at', 'desc')->get();
+        
+        // Transform candidates to match view expectations
+        $onboardings = $candidates->map(function($candidate) {
+            // Get actual values from database, with fallback defaults
+            $designation = $candidate->designation ?? 'Not Assigned';
+            $department = $candidate->department ?? 'Not Assigned';
+            $joiningDate = $candidate->joining_date ?? $candidate->created_at;
+            
+            // Calculate progress from completed_steps and total_steps
+            $completed = intval($candidate->completed_steps ?? 0);
+            $total = intval($candidate->total_steps ?? 5);
+            $progressPercent = $total > 0 ? intval(($completed / $total) * 100) : 0;
+            
+            // Status mapping - use database status or calculate from progress
+            $status = $candidate->status;
+            if (!$status) {
+                if ($progressPercent >= 100) {
+                    $status = 'Completed';
+                } elseif ($progressPercent >= 80) {
+                    $status = 'Joining Soon';
+                } elseif ($progressPercent >= 50) {
+                    $status = 'IT Pending';
+                } elseif ($progressPercent >= 20) {
+                    $status = 'Pending Docs';
+                } else {
+                    $status = 'Pre-boarding';
+                }
+            }
+            
+            // Create a simple object that matches view expectations
+            return (object) [
+                'id' => $candidate->id,
+                'first_name' => $candidate->first_name ?? '',
+                'last_name' => $candidate->last_name ?? '',
+                'email' => $candidate->primary_email ?? '',
+                'role' => $designation,
+                'department' => $department,
+                'joining_date' => $joiningDate,
+                'progress' => $progressPercent . '%',
+                'status' => $status,
+            ];
+        });
         
         return view('freeplan.employee-onboarding.all', compact('onboardings', 'tenantModel'));
     }
@@ -655,6 +707,10 @@ class EmployeeOnboardingController extends Controller
                 'last_name', 
                 'primary_email',
                 'primary_phone',
+                'designation',
+                'department',
+                'manager',
+                'joining_date',
                 'source',
                 'tags'
             ]);
@@ -665,6 +721,10 @@ class EmployeeOnboardingController extends Controller
                 'Doe',
                 'john.doe@example.com',
                 '+1234567890',
+                'Software Engineer',
+                'Engineering',
+                'Jane Manager',
+                '2025-12-01',
                 'Onboarding',
                 'New Hire,Full-time'
             ]);
@@ -1125,18 +1185,36 @@ class OnboardingCandidateImport implements ToModel, WithHeadingRow, SkipsOnError
             $firstName = $this->getFieldValue($row, $normalizedRow, ['firstname', 'first_name', 'fname', 'name', 'first'], $existingCandidate->first_name);
             $lastName = $this->getFieldValue($row, $normalizedRow, ['lastname', 'last_name', 'lname', 'surname', 'last'], $existingCandidate->last_name);
             $phone = $this->getFieldValue($row, $normalizedRow, ['primaryphone', 'primary_phone', 'phone', 'mobile', 'contact', 'phonenumber', 'phone_number'], $existingCandidate->primary_phone);
+            $designation = $this->getFieldValue($row, $normalizedRow, ['designation', 'role', 'position', 'job_title'], $existingCandidate->designation);
+            $department = $this->getFieldValue($row, $normalizedRow, ['department', 'dept'], $existingCandidate->department);
+            $manager = $this->getFieldValue($row, $normalizedRow, ['manager', 'reporting_manager', 'manager_name'], $existingCandidate->manager);
+            $joiningDate = $this->getFieldValue($row, $normalizedRow, ['joining_date', 'joiningdate', 'join_date', 'joindate', 'start_date'], $existingCandidate->joining_date ? $existingCandidate->joining_date->format('Y-m-d') : null);
             
             // Always set source to 'Onboarding Import' for onboarding imports (regardless of what's in the file)
             // This ensures the candidate will show up in the onboarding list
             $source = $this->source; // Always use 'Onboarding Import'
             
             // Update existing candidate - always set source to 'Onboarding Import' for onboarding imports
-            $existingCandidate->update([
+            $updateData = [
                 'first_name' => $firstName ?? $existingCandidate->first_name,
                 'last_name' => $lastName ?? $existingCandidate->last_name,
                 'primary_phone' => $phone ?? $existingCandidate->primary_phone,
                 'source' => $source, // Always set to 'Onboarding Import'
-            ]);
+            ];
+            
+            // Add onboarding fields if provided
+            if ($designation) $updateData['designation'] = $designation;
+            if ($department) $updateData['department'] = $department;
+            if ($manager) $updateData['manager'] = $manager;
+            if ($joiningDate) {
+                try {
+                    $updateData['joining_date'] = \Carbon\Carbon::parse($joiningDate);
+                } catch (\Exception $e) {
+                    // Invalid date, skip
+                }
+            }
+            
+            $existingCandidate->update($updateData);
             
             $this->updatedCount++;
             
@@ -1156,7 +1234,21 @@ class OnboardingCandidateImport implements ToModel, WithHeadingRow, SkipsOnError
         $firstName = $this->getFieldValue($row, $normalizedRow, ['firstname', 'first_name', 'fname', 'name', 'first']);
         $lastName = $this->getFieldValue($row, $normalizedRow, ['lastname', 'last_name', 'lname', 'surname', 'last']);
         $phone = $this->getFieldValue($row, $normalizedRow, ['primaryphone', 'primary_phone', 'phone', 'mobile', 'contact', 'phonenumber', 'phone_number']);
+        $designation = $this->getFieldValue($row, $normalizedRow, ['designation', 'role', 'position', 'job_title']);
+        $department = $this->getFieldValue($row, $normalizedRow, ['department', 'dept']);
+        $manager = $this->getFieldValue($row, $normalizedRow, ['manager', 'reporting_manager', 'manager_name']);
+        $joiningDate = $this->getFieldValue($row, $normalizedRow, ['joining_date', 'joiningdate', 'join_date', 'joindate', 'start_date']);
         $source = $this->getFieldValue($row, $normalizedRow, ['source'], $this->source);
+        
+        // Parse joining date if provided
+        $parsedJoiningDate = null;
+        if ($joiningDate) {
+            try {
+                $parsedJoiningDate = \Carbon\Carbon::parse($joiningDate);
+            } catch (\Exception $e) {
+                // Invalid date, will remain null
+            }
+        }
         
         // Create new candidate and explicitly save to database
         $candidate = new Candidate([
@@ -1166,6 +1258,10 @@ class OnboardingCandidateImport implements ToModel, WithHeadingRow, SkipsOnError
             'primary_email' => $email,
             'primary_phone' => $phone ?? null,
             'source' => $source ?? $this->source,
+            'designation' => $designation,
+            'department' => $department,
+            'manager' => $manager,
+            'joining_date' => $parsedJoiningDate,
         ]);
         
         // Explicitly save to ensure it's committed to database

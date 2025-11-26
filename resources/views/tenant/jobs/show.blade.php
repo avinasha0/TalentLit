@@ -200,32 +200,46 @@
                             View Applications
                         </a>
                         
-                        @if($job->status === 'draft')
-                            <form method="POST" action="{{ route('tenant.jobs.publish', ['tenant' => $tenant->slug, 'job' => $job->id]) }}">
-                                @csrf
-                                @method('PATCH')
-                                <button type="submit" class="block w-full bg-blue-600 text-white text-center py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors hover:bg-blue-700">
-                                    Publish Job
-                                </button>
-                            </form>
-                        @elseif($job->status === 'published')
-                            <form method="POST" action="{{ route('tenant.jobs.close', ['tenant' => $tenant->slug, 'job' => $job->id]) }}">
-                                @csrf
-                                @method('PATCH')
-                                <button type="submit" class="block w-full bg-blue-600 text-white text-center py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors hover:bg-blue-700">
-                                    Close Job
-                                </button>
-                            </form>
-                        @endif
+                        @customCan('publish_jobs', $tenant)
+                            @if($job->status === 'draft')
+                                <form method="POST" action="{{ route('tenant.jobs.publish', ['tenant' => $tenant->slug, 'job' => $job->id]) }}">
+                                    @csrf
+                                    @method('PATCH')
+                                    <button type="submit" class="block w-full bg-blue-600 text-white text-center py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors hover:bg-blue-700">
+                                        Publish Job
+                                    </button>
+                                </form>
+                            @endif
+                        @endcustomCan
                         
-                        <form method="POST" action="{{ route('tenant.jobs.destroy', ['tenant' => $tenant->slug, 'job' => $job->id]) }}"
-                              onsubmit="return confirm('Are you sure you want to delete this job?')">
-                            @csrf
-                            @method('DELETE')
-                            <button type="submit" class="block w-full bg-blue-600 text-white text-center py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors hover:bg-blue-700">
+                        @customCan('close_jobs', $tenant)
+                            @if($job->status === 'published')
+                                <form method="POST" action="{{ route('tenant.jobs.close', ['tenant' => $tenant->slug, 'job' => $job->id]) }}">
+                                    @csrf
+                                    @method('PATCH')
+                                    <button type="submit" class="block w-full bg-blue-600 text-white text-center py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors hover:bg-blue-700">
+                                        Close Job
+                                    </button>
+                                </form>
+                            @endif
+                        @endcustomCan
+                        
+                        @customCan('delete_jobs', $tenant)
+                            <form method="POST" action="{{ route('tenant.jobs.destroy', ['tenant' => $tenant->slug, 'job' => $job->id]) }}"
+                                  onsubmit="return confirm('Are you sure you want to delete this job?')">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="block w-full bg-red-600 text-white text-center py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors hover:bg-red-700">
+                                    Delete Job
+                                </button>
+                            </form>
+                        @else
+                            <button type="button" 
+                                    class="block w-full bg-gray-400 text-white text-center py-2 px-4 rounded-md cursor-not-allowed opacity-75"
+                                    title="Permission required: Delete Jobs">
                                 Delete Job
                             </button>
-                        </form>
+                        @endcustomCan
                     </div>
                 </x-card>
             </div>

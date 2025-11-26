@@ -57,20 +57,8 @@ class TenantSeeder extends Seeder
             ');
         }
 
-        // Create Owner role
-        DB::table('custom_tenant_roles')->insertOrIgnore([
-            'tenant_id' => $tenant->id,
-            'name' => 'Owner',
-            'permissions' => json_encode([
-                'view_dashboard', 'view_jobs', 'create_jobs', 'edit_jobs', 'delete_jobs', 'publish_jobs', 'close_jobs',
-                'manage_stages', 'view_stages', 'create_stages', 'edit_stages', 'delete_stages', 'reorder_stages',
-                'view_candidates', 'create_candidates', 'edit_candidates', 'delete_candidates', 'move_candidates', 'import_candidates',
-                'view_interviews', 'create_interviews', 'edit_interviews', 'delete_interviews',
-                'view_analytics', 'manage_users', 'manage_settings', 'manage_email_templates'
-            ]),
-            'created_at' => now(),
-            'updated_at' => now()
-        ]);
+        // Use PermissionService to ensure all roles are created with correct permissions
+        app(\App\Services\PermissionService::class)->ensureTenantRoles($tenant->id);
     }
 
     private function assignCustomOwnerRole(User $user, Tenant $tenant): void
@@ -92,13 +80,7 @@ class TenantSeeder extends Seeder
             ');
         }
 
-        // Assign Owner role to user
-        DB::table('custom_user_roles')->insertOrIgnore([
-            'user_id' => $user->id,
-            'tenant_id' => $tenant->id,
-            'role_name' => 'Owner',
-            'created_at' => now(),
-            'updated_at' => now()
-        ]);
+        // Assign Owner role to user using User model method (enforces single role)
+        $user->assignRoleForTenant('Owner', $tenant->id);
     }
 }

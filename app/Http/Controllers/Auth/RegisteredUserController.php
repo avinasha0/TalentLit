@@ -25,8 +25,34 @@ class RegisteredUserController extends Controller
     /**
      * Display the registration view.
      */
-    public function create(): View
+    public function create(Request $request): View
     {
+        // Store referral code in session if present
+        if ($request->has('ref')) {
+            $refValue = urldecode($request->get('ref'));
+            
+            // Try to find tenant by name first (new approach)
+            $tenant = Tenant::where('name', $refValue)->first();
+            
+            if ($tenant) {
+                // Find a user from this tenant to track the referral
+                // Get the first user from this tenant (preferably owner)
+                $referrer = $tenant->users()->first();
+                
+                if ($referrer) {
+                    // Ensure the referrer has a referral code
+                    $referralCode = $referrer->referral_code ?? $referrer->generateReferralCode();
+                    session(['referral_code' => $referralCode]);
+                }
+            } else {
+                // Fallback to old system: find user by referral code
+                $referrer = User::where('referral_code', $refValue)->first();
+                if ($referrer) {
+                    session(['referral_code' => $refValue]);
+                }
+            }
+        }
+        
         return view('auth.register');
     }
 
@@ -124,7 +150,7 @@ class RegisteredUserController extends Controller
     }
     
     /**
-     * Create custom roles for tenant
+     * Create custom roles for tenant using PermissionService
      */
     private function createCustomRolesForTenant(Tenant $tenant): void
     {
@@ -144,59 +170,7 @@ class RegisteredUserController extends Controller
             ');
         }
         
-        // Create Owner role
-        DB::table('custom_tenant_roles')->insertOrIgnore([
-            'tenant_id' => $tenant->id,
-            'name' => 'Owner',
-            'permissions' => json_encode([
-                'view_dashboard', 'view_jobs', 'create_jobs', 'edit_jobs', 'delete_jobs', 'publish_jobs', 'close_jobs',
-                'manage_stages', 'view_stages', 'create_stages', 'edit_stages', 'delete_stages', 'reorder_stages',
-                'view_candidates', 'create_candidates', 'edit_candidates', 'delete_candidates', 'move_candidates', 'import_candidates',
-                'view_interviews', 'create_interviews', 'edit_interviews', 'delete_interviews',
-                'view_analytics', 'manage_users', 'manage_settings', 'manage_email_templates'
-            ]),
-            'created_at' => now(),
-            'updated_at' => now()
-        ]);
-        
-        // Create Admin role
-        DB::table('custom_tenant_roles')->insertOrIgnore([
-            'tenant_id' => $tenant->id,
-            'name' => 'Admin',
-            'permissions' => json_encode([
-                'view_dashboard', 'view_jobs', 'create_jobs', 'edit_jobs', 'delete_jobs', 'publish_jobs', 'close_jobs',
-                'manage_stages', 'view_stages', 'create_stages', 'edit_stages', 'delete_stages', 'reorder_stages',
-                'view_candidates', 'create_candidates', 'edit_candidates', 'delete_candidates', 'move_candidates', 'import_candidates',
-                'view_interviews', 'create_interviews', 'edit_interviews', 'delete_interviews',
-                'view_analytics', 'manage_settings'
-            ]),
-            'created_at' => now(),
-            'updated_at' => now()
-        ]);
-        
-        // Create Recruiter role
-        DB::table('custom_tenant_roles')->insertOrIgnore([
-            'tenant_id' => $tenant->id,
-            'name' => 'Recruiter',
-            'permissions' => json_encode([
-                'view_dashboard', 'view_jobs', 'create_jobs', 'edit_jobs', 'publish_jobs', 'close_jobs',
-                'view_candidates', 'create_candidates', 'edit_candidates', 'move_candidates',
-                'view_interviews', 'create_interviews', 'edit_interviews', 'delete_interviews'
-            ]),
-            'created_at' => now(),
-            'updated_at' => now()
-        ]);
-        
-        // Create Hiring Manager role
-        DB::table('custom_tenant_roles')->insertOrIgnore([
-            'tenant_id' => $tenant->id,
-            'name' => 'Hiring Manager',
-            'permissions' => json_encode([
-                'view_dashboard', 'view_jobs', 'view_candidates', 'create_candidates', 'edit_candidates', 'move_candidates',
-                'view_interviews', 'create_interviews', 'edit_interviews', 'delete_interviews'
-            ]),
-            'created_at' => now(),
-            'updated_at' => now()
-        ]);
+        // Use PermissionService to ensure all roles are created with correct permissions
+        app(\App\Services\PermissionService::class)->ensureTenantRoles($tenant->id);
     }
 }

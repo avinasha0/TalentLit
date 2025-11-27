@@ -78,6 +78,8 @@
 
                     <a href="{{ tenantRoute('tenant.interviews.index', $tenant->slug ?? tenant()->slug) }}" class="block py-1 text-gray-700 hover:text-blue-600">Interviews</a>
 
+                    <a href="{{ tenantRoute('tenant.offers.index', $tenant->slug ?? tenant()->slug) }}" class="block py-1 text-gray-700 hover:text-blue-600">Offer</a>
+
                     @customCan('view_analytics', $tenant ?? tenant())
                         @if($mobileAnalyticsLocked)
                             <a href="{{ $analyticsUpgradeUrl }}"

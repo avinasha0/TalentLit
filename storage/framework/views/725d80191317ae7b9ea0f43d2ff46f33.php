@@ -14,6 +14,7 @@
     $isJobs = str_starts_with($currentRoute, 'tenant.jobs') || str_starts_with($currentRoute, 'subdomain.jobs');
     $isCandidates = str_starts_with($currentRoute, 'tenant.candidates') || str_starts_with($currentRoute, 'subdomain.candidates');
     $isInterviews = str_starts_with($currentRoute, 'tenant.interviews') || str_starts_with($currentRoute, 'subdomain.interviews');
+    $isOffers = str_starts_with($currentRoute, 'tenant.offers') || str_starts_with($currentRoute, 'subdomain.offers');
     $isAnalytics = str_starts_with($currentRoute, 'tenant.analytics') || str_starts_with($currentRoute, 'subdomain.analytics');
     $isSettings = str_starts_with($currentRoute, 'tenant.settings') || str_starts_with($currentRoute, 'subdomain.settings');
     $isEmployeeOnboarding = str_starts_with($currentRoute, 'tenant.employee-onboarding') || str_starts_with($currentRoute, 'subdomain.employee-onboarding');
@@ -25,7 +26,7 @@
 
 <div x-data='{ 
     sidebarOpen: $store.sidebar?.open ?? (window.innerWidth >= 1024),
-    recruitingOpen: <?php echo e(($isRecruiting || $isJobs || $isCandidates || $isInterviews || $isAnalytics) ? 'true' : 'false'); ?>,
+    recruitingOpen: <?php echo e(($isRecruiting || $isJobs || $isCandidates || $isInterviews || $isOffers || $isAnalytics) ? 'true' : 'false'); ?>,
     jobsOpen: false,
     candidatesOpen: false,
     settingsOpen: <?php echo e($isSettings ? 'true' : 'false'); ?>,
@@ -100,7 +101,7 @@ class="fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 text-white lg:translate-x-0"
             <!-- Recruiting -->
             <div>
                 <button type="button" @click="recruitingOpen = !recruitingOpen" 
-                        class="flex items-center justify-between w-full px-3 py-2 text-sm font-medium rounded-lg transition-colors duration-200 <?php echo e(($isRecruiting || $isJobs || $isCandidates || $isInterviews || $isAnalytics) ? 'bg-purple-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'); ?>">
+                        class="flex items-center justify-between w-full px-3 py-2 text-sm font-medium rounded-lg transition-colors duration-200 <?php echo e(($isRecruiting || $isJobs || $isCandidates || $isInterviews || $isOffers || $isAnalytics) ? 'bg-purple-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'); ?>">
                     <div class="flex items-center">
                         <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
@@ -193,6 +194,15 @@ class="fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 text-white lg:translate-x-0"
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                         </svg>
                         Interviews
+                    </a>
+
+                    <!-- Offer -->
+                    <a href="<?php echo e(tenantRoute('tenant.offers.index', $tenant->slug)); ?>" 
+                       class="flex items-center px-3 py-2 text-sm text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors duration-200 <?php echo e($isOffers ? 'bg-gray-700 text-white' : ''); ?>">
+                        <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        Offer
                     </a>
 
                     <!-- Analytics -->

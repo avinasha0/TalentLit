@@ -538,6 +538,11 @@ $tenantRoutes = function () {
         Route::delete('/{tenant}/interviews/{interview}', [InterviewController::class, 'destroy'])->name('tenant.interviews.destroy');
     });
 
+    // Offer Management Routes - Owner, Admin, Recruiter, Hiring Manager
+    Route::middleware('custom.permission:view_dashboard')->group(function () {
+        Route::get('/{tenant}/offers', [RecruitingController::class, 'index'])->name('tenant.offers.index');
+    });
+
     // Analytics Routes - Owner, Admin, Recruiter, Hiring Manager
     Route::middleware(['capture.tenant', 'tenant', 'custom.permission:view_analytics'])->group(function () {
         Route::get('/{tenant}/analytics', [App\Http\Controllers\Tenant\AnalyticsController::class, 'index'])->name('tenant.analytics.index');
@@ -605,6 +610,8 @@ $tenantRoutes = function () {
     Route::middleware('custom.permission:edit_jobs')->group(function () {
         Route::get('/{tenant}/jobs/{job}/questions', [JobQuestionsController::class, 'edit'])->name('tenant.jobs.questions');
         Route::put('/{tenant}/jobs/{job}/questions', [JobQuestionsController::class, 'update'])->name('tenant.jobs.questions.update');
+        Route::get('/{tenant}/jobs/{job}/hiring-manager', [JobController::class, 'getHiringManager'])->name('tenant.jobs.hiring-manager.get');
+        Route::patch('/{tenant}/jobs/{job}/hiring-manager', [JobController::class, 'updateHiringManager'])->name('tenant.jobs.hiring-manager.update');
     });
 
     // Email Template Routes - Owner, Admin, Recruiter
@@ -942,6 +949,11 @@ Route::domain('{subdomain}.' . $appDomain)->middleware(['subdomain.redirect', 's
         Route::delete('/interviews/{interview}', [InterviewController::class, 'destroy'])->name('subdomain.interviews.destroy');
     });
 
+    // Offer Management Routes
+    Route::middleware('custom.permission:view_dashboard')->group(function () {
+        Route::get('/offers', [RecruitingController::class, 'index'])->name('subdomain.offers.index');
+    });
+
     // Analytics Routes
     Route::middleware('custom.permission:view_analytics')->group(function () {
         Route::get('/analytics', [App\Http\Controllers\Tenant\AnalyticsController::class, 'index'])->name('subdomain.analytics.index');
@@ -1009,6 +1021,8 @@ Route::domain('{subdomain}.' . $appDomain)->middleware(['subdomain.redirect', 's
     Route::middleware('custom.permission:edit_jobs')->group(function () {
         Route::get('/jobs/{job}/questions', [JobQuestionsController::class, 'edit'])->name('subdomain.jobs.questions');
         Route::put('/jobs/{job}/questions', [JobQuestionsController::class, 'update'])->name('subdomain.jobs.questions.update');
+        Route::get('/jobs/{job}/hiring-manager', [JobController::class, 'getHiringManager'])->name('subdomain.jobs.hiring-manager.get');
+        Route::patch('/jobs/{job}/hiring-manager', [JobController::class, 'updateHiringManager'])->name('subdomain.jobs.hiring-manager.update');
     });
 
     // Email Template Routes

@@ -29,6 +29,12 @@ class JobOpening extends Model
         'openings_count',
         'description',
         'published_at',
+        'hiring_manager_primary_name',
+        'hiring_manager_primary_email',
+        'hiring_manager_primary_phone',
+        'hiring_manager_secondary_name',
+        'hiring_manager_secondary_email',
+        'hiring_manager_secondary_phone',
     ];
 
     protected $casts = [

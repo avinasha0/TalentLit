@@ -41,5 +41,20 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->removeFromGroup('api', \Illuminate\Http\Middleware\ValidatePathEncoding::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // Handle 419 CSRF token expired errors gracefully
+        $exceptions->render(function (\Illuminate\Session\TokenMismatchException $e, \Illuminate\Http\Request $request) {
+            // For AJAX/JSON requests, return a JSON response
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json([
+                    'message' => 'Your session has expired. Please refresh the page and try again.',
+                    'error' => 'Session expired',
+                    'code' => 419,
+                    'redirect' => route('login')
+                ], 419);
+            }
+            
+            // For regular requests, Laravel will automatically use resources/views/errors/419.blade.php
+            // But we can customize the response if needed
+            return response()->view('errors.419', [], 419);
+        });
     })->create();

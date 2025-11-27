@@ -524,4 +524,49 @@ class JobController extends Controller
 
         return $description;
     }
+
+    public function getHiringManager(Request $request, string $tenant, JobOpening $job)
+    {
+        // Ensure the job belongs to the current tenant
+        if ($job->tenant_id !== tenant_id()) {
+            abort(404, 'Job not found');
+        }
+
+        Gate::authorize('view', $job);
+
+        return response()->json([
+            'hiring_manager_primary_name' => $job->hiring_manager_primary_name,
+            'hiring_manager_primary_email' => $job->hiring_manager_primary_email,
+            'hiring_manager_primary_phone' => $job->hiring_manager_primary_phone,
+            'hiring_manager_secondary_name' => $job->hiring_manager_secondary_name,
+            'hiring_manager_secondary_email' => $job->hiring_manager_secondary_email,
+            'hiring_manager_secondary_phone' => $job->hiring_manager_secondary_phone,
+        ]);
+    }
+
+    public function updateHiringManager(Request $request, string $tenant, JobOpening $job)
+    {
+        // Ensure the job belongs to the current tenant
+        if ($job->tenant_id !== tenant_id()) {
+            abort(404, 'Job not found');
+        }
+
+        Gate::authorize('update', $job);
+
+        $validated = $request->validate([
+            'hiring_manager_primary_name' => 'nullable|string|max:255',
+            'hiring_manager_primary_email' => 'nullable|email|max:255',
+            'hiring_manager_primary_phone' => 'nullable|string|max:20',
+            'hiring_manager_secondary_name' => 'nullable|string|max:255',
+            'hiring_manager_secondary_email' => 'nullable|email|max:255',
+            'hiring_manager_secondary_phone' => 'nullable|string|max:20',
+        ]);
+
+        $job->update($validated);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Hiring manager details updated successfully.',
+        ]);
+    }
 }

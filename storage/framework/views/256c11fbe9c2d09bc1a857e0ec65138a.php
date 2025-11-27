@@ -78,6 +78,8 @@
 
                     <a href="<?php echo e(tenantRoute('tenant.interviews.index', $tenant->slug ?? tenant()->slug)); ?>" class="block py-1 text-gray-700 hover:text-blue-600">Interviews</a>
 
+                    <a href="<?php echo e(tenantRoute('tenant.offers.index', $tenant->slug ?? tenant()->slug)); ?>" class="block py-1 text-gray-700 hover:text-blue-600">Offer</a>
+
                     <?php if (app('App\Support\CustomPermissionChecker')->check('view_analytics', $tenant ?? tenant())): ?>
                         <?php if($mobileAnalyticsLocked): ?>
                             <a href="<?php echo e($analyticsUpgradeUrl); ?>"

@@ -239,7 +239,12 @@
 
                 <!-- Pagination -->
                 <div class="px-4 py-3 border-t border-gray-200">
-                    {{ $requisitions->appends(request()->query())->links() }}
+                    <div id="requisition-pagination" class="flex flex-wrap items-center gap-2 text-sm"></div>
+                    <noscript>
+                        <div class="mt-3">
+                            {{ $requisitions->appends(request()->query())->links() }}
+                        </div>
+                    </noscript>
                 </div>
             @else
                 <div class="text-center py-12">
@@ -266,11 +271,15 @@
         const statusFilter = document.getElementById('requisition-status-filter');
         const rows = Array.from(document.querySelectorAll('.requisition-row'));
         const noResultsRow = document.getElementById('requisition-no-results-row');
+        const paginationContainer = document.getElementById('requisition-pagination');
+        const rowsPerPage = 10;
+        let currentPage = 1;
 
-        if (!searchInput || !statusFilter || rows.length === 0) {
+        if (!searchInput || !statusFilter || rows.length === 0 || !paginationContainer) {
             console.warn('Requisition filters unavailable: required elements missing.', {
                 hasSearchInput: Boolean(searchInput),
                 hasStatusFilter: Boolean(statusFilter),
+                hasPaginationContainer: Boolean(paginationContainer),
                 rowCount: rows.length,
             });
             return;
@@ -278,12 +287,11 @@
 
         const normalize = (value) => (value || '').toString().toLowerCase();
 
-        const applyFilters = () => {
+        const getFilteredRows = () => {
             const searchTerm = normalize(searchInput.value).trim();
             const statusValue = normalize(statusFilter.value);
-            let visibleCount = 0;
 
-            rows.forEach((row) => {
+            return rows.filter((row) => {
                 const jobTitle = normalize(row.dataset.jobTitle);
                 const department = normalize(row.dataset.department);
                 const status = normalize(row.dataset.status);
@@ -296,22 +304,108 @@
 
                 const matchesStatus = statusValue === 'all' || status === statusValue;
 
-                if (matchesSearch && matchesStatus) {
-                    row.classList.remove('hidden');
-                    visibleCount++;
-                } else {
-                    row.classList.add('hidden');
+                return matchesSearch && matchesStatus;
+            });
+        };
+
+        const renderPagination = (filteredCount) => {
+            if (filteredCount === 0) {
+                paginationContainer.innerHTML = '';
+                paginationContainer.classList.add('hidden');
+                return;
+            }
+
+            paginationContainer.classList.remove('hidden');
+            const totalPages = Math.max(1, Math.ceil(filteredCount / rowsPerPage));
+            paginationContainer.innerHTML = '';
+
+            const createButton = (label, disabled, onClick, isActive = false) => {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.textContent = label;
+                button.className = [
+                    'px-3 py-1 rounded-md border transition-colors duration-150',
+                    disabled ? 'text-gray-400 border-gray-200 cursor-not-allowed bg-gray-50' : 'text-gray-700 border-gray-300 hover:bg-gray-100',
+                    isActive ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700' : '',
+                ].join(' ').trim();
+                button.disabled = disabled;
+
+                if (!disabled) {
+                    button.addEventListener('click', onClick);
                 }
+
+                return button;
+            };
+
+            const totalPagesArray = Array.from({ length: totalPages }, (_, i) => i + 1);
+
+            paginationContainer.appendChild(
+                createButton('Previous', currentPage === 1, () => {
+                    currentPage = Math.max(1, currentPage - 1);
+                    refreshView();
+                })
+            );
+
+            totalPagesArray.forEach((pageNumber) => {
+                paginationContainer.appendChild(
+                    createButton(
+                        pageNumber,
+                        false,
+                        () => {
+                            currentPage = pageNumber;
+                            refreshView();
+                        },
+                        pageNumber === currentPage
+                    )
+                );
             });
 
+            paginationContainer.appendChild(
+                createButton('Next', currentPage === totalPages, () => {
+                    currentPage = Math.min(totalPages, currentPage + 1);
+                    refreshView();
+                })
+            );
+        };
+
+        const renderTable = (filteredRows) => {
+            rows.forEach((row) => row.classList.add('hidden'));
+
+            if (filteredRows.length === 0) {
+                if (noResultsRow) {
+                    noResultsRow.classList.remove('hidden');
+                }
+                return;
+            }
+
+            const totalPages = Math.max(1, Math.ceil(filteredRows.length / rowsPerPage));
+            if (currentPage > totalPages) {
+                currentPage = totalPages;
+            }
+
+            const start = (currentPage - 1) * rowsPerPage;
+            const end = start + rowsPerPage;
+            filteredRows.slice(start, end).forEach((row) => row.classList.remove('hidden'));
+
             if (noResultsRow) {
-                noResultsRow.classList.toggle('hidden', visibleCount !== 0);
+                noResultsRow.classList.add('hidden');
             }
         };
 
-        searchInput.addEventListener('input', applyFilters);
-        statusFilter.addEventListener('change', applyFilters);
-        applyFilters();
+        const refreshView = () => {
+            const filteredRows = getFilteredRows();
+            renderTable(filteredRows);
+            renderPagination(filteredRows.length);
+        };
+
+        const resetAndRefresh = () => {
+            currentPage = 1;
+            refreshView();
+        };
+
+        searchInput.addEventListener('input', resetAndRefresh);
+        statusFilter.addEventListener('change', resetAndRefresh);
+        refreshView();
     });
 </script>
 

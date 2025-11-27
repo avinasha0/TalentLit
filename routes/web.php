@@ -450,6 +450,8 @@ $tenantRoutes = function () {
     Route::middleware(['custom.permission:view_jobs'])->group(function () {
         Route::post('/{tenant}/requisitions/{id}/approve', [RequisitionController::class, 'approve'])->name('tenant.requisitions.approve');
         Route::post('/{tenant}/requisitions/{id}/reject', [RequisitionController::class, 'reject'])->name('tenant.requisitions.reject');
+        Route::get('/{tenant}/requisitions/export/csv', [RequisitionController::class, 'exportCsv'])->name('tenant.requisitions.export.csv');
+        Route::get('/{tenant}/requisitions/export/excel', [RequisitionController::class, 'exportExcel'])->name('tenant.requisitions.export.excel');
     });
 
     // Job Management Routes - Owner, Admin, Recruiter
@@ -872,6 +874,8 @@ Route::domain('{subdomain}.' . $appDomain)->middleware(['subdomain.redirect', 's
     Route::middleware(['custom.permission:view_jobs'])->group(function () {
         Route::post('/requisitions/{id}/approve', [RequisitionController::class, 'approve'])->name('subdomain.requisitions.approve');
         Route::post('/requisitions/{id}/reject', [RequisitionController::class, 'reject'])->name('subdomain.requisitions.reject');
+        Route::get('/requisitions/export/csv', [RequisitionController::class, 'exportCsv'])->name('subdomain.requisitions.export.csv');
+        Route::get('/requisitions/export/excel', [RequisitionController::class, 'exportExcel'])->name('subdomain.requisitions.export.excel');
     });
 
     // Employee Onboarding

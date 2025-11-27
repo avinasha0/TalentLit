@@ -31,9 +31,23 @@ class RequisitionController extends Controller
                 $createdSort = 'desc';
             }
 
+            // Determine headcount sort direction with safe defaults
+            $headcountSort = strtolower($request->input('headcount_sort', ''));
+            if (!in_array($headcountSort, ['asc', 'desc'], true)) {
+                $headcountSort = null;
+            }
+
             // Use the new Requisition model
-            $query = Requisition::query()
-                ->orderBy('created_at', $createdSort);
+            $query = Requisition::query();
+
+            // Apply sorting - headcount sort takes priority if specified
+            if ($headcountSort) {
+                $query->orderBy('headcount', $headcountSort);
+                // Secondary sort by created_at for consistent ordering
+                $query->orderBy('created_at', 'desc');
+            } else {
+                $query->orderBy('created_at', $createdSort);
+            }
 
             // Apply filters
             if ($request->filled('status')) {
@@ -311,6 +325,187 @@ class RequisitionController extends Controller
             return redirect(tenantRoute('tenant.requisitions.index', $tenantSlug))
                 ->with('error', 'Requisition not found.');
         }
+    }
+
+    /**
+     * Export requisitions to CSV
+     */
+    public function exportCsv(Request $request, string $tenant = null)
+    {
+        try {
+            $query = $this->buildFilteredQuery($request);
+            $requisitions = $query->get();
+
+            $filename = 'requisitions_export_' . date('Y-m-d_His') . '.csv';
+
+            $headers = [
+                'Content-Type' => 'text/csv; charset=UTF-8',
+                'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            ];
+
+            $callback = function() use ($requisitions) {
+                $file = fopen('php://output', 'w');
+                
+                // Add BOM for UTF-8 (helps Excel recognize UTF-8 encoding)
+                fwrite($file, "\xEF\xBB\xBF");
+                
+                // Headers
+                fputcsv($file, [
+                    'Job Title',
+                    'Department',
+                    'Headcount',
+                    'Contract Type',
+                    'Status',
+                    'Created Date',
+                ]);
+                
+                // Data rows
+                foreach ($requisitions as $requisition) {
+                    fputcsv($file, [
+                        $requisition->job_title ?? '',
+                        $requisition->department ?? 'N/A',
+                        $requisition->headcount ?? 0,
+                        $requisition->contract_type ?? 'N/A',
+                        $requisition->status ?? 'Draft',
+                        $requisition->created_at ? $requisition->created_at->format('Y-m-d') : '',
+                    ]);
+                }
+                
+                fclose($file);
+            };
+
+            Log::info('RequisitionController@exportCsv', [
+                'exported_count' => $requisitions->count(),
+                'user_id' => auth()->id(),
+            ]);
+
+            return response()->stream($callback, 200, $headers);
+        } catch (\Exception $e) {
+            Log::error('RequisitionController@exportCsv error', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            
+            $tenantModel = tenant();
+            $tenantSlug = $tenantModel ? $tenantModel->slug : $tenant;
+            
+            return redirect(tenantRoute('tenant.requisitions.index', $tenantSlug))
+                ->with('error', 'Failed to export requisitions. Please try again.');
+        }
+    }
+
+    /**
+     * Export requisitions to Excel
+     */
+    public function exportExcel(Request $request, string $tenant = null)
+    {
+        try {
+            $query = $this->buildFilteredQuery($request);
+            $requisitions = $query->get();
+
+            $filename = 'requisitions_export_' . date('Y-m-d_His') . '.xlsx';
+
+            // Check if Maatwebsite\Excel is available
+            if (class_exists(\Maatwebsite\Excel\Facades\Excel::class)) {
+                $export = new class($requisitions) implements \Maatwebsite\Excel\Concerns\FromCollection, \Maatwebsite\Excel\Concerns\WithHeadings {
+                    protected $requisitions;
+                    
+                    public function __construct($requisitions) {
+                        $this->requisitions = $requisitions;
+                    }
+                    
+                    public function collection() {
+                        return $this->requisitions->map(function ($requisition) {
+                            return [
+                                $requisition->job_title ?? '',
+                                $requisition->department ?? 'N/A',
+                                $requisition->headcount ?? 0,
+                                $requisition->contract_type ?? 'N/A',
+                                $requisition->status ?? 'Draft',
+                                $requisition->created_at ? $requisition->created_at->format('Y-m-d') : '',
+                            ];
+                        });
+                    }
+                    
+                    public function headings(): array {
+                        return [
+                            'Job Title',
+                            'Department',
+                            'Headcount',
+                            'Contract Type',
+                            'Status',
+                            'Created Date',
+                        ];
+                    }
+                };
+                
+                return \Maatwebsite\Excel\Facades\Excel::download($export, $filename);
+            } else {
+                // Fallback to CSV if Excel package is not available
+                Log::warning('Excel package not available, falling back to CSV export');
+                return $this->exportCsv($request, $tenant);
+            }
+        } catch (\Exception $e) {
+            Log::error('RequisitionController@exportExcel error', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            
+            $tenantModel = tenant();
+            $tenantSlug = $tenantModel ? $tenantModel->slug : $tenant;
+            
+            return redirect(tenantRoute('tenant.requisitions.index', $tenantSlug))
+                ->with('error', 'Failed to export requisitions. Please try again.');
+        }
+    }
+
+    /**
+     * Build filtered query based on request parameters
+     */
+    private function buildFilteredQuery(Request $request)
+    {
+        $query = Requisition::query();
+
+        // Apply filters
+        if ($request->filled('status')) {
+            $statusMap = [
+                'draft' => 'Draft',
+                'pending' => 'Pending',
+                'approved' => 'Approved',
+                'rejected' => 'Rejected',
+            ];
+            $status = $statusMap[strtolower($request->status)] ?? $request->status;
+            $query->where('status', $status);
+        }
+
+        if ($request->filled('department')) {
+            $query->where('department', 'like', '%'.$request->department.'%');
+        }
+
+        if ($request->filled('keyword')) {
+            $keyword = $request->keyword;
+            $query->where(function ($q) use ($keyword) {
+                $q->where('job_title', 'like', '%'.$keyword.'%')
+                    ->orWhere('justification', 'like', '%'.$keyword.'%')
+                    ->orWhere('department', 'like', '%'.$keyword.'%');
+            });
+        }
+
+        // Apply sorting - headcount sort takes priority if specified
+        $headcountSort = strtolower($request->input('headcount_sort', ''));
+        if (in_array($headcountSort, ['asc', 'desc'], true)) {
+            $query->orderBy('headcount', $headcountSort);
+            // Secondary sort by created_at for consistent ordering
+            $query->orderBy('created_at', 'desc');
+        } else {
+            $createdSort = strtolower($request->input('created_sort', 'desc'));
+            if (!in_array($createdSort, ['asc', 'desc'], true)) {
+                $createdSort = 'desc';
+            }
+            $query->orderBy('created_at', $createdSort);
+        }
+
+        return $query;
     }
 }
 

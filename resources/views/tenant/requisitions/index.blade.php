@@ -99,10 +99,30 @@
 
         <!-- Requisitions Table -->
         <x-card>
-            <div class="px-4 py-5 sm:px-6 border-b border-gray-200">
-                <h3 class="text-lg leading-6 font-medium text-black">
-                    {{ $requisitions->total() }} requisition{{ $requisitions->total() !== 1 ? 's' : '' }} found
-                </h3>
+            <div class="px-4 py-5 sm:px-6 border-b border-gray-200 flex items-center justify-between">
+                <div>
+                    <h3 class="text-lg leading-6 font-medium text-black">
+                        <span id="total-requisitions-counter">Total Requisitions: {{ $requisitions->total() }}</span>
+                    </h3>
+                </div>
+                <div class="flex items-center gap-2">
+                    <a href="{{ tenantRoute('tenant.requisitions.export.csv', $tenantSlug) }}{{ request()->getQueryString() ? '?' . request()->getQueryString() : '' }}"
+                       class="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        Export CSV
+                    </a>
+                    <a href="{{ tenantRoute('tenant.requisitions.export.excel', $tenantSlug) }}{{ request()->getQueryString() ? '?' . request()->getQueryString() : '' }}"
+                       class="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        Export Excel
+                    </a>
+                    <button type="button" 
+                            id="refresh-requisitions-btn"
+                            class="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            title="Refresh">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                        </svg>
+                    </button>
+                </div>
             </div>
 
             @if($requisitions->count() > 0)
@@ -128,6 +148,16 @@
                         </select>
                     </div>
                     <div class="w-full sm:w-auto">
+                        <label for="requisition-department-filter" class="text-sm font-medium text-gray-700">Filter by Department</label>
+                        <select id="requisition-department-filter"
+                                class="mt-1 w-full sm:w-52 border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="all" selected>All Departments</option>
+                            @foreach($allDepartments as $dept)
+                                <option value="{{ strtolower($dept) }}">{{ $dept }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="w-full sm:w-auto">
                         <label for="requisition-search" class="text-sm font-medium text-gray-700">Search</label>
                         <input id="requisition-search"
                                type="search"
@@ -141,7 +171,37 @@
                             <tr>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Job Title</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Headcount</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    @php
+                                        $currentHeadcountSort = strtolower(request('headcount_sort', ''));
+                                        $nextHeadcountSort = '';
+                                        $headcountSortIcon = '';
+                                        if ($currentHeadcountSort === 'asc') {
+                                            $nextHeadcountSort = 'desc';
+                                            $headcountSortIcon = '↑';
+                                        } elseif ($currentHeadcountSort === 'desc') {
+                                            $nextHeadcountSort = 'asc';
+                                            $headcountSortIcon = '↓';
+                                        } else {
+                                            $nextHeadcountSort = 'asc';
+                                            $headcountSortIcon = '';
+                                        }
+                                        $headcountSortUrl = request()->fullUrlWithQuery([
+                                            'headcount_sort' => $nextHeadcountSort,
+                                            'page' => 1,
+                                        ]);
+                                    @endphp
+                                    <button type="button"
+                                            class="flex items-center gap-1 text-gray-600 hover:text-gray-900 focus:outline-none"
+                                            title="Sort by Headcount"
+                                            onclick="window.location='{{ $headcountSortUrl }}'">
+                                        <span>Headcount</span>
+                                        @if($headcountSortIcon)
+                                            <span aria-hidden="true" class="text-xs">{{ $headcountSortIcon }}</span>
+                                        @endif
+                                        <span class="sr-only">Current sort: {{ $currentHeadcountSort === 'asc' ? 'Low to High' : ($currentHeadcountSort === 'desc' ? 'High to Low' : 'Not sorted') }}</span>
+                                    </button>
+                                </th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contract Type</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -167,7 +227,8 @@
                                 <tr class="requisition-row"
                                     data-job-title="{{ $rowJobTitle }}"
                                     data-department="{{ $rowDepartment }}"
-                                    data-status="{{ $rowStatus }}">
+                                    data-status="{{ $rowStatus }}"
+                                    data-headcount="{{ $requisition->headcount ?? 0 }}">
                                     <td class="px-6 py-4">
                                         <div class="text-sm font-medium text-gray-900">
                                             <a href="{{ tenantRoute('tenant.requisitions.show', [$tenantSlug, $requisition->id]) }}" 
@@ -245,7 +306,7 @@
                             @endforeach
                             <tr id="requisition-no-results-row" class="hidden">
                                 <td colspan="7" class="px-6 py-6 text-center text-sm text-gray-500">
-                                    No requisitions match your filters.
+                                    No requisitions found. Try adjusting your filters.
                                 </td>
                             </tr>
                         </tbody>
@@ -262,12 +323,12 @@
                     </noscript>
                 </div>
             @else
-                <div class="text-center py-12">
+                <div class="text-center py-12" id="empty-state-message">
                     <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                     </svg>
                     <h3 class="mt-2 text-sm font-medium text-gray-900">No requisitions found</h3>
-                    <p class="mt-1 text-sm text-gray-500">Get started by creating a new requisition.</p>
+                    <p class="mt-1 text-sm text-gray-500">No requisitions found. Try adjusting your filters.</p>
                     <div class="mt-6">
                         <a href="{{ tenantRoute('tenant.requisitions.create', $tenantSlug) }}"
                            class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
@@ -284,13 +345,18 @@
     document.addEventListener('DOMContentLoaded', function () {
         const searchInput = document.getElementById('requisition-search');
         const statusFilter = document.getElementById('requisition-status-filter');
+        const departmentFilter = document.getElementById('requisition-department-filter');
+        const refreshBtn = document.getElementById('refresh-requisitions-btn');
+        const totalCounter = document.getElementById('total-requisitions-counter');
         const rows = Array.from(document.querySelectorAll('.requisition-row'));
         const noResultsRow = document.getElementById('requisition-no-results-row');
         const paginationContainer = document.getElementById('requisition-pagination');
+        const tableContainer = document.querySelector('.overflow-x-auto');
+        const emptyStateMessage = document.getElementById('empty-state-message');
         const rowsPerPage = 10;
         let currentPage = 1;
 
-        if (!searchInput || !statusFilter || rows.length === 0 || !paginationContainer) {
+        if (!searchInput || !statusFilter || !paginationContainer) {
             console.warn('Requisition filters unavailable: required elements missing.', {
                 hasSearchInput: Boolean(searchInput),
                 hasStatusFilter: Boolean(statusFilter),
@@ -305,6 +371,7 @@
         const getFilteredRows = () => {
             const searchTerm = normalize(searchInput.value).trim();
             const statusValue = normalize(statusFilter.value);
+            const departmentValue = departmentFilter ? normalize(departmentFilter.value) : 'all';
 
             return rows.filter((row) => {
                 const jobTitle = normalize(row.dataset.jobTitle);
@@ -318,9 +385,25 @@
                     status.includes(searchTerm);
 
                 const matchesStatus = statusValue === 'all' || status === statusValue;
+                const matchesDepartment = departmentValue === 'all' || department === departmentValue;
 
-                return matchesSearch && matchesStatus;
+                return matchesSearch && matchesStatus && matchesDepartment;
             });
+        };
+
+        const updateTotalCounter = (count) => {
+            if (totalCounter) {
+                totalCounter.textContent = `Total Requisitions: ${count}`;
+            }
+        };
+
+        const toggleEmptyState = (hasResults) => {
+            if (tableContainer) {
+                tableContainer.style.display = hasResults ? '' : 'none';
+            }
+            if (emptyStateMessage) {
+                emptyStateMessage.style.display = hasResults ? 'none' : '';
+            }
         };
 
         const renderPagination = (filteredCount) => {
@@ -390,8 +473,11 @@
                 if (noResultsRow) {
                     noResultsRow.classList.remove('hidden');
                 }
+                toggleEmptyState(false);
                 return;
             }
+
+            toggleEmptyState(true);
 
             const totalPages = Math.max(1, Math.ceil(filteredRows.length / rowsPerPage));
             if (currentPage > totalPages) {
@@ -409,6 +495,7 @@
 
         const refreshView = () => {
             const filteredRows = getFilteredRows();
+            updateTotalCounter(filteredRows.length);
             renderTable(filteredRows);
             renderPagination(filteredRows.length);
         };
@@ -418,8 +505,21 @@
             refreshView();
         };
 
+        // Refresh button handler
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', function() {
+                window.location.reload();
+            });
+        }
+
+        // Event listeners
         searchInput.addEventListener('input', resetAndRefresh);
         statusFilter.addEventListener('change', resetAndRefresh);
+        if (departmentFilter) {
+            departmentFilter.addEventListener('change', resetAndRefresh);
+        }
+
+        // Initial render
         refreshView();
     });
 </script>

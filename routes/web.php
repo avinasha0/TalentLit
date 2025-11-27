@@ -443,6 +443,10 @@ $tenantRoutes = function () {
         Route::post('/{tenant}/requisitions', [RequisitionController::class, 'store'])->name('tenant.requisitions.store');
     });
 
+    Route::middleware(['custom.permission:edit_jobs'])->group(function () {
+        Route::get('/{tenant}/requisitions/{id}/edit', [RequisitionController::class, 'edit'])->name('tenant.requisitions.edit');
+    });
+
     Route::middleware(['custom.permission:view_jobs'])->group(function () {
         Route::post('/{tenant}/requisitions/{id}/approve', [RequisitionController::class, 'approve'])->name('tenant.requisitions.approve');
         Route::post('/{tenant}/requisitions/{id}/reject', [RequisitionController::class, 'reject'])->name('tenant.requisitions.reject');
@@ -859,6 +863,10 @@ Route::domain('{subdomain}.' . $appDomain)->middleware(['subdomain.redirect', 's
     Route::middleware(['custom.permission:create_jobs'])->group(function () {
         Route::get('/requisitions/create', [RequisitionController::class, 'create'])->name('subdomain.requisitions.create');
         Route::post('/requisitions', [RequisitionController::class, 'store'])->name('subdomain.requisitions.store');
+    });
+
+    Route::middleware(['custom.permission:edit_jobs'])->group(function () {
+        Route::get('/requisitions/{id}/edit', [RequisitionController::class, 'edit'])->name('subdomain.requisitions.edit');
     });
 
     Route::middleware(['custom.permission:view_jobs'])->group(function () {

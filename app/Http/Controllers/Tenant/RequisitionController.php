@@ -277,5 +277,40 @@ class RequisitionController extends Controller
             return redirect()->back()->with('error', 'Failed to reject requisition.');
         }
     }
+
+    /**
+     * Show the form for editing the specified requisition
+     */
+    public function edit($id, string $tenant = null)
+    {
+        try {
+            $requisition = Requisition::findOrFail($id);
+
+            Log::info('RequisitionController@edit', [
+                'requisition_id' => $id,
+                'user_id' => auth()->id(),
+            ]);
+
+            // For now, redirect to show page since update logic is not needed
+            // This allows navigation to work without implementing full edit functionality
+            $tenantModel = tenant();
+            $tenantSlug = $tenantModel ? $tenantModel->slug : $tenant;
+            
+            return redirect(tenantRoute('tenant.requisitions.show', [$tenantSlug, $id]))
+                ->with('info', 'Edit functionality will be available soon.');
+        } catch (\Exception $e) {
+            Log::error('RequisitionController@edit error', [
+                'requisition_id' => $id,
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            
+            $tenantModel = tenant();
+            $tenantSlug = $tenantModel ? $tenantModel->slug : $tenant;
+            
+            return redirect(tenantRoute('tenant.requisitions.index', $tenantSlug))
+                ->with('error', 'Requisition not found.');
+        }
+    }
 }
 

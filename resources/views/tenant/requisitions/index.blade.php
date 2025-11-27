@@ -142,6 +142,7 @@
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Job Title</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Headcount</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contract Type</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     <button type="button"
@@ -168,7 +169,12 @@
                                     data-department="{{ $rowDepartment }}"
                                     data-status="{{ $rowStatus }}">
                                     <td class="px-6 py-4">
-                                        <div class="text-sm font-medium text-gray-900">{{ $requisition->job_title }}</div>
+                                        <div class="text-sm font-medium text-gray-900">
+                                            <a href="{{ tenantRoute('tenant.requisitions.show', [$tenantSlug, $requisition->id]) }}" 
+                                               class="text-blue-600 hover:text-blue-900 hover:underline focus:outline-none focus:underline">
+                                                {{ $requisition->job_title }}
+                                            </a>
+                                        </div>
                                         @if($requisition->justification)
                                             <div class="text-sm text-gray-500 truncate max-w-xs">{{ Str::limit($requisition->justification, 50) }}</div>
                                         @endif
@@ -178,6 +184,9 @@
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                         {{ $requisition->headcount }}
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                        {{ $requisition->contract_type ?? 'N/A' }}
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium
@@ -191,7 +200,8 @@
                                                 bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200
                                             @else 
                                                 bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200
-                                            @endif">
+                                            @endif"
+                                            title="{{ $requisition->status }}">
                                             {{ $requisition->status }}
                                         </span>
                                     </td>
@@ -203,6 +213,11 @@
                                             <a href="{{ tenantRoute('tenant.requisitions.show', [$tenantSlug, $requisition->id]) }}" 
                                                class="text-blue-600 hover:text-blue-900 focus:outline-none">
                                                 View
+                                            </a>
+                                            <span class="text-gray-300">|</span>
+                                            <a href="{{ tenantRoute('tenant.requisitions.edit', [$tenantSlug, $requisition->id]) }}" 
+                                               class="text-indigo-600 hover:text-indigo-900 focus:outline-none">
+                                                Edit
                                             </a>
                                             @if($requisition->status === 'Pending')
                                                 <span class="text-gray-300">|</span>
@@ -229,7 +244,7 @@
                                 </tr>
                             @endforeach
                             <tr id="requisition-no-results-row" class="hidden">
-                                <td colspan="6" class="px-6 py-6 text-center text-sm text-gray-500">
+                                <td colspan="7" class="px-6 py-6 text-center text-sm text-gray-500">
                                     No requisitions match your filters.
                                 </td>
                             </tr>

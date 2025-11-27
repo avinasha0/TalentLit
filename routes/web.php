@@ -434,6 +434,15 @@ $tenantRoutes = function () {
     Route::middleware(['custom.permission:create_jobs'])->group(function () {
         Route::get('/{tenant}/requisitions/create', [RequisitionController::class, 'create'])->name('tenant.requisitions.create');
         Route::post('/{tenant}/requisitions', [RequisitionController::class, 'store'])->name('tenant.requisitions.store');
+        
+        // API routes for requisition creation features (Tasks 49-55)
+        Route::prefix('{tenant}/api/requisitions')->group(function () {
+            Route::get('/job-titles', [RequisitionController::class, 'getJobTitleSuggestions'])->name('tenant.api.requisitions.job-titles');
+            Route::get('/skills', [RequisitionController::class, 'getSkillSuggestions'])->name('tenant.api.requisitions.skills');
+            Route::post('/draft', [RequisitionController::class, 'saveDraft'])->name('tenant.api.requisitions.draft.save');
+            Route::get('/draft', [RequisitionController::class, 'loadDraft'])->name('tenant.api.requisitions.draft.load');
+            Route::delete('/draft', [RequisitionController::class, 'deleteDraft'])->name('tenant.api.requisitions.draft.delete');
+        });
     });
 
     Route::middleware('custom.permission:view_jobs')->group(function () {
@@ -443,6 +452,7 @@ $tenantRoutes = function () {
         Route::get('/{tenant}/requisitions/rejected', [RequisitionController::class, 'rejected'])->name('tenant.requisitions.rejected');
         Route::get('/{tenant}/requisitions/export/csv', [RequisitionController::class, 'exportCsv'])->name('tenant.requisitions.export.csv');
         Route::get('/{tenant}/requisitions/export/excel', [RequisitionController::class, 'exportExcel'])->name('tenant.requisitions.export.excel');
+        Route::get('/{tenant}/requisitions/{id}/success', [RequisitionController::class, 'success'])->name('tenant.requisitions.success');
         Route::get('/{tenant}/requisitions/{id}', [RequisitionController::class, 'show'])->name('tenant.requisitions.show');
     });
 
@@ -863,6 +873,15 @@ Route::domain('{subdomain}.' . $appDomain)->middleware(['subdomain.redirect', 's
     Route::middleware(['custom.permission:create_jobs'])->group(function () {
         Route::get('/requisitions/create', [RequisitionController::class, 'create'])->name('subdomain.requisitions.create');
         Route::post('/requisitions', [RequisitionController::class, 'store'])->name('subdomain.requisitions.store');
+        
+        // API routes for requisition creation features (Tasks 49-55)
+        Route::prefix('api/requisitions')->group(function () {
+            Route::get('/job-titles', [RequisitionController::class, 'getJobTitleSuggestions'])->name('subdomain.api.requisitions.job-titles');
+            Route::get('/skills', [RequisitionController::class, 'getSkillSuggestions'])->name('subdomain.api.requisitions.skills');
+            Route::post('/draft', [RequisitionController::class, 'saveDraft'])->name('subdomain.api.requisitions.draft.save');
+            Route::get('/draft', [RequisitionController::class, 'loadDraft'])->name('subdomain.api.requisitions.draft.load');
+            Route::delete('/draft', [RequisitionController::class, 'deleteDraft'])->name('subdomain.api.requisitions.draft.delete');
+        });
     });
 
     Route::middleware('custom.permission:view_jobs')->group(function () {
@@ -872,6 +891,7 @@ Route::domain('{subdomain}.' . $appDomain)->middleware(['subdomain.redirect', 's
         Route::get('/requisitions/rejected', [RequisitionController::class, 'rejected'])->name('subdomain.requisitions.rejected');
         Route::get('/requisitions/export/csv', [RequisitionController::class, 'exportCsv'])->name('subdomain.requisitions.export.csv');
         Route::get('/requisitions/export/excel', [RequisitionController::class, 'exportExcel'])->name('subdomain.requisitions.export.excel');
+        Route::get('/requisitions/{id}/success', [RequisitionController::class, 'success'])->name('subdomain.requisitions.success');
         Route::get('/requisitions/{id}', [RequisitionController::class, 'show'])->name('subdomain.requisitions.show');
     });
 

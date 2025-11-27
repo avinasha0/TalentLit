@@ -13,6 +13,7 @@ use App\Models\RequisitionAuditLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class RequisitionController extends Controller
 {
@@ -135,6 +136,35 @@ class RequisitionController extends Controller
     }
 
     /**
+     * Display success page after requisition creation (Tasks 82-85)
+     */
+    public function success($id, string $tenant = null)
+    {
+        try {
+            $requisition = Requisition::findOrFail($id);
+
+            Log::info('RequisitionController@success', [
+                'requisition_id' => $id,
+                'user_id' => auth()->id(),
+            ]);
+
+            return view('tenant.requisitions.success', compact('requisition'));
+        } catch (\Exception $e) {
+            Log::error('RequisitionController@success error', [
+                'requisition_id' => $id,
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            
+            $tenantModel = tenant();
+            $tenantSlug = $tenantModel ? $tenantModel->slug : $tenant;
+            
+            return redirect(tenantRoute('tenant.requisitions.index', $tenantSlug))
+                ->with('error', 'Requisition not found.');
+        }
+    }
+
+    /**
      * Display the specified requisition
      */
     public function show($id, string $tenant = null)
@@ -155,7 +185,10 @@ class RequisitionController extends Controller
                 'trace' => $e->getTraceAsString(),
             ]);
             
-            return redirect(tenantRoute('tenant.requisitions.index', $tenant))
+            $tenantModel = tenant();
+            $tenantSlug = $tenantModel ? $tenantModel->slug : $tenant;
+            
+            return redirect(tenantRoute('tenant.requisitions.index', $tenantSlug))
                 ->with('error', 'Requisition not found.');
         }
     }
@@ -178,28 +211,364 @@ class RequisitionController extends Controller
      */
     public function store(Request $request, string $tenant = null)
     {
-        $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'headcount' => 'required|integer|min:1',
-            'department_id' => 'nullable|exists:departments,id',
-            'location_id' => 'nullable|exists:locations,id',
-            'global_department_id' => 'nullable|exists:global_departments,id',
-            'global_location_id' => 'nullable|exists:global_locations,id',
-            'status' => 'nullable|in:pending,approved,rejected',
-        ]);
+        try {
+            // Validate all required fields (Task 14)
+            $validated = $request->validate([
+                'department' => 'required|string|max:150',
+                'job_title' => 'required|string|max:200',
+                'justification' => 'required|string',
+                'budget_min' => 'required|integer|min:0',
+                'budget_max' => 'required|integer|min:0|gte:budget_min',
+                'contract_type' => 'required|string|in:Full-time,Part-time,Contract,Intern,Temporary',
+                'duration' => 'nullable|integer|min:1|max:60',
+                'skills' => 'required|json',
+                'experience_min' => 'required|integer|min:0|max:50',
+                'experience_max' => 'nullable|integer|min:0|max:50|gte:experience_min',
+                'headcount' => 'required|integer|min:1',
+                'priority' => 'required|string|in:Low,Medium,High',
+                'location' => 'required|string|max:200',
+                'additional_notes' => 'nullable|string',
+                'attachments.*' => 'nullable|file|mimes:pdf,doc,docx|max:5120', // 5MB max (Task 68, 69)
+            ], [
+                'budget_max.gte' => 'Maximum budget must be greater than or equal to minimum budget.',
+                'experience_max.gte' => 'Maximum experience must be greater than or equal to minimum experience.',
+                'headcount.min' => 'Headcount must be at least 1.',
+                'skills.required' => 'At least one skill is required.',
+                'attachments.*.max' => 'Each attachment must not exceed 5MB.',
+                'attachments.*.mimes' => 'Attachments must be PDF or DOC files.',
+            ]);
 
-        $validated['status'] = $validated['status'] ?? 'pending';
-        $validated['tenant_id'] = tenant_id();
+            // Parse skills JSON
+            $skills = json_decode($validated['skills'], true);
+            if (!is_array($skills) || count($skills) === 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'At least one skill is required.',
+                    'errors' => ['skills' => ['At least one skill is required.']]
+                ], 422);
+            }
+            $validated['skills'] = json_encode($skills);
 
-        JobRequisition::create($validated);
+            // Set status to Pending when submitted (Task 45)
+            $validated['status'] = 'Pending';
+            $validated['tenant_id'] = tenant_id();
+            $validated['created_by'] = auth()->id();
 
-        // Use tenantRoute helper which automatically handles both slug and subdomain routes
-        $tenantModel = tenant();
-        $tenantSlug = $tenantModel ? $tenantModel->slug : $tenant;
-        
-        return redirect(tenantRoute('tenant.requisitions.index', $tenantSlug))
-            ->with('success', 'Requisition created successfully.');
+            DB::beginTransaction();
+            try {
+                // Create requisition
+                $requisition = Requisition::create($validated);
+
+                // Handle file uploads (Task 52)
+                if ($request->hasFile('attachments')) {
+                    foreach ($request->file('attachments') as $file) {
+                        $this->storeAttachment($requisition, $file);
+                    }
+                }
+
+                // Log creation (Task 48)
+                RequisitionAuditLog::create([
+                    'requisition_id' => $requisition->id,
+                    'user_id' => auth()->id(),
+                    'action' => 'created',
+                    'ip_address' => $request->ip(),
+                    'user_agent' => $request->userAgent(),
+                ]);
+
+                DB::commit();
+
+                Log::info('Requisition created', [
+                    'requisition_id' => $requisition->id,
+                    'user_id' => auth()->id(),
+                    'tenant_id' => tenant_id(),
+                ]);
+
+                $tenantModel = tenant();
+                $tenantSlug = $tenantModel ? $tenantModel->slug : $tenant;
+
+                // Return JSON for AJAX requests, redirect for regular form submissions
+                if ($request->expectsJson() || $request->wantsJson()) {
+                    return response()->json([
+                        'success' => true,
+                        'message' => 'Requisition created successfully.',
+                        'requisition_id' => $requisition->id,
+                        'redirect_url' => tenantRoute('tenant.requisitions.success', [$tenantSlug, $requisition->id]),
+                    ]);
+                }
+
+                // Redirect to success page (Task 82)
+                return redirect(tenantRoute('tenant.requisitions.success', [$tenantSlug, $requisition->id]));
+            } catch (\Exception $e) {
+                DB::rollBack();
+                throw $e;
+            }
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::warning('Requisition validation failed', [
+                'errors' => $e->errors(),
+                'user_id' => auth()->id(),
+            ]);
+
+            if ($request->expectsJson() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation failed.',
+                    'errors' => $e->errors(),
+                ], 422);
+            }
+
+            return redirect()->back()
+                ->withErrors($e->errors())
+                ->withInput();
+        } catch (\Exception $e) {
+            Log::error('Requisition creation failed', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'user_id' => auth()->id(),
+            ]);
+
+            if ($request->expectsJson() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to create requisition. Please try again.',
+                ], 500);
+            }
+
+            return redirect()->back()
+                ->with('error', 'Failed to create requisition. Please try again.')
+                ->withInput();
+        }
+    }
+
+    /**
+     * Store attachment for requisition
+     */
+    private function storeAttachment(Requisition $requisition, $file)
+    {
+        try {
+            $extension = $file->getClientOriginalExtension();
+            $filename = \Illuminate\Support\Str::uuid() . '.' . $extension;
+            $path = "requisitions/{$requisition->tenant_id}/{$requisition->id}/{$filename}";
+
+            // Store file
+            \Illuminate\Support\Facades\Storage::disk('public')->put($path, file_get_contents($file));
+
+            // Create attachment record
+            \App\Models\Attachment::create([
+                'tenant_id' => $requisition->tenant_id,
+                'attachable_type' => Requisition::class,
+                'attachable_id' => $requisition->id,
+                'disk' => 'public',
+                'path' => $path,
+                'filename' => $file->getClientOriginalName(),
+                'mime' => $file->getMimeType(),
+                'size' => $file->getSize(),
+                'created_at' => now(),
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to store requisition attachment', [
+                'requisition_id' => $requisition->id,
+                'error' => $e->getMessage(),
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Get job title suggestions for autocomplete (Task 50)
+     * Security: Only authenticated users with create_jobs permission (Task 78)
+     */
+    public function getJobTitleSuggestions(Request $request, string $tenant = null)
+    {
+        try {
+            // Permission check (Task 78)
+            if (!auth()->check()) {
+                return response()->json(['suggestions' => []], 401);
+            }
+
+            $query = $request->input('q', '');
+            
+            if (strlen($query) < 2) {
+                return response()->json(['suggestions' => []]);
+            }
+
+            // Get suggestions from existing requisitions and job openings
+            $suggestions = Requisition::where('job_title', 'like', "%{$query}%")
+                ->distinct()
+                ->pluck('job_title')
+                ->take(10)
+                ->toArray();
+
+            // Also check job openings
+            $jobTitles = \App\Models\JobOpening::where('title', 'like', "%{$query}%")
+                ->distinct()
+                ->pluck('title')
+                ->take(10)
+                ->toArray();
+
+            $suggestions = array_unique(array_merge($suggestions, $jobTitles));
+            $suggestions = array_slice($suggestions, 0, 10);
+
+            return response()->json(['suggestions' => $suggestions]);
+        } catch (\Exception $e) {
+            Log::error('Job title autocomplete error', [
+                'error' => $e->getMessage(),
+            ]);
+            return response()->json(['suggestions' => []], 500);
+        }
+    }
+
+    /**
+     * Get skill suggestions for autocomplete (Task 51)
+     * Security: Only authenticated users with create_jobs permission (Task 78)
+     */
+    public function getSkillSuggestions(Request $request, string $tenant = null)
+    {
+        try {
+            // Permission check (Task 78)
+            if (!auth()->check()) {
+                return response()->json(['suggestions' => []], 401);
+            }
+
+            $query = $request->input('q', '');
+            
+            if (strlen($query) < 2) {
+                return response()->json(['suggestions' => []]);
+            }
+
+            // Get suggestions from existing requisitions
+            $suggestions = Requisition::whereNotNull('skills')
+                ->get()
+                ->flatMap(function ($req) {
+                    $skills = json_decode($req->skills, true);
+                    return is_array($skills) ? $skills : [];
+                })
+                ->filter(function ($skill) use ($query) {
+                    return stripos($skill, $query) !== false;
+                })
+                ->unique()
+                ->take(10)
+                ->values()
+                ->toArray();
+
+            // Also check tags table if it exists
+            if (Schema::hasTable('tags')) {
+                $tagSuggestions = \App\Models\Tag::where('name', 'like', "%{$query}%")
+                    ->pluck('name')
+                    ->take(10)
+                    ->toArray();
+                $suggestions = array_unique(array_merge($suggestions, $tagSuggestions));
+                $suggestions = array_slice($suggestions, 0, 10);
+            }
+
+            return response()->json(['suggestions' => $suggestions]);
+        } catch (\Exception $e) {
+            Log::error('Skill autocomplete error', [
+                'error' => $e->getMessage(),
+            ]);
+            return response()->json(['suggestions' => []], 500);
+        }
+    }
+
+    /**
+     * Save draft requisition (Tasks 38-42)
+     * Security: Validate token/session before saving (Task 80)
+     */
+    public function saveDraft(Request $request, string $tenant = null)
+    {
+        try {
+            // Permission and session validation (Task 80)
+            if (!auth()->check()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized.',
+                ], 401);
+            }
+
+            $draftData = $request->except(['_token', '_method']);
+            
+            // Store draft in session
+            session(['requisition_draft' => $draftData]);
+            
+            // Optionally store in database for persistence across sessions
+            // For now, using session storage (Task 64)
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Draft saved successfully.',
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Draft save error', [
+                'error' => $e->getMessage(),
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to save draft.',
+            ], 500);
+        }
+    }
+
+    /**
+     * Load draft requisition (Task 40)
+     * Security: Validate token/session before loading (Task 80)
+     */
+    public function loadDraft(string $tenant = null)
+    {
+        try {
+            // Permission and session validation (Task 80)
+            if (!auth()->check()) {
+                return response()->json([
+                    'success' => false,
+                    'draft' => null,
+                ], 401);
+            }
+
+            $draft = session('requisition_draft', null);
+            
+            return response()->json([
+                'success' => true,
+                'draft' => $draft,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Draft load error', [
+                'error' => $e->getMessage(),
+            ]);
+            return response()->json([
+                'success' => false,
+                'draft' => null,
+            ], 500);
+        }
+    }
+
+    /**
+     * Delete draft requisition
+     * Security: Validate token/session before deleting (Task 80)
+     */
+    public function deleteDraft(string $tenant = null)
+    {
+        try {
+            // Permission and session validation (Task 80)
+            if (!auth()->check()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized.',
+                ], 401);
+            }
+
+            session()->forget('requisition_draft');
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Draft deleted successfully.',
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Draft delete error', [
+                'error' => $e->getMessage(),
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to delete draft.',
+            ], 500);
+        }
     }
 
     /**

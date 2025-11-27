@@ -6,6 +6,7 @@ use App\Models\Concerns\TenantScoped;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Requisition extends Model
@@ -22,10 +23,14 @@ class Requisition extends Model
         'budget_min',
         'budget_max',
         'contract_type',
+        'duration',
         'skills',
         'experience_min',
         'experience_max',
         'headcount',
+        'priority',
+        'location',
+        'additional_notes',
         'status',
         'created_by',
     ];
@@ -36,7 +41,9 @@ class Requisition extends Model
         'experience_min' => 'integer',
         'experience_max' => 'integer',
         'headcount' => 'integer',
+        'duration' => 'integer',
         'status' => 'string',
+        'priority' => 'string',
     ];
 
     /**
@@ -101,6 +108,14 @@ class Requisition extends Model
     public function auditLogs()
     {
         return $this->hasMany(RequisitionAuditLog::class);
+    }
+
+    /**
+     * Get attachments for this requisition
+     */
+    public function attachments(): MorphMany
+    {
+        return $this->morphMany(Attachment::class, 'attachable');
     }
 }
 

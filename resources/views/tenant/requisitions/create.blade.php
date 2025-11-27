@@ -121,12 +121,12 @@
                                         aria-required="true">
                                     <option value="">Select Department</option>
                                     @foreach($departments as $dept)
-                                        <option value="{{ $dept->name }}" {{ old('department', $draft['department'] ?? '') == $dept->name ? 'selected' : '' }}>
+                                        <option value="{{ $dept->name }}" {{ old('department', '') == $dept->name ? 'selected' : '' }}>
                                             {{ $dept->name }}
                                         </option>
                                     @endforeach
                                     @foreach($globalDepartments as $dept)
-                                        <option value="{{ $dept->name }}" {{ old('department', $draft['department'] ?? '') == $dept->name ? 'selected' : '' }}>
+                                        <option value="{{ $dept->name }}" {{ old('department', '') == $dept->name ? 'selected' : '' }}>
                                             {{ $dept->name }} (Global)
                                         </option>
                                     @endforeach
@@ -755,24 +755,29 @@
 
     @push('scripts')
     <script>
+    // Global flag to prevent duplicate draft loads across page instances
+    if (typeof window.draftLoadInProgress === 'undefined') {
+        window.draftLoadInProgress = false;
+    }
+    
     function requisitionForm() {
         return {
-            // Form Data
+            // Form Data - Start with empty form by default
             formData: {
-                department: @json(old('department', $draft['department'] ?? '')),
-                job_title: @json(old('job_title', $draft['job_title'] ?? '')),
-                justification: @json(old('justification', $draft['justification'] ?? '')),
-                budget_min: @json(old('budget_min', $draft['budget_min'] ?? '')),
-                budget_max: @json(old('budget_max', $draft['budget_max'] ?? '')),
-                contract_type: @json(old('contract_type', $draft['contract_type'] ?? '')),
-                duration: @json(old('duration', $draft['duration'] ?? '')),
-                skills: @json(old('skills', $draft['skills'] ?? [])),
-                experience_min: @json(old('experience_min', $draft['experience_min'] ?? '')),
-                experience_max: @json(old('experience_max', $draft['experience_max'] ?? '')),
-                headcount: @json(old('headcount', $draft['headcount'] ?? 1)),
-                priority: @json(old('priority', $draft['priority'] ?? 'Medium')),
-                location: @json(old('location', $draft['location'] ?? '')),
-                additional_notes: @json(old('additional_notes', $draft['additional_notes'] ?? ''))
+                department: @json(old('department', '')),
+                job_title: @json(old('job_title', '')),
+                justification: @json(old('justification', '')),
+                budget_min: @json(old('budget_min', '')),
+                budget_max: @json(old('budget_max', '')),
+                contract_type: @json(old('contract_type', '')),
+                duration: @json(old('duration', '')),
+                skills: @json(old('skills', [])),
+                experience_min: @json(old('experience_min', '')),
+                experience_max: @json(old('experience_max', '')),
+                headcount: @json(old('headcount', 1)),
+                priority: @json(old('priority', 'Medium')),
+                location: @json(old('location', '')),
+                additional_notes: @json(old('additional_notes', ''))
             },
             
             // UI State
@@ -790,7 +795,7 @@
             showHelpModal: false,
             previewExpanded: true,
             submitAction: 'submit',
-            isOffline: !navigator.onLine,
+            isOffline: false,
             hasUnsavedChanges: false,
             autosaveInterval: null,
             
@@ -818,8 +823,13 @@
                     if (firstField) firstField.focus();
                 });
                 
-                // Load draft if exists (Task 40)
-                this.loadDraft();
+                // By default, show empty form (no auto-load)
+                // Only load draft if explicitly requested via URL parameter
+                const urlParams = new URLSearchParams(window.location.search);
+                if (urlParams.get('load_draft') === 'true') {
+                    this.loadDraft();
+                }
+                // Otherwise, start with empty form
                 
                 // Setup autosave (Task 38)
                 this.setupAutosave();
@@ -1071,16 +1081,39 @@
             },
             
             // Draft Management (Tasks 38-42, 64)
+            draftId: null,
+            draftSaving: false,
+            draftLoaded: false,
+            draftLoading: false, // Prevent concurrent load requests
+            autosaveTimeout: null,
+            
             setupAutosave() {
-                // Auto-save every 15 seconds (Task 38)
+                // Auto-save every 15 seconds (Task 38) - debounced
                 this.autosaveInterval = setInterval(() => {
-                    if (this.hasUnsavedChanges) {
-                        this.saveDraft(true);
+                    if (this.hasUnsavedChanges && !this.draftSaving) {
+                        // Clear any pending autosave
+                        if (this.autosaveTimeout) {
+                            clearTimeout(this.autosaveTimeout);
+                        }
+                        // Debounce autosave by 1.5 seconds
+                        this.autosaveTimeout = setTimeout(() => {
+                            this.saveDraft(true);
+                        }, 1500);
                     }
                 }, 15000);
             },
             
             async saveDraft(silent = false) {
+                // Prevent duplicate requests
+                if (this.draftSaving) {
+                    if (!silent) {
+                        console.log('Draft save already in progress, skipping...');
+                    }
+                    return;
+                }
+
+                this.draftSaving = true;
+                
                 try {
                     const formData = new FormData();
                     Object.keys(this.formData).forEach(key => {
@@ -1090,6 +1123,16 @@
                             formData.append(key, this.formData[key] || '');
                         }
                     });
+                    
+                    // Include draft_id if we have one (for updates)
+                    if (this.draftId) {
+                        formData.append('draft_id', this.draftId);
+                    }
+                    
+                    // If no draft_id, this is a new requisition - don't update existing drafts
+                    if (!this.draftId) {
+                        formData.append('is_new', 'true');
+                    }
                     
                     const response = await fetch(`/{{ $tenantSlug }}/api/requisitions/draft`, {
                         method: 'POST',
@@ -1101,20 +1144,41 @@
                     });
                     
                     if (response.ok) {
+                        const data = await response.json();
+                        
+                        // Store draft_id for future updates
+                        if (data.draft_id) {
+                            this.draftId = data.draft_id;
+                        }
+                        
                         this.hasUnsavedChanges = false;
                         if (!silent) {
                             this.showToast('Draft saved successfully', 'success');
                         }
+                    } else {
+                        const errorData = await response.json().catch(() => ({}));
+                        throw new Error(errorData.message || 'Failed to save draft');
                     }
                 } catch (error) {
                     console.error('Draft save error:', error);
                     if (!silent) {
                         this.showToast('Failed to save draft', 'error');
                     }
+                } finally {
+                    this.draftSaving = false;
                 }
             },
             
             async loadDraft() {
+                // Prevent duplicate loads - check both local and global flags
+                if (this.draftLoaded || this.draftLoading || window.draftLoadInProgress) {
+                    return;
+                }
+
+                // Set loading flags immediately to prevent concurrent calls
+                this.draftLoading = true;
+                window.draftLoadInProgress = true;
+
                 try {
                     const response = await fetch(`/{{ $tenantSlug }}/api/requisitions/draft`, {
                         headers: {
@@ -1126,20 +1190,82 @@
                     if (response.ok) {
                         const data = await response.json();
                         if (data.draft) {
+                            // Store draft_id
+                            if (data.draft.id || data.draft.draft_id) {
+                                this.draftId = data.draft.id || data.draft.draft_id;
+                            }
+                            
+                            // Check if draft has meaningful data (not just defaults)
+                            let hasData = false;
+                            const meaningfulFields = ['job_title', 'department', 'justification', 'budget_min', 'budget_max'];
+                            meaningfulFields.forEach(field => {
+                                if (data.draft[field] && 
+                                    data.draft[field] !== 'Draft' && 
+                                    data.draft[field] !== 'Draft Requisition' && 
+                                    data.draft[field] !== 'TBD' &&
+                                    data.draft[field] !== 0) {
+                                    hasData = true;
+                                }
+                            });
+                            
+                            // Populate form
                             Object.keys(data.draft).forEach(key => {
-                                if (key === 'skills' && Array.isArray(data.draft[key])) {
-                                    this.formData[key] = data.draft[key];
+                                if (key === 'skills') {
+                                    try {
+                                        let skills = null;
+                                        
+                                        if (typeof data.draft[key] === 'string') {
+                                            // Try to parse as JSON
+                                            try {
+                                                skills = JSON.parse(data.draft[key]);
+                                            } catch (e) {
+                                                // If not valid JSON, try to handle as comma-separated string
+                                                const skillsString = data.draft[key].trim();
+                                                if (skillsString) {
+                                                    // Split by comma and clean up
+                                                    skills = skillsString.split(',')
+                                                        .map(s => s.trim())
+                                                        .filter(s => s.length > 0);
+                                                }
+                                            }
+                                        } else if (Array.isArray(data.draft[key])) {
+                                            skills = data.draft[key];
+                                        }
+                                        
+                                        if (Array.isArray(skills) && skills.length > 0) {
+                                            this.formData[key] = skills;
+                                            hasData = true; // Skills count as meaningful data
+                                        }
+                                    } catch (e) {
+                                        console.warn('Failed to parse skills:', e, data.draft[key]);
+                                        // Set empty array on error
+                                        this.formData[key] = [];
+                                    }
+                                } else if (key === 'id' || key === 'draft_id') {
+                                    // Skip id fields
                                 } else if (this.formData.hasOwnProperty(key)) {
                                     this.formData[key] = data.draft[key];
                                 }
                             });
+                            
                             this.toggleDurationField();
                             this.updatePreview();
-                            this.showToast('Draft loaded', 'info');
+                            
+                            // Mark as loaded
+                            this.draftLoaded = true;
+                            
+                            // Only show notification if draft has meaningful data (not just defaults)
+                            if (hasData) {
+                                this.showToast('Draft loaded', 'info');
+                            }
                         }
                     }
                 } catch (error) {
                     console.error('Draft load error:', error);
+                } finally {
+                    // Always reset loading flags
+                    this.draftLoading = false;
+                    window.draftLoadInProgress = false;
                 }
             },
             
@@ -1165,6 +1291,8 @@
                     this.errors = {};
                     this.uploadedFiles = [];
                     this.hasUnsavedChanges = false;
+                    this.draftId = null; // Clear draft ID - next save will be new
+                    this.draftLoaded = false;
                     this.showToast('Form cleared', 'info');
                 }
             },
@@ -1207,26 +1335,56 @@
                         formData.append(`attachments[${index}]`, fileObj.file);
                     });
                     
+                    // Debug: Log form data
+                    console.log('Submitting requisition form:', {
+                        action: form.action,
+                        method: 'POST',
+                        skills: JSON.stringify(this.formData.skills),
+                        formDataKeys: Array.from(formData.keys())
+                    });
+                    
                     const response = await fetch(form.action, {
                         method: 'POST',
                         headers: {
                             'X-Requested-With': 'XMLHttpRequest',
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                            'Accept': 'application/json'
                         },
                         body: formData
                     });
                     
-                    const data = await response.json();
+                    // Log response for debugging
+                    console.log('Response status:', response.status);
+                    const responseText = await response.text();
+                    console.log('Response text:', responseText);
+                    
+                    let data;
+                    try {
+                        data = JSON.parse(responseText);
+                    } catch (e) {
+                        console.error('Failed to parse JSON response:', e);
+                        throw new Error('Invalid response from server');
+                    }
                     
                     if (response.ok) {
-                        // Clear draft
-                        await fetch(`/{{ $tenantSlug }}/api/requisitions/draft`, {
-                            method: 'DELETE',
-                            headers: {
-                                'X-Requested-With': 'XMLHttpRequest',
-                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                            }
-                        });
+                        // Clear draft if we have one
+                        if (this.draftId) {
+                            const deleteFormData = new FormData();
+                            deleteFormData.append('draft_id', this.draftId);
+                            
+                            await fetch(`/{{ $tenantSlug }}/api/requisitions/draft`, {
+                                method: 'DELETE',
+                                headers: {
+                                    'X-Requested-With': 'XMLHttpRequest',
+                                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                                },
+                                body: deleteFormData
+                            });
+                        }
+                        
+                        // Reset draft tracking
+                        this.draftId = null;
+                        this.draftLoaded = false;
                         
                         // Redirect to success page (Task 82)
                         window.location.href = data.redirect_url || '/{{ $tenantSlug }}/requisitions';

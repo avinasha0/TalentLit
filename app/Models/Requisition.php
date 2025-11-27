@@ -33,6 +33,11 @@ class Requisition extends Model
         'additional_notes',
         'status',
         'created_by',
+        'approval_status',
+        'approval_level',
+        'current_approver_id',
+        'approved_at',
+        'approval_workflow',
     ];
 
     protected $casts = [
@@ -44,6 +49,9 @@ class Requisition extends Model
         'duration' => 'integer',
         'status' => 'string',
         'priority' => 'string',
+        'approval_level' => 'integer',
+        'approved_at' => 'datetime',
+        'approval_workflow' => 'array',
     ];
 
     /**
@@ -116,6 +124,47 @@ class Requisition extends Model
     public function attachments(): MorphMany
     {
         return $this->morphMany(Attachment::class, 'attachable');
+    }
+
+    /**
+     * Get the current approver user
+     */
+    public function currentApprover(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'current_approver_id');
+    }
+
+    /**
+     * Get all approval history for this requisition
+     */
+    public function approvals()
+    {
+        return $this->hasMany(RequisitionApproval::class);
+    }
+
+    /**
+     * Get tasks related to this requisition
+     */
+    public function tasks()
+    {
+        return $this->hasMany(Task::class);
+    }
+
+    /**
+     * Scope to filter by approval status
+     */
+    public function scopeApprovalStatus($query, string $status)
+    {
+        return $query->where('approval_status', $status);
+    }
+
+    /**
+     * Scope to filter pending approvals for a specific user
+     */
+    public function scopePendingForApprover($query, $userId)
+    {
+        return $query->where('approval_status', 'Pending')
+            ->where('current_approver_id', $userId);
     }
 }
 

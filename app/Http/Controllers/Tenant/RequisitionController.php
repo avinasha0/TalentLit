@@ -212,19 +212,43 @@ class RequisitionController extends Controller
     public function store(Request $request, string $tenant = null)
     {
         try {
+            // Log incoming request for debugging
+            Log::info('Requisition store request received', [
+                'user_id' => auth()->id(),
+                'tenant_id' => tenant_id(),
+                'tenant_slug' => $tenant,
+                'method' => $request->method(),
+                'url' => $request->fullUrl(),
+                'request_data_keys' => array_keys($request->all()),
+                'has_skills' => $request->has('skills'),
+                'skills_value' => $request->input('skills'),
+                'has_attachments' => $request->hasFile('attachments'),
+                'all_input' => $request->except(['_token', 'password']), // Exclude sensitive data
+            ]);
+
             // Validate all required fields (Task 14)
+            // Note: FormData sends everything as strings, so we need flexible validation
+            Log::debug('Starting requisition validation', [
+                'user_id' => auth()->id(),
+                'input_fields' => $request->only([
+                    'department', 'job_title', 'justification', 'budget_min', 'budget_max',
+                    'contract_type', 'duration', 'skills', 'experience_min', 'experience_max',
+                    'headcount', 'priority', 'location'
+                ]),
+            ]);
+            
             $validated = $request->validate([
                 'department' => 'required|string|max:150',
                 'job_title' => 'required|string|max:200',
                 'justification' => 'required|string',
-                'budget_min' => 'required|integer|min:0',
-                'budget_max' => 'required|integer|min:0|gte:budget_min',
+                'budget_min' => 'required|numeric|min:0',
+                'budget_max' => 'required|numeric|min:0|gte:budget_min',
                 'contract_type' => 'required|string|in:Full-time,Part-time,Contract,Intern,Temporary',
-                'duration' => 'nullable|integer|min:1|max:60',
-                'skills' => 'required|json',
-                'experience_min' => 'required|integer|min:0|max:50',
-                'experience_max' => 'nullable|integer|min:0|max:50|gte:experience_min',
-                'headcount' => 'required|integer|min:1',
+                'duration' => 'nullable|numeric|min:1|max:60',
+                'skills' => 'required|string', // Accept as string, we'll parse it
+                'experience_min' => 'required|numeric|min:0|max:50',
+                'experience_max' => 'nullable|numeric|min:0|max:50|gte:experience_min',
+                'headcount' => 'required|numeric|min:1',
                 'priority' => 'required|string|in:Low,Medium,High',
                 'location' => 'required|string|max:200',
                 'additional_notes' => 'nullable|string',
@@ -238,19 +262,71 @@ class RequisitionController extends Controller
                 'attachments.*.mimes' => 'Attachments must be PDF or DOC files.',
             ]);
 
-            // Parse skills JSON
-            $skills = json_decode($validated['skills'], true);
+            // Convert numeric strings to integers
+            $validated['budget_min'] = (int) $validated['budget_min'];
+            $validated['budget_max'] = (int) $validated['budget_max'];
+            $validated['experience_min'] = (int) $validated['experience_min'];
+            if (isset($validated['experience_max']) && $validated['experience_max'] !== null) {
+                $validated['experience_max'] = (int) $validated['experience_max'];
+            }
+            if (isset($validated['duration']) && $validated['duration'] !== null) {
+                $validated['duration'] = (int) $validated['duration'];
+            }
+            $validated['headcount'] = (int) $validated['headcount'];
+
+            // Parse skills JSON - handle both JSON string and array
+            $skillsInput = $validated['skills'];
+            $skills = null;
+            
+            // Try to parse as JSON first
+            if (is_string($skillsInput)) {
+                $decoded = json_decode($skillsInput, true);
+                if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                    $skills = $decoded;
+                } else {
+                    // If not valid JSON, try to handle as comma-separated string
+                    $skillsString = trim($skillsInput, ' ,');
+                    if (!empty($skillsString)) {
+                        $skillsArray = array_map('trim', explode(',', $skillsString));
+                        $skillsArray = array_filter($skillsArray, function($skill) {
+                            return !empty($skill) && trim($skill) !== '';
+                        });
+                        if (!empty($skillsArray)) {
+                            $skills = array_values($skillsArray);
+                        }
+                    }
+                }
+            } elseif (is_array($skillsInput)) {
+                $skills = $skillsInput;
+            }
+            
+            // Validate skills array
             if (!is_array($skills) || count($skills) === 0) {
+                Log::warning('Requisition validation failed: No skills provided', [
+                    'skills_input' => $skillsInput,
+                    'user_id' => auth()->id(),
+                    'tenant_id' => tenant_id(),
+                ]);
                 return response()->json([
                     'success' => false,
                     'message' => 'At least one skill is required.',
                     'errors' => ['skills' => ['At least one skill is required.']]
                 ], 422);
             }
+            
+            // Store skills as JSON string
             $validated['skills'] = json_encode($skills);
+            
+            Log::debug('Requisition validation passed', [
+                'user_id' => auth()->id(),
+                'validated_fields' => array_keys($validated),
+                'skills_count' => count($skills),
+            ]);
 
-            // Set status to Pending when submitted (Task 45)
-            $validated['status'] = 'Pending';
+            // Set status to Draft initially (user must submit for approval separately)
+            $validated['status'] = 'Draft';
+            $validated['approval_status'] = 'Draft';
+            $validated['approval_level'] = 0;
             $validated['tenant_id'] = tenant_id();
             $validated['created_by'] = auth()->id();
 
@@ -472,6 +548,7 @@ class RequisitionController extends Controller
     /**
      * Save draft requisition (Tasks 38-42)
      * Security: Validate token/session before saving (Task 80)
+     * Idempotent: Updates existing draft or creates new one
      */
     public function saveDraft(Request $request, string $tenant = null)
     {
@@ -484,25 +561,335 @@ class RequisitionController extends Controller
                 ], 401);
             }
 
-            $draftData = $request->except(['_token', '_method']);
+            $userId = auth()->id();
+            $draftId = $request->input('draft_id');
             
-            // Store draft in session
-            session(['requisition_draft' => $draftData]);
+            // Convert is_new from string to boolean before validation
+            // FormData sends everything as strings, so "true" needs to be converted
+            $isNewInput = $request->input('is_new');
+            if ($isNewInput === 'true' || $isNewInput === '1' || $isNewInput === true || $isNewInput === 1) {
+                $request->merge(['is_new' => true]);
+                $isNewRequisition = true;
+            } else {
+                $request->merge(['is_new' => false]);
+                $isNewRequisition = false;
+            }
             
-            // Optionally store in database for persistence across sessions
-            // For now, using session storage (Task 64)
-            
-            return response()->json([
-                'success' => true,
-                'message' => 'Draft saved successfully.',
+            Log::info('Draft save request received', [
+                'user_id' => $userId,
+                'tenant_id' => tenant_id(),
+                'draft_id' => $draftId,
+                'is_new' => $isNewRequisition,
+                'has_job_title' => $request->filled('job_title'),
+                'job_title' => $request->input('job_title'),
+                'request_data_keys' => array_keys($request->except(['_token', '_method'])),
             ]);
-        } catch (\Exception $e) {
-            Log::error('Draft save error', [
-                'error' => $e->getMessage(),
+            
+            // Normalize contract_type before validation (handle case variations)
+            // Get original value for logging
+            $originalContractType = $request->input('contract_type');
+            
+            if ($request->has('contract_type') && $originalContractType) {
+                $contractType = strtolower(trim($originalContractType));
+                $contractTypeMap = [
+                    'full-time' => 'Full-time',
+                    'fulltime' => 'Full-time',
+                    'full_time' => 'Full-time',
+                    'part-time' => 'Part-time',
+                    'parttime' => 'Part-time',
+                    'part_time' => 'Part-time',
+                    'contract' => 'Contract',
+                    'intern' => 'Intern',
+                    'internship' => 'Intern',
+                    'temporary' => 'Temporary',
+                    'temp' => 'Temporary',
+                ];
+                
+                $normalizedType = null;
+                if (isset($contractTypeMap[$contractType])) {
+                    $normalizedType = $contractTypeMap[$contractType];
+                } else {
+                    // If not in map, try to capitalize first letter of each word
+                    $normalizedType = ucwords(str_replace(['-', '_'], ' ', $contractType));
+                }
+                
+                // Replace in request data directly to ensure it's used in validation
+                $request->merge(['contract_type' => $normalizedType]);
+                
+                // Also update the request's input array directly
+                $request->request->set('contract_type', $normalizedType);
+                
+                if ($originalContractType !== $normalizedType) {
+                    Log::debug('Contract type normalized', [
+                        'original' => $originalContractType,
+                        'normalized' => $normalizedType,
+                    ]);
+                }
+            }
+            
+            // Validate required fields for draft (more flexible for drafts)
+            // Note: FormData sends everything as strings, so we need to handle conversion
+            $validated = $request->validate([
+                'department' => 'nullable|string|max:150',
+                'job_title' => 'nullable|string|max:200',
+                'justification' => 'nullable|string',
+                'budget_min' => 'nullable|numeric|min:0',
+                'budget_max' => 'nullable|numeric|min:0',
+                'contract_type' => 'nullable|string|in:Full-time,Part-time,Contract,Intern,Temporary',
+                'duration' => 'nullable|numeric|min:1|max:60',
+                'skills' => 'nullable|string', // Accept any string, we'll parse it
+                'experience_min' => 'nullable|numeric|min:0|max:50',
+                'experience_max' => 'nullable|numeric|min:0|max:50',
+                'headcount' => 'nullable|numeric|min:1',
+                'priority' => 'nullable|string|in:Low,Medium,High',
+                'location' => 'nullable|string|max:200',
+                'additional_notes' => 'nullable|string',
+                'draft_id' => 'nullable|integer|exists:requisitions,id',
+                // Note: is_new is handled before validation, so we don't need to validate it here
+            ]);
+            
+            // Convert numeric strings to integers for database
+            $numericFields = ['budget_min', 'budget_max', 'duration', 'experience_min', 'experience_max', 'headcount'];
+            foreach ($numericFields as $field) {
+                if (isset($validated[$field]) && $validated[$field] !== null && $validated[$field] !== '') {
+                    $validated[$field] = (int) $validated[$field];
+                }
+            }
+
+            // Parse and normalize skills - handle both JSON string and array
+            if (isset($validated['skills']) && $validated['skills'] !== null && $validated['skills'] !== '') {
+                $skills = null;
+                
+                // Try to parse as JSON first
+                if (is_string($validated['skills'])) {
+                    // Remove any leading/trailing whitespace and quotes
+                    $skillsInput = trim($validated['skills'], ' "\'');
+                    
+                    // Try to parse as JSON
+                    $decoded = json_decode($skillsInput, true);
+                    if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                        $skills = $decoded;
+                    } else {
+                        // If not valid JSON, try to handle as comma-separated string
+                        // This handles legacy data or malformed JSON
+                        $skillsString = trim($skillsInput, ' ,');
+                        if (!empty($skillsString)) {
+                            // Try to split by comma and clean up
+                            $skillsArray = array_map('trim', explode(',', $skillsString));
+                            $skillsArray = array_filter($skillsArray, function($skill) {
+                                return !empty($skill) && trim($skill) !== '';
+                            });
+                            if (!empty($skillsArray)) {
+                                $skills = array_values($skillsArray);
+                            }
+                        }
+                    }
+                } elseif (is_array($validated['skills'])) {
+                    $skills = $validated['skills'];
+                }
+                
+                // Store as JSON string if we have valid skills, otherwise use empty array
+                $validated['skills'] = !empty($skills) ? json_encode($skills) : json_encode([]);
+            } else {
+                // Always set skills to empty JSON array, never null (database requires NOT NULL)
+                $validated['skills'] = json_encode([]);
+            }
+
+            DB::beginTransaction();
+            try {
+                $requisition = null;
+
+                // Only update existing draft if:
+                // 1. draft_id is explicitly provided (user is continuing to edit a specific draft)
+                // 2. AND is_new flag is NOT set (user is not creating a new requisition)
+                if ($draftId && !$isNewRequisition) {
+                    Log::debug('Checking for existing draft by ID', [
+                        'draft_id' => $draftId,
+                        'user_id' => $userId,
+                    ]);
+                    
+                    $requisition = Requisition::where('id', $draftId)
+                        ->where('created_by', $userId)
+                        ->where('status', 'Draft')
+                        ->first();
+
+                    if ($requisition) {
+                        // Filter out null/empty values that would violate NOT NULL constraints
+                        $updateData = array_filter($validated, function($value) {
+                            return $value !== null && $value !== '';
+                        });
+                        $requisition->update($updateData);
+                        Log::info('Draft updated by explicit draft_id', [
+                            'draft_id' => $draftId,
+                            'user_id' => $userId,
+                            'updated_fields' => array_keys($updateData),
+                        ]);
+                    } else {
+                        Log::warning('Draft ID provided but not found or not owned by user', [
+                            'draft_id' => $draftId,
+                            'user_id' => $userId,
+                        ]);
+                    }
+                } else {
+                    if ($isNewRequisition) {
+                        Log::debug('Creating new requisition - skipping draft update logic', [
+                            'user_id' => $userId,
+                            'draft_id_provided' => $draftId,
+                        ]);
+                    } else {
+                        Log::debug('No draft_id provided - will create new draft', [
+                            'user_id' => $userId,
+                        ]);
+                    }
+                }
+
+                // If no draft exists, create new one
+                if (!$requisition) {
+                    // Get tenant_id - ensure it's not null
+                    $tenantId = tenant_id();
+                    if (!$tenantId) {
+                        // Try to get from tenant() helper
+                        $tenant = tenant();
+                        $tenantId = $tenant ? $tenant->id : null;
+                    }
+                    
+                    if (!$tenantId) {
+                        DB::rollBack();
+                        Log::error('Draft save failed: No tenant_id', [
+                            'user_id' => $userId,
+                            'request_path' => $request->path(),
+                        ]);
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'Unable to determine tenant. Please refresh the page and try again.',
+                        ], 400);
+                    }
+                    
+                    // Ensure required fields have default values for drafts
+                    $validated['tenant_id'] = $tenantId;
+                    $validated['status'] = 'Draft';
+                    $validated['approval_status'] = 'Draft';
+                    $validated['approval_level'] = 0;
+                    $validated['created_by'] = $userId;
+                    
+                    // Set defaults for fields that are NOT NULL in database but might be empty in draft
+                    if (empty($validated['department'])) {
+                        $validated['department'] = 'Draft';
+                    }
+                    if (empty($validated['job_title'])) {
+                        $validated['job_title'] = 'Draft Requisition';
+                    }
+                    if (empty($validated['justification'])) {
+                        $validated['justification'] = 'Draft';
+                    }
+                    if (!isset($validated['budget_min']) || $validated['budget_min'] === null || $validated['budget_min'] === '') {
+                        $validated['budget_min'] = 0;
+                    } else {
+                        $validated['budget_min'] = (int) $validated['budget_min'];
+                    }
+                    if (!isset($validated['budget_max']) || $validated['budget_max'] === null || $validated['budget_max'] === '') {
+                        $validated['budget_max'] = 0;
+                    } else {
+                        $validated['budget_max'] = (int) $validated['budget_max'];
+                    }
+                    if (empty($validated['contract_type'])) {
+                        $validated['contract_type'] = 'Full-time';
+                    }
+                    if (empty($validated['skills'])) {
+                        $validated['skills'] = json_encode([]);
+                    }
+                    if (!isset($validated['experience_min']) || $validated['experience_min'] === null || $validated['experience_min'] === '') {
+                        $validated['experience_min'] = 0;
+                    } else {
+                        $validated['experience_min'] = (int) $validated['experience_min'];
+                    }
+                    if (empty($validated['headcount'])) {
+                        $validated['headcount'] = 1;
+                    } else {
+                        $validated['headcount'] = (int) $validated['headcount'];
+                    }
+                    if (empty($validated['priority'])) {
+                        $validated['priority'] = 'Medium';
+                    }
+                    if (empty($validated['location'])) {
+                        $validated['location'] = 'TBD';
+                    }
+
+                    // Log before creation for debugging
+                    Log::info('Creating new draft requisition', [
+                        'user_id' => $userId,
+                        'tenant_id' => $tenantId,
+                        'is_new' => $isNewRequisition,
+                        'validated_fields' => array_keys($validated),
+                        'job_title' => $validated['job_title'] ?? 'N/A',
+                    ]);
+
+                    try {
+                        $requisition = Requisition::create($validated);
+                    } catch (\Exception $createException) {
+                        DB::rollBack();
+                        Log::error('Draft creation failed', [
+                            'user_id' => $userId,
+                            'tenant_id' => $tenantId,
+                            'error' => $createException->getMessage(),
+                            'trace' => $createException->getTraceAsString(),
+                            'validated_data' => $validated,
+                        ]);
+                        throw $createException;
+                    }
+
+                    // Log creation
+                    RequisitionAuditLog::create([
+                        'requisition_id' => $requisition->id,
+                        'user_id' => $userId,
+                        'action' => 'created',
+                        'changes' => ['draft' => true],
+                        'ip_address' => $request->ip(),
+                        'user_agent' => $request->userAgent(),
+                    ]);
+
+                    Log::info('Draft created', [
+                        'draft_id' => $requisition->id,
+                        'user_id' => $userId,
+                    ]);
+                }
+
+                DB::commit();
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Draft saved successfully.',
+                    'draft_id' => $requisition->id,
+                    'draft' => $requisition,
+                ]);
+            } catch (\Exception $e) {
+                DB::rollBack();
+                throw $e;
+            }
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::warning('Draft validation failed', [
+                'errors' => $e->errors(),
+                'user_id' => auth()->id(),
+                'request_data' => $request->except(['_token', '_method']),
             ]);
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to save draft.',
+                'message' => 'Validation failed: ' . implode(', ', array_map(function($errors) {
+                    return is_array($errors) ? implode(', ', $errors) : $errors;
+                }, $e->errors())),
+                'errors' => $e->errors(),
+            ], 422);
+        } catch (\Exception $e) {
+            Log::error('Draft save error', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'user_id' => auth()->id(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to save draft: ' . $e->getMessage(),
             ], 500);
         }
     }
@@ -510,6 +897,7 @@ class RequisitionController extends Controller
     /**
      * Load draft requisition (Task 40)
      * Security: Validate token/session before loading (Task 80)
+     * Loads from database instead of session
      */
     public function loadDraft(string $tenant = null)
     {
@@ -522,15 +910,73 @@ class RequisitionController extends Controller
                 ], 401);
             }
 
-            $draft = session('requisition_draft', null);
+            $userId = auth()->id();
+            
+            // Load latest draft from database for this user
+            $draft = Requisition::where('created_by', $userId)
+                ->where('status', 'Draft')
+                ->latest()
+                ->first();
+
+            if ($draft) {
+                // Normalize contract_type if it exists (handle case variations from old drafts)
+                $contractType = $draft->contract_type;
+                if ($contractType) {
+                    $contractTypeLower = strtolower(trim($contractType));
+                    $contractTypeMap = [
+                        'full-time' => 'Full-time',
+                        'fulltime' => 'Full-time',
+                        'full_time' => 'Full-time',
+                        'part-time' => 'Part-time',
+                        'parttime' => 'Part-time',
+                        'part_time' => 'Part-time',
+                        'contract' => 'Contract',
+                        'intern' => 'Intern',
+                        'internship' => 'Intern',
+                        'temporary' => 'Temporary',
+                        'temp' => 'Temporary',
+                    ];
+                    
+                    if (isset($contractTypeMap[$contractTypeLower])) {
+                        $contractType = $contractTypeMap[$contractTypeLower];
+                    } elseif ($contractTypeLower !== strtolower($contractType)) {
+                        // Auto-normalize if different case
+                        $contractType = ucwords(str_replace(['-', '_'], ' ', $contractTypeLower));
+                    }
+                }
+                
+                Log::info('Draft loaded', [
+                    'draft_id' => $draft->id,
+                    'user_id' => $userId,
+                ]);
+            }
             
             return response()->json([
                 'success' => true,
-                'draft' => $draft,
+                'draft' => $draft ? [
+                    'id' => $draft->id,
+                    'draft_id' => $draft->id, // For frontend compatibility
+                    'department' => $draft->department,
+                    'job_title' => $draft->job_title,
+                    'justification' => $draft->justification,
+                    'budget_min' => $draft->budget_min,
+                    'budget_max' => $draft->budget_max,
+                    'contract_type' => $contractType ?? $draft->contract_type,
+                    'duration' => $draft->duration,
+                    'skills' => $draft->skills,
+                    'experience_min' => $draft->experience_min,
+                    'experience_max' => $draft->experience_max,
+                    'headcount' => $draft->headcount,
+                    'priority' => $draft->priority,
+                    'location' => $draft->location,
+                    'additional_notes' => $draft->additional_notes,
+                ] : null,
             ]);
         } catch (\Exception $e) {
             Log::error('Draft load error', [
                 'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'user_id' => auth()->id(),
             ]);
             return response()->json([
                 'success' => false,
@@ -542,8 +988,9 @@ class RequisitionController extends Controller
     /**
      * Delete draft requisition
      * Security: Validate token/session before deleting (Task 80)
+     * Deletes from database instead of session
      */
-    public function deleteDraft(string $tenant = null)
+    public function deleteDraft(Request $request, string $tenant = null)
     {
         try {
             // Permission and session validation (Task 80)
@@ -554,15 +1001,52 @@ class RequisitionController extends Controller
                 ], 401);
             }
 
-            session()->forget('requisition_draft');
-            
-            return response()->json([
-                'success' => true,
-                'message' => 'Draft deleted successfully.',
-            ]);
+            $userId = auth()->id();
+            $draftId = $request->input('draft_id');
+
+            DB::beginTransaction();
+            try {
+                if ($draftId) {
+                    // Delete specific draft
+                    $draft = Requisition::where('id', $draftId)
+                        ->where('created_by', $userId)
+                        ->where('status', 'Draft')
+                        ->first();
+
+                    if ($draft) {
+                        $draft->delete(); // Soft delete
+                        Log::info('Draft deleted', [
+                            'draft_id' => $draftId,
+                            'user_id' => $userId,
+                        ]);
+                    }
+                } else {
+                    // Delete all drafts for user (optional - for cleanup)
+                    $deleted = Requisition::where('created_by', $userId)
+                        ->where('status', 'Draft')
+                        ->delete();
+
+                    Log::info('All drafts deleted', [
+                        'user_id' => $userId,
+                        'deleted_count' => $deleted,
+                    ]);
+                }
+
+                DB::commit();
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Draft deleted successfully.',
+                ]);
+            } catch (\Exception $e) {
+                DB::rollBack();
+                throw $e;
+            }
         } catch (\Exception $e) {
             Log::error('Draft delete error', [
                 'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'user_id' => auth()->id(),
             ]);
             return response()->json([
                 'success' => false,

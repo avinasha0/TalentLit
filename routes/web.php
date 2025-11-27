@@ -469,6 +469,47 @@ $tenantRoutes = function () {
         Route::get('/{tenant}/requisitions/{id}/audit-log', [RequisitionController::class, 'auditLog'])->name('tenant.requisitions.audit-log');
     });
 
+    // Approval Workflow Routes
+    Route::middleware(['custom.permission:view_jobs'])->group(function () {
+        // Pending Approvals Page
+        Route::get('/{tenant}/requisitions/pending-approvals', [\App\Http\Controllers\Tenant\ApprovalController::class, 'pendingApprovalsPage'])->name('tenant.requisitions.pending-approvals');
+        
+        // Approval Detail Page
+        Route::get('/{tenant}/requisitions/{id}/approval', [\App\Http\Controllers\Tenant\ApprovalController::class, 'approvalDetail'])->name('tenant.requisitions.approval');
+    });
+
+    // Approval API Routes
+    Route::middleware(['custom.permission:create_jobs'])->group(function () {
+        Route::post('/{tenant}/api/requisitions/{id}/submit', [\App\Http\Controllers\Tenant\ApprovalController::class, 'submit'])->name('tenant.api.requisitions.submit');
+    });
+
+    Route::middleware(['custom.permission:view_jobs'])->group(function () {
+        Route::get('/{tenant}/api/approvals/pending', [\App\Http\Controllers\Tenant\ApprovalController::class, 'pending'])->name('tenant.api.approvals.pending');
+        Route::get('/{tenant}/api/requisitions/{id}/approvals', [\App\Http\Controllers\Tenant\ApprovalController::class, 'history'])->name('tenant.api.requisitions.approvals');
+    });
+
+    Route::middleware(['custom.permission:edit_jobs'])->group(function () {
+        Route::post('/{tenant}/api/requisitions/{id}/approve', [\App\Http\Controllers\Tenant\ApprovalController::class, 'approve'])->name('tenant.api.requisitions.approve');
+        Route::post('/{tenant}/api/requisitions/{id}/reject', [\App\Http\Controllers\Tenant\ApprovalController::class, 'reject'])->name('tenant.api.requisitions.reject');
+        Route::post('/{tenant}/api/requisitions/{id}/request-changes', [\App\Http\Controllers\Tenant\ApprovalController::class, 'requestChanges'])->name('tenant.api.requisitions.request-changes');
+        Route::post('/{tenant}/api/requisitions/{id}/delegate', [\App\Http\Controllers\Tenant\ApprovalController::class, 'delegate'])->name('tenant.api.requisitions.delegate');
+    });
+
+    // Tasks Routes
+    Route::middleware(['custom.permission:view_jobs'])->group(function () {
+        // Web routes for Tasks UI
+        Route::get('/{tenant}/tasks/my', [\App\Http\Controllers\Tenant\TaskController::class, 'index'])->name('tenant.tasks.my');
+        
+        // API routes for Tasks
+        Route::prefix('{tenant}/api/tasks')->group(function () {
+            Route::get('/my', [\App\Http\Controllers\Api\TaskController::class, 'myTasks'])->name('tenant.api.tasks.my');
+            Route::get('/{id}', [\App\Http\Controllers\Api\TaskController::class, 'show'])->name('tenant.api.tasks.show');
+            Route::post('/{id}/start', [\App\Http\Controllers\Api\TaskController::class, 'start'])->name('tenant.api.tasks.start');
+            Route::post('/{id}/complete', [\App\Http\Controllers\Api\TaskController::class, 'complete'])->name('tenant.api.tasks.complete');
+            Route::post('/{id}/reassign', [\App\Http\Controllers\Api\TaskController::class, 'reassign'])->name('tenant.api.tasks.reassign');
+        });
+    });
+
     // Job Management Routes - Owner, Admin, Recruiter
     Route::middleware('custom.permission:view_jobs')->group(function () {
         Route::get('/{tenant}/jobs', [JobController::class, 'index'])->name('tenant.jobs.index');

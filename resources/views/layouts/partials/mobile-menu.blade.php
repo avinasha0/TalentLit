@@ -39,6 +39,23 @@
                     </svg>
                 </button>
                 <div data-mobile-recruiting-content class="ml-4 space-y-1 hidden">
+                    {{-- Requisitions Section --}}
+                    <div class="mt-2">
+                        <button type="button" data-mobile-requisitions-toggle class="flex items-center justify-between w-full text-left text-sm font-semibold text-gray-500 mb-2 hover:text-gray-700">
+                            <span>Requisitions</span>
+                            <svg class="w-4 h-4 transition-transform duration-200" data-mobile-requisitions-arrow fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </button>
+                        <div data-mobile-requisitions-content class="ml-4 space-y-1 hidden">
+                            <a href="{{ tenantRoute('tenant.requisitions.index', $tenant->slug ?? tenant()->slug) }}" class="block py-1 text-gray-700 hover:text-blue-600">All Requisitions</a>
+                            <a href="{{ tenantRoute('tenant.requisitions.create', $tenant->slug ?? tenant()->slug) }}" class="block py-1 text-gray-700 hover:text-blue-600">Create Requisition</a>
+                            <a href="{{ tenantRoute('tenant.requisitions.pending', $tenant->slug ?? tenant()->slug) }}" class="block py-1 text-gray-700 hover:text-blue-600">Pending Approvals</a>
+                            <a href="{{ tenantRoute('tenant.requisitions.approved', $tenant->slug ?? tenant()->slug) }}" class="block py-1 text-gray-700 hover:text-blue-600">Approved Requisitions</a>
+                            <a href="{{ tenantRoute('tenant.requisitions.rejected', $tenant->slug ?? tenant()->slug) }}" class="block py-1 text-gray-700 hover:text-blue-600">Rejected Requisitions</a>
+                        </div>
+                    </div>
+
                     {{-- Jobs Section --}}
                     <div class="mt-2">
                         <button type="button" data-mobile-jobs-toggle class="flex items-center justify-between w-full text-left text-sm font-semibold text-gray-500 mb-2 hover:text-gray-700">

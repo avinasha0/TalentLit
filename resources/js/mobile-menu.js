@@ -140,6 +140,7 @@ function setupCollapsible(toggleSelector, contentSelector, arrowSelector) {
 function initializeCollapsibles() {
   // Use setupCollapsible for ALL sections, including Recruiting (same as Settings)
   setupCollapsible('[data-mobile-recruiting-toggle]', '[data-mobile-recruiting-content]', '[data-mobile-recruiting-arrow]');
+  setupCollapsible('[data-mobile-requisitions-toggle]', '[data-mobile-requisitions-content]', '[data-mobile-requisitions-arrow]');
   setupCollapsible('[data-mobile-jobs-toggle]', '[data-mobile-jobs-content]', '[data-mobile-jobs-arrow]');
   setupCollapsible('[data-mobile-candidates-toggle]', '[data-mobile-candidates-content]', '[data-mobile-candidates-arrow]');
   setupCollapsible('[data-mobile-reporting-toggle]', '[data-mobile-reporting-content]', '[data-mobile-reporting-arrow]');

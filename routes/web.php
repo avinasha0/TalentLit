@@ -19,6 +19,7 @@ use App\Http\Controllers\Tenant\DashboardController;
 use App\Http\Controllers\Tenant\InterviewController;
 use App\Http\Controllers\Tenant\JobController;
 use App\Http\Controllers\Tenant\RecruitingController;
+use App\Http\Controllers\Tenant\RequisitionController;
 use App\Http\Controllers\Tenant\JobQuestionsController;
 use App\Http\Controllers\Tenant\JobStageController;
 use App\Http\Controllers\Tenant\PipelineController;
@@ -428,6 +429,19 @@ $tenantRoutes = function () {
         Route::get('/{tenant}/recruiting', [RecruitingController::class, 'index'])->name('tenant.recruiting.index');
     });
 
+    // Requisition Management Routes - Owner, Admin, Recruiter
+    Route::middleware('custom.permission:view_jobs')->group(function () {
+        Route::get('/{tenant}/requisitions', [RequisitionController::class, 'index'])->name('tenant.requisitions.index');
+        Route::get('/{tenant}/requisitions/pending', [RequisitionController::class, 'pending'])->name('tenant.requisitions.pending');
+        Route::get('/{tenant}/requisitions/approved', [RequisitionController::class, 'approved'])->name('tenant.requisitions.approved');
+        Route::get('/{tenant}/requisitions/rejected', [RequisitionController::class, 'rejected'])->name('tenant.requisitions.rejected');
+    });
+
+    Route::middleware(['custom.permission:create_jobs'])->group(function () {
+        Route::get('/{tenant}/requisitions/create', [RequisitionController::class, 'create'])->name('tenant.requisitions.create');
+        Route::post('/{tenant}/requisitions', [RequisitionController::class, 'store'])->name('tenant.requisitions.store');
+    });
+
     // Job Management Routes - Owner, Admin, Recruiter
     Route::middleware('custom.permission:view_jobs')->group(function () {
         Route::get('/{tenant}/jobs', [JobController::class, 'index'])->name('tenant.jobs.index');
@@ -825,6 +839,19 @@ Route::domain('{subdomain}.' . $appDomain)->middleware(['subdomain.redirect', 's
     // Recruiting
     Route::middleware('custom.permission:view_dashboard')->group(function () {
         Route::get('/recruiting', [RecruitingController::class, 'index'])->name('subdomain.recruiting.index');
+    });
+
+    // Requisition Management Routes
+    Route::middleware('custom.permission:view_jobs')->group(function () {
+        Route::get('/requisitions', [RequisitionController::class, 'index'])->name('subdomain.requisitions.index');
+        Route::get('/requisitions/pending', [RequisitionController::class, 'pending'])->name('subdomain.requisitions.pending');
+        Route::get('/requisitions/approved', [RequisitionController::class, 'approved'])->name('subdomain.requisitions.approved');
+        Route::get('/requisitions/rejected', [RequisitionController::class, 'rejected'])->name('subdomain.requisitions.rejected');
+    });
+
+    Route::middleware(['custom.permission:create_jobs'])->group(function () {
+        Route::get('/requisitions/create', [RequisitionController::class, 'create'])->name('subdomain.requisitions.create');
+        Route::post('/requisitions', [RequisitionController::class, 'store'])->name('subdomain.requisitions.store');
     });
 
     // Employee Onboarding

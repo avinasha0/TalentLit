@@ -435,14 +435,8 @@ $tenantRoutes = function () {
         Route::get('/{tenant}/requisitions/create', [RequisitionController::class, 'create'])->name('tenant.requisitions.create');
         Route::post('/{tenant}/requisitions', [RequisitionController::class, 'store'])->name('tenant.requisitions.store');
         
-        // API routes for requisition creation features (Tasks 49-55)
-        Route::prefix('{tenant}/api/requisitions')->group(function () {
-            Route::get('/job-titles', [RequisitionController::class, 'getJobTitleSuggestions'])->name('tenant.api.requisitions.job-titles');
-            Route::get('/skills', [RequisitionController::class, 'getSkillSuggestions'])->name('tenant.api.requisitions.skills');
-            Route::post('/draft', [RequisitionController::class, 'saveDraft'])->name('tenant.api.requisitions.draft.save');
-            Route::get('/draft', [RequisitionController::class, 'loadDraft'])->name('tenant.api.requisitions.draft.load');
-            Route::delete('/draft', [RequisitionController::class, 'deleteDraft'])->name('tenant.api.requisitions.draft.delete');
-        });
+        // Note: API routes for requisition creation are registered separately without domain constraints
+        // to support both path-based and subdomain-based tenant routing (see below after $tenantRoutes registration)
     });
 
     Route::middleware('custom.permission:view_jobs')->group(function () {
@@ -752,6 +746,20 @@ if (app()->environment('local')) {
 } else {
     Route::domain($appDomain)->middleware(['capture.tenant', 'tenant', 'auth'])->group($tenantRoutes);
 }
+
+// Register API routes for requisitions without domain constraints to support path-based tenant routing
+// These routes must be accessible via /{tenant}/api/requisitions/* for path-based tenants
+// Note: These routes are also defined inside $tenantRoutes with domain constraints for subdomain routing
+// Having both ensures compatibility with both path-based and subdomain-based tenant routing
+Route::middleware(['capture.tenant', 'tenant', 'auth', 'custom.permission:create_jobs'])->group(function () {
+    Route::prefix('{tenant}/api/requisitions')->group(function () {
+        Route::get('/job-titles', [RequisitionController::class, 'getJobTitleSuggestions'])->name('tenant.api.requisitions.job-titles');
+        Route::get('/skills', [RequisitionController::class, 'getSkillSuggestions'])->name('tenant.api.requisitions.skills');
+        Route::post('/draft', [RequisitionController::class, 'saveDraft'])->name('tenant.api.requisitions.draft.save');
+        Route::get('/draft', [RequisitionController::class, 'loadDraft'])->name('tenant.api.requisitions.draft.load');
+        Route::delete('/draft', [RequisitionController::class, 'deleteDraft'])->name('tenant.api.requisitions.draft.delete');
+    });
+});
 
 // API Routes
 Route::prefix('api')->group(function () {

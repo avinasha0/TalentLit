@@ -456,14 +456,34 @@ class RequisitionController extends Controller
     public function getJobTitleSuggestions(Request $request, string $tenant = null)
     {
         try {
+            // Enhanced logging for route debugging
+            Log::info('getJobTitleSuggestions called', [
+                'tenant_slug' => $tenant,
+                'tenant_id' => tenant_id(),
+                'user_id' => auth()->id(),
+                'request_path' => $request->path(),
+                'request_url' => $request->fullUrl(),
+                'request_method' => $request->method(),
+                'query_param' => $request->input('q'),
+                'route_name' => optional($request->route())->getName(),
+            ]);
+
             // Permission check (Task 78)
             if (!auth()->check()) {
+                Log::warning('getJobTitleSuggestions: Unauthorized access attempt', [
+                    'tenant_slug' => $tenant,
+                    'request_path' => $request->path(),
+                ]);
                 return response()->json(['suggestions' => []], 401);
             }
 
             $query = $request->input('q', '');
             
             if (strlen($query) < 2) {
+                Log::debug('getJobTitleSuggestions: Query too short', [
+                    'query_length' => strlen($query),
+                    'query' => $query,
+                ]);
                 return response()->json(['suggestions' => []]);
             }
 
@@ -484,10 +504,24 @@ class RequisitionController extends Controller
             $suggestions = array_unique(array_merge($suggestions, $jobTitles));
             $suggestions = array_slice($suggestions, 0, 10);
 
+            Log::info('getJobTitleSuggestions: Success', [
+                'query' => $query,
+                'suggestions_count' => count($suggestions),
+                'tenant_id' => tenant_id(),
+            ]);
+
             return response()->json(['suggestions' => $suggestions]);
         } catch (\Exception $e) {
             Log::error('Job title autocomplete error', [
                 'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'tenant_slug' => $tenant,
+                'tenant_id' => tenant_id(),
+                'user_id' => auth()->id(),
+                'request_path' => $request->path(),
+                'request_url' => $request->fullUrl(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
             ]);
             return response()->json(['suggestions' => []], 500);
         }
@@ -500,14 +534,34 @@ class RequisitionController extends Controller
     public function getSkillSuggestions(Request $request, string $tenant = null)
     {
         try {
+            // Enhanced logging for route debugging
+            Log::info('getSkillSuggestions called', [
+                'tenant_slug' => $tenant,
+                'tenant_id' => tenant_id(),
+                'user_id' => auth()->id(),
+                'request_path' => $request->path(),
+                'request_url' => $request->fullUrl(),
+                'request_method' => $request->method(),
+                'query_param' => $request->input('q'),
+                'route_name' => optional($request->route())->getName(),
+            ]);
+
             // Permission check (Task 78)
             if (!auth()->check()) {
+                Log::warning('getSkillSuggestions: Unauthorized access attempt', [
+                    'tenant_slug' => $tenant,
+                    'request_path' => $request->path(),
+                ]);
                 return response()->json(['suggestions' => []], 401);
             }
 
             $query = $request->input('q', '');
             
             if (strlen($query) < 2) {
+                Log::debug('getSkillSuggestions: Query too short', [
+                    'query_length' => strlen($query),
+                    'query' => $query,
+                ]);
                 return response()->json(['suggestions' => []]);
             }
 
@@ -536,10 +590,24 @@ class RequisitionController extends Controller
                 $suggestions = array_slice($suggestions, 0, 10);
             }
 
+            Log::info('getSkillSuggestions: Success', [
+                'query' => $query,
+                'suggestions_count' => count($suggestions),
+                'tenant_id' => tenant_id(),
+            ]);
+
             return response()->json(['suggestions' => $suggestions]);
         } catch (\Exception $e) {
             Log::error('Skill autocomplete error', [
                 'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'tenant_slug' => $tenant,
+                'tenant_id' => tenant_id(),
+                'user_id' => auth()->id(),
+                'request_path' => $request->path(),
+                'request_url' => $request->fullUrl(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
             ]);
             return response()->json(['suggestions' => []], 500);
         }
@@ -553,8 +621,24 @@ class RequisitionController extends Controller
     public function saveDraft(Request $request, string $tenant = null)
     {
         try {
+            // Enhanced logging for route debugging
+            Log::info('saveDraft called', [
+                'tenant_slug' => $tenant,
+                'tenant_id' => tenant_id(),
+                'user_id' => auth()->id(),
+                'request_path' => $request->path(),
+                'request_url' => $request->fullUrl(),
+                'request_method' => $request->method(),
+                'route_name' => optional($request->route())->getName(),
+                'has_draft_id' => $request->has('draft_id'),
+            ]);
+
             // Permission and session validation (Task 80)
             if (!auth()->check()) {
+                Log::warning('saveDraft: Unauthorized access attempt', [
+                    'tenant_slug' => $tenant,
+                    'request_path' => $request->path(),
+                ]);
                 return response()->json([
                     'success' => false,
                     'message' => 'Unauthorized.',
@@ -899,11 +983,26 @@ class RequisitionController extends Controller
      * Security: Validate token/session before loading (Task 80)
      * Loads from database instead of session
      */
-    public function loadDraft(string $tenant = null)
+    public function loadDraft(Request $request, string $tenant = null)
     {
         try {
+            // Enhanced logging for route debugging
+            Log::info('loadDraft called', [
+                'tenant_slug' => $tenant,
+                'tenant_id' => tenant_id(),
+                'user_id' => auth()->id(),
+                'request_path' => $request->path(),
+                'request_url' => $request->fullUrl(),
+                'request_method' => $request->method(),
+                'route_name' => optional($request->route())->getName(),
+            ]);
+
             // Permission and session validation (Task 80)
             if (!auth()->check()) {
+                Log::warning('loadDraft: Unauthorized access attempt', [
+                    'tenant_slug' => $tenant,
+                    'request_path' => $request->path(),
+                ]);
                 return response()->json([
                     'success' => false,
                     'draft' => null,
@@ -976,7 +1075,13 @@ class RequisitionController extends Controller
             Log::error('Draft load error', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
+                'tenant_slug' => $tenant,
+                'tenant_id' => tenant_id(),
                 'user_id' => auth()->id(),
+                'request_path' => $request->path(),
+                'request_url' => $request->fullUrl(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
             ]);
             return response()->json([
                 'success' => false,
@@ -993,8 +1098,24 @@ class RequisitionController extends Controller
     public function deleteDraft(Request $request, string $tenant = null)
     {
         try {
+            // Enhanced logging for route debugging
+            Log::info('deleteDraft called', [
+                'tenant_slug' => $tenant,
+                'tenant_id' => tenant_id(),
+                'user_id' => auth()->id(),
+                'request_path' => $request->path(),
+                'request_url' => $request->fullUrl(),
+                'request_method' => $request->method(),
+                'route_name' => optional($request->route())->getName(),
+                'draft_id' => $request->input('draft_id'),
+            ]);
+
             // Permission and session validation (Task 80)
             if (!auth()->check()) {
+                Log::warning('deleteDraft: Unauthorized access attempt', [
+                    'tenant_slug' => $tenant,
+                    'request_path' => $request->path(),
+                ]);
                 return response()->json([
                     'success' => false,
                     'message' => 'Unauthorized.',
@@ -1046,7 +1167,13 @@ class RequisitionController extends Controller
             Log::error('Draft delete error', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
+                'tenant_slug' => $tenant,
+                'tenant_id' => tenant_id(),
                 'user_id' => auth()->id(),
+                'request_path' => $request->path(),
+                'request_url' => $request->fullUrl(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
             ]);
             return response()->json([
                 'success' => false,

@@ -6,10 +6,11 @@ use App\Models\Concerns\TenantScoped;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Requisition extends Model
 {
-    use HasFactory, TenantScoped;
+    use HasFactory, TenantScoped, SoftDeletes;
 
     protected $table = 'requisitions';
 
@@ -92,6 +93,14 @@ class Requisition extends Model
     public function scopeDraft($query)
     {
         return $query->where('status', 'Draft');
+    }
+
+    /**
+     * Get audit logs for this requisition
+     */
+    public function auditLogs()
+    {
+        return $this->hasMany(RequisitionAuditLog::class);
     }
 }
 

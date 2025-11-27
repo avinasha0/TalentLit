@@ -9,8 +9,10 @@ use App\Models\Department;
 use App\Models\Location;
 use App\Models\GlobalDepartment;
 use App\Models\GlobalLocation;
+use App\Models\RequisitionAuditLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 
 class RequisitionController extends Controller
 {
@@ -255,8 +257,21 @@ class RequisitionController extends Controller
     {
         try {
             $requisition = Requisition::findOrFail($id);
+            $oldStatus = $requisition->status;
             $requisition->status = 'Approved';
             $requisition->save();
+
+            // Log the status change
+            RequisitionAuditLog::create([
+                'requisition_id' => $id,
+                'user_id' => auth()->id(),
+                'action' => 'status_changed',
+                'field_name' => 'status',
+                'old_value' => $oldStatus,
+                'new_value' => 'Approved',
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ]);
 
             Log::info('Requisition approved', ['requisition_id' => $id, 'user_id' => auth()->id()]);
 
@@ -277,8 +292,21 @@ class RequisitionController extends Controller
     {
         try {
             $requisition = Requisition::findOrFail($id);
+            $oldStatus = $requisition->status;
             $requisition->status = 'Rejected';
             $requisition->save();
+
+            // Log the status change
+            RequisitionAuditLog::create([
+                'requisition_id' => $id,
+                'user_id' => auth()->id(),
+                'action' => 'status_changed',
+                'field_name' => 'status',
+                'old_value' => $oldStatus,
+                'new_value' => 'Rejected',
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ]);
 
             Log::info('Requisition rejected', ['requisition_id' => $id, 'user_id' => auth()->id()]);
 
@@ -506,6 +534,276 @@ class RequisitionController extends Controller
         }
 
         return $query;
+    }
+
+    /**
+     * Bulk delete requisitions (soft delete)
+     */
+    public function bulkDelete(Request $request, string $tenant = null)
+    {
+        try {
+            $request->validate([
+                'ids' => 'required|array',
+                'ids.*' => 'required|integer|exists:requisitions,id',
+            ]);
+
+            $ids = $request->input('ids');
+            $deletedCount = 0;
+
+            DB::beginTransaction();
+            try {
+                foreach ($ids as $id) {
+                    $requisition = Requisition::find($id);
+                    if ($requisition && !$requisition->trashed()) {
+                        $requisition->delete(); // Soft delete
+                        
+                        // Log the deletion
+                        RequisitionAuditLog::create([
+                            'requisition_id' => $id,
+                            'user_id' => auth()->id(),
+                            'action' => 'deleted',
+                            'ip_address' => $request->ip(),
+                            'user_agent' => $request->userAgent(),
+                        ]);
+                        
+                        $deletedCount++;
+                    }
+                }
+                DB::commit();
+
+                Log::info('Bulk delete requisitions', [
+                    'deleted_count' => $deletedCount,
+                    'user_id' => auth()->id(),
+                    'ids' => $ids,
+                ]);
+
+                return response()->json([
+                    'success' => true,
+                    'message' => "{$deletedCount} requisition(s) deleted successfully.",
+                    'deleted_count' => $deletedCount,
+                ]);
+            } catch (\Exception $e) {
+                DB::rollBack();
+                throw $e;
+            }
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::error('Bulk delete validation failed', [
+                'errors' => $e->errors(),
+                'user_id' => auth()->id(),
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed: ' . implode(', ', array_map(fn($err) => implode(', ', $err), $e->errors())),
+            ], 422);
+        } catch (\Exception $e) {
+            Log::error('Bulk delete requisitions failed', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'user_id' => auth()->id(),
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to delete requisitions. Please try again.',
+            ], 500);
+        }
+    }
+
+    /**
+     * Bulk update status to Pending
+     */
+    public function bulkStatusUpdate(Request $request, string $tenant = null)
+    {
+        try {
+            $request->validate([
+                'ids' => 'required|array',
+                'ids.*' => 'required|integer|exists:requisitions,id',
+                'status' => 'required|in:Pending',
+            ]);
+
+            $ids = $request->input('ids');
+            $status = $request->input('status');
+            $updatedCount = 0;
+
+            DB::beginTransaction();
+            try {
+                foreach ($ids as $id) {
+                    $requisition = Requisition::find($id);
+                    if ($requisition && $requisition->status !== $status) {
+                        $oldStatus = $requisition->status;
+                        $requisition->status = $status;
+                        $requisition->save();
+
+                        // Log the status change
+                        RequisitionAuditLog::create([
+                            'requisition_id' => $id,
+                            'user_id' => auth()->id(),
+                            'action' => 'status_changed',
+                            'field_name' => 'status',
+                            'old_value' => $oldStatus,
+                            'new_value' => $status,
+                            'ip_address' => $request->ip(),
+                            'user_agent' => $request->userAgent(),
+                        ]);
+
+                        $updatedCount++;
+                    }
+                }
+                DB::commit();
+
+                Log::info('Bulk status update requisitions', [
+                    'updated_count' => $updatedCount,
+                    'status' => $status,
+                    'user_id' => auth()->id(),
+                    'ids' => $ids,
+                ]);
+
+                return response()->json([
+                    'success' => true,
+                    'message' => "Status updated successfully for {$updatedCount} requisition(s).",
+                    'updated_count' => $updatedCount,
+                ]);
+            } catch (\Exception $e) {
+                DB::rollBack();
+                throw $e;
+            }
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::error('Bulk status update validation failed', [
+                'errors' => $e->errors(),
+                'user_id' => auth()->id(),
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed: ' . implode(', ', array_map(fn($err) => implode(', ', $err), $e->errors())),
+            ], 422);
+        } catch (\Exception $e) {
+            Log::error('Bulk status update requisitions failed', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'user_id' => auth()->id(),
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update status. Please try again.',
+            ], 500);
+        }
+    }
+
+    /**
+     * Duplicate a requisition
+     */
+    public function duplicate(Request $request, $id, string $tenant = null)
+    {
+        try {
+            $original = Requisition::findOrFail($id);
+
+            DB::beginTransaction();
+            try {
+                $duplicate = $original->replicate();
+                $duplicate->status = 'Draft';
+                $duplicate->created_by = auth()->id();
+                $duplicate->save();
+
+                // Log the duplication
+                RequisitionAuditLog::create([
+                    'requisition_id' => $duplicate->id,
+                    'user_id' => auth()->id(),
+                    'action' => 'created',
+                    'changes' => ['duplicated_from' => $original->id],
+                    'ip_address' => $request->ip(),
+                    'user_agent' => $request->userAgent(),
+                ]);
+
+                DB::commit();
+
+                Log::info('Requisition duplicated', [
+                    'original_id' => $id,
+                    'duplicate_id' => $duplicate->id,
+                    'user_id' => auth()->id(),
+                ]);
+
+                $tenantModel = tenant();
+                $tenantSlug = $tenantModel ? $tenantModel->slug : $tenant;
+
+                if ($request->expectsJson() || $request->wantsJson()) {
+                    return response()->json([
+                        'success' => true,
+                        'message' => 'Requisition duplicated successfully.',
+                        'redirect_url' => tenantRoute('tenant.requisitions.show', [$tenantSlug, $duplicate->id]),
+                    ]);
+                }
+
+                return redirect(tenantRoute('tenant.requisitions.show', [$tenantSlug, $duplicate->id]))
+                    ->with('success', 'Requisition duplicated successfully. You can now edit the draft.');
+            } catch (\Exception $e) {
+                DB::rollBack();
+                throw $e;
+            }
+        } catch (\Exception $e) {
+            Log::error('Requisition duplication failed', [
+                'requisition_id' => $id,
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'user_id' => auth()->id(),
+            ]);
+
+            $tenantModel = tenant();
+            $tenantSlug = $tenantModel ? $tenantModel->slug : $tenant;
+
+            return redirect(tenantRoute('tenant.requisitions.index', $tenantSlug))
+                ->with('error', 'Failed to duplicate requisition. Please try again.');
+        }
+    }
+
+    /**
+     * Get audit log for a requisition
+     */
+    public function auditLog($id, string $tenant = null)
+    {
+        try {
+            $requisition = Requisition::findOrFail($id);
+            $auditLogs = RequisitionAuditLog::where('requisition_id', $id)
+                ->with('user')
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'requisition' => [
+                    'id' => $requisition->id,
+                    'job_title' => $requisition->job_title,
+                    'status' => $requisition->status,
+                    'created_at' => $requisition->created_at?->format('Y-m-d H:i:s'),
+                    'created_by' => $requisition->creator?->name ?? 'N/A',
+                ],
+                'audit_logs' => $auditLogs->map(function ($log) {
+                    return [
+                        'id' => $log->id,
+                        'action' => $log->action,
+                        'field_name' => $log->field_name,
+                        'old_value' => $log->old_value,
+                        'new_value' => $log->new_value,
+                        'changes' => $log->changes,
+                        'user' => $log->user ? [
+                            'id' => $log->user->id,
+                            'name' => $log->user->name,
+                            'email' => $log->user->email,
+                        ] : null,
+                        'created_at' => $log->created_at->format('Y-m-d H:i:s'),
+                    ];
+                }),
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Get audit log failed', [
+                'requisition_id' => $id,
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'user_id' => auth()->id(),
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load audit log.',
+            ], 500);
+        }
     }
 }
 

@@ -453,6 +453,10 @@ $tenantRoutes = function () {
     Route::middleware(['custom.permission:view_jobs'])->group(function () {
         Route::post('/{tenant}/requisitions/{id}/approve', [RequisitionController::class, 'approve'])->name('tenant.requisitions.approve');
         Route::post('/{tenant}/requisitions/{id}/reject', [RequisitionController::class, 'reject'])->name('tenant.requisitions.reject');
+        Route::post('/{tenant}/requisitions/bulk-delete', [RequisitionController::class, 'bulkDelete'])->name('tenant.requisitions.bulk-delete');
+        Route::post('/{tenant}/requisitions/bulk-status-update', [RequisitionController::class, 'bulkStatusUpdate'])->name('tenant.requisitions.bulk-status-update');
+        Route::post('/{tenant}/requisitions/{id}/duplicate', [RequisitionController::class, 'duplicate'])->name('tenant.requisitions.duplicate');
+        Route::get('/{tenant}/requisitions/{id}/audit-log', [RequisitionController::class, 'auditLog'])->name('tenant.requisitions.audit-log');
     });
 
     // Job Management Routes - Owner, Admin, Recruiter
@@ -878,6 +882,10 @@ Route::domain('{subdomain}.' . $appDomain)->middleware(['subdomain.redirect', 's
     Route::middleware(['custom.permission:view_jobs'])->group(function () {
         Route::post('/requisitions/{id}/approve', [RequisitionController::class, 'approve'])->name('subdomain.requisitions.approve');
         Route::post('/requisitions/{id}/reject', [RequisitionController::class, 'reject'])->name('subdomain.requisitions.reject');
+        Route::post('/requisitions/bulk-delete', [RequisitionController::class, 'bulkDelete'])->name('subdomain.requisitions.bulk-delete');
+        Route::post('/requisitions/bulk-status-update', [RequisitionController::class, 'bulkStatusUpdate'])->name('subdomain.requisitions.bulk-status-update');
+        Route::post('/requisitions/{id}/duplicate', [RequisitionController::class, 'duplicate'])->name('subdomain.requisitions.duplicate');
+        Route::get('/requisitions/{id}/audit-log', [RequisitionController::class, 'auditLog'])->name('subdomain.requisitions.audit-log');
     });
 
     // Employee Onboarding

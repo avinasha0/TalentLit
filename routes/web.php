@@ -442,6 +442,11 @@ $tenantRoutes = function () {
         Route::post('/{tenant}/requisitions', [RequisitionController::class, 'store'])->name('tenant.requisitions.store');
     });
 
+    Route::middleware(['custom.permission:view_jobs'])->group(function () {
+        Route::post('/{tenant}/requisitions/{id}/approve', [RequisitionController::class, 'approve'])->name('tenant.requisitions.approve');
+        Route::post('/{tenant}/requisitions/{id}/reject', [RequisitionController::class, 'reject'])->name('tenant.requisitions.reject');
+    });
+
     // Job Management Routes - Owner, Admin, Recruiter
     Route::middleware('custom.permission:view_jobs')->group(function () {
         Route::get('/{tenant}/jobs', [JobController::class, 'index'])->name('tenant.jobs.index');
@@ -852,6 +857,11 @@ Route::domain('{subdomain}.' . $appDomain)->middleware(['subdomain.redirect', 's
     Route::middleware(['custom.permission:create_jobs'])->group(function () {
         Route::get('/requisitions/create', [RequisitionController::class, 'create'])->name('subdomain.requisitions.create');
         Route::post('/requisitions', [RequisitionController::class, 'store'])->name('subdomain.requisitions.store');
+    });
+
+    Route::middleware(['custom.permission:view_jobs'])->group(function () {
+        Route::post('/requisitions/{id}/approve', [RequisitionController::class, 'approve'])->name('subdomain.requisitions.approve');
+        Route::post('/requisitions/{id}/reject', [RequisitionController::class, 'reject'])->name('subdomain.requisitions.reject');
     });
 
     // Employee Onboarding

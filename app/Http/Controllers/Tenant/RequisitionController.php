@@ -3,12 +3,14 @@
 namespace App\Http\Controllers\Tenant;
 
 use App\Http\Controllers\Controller;
+use App\Models\Requisition;
 use App\Models\JobRequisition;
 use App\Models\Department;
 use App\Models\Location;
 use App\Models\GlobalDepartment;
 use App\Models\GlobalLocation;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class RequisitionController extends Controller
 {
@@ -17,52 +19,70 @@ class RequisitionController extends Controller
      */
     public function index(Request $request, string $tenant = null)
     {
-        $query = JobRequisition::with(['department', 'location', 'globalDepartment', 'globalLocation'])
-            ->orderBy('created_at', 'desc');
+        try {
+            // Use the new Requisition model
+            $query = Requisition::query()
+                ->orderBy('created_at', 'desc');
 
-        // Apply filters
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
+            // Apply filters
+            if ($request->filled('status')) {
+                // Map lowercase status to capitalized format
+                $statusMap = [
+                    'draft' => 'Draft',
+                    'pending' => 'Pending',
+                    'approved' => 'Approved',
+                    'rejected' => 'Rejected',
+                ];
+                $status = $statusMap[strtolower($request->status)] ?? $request->status;
+                $query->where('status', $status);
+            }
+
+            if ($request->filled('department')) {
+                $query->where('department', 'like', '%'.$request->department.'%');
+            }
+
+            if ($request->filled('keyword')) {
+                $keyword = $request->keyword;
+                $query->where(function ($q) use ($keyword) {
+                    $q->where('job_title', 'like', '%'.$keyword.'%')
+                        ->orWhere('justification', 'like', '%'.$keyword.'%')
+                        ->orWhere('department', 'like', '%'.$keyword.'%');
+                });
+            }
+
+            $requisitions = $query->paginate(20);
+
+            // Get filter options for departments (from existing tables for backward compatibility)
+            $departments = Department::orderBy('name')->pluck('name')->unique()->values();
+            $globalDepartments = GlobalDepartment::orderBy('name')->pluck('name')->unique()->values();
+            $allDepartments = $departments->merge($globalDepartments)->unique()->sort()->values();
+
+            // Also get unique departments from requisitions table
+            $requisitionDepartments = Requisition::distinct()->pluck('department')->filter()->sort()->values();
+            $allDepartments = $allDepartments->merge($requisitionDepartments)->unique()->sort()->values();
+
+            $locations = Location::orderBy('name')->pluck('name')->unique()->values();
+            $globalLocations = GlobalLocation::orderBy('name')->pluck('name')->unique()->values();
+            $allLocations = $locations->merge($globalLocations)->unique()->sort()->values();
+
+            // Status options matching the new table enum
+            $statuses = ['Draft', 'Pending', 'Approved', 'Rejected'];
+
+            // Log for debugging
+            Log::info('RequisitionController@index', [
+                'total_requisitions' => $requisitions->total(),
+                'current_page' => $requisitions->currentPage(),
+                'filters' => $request->only(['status', 'department', 'keyword']),
+            ]);
+
+            return view('tenant.requisitions.index', compact('requisitions', 'allDepartments', 'allLocations', 'statuses'));
+        } catch (\Exception $e) {
+            Log::error('RequisitionController@index error', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            throw $e;
         }
-
-        if ($request->filled('department')) {
-            $query->whereHas('department', function ($subQ) use ($request) {
-                $subQ->where('name', 'like', '%'.$request->department.'%');
-            })->orWhereHas('globalDepartment', function ($subQ) use ($request) {
-                $subQ->where('name', 'like', '%'.$request->department.'%');
-            });
-        }
-
-        if ($request->filled('location')) {
-            $query->whereHas('location', function ($subQ) use ($request) {
-                $subQ->where('name', 'like', '%'.$request->location.'%');
-            })->orWhereHas('globalLocation', function ($subQ) use ($request) {
-                $subQ->where('name', 'like', '%'.$request->location.'%');
-            });
-        }
-
-        if ($request->filled('keyword')) {
-            $keyword = $request->keyword;
-            $query->where(function ($q) use ($keyword) {
-                $q->where('title', 'like', '%'.$keyword.'%')
-                    ->orWhere('description', 'like', '%'.$keyword.'%');
-            });
-        }
-
-        $requisitions = $query->paginate(20);
-
-        // Get filter options
-        $departments = Department::orderBy('name')->pluck('name')->unique()->values();
-        $globalDepartments = GlobalDepartment::orderBy('name')->pluck('name')->unique()->values();
-        $allDepartments = $departments->merge($globalDepartments)->unique()->sort()->values();
-
-        $locations = Location::orderBy('name')->pluck('name')->unique()->values();
-        $globalLocations = GlobalLocation::orderBy('name')->pluck('name')->unique()->values();
-        $allLocations = $locations->merge($globalLocations)->unique()->sort()->values();
-
-        $statuses = ['pending', 'approved', 'rejected'];
-
-        return view('tenant.requisitions.index', compact('requisitions', 'allDepartments', 'allLocations', 'statuses'));
     }
 
     /**
@@ -112,15 +132,16 @@ class RequisitionController extends Controller
      */
     public function pending(Request $request, string $tenant = null)
     {
-        $query = JobRequisition::with(['department', 'location', 'globalDepartment', 'globalLocation'])
-            ->where('status', 'pending')
+        $query = Requisition::query()
+            ->where('status', 'Pending')
             ->orderBy('created_at', 'desc');
 
         if ($request->filled('keyword')) {
             $keyword = $request->keyword;
             $query->where(function ($q) use ($keyword) {
-                $q->where('title', 'like', '%'.$keyword.'%')
-                    ->orWhere('description', 'like', '%'.$keyword.'%');
+                $q->where('job_title', 'like', '%'.$keyword.'%')
+                    ->orWhere('justification', 'like', '%'.$keyword.'%')
+                    ->orWhere('department', 'like', '%'.$keyword.'%');
             });
         }
 
@@ -134,15 +155,16 @@ class RequisitionController extends Controller
      */
     public function approved(Request $request, string $tenant = null)
     {
-        $query = JobRequisition::with(['department', 'location', 'globalDepartment', 'globalLocation'])
-            ->where('status', 'approved')
+        $query = Requisition::query()
+            ->where('status', 'Approved')
             ->orderBy('created_at', 'desc');
 
         if ($request->filled('keyword')) {
             $keyword = $request->keyword;
             $query->where(function ($q) use ($keyword) {
-                $q->where('title', 'like', '%'.$keyword.'%')
-                    ->orWhere('description', 'like', '%'.$keyword.'%');
+                $q->where('job_title', 'like', '%'.$keyword.'%')
+                    ->orWhere('justification', 'like', '%'.$keyword.'%')
+                    ->orWhere('department', 'like', '%'.$keyword.'%');
             });
         }
 
@@ -156,21 +178,66 @@ class RequisitionController extends Controller
      */
     public function rejected(Request $request, string $tenant = null)
     {
-        $query = JobRequisition::with(['department', 'location', 'globalDepartment', 'globalLocation'])
-            ->where('status', 'rejected')
+        $query = Requisition::query()
+            ->where('status', 'Rejected')
             ->orderBy('created_at', 'desc');
 
         if ($request->filled('keyword')) {
             $keyword = $request->keyword;
             $query->where(function ($q) use ($keyword) {
-                $q->where('title', 'like', '%'.$keyword.'%')
-                    ->orWhere('description', 'like', '%'.$keyword.'%');
+                $q->where('job_title', 'like', '%'.$keyword.'%')
+                    ->orWhere('justification', 'like', '%'.$keyword.'%')
+                    ->orWhere('department', 'like', '%'.$keyword.'%');
             });
         }
 
         $requisitions = $query->paginate(20);
 
         return view('tenant.requisitions.rejected', compact('requisitions'));
+    }
+
+    /**
+     * Approve a requisition
+     */
+    public function approve(Request $request, $id, string $tenant = null)
+    {
+        try {
+            $requisition = Requisition::findOrFail($id);
+            $requisition->status = 'Approved';
+            $requisition->save();
+
+            Log::info('Requisition approved', ['requisition_id' => $id, 'user_id' => auth()->id()]);
+
+            return redirect()->back()->with('success', 'Requisition approved successfully.');
+        } catch (\Exception $e) {
+            Log::error('Requisition approval failed', [
+                'requisition_id' => $id,
+                'error' => $e->getMessage(),
+            ]);
+            return redirect()->back()->with('error', 'Failed to approve requisition.');
+        }
+    }
+
+    /**
+     * Reject a requisition
+     */
+    public function reject(Request $request, $id, string $tenant = null)
+    {
+        try {
+            $requisition = Requisition::findOrFail($id);
+            $requisition->status = 'Rejected';
+            $requisition->save();
+
+            Log::info('Requisition rejected', ['requisition_id' => $id, 'user_id' => auth()->id()]);
+
+            return redirect()->back()->with('success', 'Requisition rejected successfully.');
+        } catch (\Exception $e) {
+            Log::error('Requisition rejection failed', [
+                'requisition_id' => $id,
+                'error' => $e->getMessage(),
+            ]);
+            return redirect()->back()->with('error', 'Failed to reject requisition.');
+        }
     }
 }
 

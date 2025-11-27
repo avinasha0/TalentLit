@@ -53,7 +53,7 @@
                             <option value="">All Statuses</option>
                             @foreach($statuses as $status)
                                 <option value="{{ $status }}" {{ request('status') == $status ? 'selected' : '' }}>
-                                    {{ ucfirst($status) }}
+                                    {{ $status }}
                                 </option>
                             @endforeach
                         </select>
@@ -110,43 +110,69 @@
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Job Title</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Headcount</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
                             @foreach($requisitions as $requisition)
                                 <tr>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <div class="text-sm font-medium text-gray-900">{{ $requisition->title }}</div>
-                                        @if($requisition->description)
-                                            <div class="text-sm text-gray-500 truncate max-w-xs">{{ Str::limit($requisition->description, 50) }}</div>
+                                    <td class="px-6 py-4">
+                                        <div class="text-sm font-medium text-gray-900">{{ $requisition->job_title }}</div>
+                                        @if($requisition->justification)
+                                            <div class="text-sm text-gray-500 truncate max-w-xs">{{ Str::limit($requisition->justification, 50) }}</div>
                                         @endif
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        {{ $requisition->department?->name ?? $requisition->globalDepartment?->name ?? 'N/A' }}
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        {{ $requisition->location?->name ?? $requisition->globalLocation?->name ?? 'N/A' }}
+                                        {{ $requisition->department ?? 'N/A' }}
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                         {{ $requisition->headcount }}
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
-                                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full
-                                            @if($requisition->status === 'approved') bg-green-100 text-green-800
-                                            @elseif($requisition->status === 'pending') bg-yellow-100 text-yellow-800
-                                            @else bg-red-100 text-red-800
+                                        <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium
+                                            @if($requisition->status === 'Approved') 
+                                                bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200
+                                            @elseif($requisition->status === 'Pending') 
+                                                bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200
+                                            @elseif($requisition->status === 'Rejected') 
+                                                bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200
+                                            @elseif($requisition->status === 'Draft') 
+                                                bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200
+                                            @else 
+                                                bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200
                                             @endif">
-                                            {{ ucfirst($requisition->status) }}
+                                            {{ $requisition->status }}
                                         </span>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                         {{ $requisition->created_at->format('M j, Y') }}
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                        @if($requisition->status === 'Pending')
+                                            <form method="POST" action="{{ tenantRoute('tenant.requisitions.approve', [$tenantSlug, $requisition->id]) }}" class="inline-block mr-2">
+                                                @csrf
+                                                <button type="submit" 
+                                                        class="text-green-600 hover:text-green-900 focus:outline-none"
+                                                        onclick="return confirm('Are you sure you want to approve this requisition?')">
+                                                    Approve
+                                                </button>
+                                            </form>
+                                            <form method="POST" action="{{ tenantRoute('tenant.requisitions.reject', [$tenantSlug, $requisition->id]) }}" class="inline-block">
+                                                @csrf
+                                                <button type="submit" 
+                                                        class="text-red-600 hover:text-red-900 focus:outline-none"
+                                                        onclick="return confirm('Are you sure you want to reject this requisition?')">
+                                                    Reject
+                                                </button>
+                                            </form>
+                                        @else
+                                            <span class="text-gray-400">—</span>
+                                        @endif
                                     </td>
                                 </tr>
                             @endforeach

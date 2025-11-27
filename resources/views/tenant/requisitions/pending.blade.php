@@ -46,16 +46,19 @@
                             @foreach($requisitions as $requisition)
                                 <tr>
                                     <td class="px-6 py-4 whitespace-nowrap">
-                                        <div class="text-sm font-medium text-gray-900">{{ $requisition->title }}</div>
-                                        @if($requisition->description)
-                                            <div class="text-sm text-gray-500 truncate max-w-xs">{{ Str::limit($requisition->description, 50) }}</div>
+                                        <a href="{{ tenantRoute('tenant.requisitions.show', [$tenantSlug, $requisition->id]) }}" 
+                                           class="text-sm font-medium text-blue-600 hover:text-blue-900 hover:underline focus:outline-none focus:underline">
+                                            {{ $requisition->job_title }}
+                                        </a>
+                                        @if($requisition->justification)
+                                            <div class="text-sm text-gray-500 truncate max-w-xs">{{ Str::limit($requisition->justification, 50) }}</div>
                                         @endif
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        {{ $requisition->department?->name ?? $requisition->globalDepartment?->name ?? 'N/A' }}
+                                        {{ $requisition->department ?? 'N/A' }}
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        {{ $requisition->location?->name ?? $requisition->globalLocation?->name ?? 'N/A' }}
+                                        {{ $requisition->location ?? 'N/A' }}
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                         {{ $requisition->headcount }}

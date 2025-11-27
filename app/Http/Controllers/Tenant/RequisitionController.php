@@ -76,15 +76,16 @@ class RequisitionController extends Controller
                 $query->orderBy('created_at', $createdSort);
             }
 
+            // Map lowercase status to capitalized format (used in filters and logging)
+            $statusMap = [
+                'draft' => 'Draft',
+                'pending' => 'Pending',
+                'approved' => 'Approved',
+                'rejected' => 'Rejected',
+            ];
+            
             // Apply filters
             if ($request->filled('status')) {
-                // Map lowercase status to capitalized format
-                $statusMap = [
-                    'draft' => 'Draft',
-                    'pending' => 'Pending',
-                    'approved' => 'Approved',
-                    'rejected' => 'Rejected',
-                ];
                 $status = $statusMap[strtolower($request->status)] ?? $request->status;
                 $query->where('status', $status);
             }
@@ -129,15 +130,36 @@ class RequisitionController extends Controller
             // Status options matching the new table enum
             $statuses = ['Draft', 'Pending', 'Approved', 'Rejected'];
 
-            // Log for debugging
-            Log::info('RequisitionController@index', [
+            // Log for debugging - especially when filtering by status
+            $statusFilter = $request->input('status');
+            $debugInfo = [
                 'total_requisitions' => $requisitions->total(),
                 'current_page' => $requisitions->currentPage(),
                 'per_page' => $perPage,
                 'filters' => $request->only(['status', 'department', 'keyword', 'contract_type', 'created_sort', 'job_title_sort', 'headcount_sort']),
                 'created_sort_applied' => $createdSort,
                 'job_title_sort_applied' => $jobTitleSort,
-            ]);
+            ];
+            
+            // If filtering by status, log detailed info
+            if ($statusFilter) {
+                $allWithStatus = Requisition::where('tenant_id', $tenantId)
+                    ->where('status', $statusMap[strtolower($statusFilter)] ?? $statusFilter)
+                    ->get(['id', 'job_title', 'status', 'approval_status', 'created_at']);
+                    
+                $debugInfo['status_filter_applied'] = $statusFilter;
+                $debugInfo['count_with_status'] = $allWithStatus->count();
+                $debugInfo['requisitions_with_status'] = $allWithStatus->map(function($r) {
+                    return [
+                        'id' => $r->id,
+                        'job_title' => $r->job_title,
+                        'status' => $r->status,
+                        'approval_status' => $r->approval_status,
+                    ];
+                })->toArray();
+            }
+            
+            Log::info('RequisitionController@index', $debugInfo);
 
             return view('tenant.requisitions.index', compact('requisitions', 'allDepartments', 'allLocations', 'statuses'));
         } catch (\Exception $e) {
@@ -1580,11 +1602,45 @@ class RequisitionController extends Controller
     }
 
     /**
-     * Display pending requisitions
+     * Display pending requisitions (pending approval)
      */
     public function pending(Request $request, string $tenant = null)
     {
-        $query = Requisition::query()
+        $tenantId = tenant_id();
+        
+        // Log all pending requisitions for debugging
+        $allPendingByStatus = Requisition::where('tenant_id', $tenantId)
+            ->where('status', 'Pending')
+            ->get(['id', 'job_title', 'status', 'approval_status', 'created_at']);
+            
+        $allPendingByApprovalStatus = Requisition::where('tenant_id', $tenantId)
+            ->where('approval_status', 'Pending')
+            ->get(['id', 'job_title', 'status', 'approval_status', 'created_at']);
+        
+        Log::info('RequisitionController@pending - Debug Analysis', [
+            'tenant_id' => $tenantId,
+            'count_by_status_pending' => $allPendingByStatus->count(),
+            'count_by_approval_status_pending' => $allPendingByApprovalStatus->count(),
+            'requisitions_with_status_pending' => $allPendingByStatus->map(function($r) {
+                return [
+                    'id' => $r->id,
+                    'job_title' => $r->job_title,
+                    'status' => $r->status,
+                    'approval_status' => $r->approval_status,
+                ];
+            })->toArray(),
+            'requisitions_with_approval_status_pending' => $allPendingByApprovalStatus->map(function($r) {
+                return [
+                    'id' => $r->id,
+                    'job_title' => $r->job_title,
+                    'status' => $r->status,
+                    'approval_status' => $r->approval_status,
+                ];
+            })->toArray(),
+        ]);
+        
+        // Filter by status='Pending' to match what index shows
+        $query = Requisition::where('tenant_id', $tenantId)
             ->where('status', 'Pending')
             ->orderBy('created_at', 'desc');
 
@@ -1598,6 +1654,14 @@ class RequisitionController extends Controller
         }
 
         $requisitions = $query->paginate(20);
+        
+        Log::info('RequisitionController@pending - Final Results', [
+            'tenant_id' => $tenantId,
+            'total_requisitions' => $requisitions->total(),
+            'current_page' => $requisitions->currentPage(),
+            'per_page' => $requisitions->perPage(),
+            'requisition_ids' => $requisitions->pluck('id')->toArray(),
+        ]);
 
         return view('tenant.requisitions.pending', compact('requisitions'));
     }

@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Tenant;
 use App\Http\Controllers\Controller;
 use App\Models\Requisition;
 use App\Models\RequisitionApproval;
+use App\Models\RequisitionAuditLog;
 use App\Models\Task;
+use App\Models\InAppNotification;
 use App\Services\ApprovalWorkflowService;
 use App\Mail\RequisitionApprovalRequest;
 use App\Mail\RequisitionApproved;
@@ -34,7 +36,10 @@ class ApprovalController extends Controller
     public function submit(Request $request, $id, string $tenant = null)
     {
         try {
-            $requisition = Requisition::findOrFail($id);
+            // Get requisition with tenant scope
+            $tenantModel = tenant();
+            $requisition = Requisition::where('tenant_id', $tenantModel->id)
+                ->findOrFail($id);
             
             // Verify user is the creator or has permission
             if ($requisition->created_by !== Auth::id() && !$this->hasHRAdminPermission()) {
@@ -57,14 +62,29 @@ class ApprovalController extends Controller
                 // Evaluate workflow
                 $workflow = $this->workflowService->evaluateWorkflow($requisition);
                 
+                Log::info('Workflow evaluated for requisition', [
+                    'requisition_id' => $requisition->id,
+                    'workflow' => $workflow,
+                ]);
+                
                 // Get first approver
                 $firstApproverId = $this->workflowService->getFirstApprover($requisition);
                 
+                Log::info('First approver lookup', [
+                    'requisition_id' => $requisition->id,
+                    'first_approver_id' => $firstApproverId,
+                ]);
+                
                 if (!$firstApproverId) {
                     DB::rollBack();
+                    Log::error('No approver found for requisition', [
+                        'requisition_id' => $requisition->id,
+                        'tenant_id' => tenant_id(),
+                        'workflow' => $workflow,
+                    ]);
                     return response()->json([
                         'success' => false,
-                        'message' => 'No approver found for this requisition. Please configure approval workflow.',
+                        'message' => 'No approver found for this requisition. Please configure approval workflow or ensure you have users with Owner/Admin roles.',
                     ], 400);
                 }
 
@@ -84,8 +104,39 @@ class ApprovalController extends Controller
                     'comments' => 'Requisition submitted for approval',
                 ]);
 
+                // Create audit log entry
+                RequisitionAuditLog::create([
+                    'requisition_id' => $requisition->id,
+                    'user_id' => Auth::id(),
+                    'action' => 'Submitted',
+                    'field_name' => 'approval_status',
+                    'old_value' => 'Draft',
+                    'new_value' => 'Pending',
+                    'changes' => [
+                        'approval_status' => 'Pending',
+                        'approval_level' => 1,
+                        'current_approver_id' => $firstApproverId,
+                    ],
+                    'ip_address' => $request->ip(),
+                    'user_agent' => $request->userAgent(),
+                ]);
+
+                // Get tenant for notifications
+                $tenantModel = tenant();
+                $tenantSlug = $tenantModel ? $tenantModel->slug : ($tenant ?? 'tenant');
+                
                 // Create task for approver
                 $this->createApprovalTask($requisition, $firstApproverId);
+
+                // Create in-app notification
+                $this->createInAppNotification(
+                    $firstApproverId,
+                    'requisition_approval_request',
+                    "New Requisition Requires Approval",
+                    "Requisition '{$requisition->job_title}' requires your approval.",
+                    "/{$tenantSlug}/requisitions/{$requisition->id}/approval",
+                    ['requisition_id' => $requisition->id]
+                );
 
                 // Send notification email
                 $this->sendApprovalRequestNotification($requisition, $firstApproverId);
@@ -201,7 +252,7 @@ class ApprovalController extends Controller
 
                 $comments = $request->input('comments', '');
 
-                // Create audit log
+                // Create approval record
                 RequisitionApproval::create([
                     'requisition_id' => $requisition->id,
                     'approver_id' => $user->id,
@@ -210,6 +261,26 @@ class ApprovalController extends Controller
                     'comments' => $comments,
                 ]);
 
+                // Create audit log entry
+                RequisitionAuditLog::create([
+                    'requisition_id' => $requisition->id,
+                    'user_id' => $user->id,
+                    'action' => 'Approved',
+                    'field_name' => 'approval_status',
+                    'old_value' => 'Pending',
+                    'new_value' => $this->workflowService->hasMoreLevels($requisition) ? 'Pending' : 'Approved',
+                    'changes' => [
+                        'approval_level' => $requisition->approval_level,
+                        'comments' => $comments,
+                    ],
+                    'ip_address' => $request->ip(),
+                    'user_agent' => $request->userAgent(),
+                ]);
+
+                // Get tenant for notifications
+                $tenant = tenant();
+                $tenantSlug = $tenant ? $tenant->slug : 'tenant';
+                
                 // Check if there are more approval levels
                 if ($this->workflowService->hasMoreLevels($requisition)) {
                     // Move to next level
@@ -223,6 +294,16 @@ class ApprovalController extends Controller
                         // Create task for next approver
                         $this->createApprovalTask($requisition, $nextApprover['user_id']);
                         
+                        // Create in-app notification for next approver
+                        $this->createInAppNotification(
+                            $nextApprover['user_id'],
+                            'requisition_approval_request',
+                            "Requisition Requires Your Approval",
+                            "Requisition '{$requisition->job_title}' has been approved at level " . ($requisition->approval_level - 1) . " and now requires your approval.",
+                            "/{$tenantSlug}/requisitions/{$requisition->id}/approval",
+                            ['requisition_id' => $requisition->id, 'approval_level' => $nextApprover['level']]
+                        );
+                        
                         // Send notification to next approver
                         $this->sendApprovalRequestNotification($requisition, $nextApprover['user_id']);
                     } else {
@@ -234,6 +315,16 @@ class ApprovalController extends Controller
                         
                         // Notify requester
                         $this->sendFinalApprovalNotification($requisition);
+                        
+                        // Create in-app notification for requester
+                        $this->createInAppNotification(
+                            $requisition->created_by,
+                            'requisition_approved',
+                            "Requisition Approved",
+                            "Your requisition '{$requisition->job_title}' has been approved.",
+                            "/{$tenantSlug}/requisitions/{$requisition->id}",
+                            ['requisition_id' => $requisition->id]
+                        );
                     }
                 } else {
                     // Final approval
@@ -244,6 +335,16 @@ class ApprovalController extends Controller
                     
                     // Notify requester
                     $this->sendFinalApprovalNotification($requisition);
+                    
+                    // Create in-app notification for requester
+                    $this->createInAppNotification(
+                        $requisition->created_by,
+                        'requisition_approved',
+                        "Requisition Approved",
+                        "Your requisition '{$requisition->job_title}' has been approved.",
+                        "/{$tenantSlug}/requisitions/{$requisition->id}",
+                        ['requisition_id' => $requisition->id]
+                    );
                 }
 
                 // Complete task
@@ -326,13 +427,29 @@ class ApprovalController extends Controller
 
                 $comments = $request->input('comments');
 
-                // Create audit log
+                // Create approval record
                 RequisitionApproval::create([
                     'requisition_id' => $requisition->id,
                     'approver_id' => $user->id,
                     'action' => 'Rejected',
                     'approval_level' => $requisition->approval_level,
                     'comments' => $comments,
+                ]);
+
+                // Create audit log entry
+                RequisitionAuditLog::create([
+                    'requisition_id' => $requisition->id,
+                    'user_id' => $user->id,
+                    'action' => 'Rejected',
+                    'field_name' => 'approval_status',
+                    'old_value' => 'Pending',
+                    'new_value' => 'Rejected',
+                    'changes' => [
+                        'approval_level' => $requisition->approval_level,
+                        'comments' => $comments,
+                    ],
+                    'ip_address' => $request->ip(),
+                    'user_agent' => $request->userAgent(),
                 ]);
 
                 // Update requisition
@@ -346,6 +463,18 @@ class ApprovalController extends Controller
 
                 // Notify requester
                 $this->sendRejectionNotification($requisition, $comments);
+                
+                // Create in-app notification for requester
+                $tenant = tenant();
+                $tenantSlug = $tenant ? $tenant->slug : 'tenant';
+                $this->createInAppNotification(
+                    $requisition->created_by,
+                    'requisition_rejected',
+                    "Requisition Rejected",
+                    "Your requisition '{$requisition->job_title}' has been rejected. Comments: " . substr($comments, 0, 100),
+                    "/{$tenantSlug}/requisitions/{$requisition->id}",
+                    ['requisition_id' => $requisition->id, 'comments' => $comments]
+                );
 
                 DB::commit();
 
@@ -422,13 +551,29 @@ class ApprovalController extends Controller
 
                 $comments = $request->input('comments');
 
-                // Create audit log
+                // Create approval record
                 RequisitionApproval::create([
                     'requisition_id' => $requisition->id,
                     'approver_id' => $user->id,
                     'action' => 'RequestedChanges',
                     'approval_level' => $requisition->approval_level,
                     'comments' => $comments,
+                ]);
+
+                // Create audit log entry
+                RequisitionAuditLog::create([
+                    'requisition_id' => $requisition->id,
+                    'user_id' => $user->id,
+                    'action' => 'RequestedChanges',
+                    'field_name' => 'approval_status',
+                    'old_value' => 'Pending',
+                    'new_value' => 'ChangesRequested',
+                    'changes' => [
+                        'approval_level' => $requisition->approval_level,
+                        'comments' => $comments,
+                    ],
+                    'ip_address' => $request->ip(),
+                    'user_agent' => $request->userAgent(),
                 ]);
 
                 // Update requisition
@@ -444,6 +589,18 @@ class ApprovalController extends Controller
 
                 // Notify requester
                 $this->sendChangesRequestedNotification($requisition, $comments);
+                
+                // Create in-app notification for requester
+                $tenant = tenant();
+                $tenantSlug = $tenant ? $tenant->slug : 'tenant';
+                $this->createInAppNotification(
+                    $requisition->created_by,
+                    'requisition_changes_requested',
+                    "Changes Requested",
+                    "Changes have been requested for requisition '{$requisition->job_title}'. Comments: " . substr($comments, 0, 100),
+                    "/{$tenantSlug}/requisitions/{$requisition->id}/edit",
+                    ['requisition_id' => $requisition->id, 'comments' => $comments]
+                );
 
                 DB::commit();
 
@@ -529,7 +686,7 @@ class ApprovalController extends Controller
                     ], 400);
                 }
 
-                // Create audit log
+                // Create approval record
                 RequisitionApproval::create([
                     'requisition_id' => $requisition->id,
                     'approver_id' => $user->id,
@@ -537,6 +694,23 @@ class ApprovalController extends Controller
                     'approval_level' => $requisition->approval_level,
                     'comments' => $comments,
                     'delegate_to' => $delegateToId,
+                ]);
+
+                // Create audit log entry
+                RequisitionAuditLog::create([
+                    'requisition_id' => $requisition->id,
+                    'user_id' => $user->id,
+                    'action' => 'Delegated',
+                    'field_name' => 'current_approver_id',
+                    'old_value' => (string) $user->id,
+                    'new_value' => (string) $delegateToId,
+                    'changes' => [
+                        'delegated_from' => $user->id,
+                        'delegated_to' => $delegateToId,
+                        'comments' => $comments,
+                    ],
+                    'ip_address' => $request->ip(),
+                    'user_agent' => $request->userAgent(),
                 ]);
 
                 // Update requisition
@@ -551,6 +725,19 @@ class ApprovalController extends Controller
 
                 // Notify delegate
                 $this->sendDelegationNotification($requisition, $delegateToId, $user->id);
+                
+                // Create in-app notification for delegate
+                $tenant = tenant();
+                $tenantSlug = $tenant ? $tenant->slug : 'tenant';
+                $delegator = \App\Models\User::find($user->id);
+                $this->createInAppNotification(
+                    $delegateToId,
+                    'requisition_delegated',
+                    "Approval Delegated to You",
+                    "{$delegator->name} has delegated approval of requisition '{$requisition->job_title}' to you.",
+                    "/{$tenantSlug}/requisitions/{$requisition->id}/approval",
+                    ['requisition_id' => $requisition->id, 'delegated_from' => $user->id]
+                );
 
                 DB::commit();
 
@@ -984,6 +1171,37 @@ class ApprovalController extends Controller
             Log::error('Failed to send task created notification', [
                 'task_id' => $task->id,
                 'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Create in-app notification
+     */
+    private function createInAppNotification(int $userId, string $type, string $title, string $message, string $link = null, array $data = []): void
+    {
+        try {
+            InAppNotification::create([
+                'user_id' => $userId,
+                'type' => $type,
+                'title' => $title,
+                'message' => $message,
+                'link' => $link,
+                'data' => $data,
+                'read' => false,
+            ]);
+
+            Log::info('In-app notification created', [
+                'user_id' => $userId,
+                'type' => $type,
+                'title' => $title,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to create in-app notification', [
+                'user_id' => $userId,
+                'type' => $type,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
             ]);
         }
     }

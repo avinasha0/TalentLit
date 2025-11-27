@@ -948,6 +948,29 @@ Route::domain('{subdomain}.' . $appDomain)->middleware(['subdomain.redirect', 's
         Route::get('/requisitions/{id}/edit', [RequisitionController::class, 'edit'])->name('subdomain.requisitions.edit');
     });
 
+    // Approval Routes for Subdomain
+    Route::middleware(['custom.permission:view_jobs'])->group(function () {
+        Route::get('/requisitions/pending-approvals', [\App\Http\Controllers\Tenant\ApprovalController::class, 'pendingApprovalsPage'])->name('subdomain.requisitions.pending-approvals');
+        Route::get('/requisitions/{id}/approval', [\App\Http\Controllers\Tenant\ApprovalController::class, 'approvalDetail'])->name('subdomain.requisitions.approval');
+    });
+
+    // Approval API Routes for Subdomain
+    Route::middleware(['custom.permission:create_jobs'])->group(function () {
+        Route::post('/api/requisitions/{id}/submit', [\App\Http\Controllers\Tenant\ApprovalController::class, 'submit'])->name('subdomain.api.requisitions.submit');
+    });
+
+    Route::middleware(['custom.permission:view_jobs'])->group(function () {
+        Route::get('/api/approvals/pending', [\App\Http\Controllers\Tenant\ApprovalController::class, 'pending'])->name('subdomain.api.approvals.pending');
+        Route::get('/api/requisitions/{id}/approvals', [\App\Http\Controllers\Tenant\ApprovalController::class, 'history'])->name('subdomain.api.requisitions.approvals');
+    });
+
+    Route::middleware(['custom.permission:edit_jobs'])->group(function () {
+        Route::post('/api/requisitions/{id}/approve', [\App\Http\Controllers\Tenant\ApprovalController::class, 'approve'])->name('subdomain.api.requisitions.approve');
+        Route::post('/api/requisitions/{id}/reject', [\App\Http\Controllers\Tenant\ApprovalController::class, 'reject'])->name('subdomain.api.requisitions.reject');
+        Route::post('/api/requisitions/{id}/request-changes', [\App\Http\Controllers\Tenant\ApprovalController::class, 'requestChanges'])->name('subdomain.api.requisitions.request-changes');
+        Route::post('/api/requisitions/{id}/delegate', [\App\Http\Controllers\Tenant\ApprovalController::class, 'delegate'])->name('subdomain.api.requisitions.delegate');
+    });
+
     Route::middleware(['custom.permission:view_jobs'])->group(function () {
         Route::post('/requisitions/{id}/approve', [RequisitionController::class, 'approve'])->name('subdomain.requisitions.approve');
         Route::post('/requisitions/{id}/reject', [RequisitionController::class, 'reject'])->name('subdomain.requisitions.reject');

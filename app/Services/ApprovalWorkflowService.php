@@ -158,6 +158,7 @@ class ApprovalWorkflowService
                 ->where('custom_user_roles.tenant_id', $tenant->id)
                 ->whereIn('custom_user_roles.role_name', ['Owner', 'Admin'])
                 ->select('custom_user_roles.user_id')
+                ->orderByRaw("CASE WHEN custom_user_roles.role_name = 'Owner' THEN 1 ELSE 2 END")
                 ->first();
             
             if ($fallbackUser) {
@@ -165,11 +166,27 @@ class ApprovalWorkflowService
                     'tenant_id' => $tenant->id,
                     'required_role' => $actualRoleName,
                     'fallback_user_id' => $fallbackUser->user_id,
+                    'fallback_role' => 'Owner/Admin',
                 ]);
                 return $fallbackUser->user_id;
             }
             
-            Log::error('No approver found for workflow level', [
+            // Last resort: Get any user from the tenant (shouldn't happen in production)
+            $anyUser = DB::table('tenant_user')
+                ->where('tenant_id', $tenant->id)
+                ->select('user_id')
+                ->first();
+            
+            if ($anyUser) {
+                Log::error('No approver role found, using any tenant user as last resort', [
+                    'tenant_id' => $tenant->id,
+                    'required_role' => $actualRoleName,
+                    'fallback_user_id' => $anyUser->user_id,
+                ]);
+                return $anyUser->user_id;
+            }
+            
+            Log::error('No approver found for workflow level - no users in tenant', [
                 'tenant_id' => $tenant->id,
                 'role' => $actualRoleName,
             ]);

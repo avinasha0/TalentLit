@@ -588,13 +588,27 @@
                             </button>
                         </div>
                         <div class="flex gap-2">
-                            <!-- Submit For Approval Button (Task 43) -->
-                            <button type="submit"
+                            <!-- Save as Draft Button -->
+                            <button type="button"
                                     :disabled="!isFormValid || isSubmitting"
-                                    @click="submitAction = 'submit'"
+                                    @click="submitAction = 'draft'; handleSubmit($event)"
+                                    class="px-6 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                                <span x-show="!isSubmitting">Save as Draft</span>
+                                <span x-show="isSubmitting && submitAction === 'draft'" class="flex items-center">
+                                    <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-gray-700" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    Saving...
+                                </span>
+                            </button>
+                            <!-- Submit For Approval Button (Task 43) -->
+                            <button type="button"
+                                    :disabled="!isFormValid || isSubmitting"
+                                    @click="submitAction = 'approval'; handleSubmit($event)"
                                     class="px-6 py-2 text-sm font-medium text-white bg-purple-600 border border-transparent rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed">
                                 <span x-show="!isSubmitting">Submit For Approval</span>
-                                <span x-show="isSubmitting" class="flex items-center">
+                                <span x-show="isSubmitting && submitAction === 'approval'" class="flex items-center">
                                     <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
                                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -679,20 +693,25 @@
                 <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
                     <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                         <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4" id="modal-title">
-                            Confirm Submission
+                            <span x-show="submitAction === 'approval'">Confirm Submission for Approval</span>
+                            <span x-show="submitAction === 'draft'">Confirm Save as Draft</span>
                         </h3>
-                        <div class="space-y-2 text-sm text-gray-600">
+                        <div class="space-y-2 text-sm text-gray-600 mb-4">
                             <p><strong>Job Title:</strong> <span x-text="formData.job_title"></span></p>
                             <p><strong>Department:</strong> <span x-text="formData.department"></span></p>
                             <p><strong>Headcount:</strong> <span x-text="formData.headcount"></span></p>
                             <p><strong>Priority:</strong> <span x-text="formData.priority"></span></p>
                         </div>
+                        <p class="text-sm text-gray-700" x-show="submitAction === 'approval'">
+                            This requisition will be submitted for approval and cannot be edited until changes are requested.
+                        </p>
                     </div>
                     <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
                         <button type="button"
                                 @click="confirmSubmit()"
                                 class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-purple-600 text-base font-medium text-white hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 sm:ml-3 sm:w-auto sm:text-sm">
-                            Confirm & Submit
+                            <span x-show="submitAction === 'approval'">Confirm & Submit for Approval</span>
+                            <span x-show="submitAction === 'draft'">Confirm & Save as Draft</span>
                         </button>
                         <button type="button"
                                 @click="showConfirmModal = false"
@@ -794,9 +813,10 @@
             showConfirmModal: false,
             showHelpModal: false,
             previewExpanded: true,
-            submitAction: 'submit',
+            submitAction: 'draft', // 'draft' or 'approval'
             isOffline: false,
             hasUnsavedChanges: false,
+            submitAction: 'draft', // 'draft' or 'approval'
             autosaveInterval: null,
             
             // Computed Properties
@@ -1115,6 +1135,13 @@
                 this.draftSaving = true;
                 
                 try {
+                    console.log('saveDraft called', {
+                        draftId: this.draftId,
+                        jobTitle: this.formData.job_title,
+                        isSubmitting: this.isSubmitting,
+                        silent: silent
+                    });
+                    
                     const formData = new FormData();
                     Object.keys(this.formData).forEach(key => {
                         if (key === 'skills') {
@@ -1123,6 +1150,13 @@
                             formData.append(key, this.formData[key] || '');
                         }
                     });
+                    
+                    // CRITICAL: If we're submitting the form (creating new requisition), 
+                    // DO NOT call saveDraft - it will update existing drafts
+                    if (this.isSubmitting) {
+                        console.warn('saveDraft called during form submission - ABORTING to prevent updating existing drafts');
+                        return;
+                    }
                     
                     // Include draft_id if we have one (for updates)
                     if (this.draftId) {
@@ -1315,7 +1349,13 @@
                     return;
                 }
                 
-                // Show confirmation modal (Task 32)
+                // If saving as draft, submit immediately without confirmation
+                if (this.submitAction === 'draft') {
+                    this.confirmSubmit();
+                    return;
+                }
+                
+                // Show confirmation modal for approval submission (Task 32)
                 this.showConfirmModal = true;
             },
             
@@ -1323,12 +1363,38 @@
                 this.showConfirmModal = false;
                 this.isSubmitting = true;
                 
+                // Clear unsaved changes flag to prevent beforeunload warning
+                this.hasUnsavedChanges = false;
+                
+                // Stop autosave to prevent updating existing drafts
+                if (this.autosaveInterval) {
+                    clearInterval(this.autosaveInterval);
+                    this.autosaveInterval = null;
+                }
+                if (this.autosaveTimeout) {
+                    clearTimeout(this.autosaveTimeout);
+                    this.autosaveTimeout = null;
+                }
+                
+                // Clear draftId to ensure we create a new requisition, not update existing
+                const oldDraftId = this.draftId;
+                this.draftId = null;
+                
                 try {
                     const form = document.getElementById('requisition-form');
                     const formData = new FormData(form);
                     
+                    // Remove draft_id if it exists - we want to create a new requisition
+                    formData.delete('draft_id');
+                    
                     // Add skills as JSON
                     formData.set('skills', JSON.stringify(this.formData.skills));
+                    
+                    // Add submit action (draft or approval)
+                    formData.set('submit_action', this.submitAction);
+                    
+                    // Explicitly set is_new to ensure we create a new requisition
+                    formData.set('is_new', 'true');
                     
                     // Add uploaded files
                     this.uploadedFiles.forEach((fileObj, index) => {
@@ -1367,19 +1433,23 @@
                     }
                     
                     if (response.ok) {
-                        // Clear draft if we have one
-                        if (this.draftId) {
+                        // Clear old draft if we had one (before clearing draftId)
+                        if (oldDraftId) {
                             const deleteFormData = new FormData();
-                            deleteFormData.append('draft_id', this.draftId);
+                            deleteFormData.append('draft_id', oldDraftId);
                             
-                            await fetch(`/{{ $tenantSlug }}/api/requisitions/draft`, {
-                                method: 'DELETE',
-                                headers: {
-                                    'X-Requested-With': 'XMLHttpRequest',
-                                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                                },
-                                body: deleteFormData
-                            });
+                            try {
+                                await fetch(`/{{ $tenantSlug }}/api/requisitions/draft`, {
+                                    method: 'DELETE',
+                                    headers: {
+                                        'X-Requested-With': 'XMLHttpRequest',
+                                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                                    },
+                                    body: deleteFormData
+                                });
+                            } catch (e) {
+                                console.warn('Failed to delete old draft:', e);
+                            }
                         }
                         
                         // Reset draft tracking
@@ -1445,7 +1515,8 @@
             
             handleBeforeUnload(event) {
                 // Unsaved changes warning (Task 93)
-                if (this.hasUnsavedChanges) {
+                // Don't show warning if form is being submitted
+                if (this.hasUnsavedChanges && !this.isSubmitting) {
                     event.preventDefault();
                     event.returnValue = '';
                     return '';

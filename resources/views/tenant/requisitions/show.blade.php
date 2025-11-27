@@ -188,33 +188,139 @@
                 </x-card>
 
                 <!-- Actions -->
-                @if($requisition->status === 'Pending')
+                @if($requisition->approval_status === 'Draft' || $requisition->approval_status === 'ChangesRequested')
+                    @if($requisition->created_by === auth()->id() || auth()->user()->hasAnyRole(['Owner', 'Admin'], tenant_id()))
+                        <x-card>
+                            <div class="px-6 py-4 border-b border-gray-200">
+                                <h3 class="text-lg font-semibold text-black">Actions</h3>
+                            </div>
+                            <div class="px-6 py-4 space-y-3">
+                                <button type="button" 
+                                        id="submit-for-approval-btn"
+                                        class="w-full bg-purple-600 text-white text-center py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors hover:bg-purple-700">
+                                    Submit for Approval
+                                </button>
+                                <a href="{{ tenantRoute('tenant.requisitions.edit', [$tenantSlug, $requisition->id]) }}"
+                                   class="block w-full bg-gray-600 text-white text-center py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors hover:bg-gray-700">
+                                    Edit Requisition
+                                </a>
+                            </div>
+                        </x-card>
+                    @endif
+                @elseif($requisition->approval_status === 'Pending' && $requisition->current_approver_id === auth()->id())
                     <x-card>
                         <div class="px-6 py-4 border-b border-gray-200">
                             <h3 class="text-lg font-semibold text-black">Actions</h3>
                         </div>
-                        <div class="px-6 py-4 space-y-3">
-                            <form method="POST" action="{{ tenantRoute('tenant.requisitions.approve', [$tenantSlug, $requisition->id]) }}">
-                                @csrf
-                                <button type="submit" 
-                                        class="w-full bg-green-600 text-white text-center py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors hover:bg-green-700"
-                                        onclick="return confirm('Are you sure you want to approve this requisition?')">
-                                    Approve Requisition
-                                </button>
-                            </form>
-                            <form method="POST" action="{{ tenantRoute('tenant.requisitions.reject', [$tenantSlug, $requisition->id]) }}">
-                                @csrf
-                                <button type="submit" 
-                                        class="w-full bg-red-600 text-white text-center py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors hover:bg-red-700"
-                                        onclick="return confirm('Are you sure you want to reject this requisition?')">
-                                    Reject Requisition
-                                </button>
-                            </form>
+                        <div class="px-6 py-4">
+                            <a href="{{ tenantRoute('tenant.requisitions.approval', [$tenantSlug, $requisition->id]) }}"
+                               class="block w-full bg-blue-600 text-white text-center py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors hover:bg-blue-700">
+                                Review & Approve
+                            </a>
                         </div>
                     </x-card>
                 @endif
             </div>
         </div>
     </div>
+
+    @push('scripts')
+    <script>
+        (function() {
+            // Prevent any beforeunload handlers from interfering
+            let isSubmitting = false;
+            
+            // Override any existing beforeunload handlers for this action
+            window.addEventListener('beforeunload', function(e) {
+                if (isSubmitting) {
+                    // Allow navigation if we're submitting
+                    return;
+                }
+            }, { capture: true });
+            
+            document.addEventListener('DOMContentLoaded', function() {
+                const submitBtn = document.getElementById('submit-for-approval-btn');
+                if (submitBtn) {
+                    submitBtn.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        e.stopImmediatePropagation();
+                        
+                        const requisitionId = {{ $requisition->id }};
+                        
+                        if (!confirm('Are you sure you want to submit this requisition for approval? Once submitted, you will not be able to edit it until changes are requested.')) {
+                            return false;
+                        }
+
+                        // Set flag to prevent beforeunload warnings
+                        isSubmitting = true;
+                        
+                        // Disable button to prevent double-clicks
+                        submitBtn.disabled = true;
+                        const originalText = submitBtn.textContent;
+                        submitBtn.textContent = 'Submitting...';
+
+                        // Determine if we're on subdomain or path-based routing
+                        const hostname = window.location.hostname;
+                        const isSubdomain = hostname.includes('.localhost') || (hostname.split('.').length > 2 && !hostname.startsWith('localhost'));
+                        const submitUrl = isSubdomain 
+                            ? `/api/requisitions/${requisitionId}/submit`
+                            : `/{{ $tenantSlug }}/api/requisitions/${requisitionId}/submit`;
+                        
+                        console.log('Submitting requisition for approval:', {
+                            requisitionId: requisitionId,
+                            url: submitUrl,
+                            isSubdomain: isSubdomain
+                        });
+                        
+                        fetch(submitUrl, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'Accept': 'application/json'
+                            },
+                            body: JSON.stringify({})
+                        })
+                        .then(response => {
+                            console.log('Response status:', response.status);
+                            if (!response.ok) {
+                                return response.json().then(data => {
+                                    throw new Error(data.message || 'Failed to submit requisition');
+                                });
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            console.log('Submit response:', data);
+                            if (data.success) {
+                                alert('Requisition submitted for approval successfully.');
+                                // Reload after a short delay to ensure the alert is seen
+                                setTimeout(() => {
+                                    window.location.reload();
+                                }, 100);
+                            } else {
+                                alert(data.message || 'Failed to submit requisition for approval.');
+                                isSubmitting = false;
+                                submitBtn.disabled = false;
+                                submitBtn.textContent = originalText;
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error submitting requisition:', error);
+                            alert('An error occurred: ' + error.message);
+                            isSubmitting = false;
+                            submitBtn.disabled = false;
+                            submitBtn.textContent = originalText;
+                        });
+                        
+                        return false;
+                    }, { capture: true });
+                }
+            });
+        })();
+    </script>
+    @endpush
 </x-app-layout>
 

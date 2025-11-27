@@ -93,7 +93,7 @@
                                         #{{ $requisition->id }}
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
-                                        <a href="{{ tenantRoute('tenant.requisitions.approval', [$tenantSlug, $requisition->id]) }}" 
+                                        <a href="{{ request()->routeIs('subdomain.*') ? route('subdomain.requisitions.approval', $requisition->id) : tenantRoute('tenant.requisitions.approval', [$tenantSlug, $requisition->id]) }}" 
                                            class="text-sm font-medium text-blue-600 hover:text-blue-800">
                                             {{ $requisition->job_title }}
                                         </a>
@@ -132,7 +132,7 @@
                                         </span>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                        <a href="{{ tenantRoute('tenant.requisitions.approval', [$tenantSlug, $requisition->id]) }}" 
+                                        <a href="{{ request()->routeIs('subdomain.*') ? route('subdomain.requisitions.approval', $requisition->id) : tenantRoute('tenant.requisitions.approval', [$tenantSlug, $requisition->id]) }}" 
                                            class="text-blue-600 hover:text-blue-900">
                                             View
                                         </a>

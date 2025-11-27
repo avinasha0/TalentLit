@@ -10,13 +10,26 @@ use App\Models\Location;
 use App\Models\GlobalDepartment;
 use App\Models\GlobalLocation;
 use App\Models\RequisitionAuditLog;
+use App\Models\RequisitionApproval;
+use App\Models\Task;
+use App\Models\InAppNotification;
+use App\Services\ApprovalWorkflowService;
+use App\Mail\RequisitionApprovalRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Mail;
 
 class RequisitionController extends Controller
 {
+    protected $workflowService;
+
+    public function __construct(ApprovalWorkflowService $workflowService)
+    {
+        $this->workflowService = $workflowService;
+    }
+
     /**
      * Display all requisitions
      */
@@ -46,8 +59,9 @@ class RequisitionController extends Controller
                 $jobTitleSort = null;
             }
 
-            // Use the new Requisition model
-            $query = Requisition::query();
+            // Use the new Requisition model - CRITICAL: Filter by tenant_id
+            $tenantId = tenant_id();
+            $query = Requisition::where('tenant_id', $tenantId);
 
             // Apply sorting - priority: job_title_sort > headcount_sort > created_sort
             if ($jobTitleSort) {
@@ -138,20 +152,75 @@ class RequisitionController extends Controller
     /**
      * Display success page after requisition creation (Tasks 82-85)
      */
-    public function success($id, string $tenant = null)
+    public function success(Request $request, $id = null, string $tenant = null)
     {
         try {
-            $requisition = Requisition::findOrFail($id);
+            // For subdomain routes, Laravel binds route parameters incorrectly to method parameters
+            // The route is: /requisitions/{id}/success
+            // But Laravel passes: $id = subdomain, $tenant = actual_id
+            // So we need to get the ID from route parameters directly, ignoring method parameters
+            
+            $routeParams = $request->route()->parameters();
+            $requisitionId = null;
+            
+            // First, try to get from route parameters array (most reliable)
+            // The route parameters should have 'id' => '33' for /requisitions/33/success
+            if (isset($routeParams['id']) && is_numeric($routeParams['id'])) {
+                $requisitionId = (int) $routeParams['id'];
+            } else {
+                // Fallback: check if route('id') works
+                $routeId = $request->route('id');
+                if ($routeId && is_numeric($routeId)) {
+                    $requisitionId = (int) $routeId;
+                }
+            }
+            
+            // For subdomain routes, Laravel swaps parameters, so check $tenant parameter
+            // This is the actual ID when Laravel binds incorrectly
+            if (!$requisitionId || !is_numeric($requisitionId)) {
+                if (is_numeric($tenant)) {
+                    $requisitionId = (int) $tenant;
+                } elseif (is_numeric($id)) {
+                    $requisitionId = (int) $id;
+                }
+            }
+            
+            // Validate we have a numeric ID
+            if (!$requisitionId || !is_numeric($requisitionId)) {
+                Log::error('RequisitionController@success: Invalid requisition ID', [
+                    'route_id' => $request->route('id'),
+                    'route_params' => $routeParams,
+                    'method_id_param' => $id,
+                    'method_tenant_param' => $tenant,
+                    'route_name' => $request->route()->getName(),
+                    'url' => $request->fullUrl(),
+                ]);
+                throw new \Exception('Invalid requisition ID');
+            }
+            
+            // Use tenant scope to ensure we're getting the requisition from the correct tenant
+            $tenantModel = tenant();
+            if (!$tenantModel) {
+                throw new \Exception('Tenant not resolved');
+            }
+            
+            // Find requisition with tenant scope
+            $requisition = Requisition::where('tenant_id', $tenantModel->id)
+                ->findOrFail($requisitionId);
 
             Log::info('RequisitionController@success', [
-                'requisition_id' => $id,
+                'requisition_id' => $requisitionId,
                 'user_id' => auth()->id(),
             ]);
 
             return view('tenant.requisitions.success', compact('requisition'));
         } catch (\Exception $e) {
             Log::error('RequisitionController@success error', [
-                'requisition_id' => $id,
+                'route_id' => $request->route('id'),
+                'method_id_param' => $id,
+                'method_tenant_param' => $tenant,
+                'route_params' => $request->route()->parameters(),
+                'url' => $request->fullUrl(),
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
@@ -323,17 +392,121 @@ class RequisitionController extends Controller
                 'skills_count' => count($skills),
             ]);
 
-            // Set status to Draft initially (user must submit for approval separately)
-            $validated['status'] = 'Draft';
-            $validated['approval_status'] = 'Draft';
-            $validated['approval_level'] = 0;
+            // Check if user wants to submit for approval directly
+            $submitForApproval = $request->input('submit_action') === 'approval';
+            
+            // Set status based on action
+            if ($submitForApproval) {
+                $validated['status'] = 'Pending';
+                $validated['approval_status'] = 'Pending';
+                $validated['approval_level'] = 1;
+            } else {
+                $validated['status'] = 'Draft';
+                $validated['approval_status'] = 'Draft';
+                $validated['approval_level'] = 0;
+            }
+            
             $validated['tenant_id'] = tenant_id();
             $validated['created_by'] = auth()->id();
+            
+            // Ensure we're creating a new requisition, not updating an existing one
+            // If is_new flag is set, ignore any draft_id that might be in the request
+            $isNewRequisition = $request->input('is_new') === 'true' || $request->input('is_new') === true;
+            $draftIdInRequest = $request->input('draft_id');
+            
+            // CRITICAL: Log all request data to debug the issue
+            Log::info('RequisitionController@store - Request Analysis', [
+                'user_id' => auth()->id(),
+                'tenant_id' => tenant_id(),
+                'is_new_flag' => $isNewRequisition,
+                'draft_id_in_request' => $draftIdInRequest,
+                'submit_action' => $request->input('submit_action'),
+                'job_title' => $request->input('job_title'),
+                'all_request_inputs' => $request->except(['_token', '_method', 'attachments']),
+                'validated_data_keys' => array_keys($validated),
+                'validated_job_title' => $validated['job_title'] ?? null,
+            ]);
+            
+            // Check for existing drafts that might be affected
+            $existingDrafts = Requisition::where('created_by', auth()->id())
+                ->where('tenant_id', tenant_id())
+                ->where('approval_status', 'Draft')
+                ->where('status', 'Draft')
+                ->get(['id', 'job_title', 'created_at', 'updated_at']);
+            
+            Log::info('RequisitionController@store - Existing Drafts Check', [
+                'user_id' => auth()->id(),
+                'existing_drafts_count' => $existingDrafts->count(),
+                'existing_drafts' => $existingDrafts->map(function($draft) {
+                    return [
+                        'id' => $draft->id,
+                        'job_title' => $draft->job_title,
+                        'created_at' => $draft->created_at,
+                        'updated_at' => $draft->updated_at,
+                    ];
+                })->toArray(),
+            ]);
+            
+            if ($isNewRequisition) {
+                // Remove draft_id from validated data to ensure we create new
+                unset($validated['draft_id']);
+                Log::info('RequisitionController@store - Creating NEW requisition', [
+                    'user_id' => auth()->id(),
+                    'job_title' => $validated['job_title'] ?? null,
+                    'draft_id_removed' => true,
+                ]);
+            } else {
+                Log::warning('RequisitionController@store - is_new flag NOT set!', [
+                    'user_id' => auth()->id(),
+                    'draft_id_in_request' => $draftIdInRequest,
+                    'this_might_update_existing' => true,
+                ]);
+            }
 
             DB::beginTransaction();
             try {
-                // Create requisition
+                // CRITICAL: Log before creating to track what will be inserted
+                Log::info('RequisitionController@store - About to CREATE requisition', [
+                    'user_id' => auth()->id(),
+                    'job_title' => $validated['job_title'] ?? null,
+                    'department' => $validated['department'] ?? null,
+                    'validated_data' => $validated,
+                ]);
+                
+                // Always create a new requisition - never update existing in store method
                 $requisition = Requisition::create($validated);
+                
+                // CRITICAL: Log after creation to verify new record
+                Log::info('RequisitionController@store - Requisition CREATED', [
+                    'new_requisition_id' => $requisition->id,
+                    'new_requisition_job_title' => $requisition->job_title,
+                    'new_requisition_status' => $requisition->status,
+                    'new_requisition_approval_status' => $requisition->approval_status,
+                    'new_requisition_created_at' => $requisition->created_at,
+                    'new_requisition_updated_at' => $requisition->updated_at,
+                ]);
+                
+                // Verify no other requisitions were updated
+                $updatedDrafts = Requisition::where('created_by', auth()->id())
+                    ->where('tenant_id', tenant_id())
+                    ->where('approval_status', 'Draft')
+                    ->where('status', 'Draft')
+                    ->where('id', '!=', $requisition->id)
+                    ->where('updated_at', '>', now()->subSeconds(5))
+                    ->get(['id', 'job_title', 'updated_at']);
+                
+                if ($updatedDrafts->isNotEmpty()) {
+                    Log::error('RequisitionController@store - CRITICAL: Other drafts were updated!', [
+                        'new_requisition_id' => $requisition->id,
+                        'updated_drafts' => $updatedDrafts->map(function($draft) {
+                            return [
+                                'id' => $draft->id,
+                                'job_title' => $draft->job_title,
+                                'updated_at' => $draft->updated_at,
+                            ];
+                        })->toArray(),
+                    ]);
+                }
 
                 // Handle file uploads (Task 52)
                 if ($request->hasFile('attachments')) {
@@ -350,6 +523,141 @@ class RequisitionController extends Controller
                     'ip_address' => $request->ip(),
                     'user_agent' => $request->userAgent(),
                 ]);
+
+                // If submitting for approval, set up approval workflow
+                if ($submitForApproval) {
+                    try {
+                        // Evaluate workflow
+                        $workflow = $this->workflowService->evaluateWorkflow($requisition);
+                        
+                        // Get first approver
+                        $firstApproverId = $this->workflowService->getFirstApprover($requisition);
+                        
+                        if ($firstApproverId) {
+                            // Update requisition with approver
+                            $requisition->current_approver_id = $firstApproverId;
+                            $requisition->approval_workflow = $workflow;
+                            $requisition->save();
+                            
+                            // Create approval record
+                            RequisitionApproval::create([
+                                'requisition_id' => $requisition->id,
+                                'approver_id' => $firstApproverId,
+                                'action' => 'Pending',
+                                'approval_level' => 1,
+                                'comments' => 'Requisition submitted for approval',
+                            ]);
+                            
+                            // Create audit log
+                            RequisitionAuditLog::create([
+                                'requisition_id' => $requisition->id,
+                                'user_id' => auth()->id(),
+                                'action' => 'submitted_for_approval',
+                                'ip_address' => $request->ip(),
+                                'user_agent' => $request->userAgent(),
+                            ]);
+                            
+                            // Create task for approver
+                            $tenantModel = tenant();
+                            
+                            // Generate approval URL - handle both subdomain and path-based routing
+                            try {
+                                if (request()->routeIs('subdomain.*') || (request()->getHost() && strpos(request()->getHost(), '.localhost') !== false)) {
+                                    // Subdomain routing
+                                    $approvalUrl = url("/requisitions/{$requisition->id}/approval");
+                                } else {
+                                    // Path-based routing
+                                    $approvalUrl = tenantRoute('tenant.requisitions.approval', [$tenantModel->slug, $requisition->id]);
+                                }
+                            } catch (\Exception $routeException) {
+                                // Fallback URL generation
+                                Log::warning('Route generation failed, using fallback URL', [
+                                    'requisition_id' => $requisition->id,
+                                    'error' => $routeException->getMessage(),
+                                ]);
+                                $approvalUrl = url("/requisitions/{$requisition->id}/approval");
+                            }
+                            
+                            Task::create([
+                                'title' => "Approve – {$requisition->job_title}",
+                                'description' => "Requisition '{$requisition->job_title}' requires your approval.",
+                                'task_type' => 'approval',
+                                'related_type' => 'requisition',
+                                'related_id' => $requisition->id,
+                                'assignee' => $firstApproverId,
+                                'status' => 'pending',
+                                'link' => $approvalUrl,
+                                'created_by' => auth()->id(),
+                                'tenant_id' => tenant_id(),
+                            ]);
+                            
+                            // Create in-app notification
+                            InAppNotification::create([
+                                'user_id' => $firstApproverId,
+                                'type' => 'requisition_approval_request',
+                                'title' => "New Requisition Requires Approval",
+                                'body' => "Requisition '{$requisition->job_title}' requires your approval.",
+                                'link' => $approvalUrl,
+                                'notifiable_type' => Requisition::class,
+                                'notifiable_id' => $requisition->id,
+                            ]);
+                            
+                            // Send email notification
+                            try {
+                                $approver = \App\Models\User::find($firstApproverId);
+                                if ($approver && $approver->email) {
+                                    Mail::to($approver->email)->send(new RequisitionApprovalRequest($requisition, $approver));
+                                }
+                            } catch (\Exception $e) {
+                                Log::error('Failed to send approval request email', [
+                                    'requisition_id' => $requisition->id,
+                                    'approver_id' => $firstApproverId,
+                                    'error' => $e->getMessage(),
+                                ]);
+                            }
+                            
+                            Log::info('Requisition submitted for approval during creation', [
+                                'requisition_id' => $requisition->id,
+                                'first_approver_id' => $firstApproverId,
+                            ]);
+                        } else {
+                            // No approver found, revert to Draft
+                            $requisition->approval_status = 'Draft';
+                            $requisition->status = 'Draft';
+                            $requisition->approval_level = 0;
+                            $requisition->current_approver_id = null;
+                            $requisition->save();
+                            
+                            Log::warning('No approver found for requisition, saved as Draft', [
+                                'requisition_id' => $requisition->id,
+                            ]);
+                        }
+                    } catch (\Exception $e) {
+                        Log::error('Failed to set up approval workflow during creation', [
+                            'requisition_id' => $requisition->id,
+                            'error' => $e->getMessage(),
+                            'trace' => $e->getTraceAsString(),
+                        ]);
+                        
+                        // Only revert to Draft if it's a critical error (no approver)
+                        // Don't revert for route generation errors - keep as Pending
+                        if (strpos($e->getMessage(), 'No approver') !== false || strpos($e->getMessage(), 'approver') !== false) {
+                            // Revert to Draft if no approver found
+                            $requisition->approval_status = 'Draft';
+                            $requisition->status = 'Draft';
+                            $requisition->approval_level = 0;
+                            $requisition->current_approver_id = null;
+                            $requisition->save();
+                        } else {
+                            // For other errors (like route generation), keep as Pending
+                            // The workflow is set up, just some notifications might have failed
+                            Log::warning('Approval workflow setup had non-critical errors, keeping status as Pending', [
+                                'requisition_id' => $requisition->id,
+                                'error' => $e->getMessage(),
+                            ]);
+                        }
+                    }
+                }
 
                 DB::commit();
 
@@ -783,18 +1091,42 @@ class RequisitionController extends Controller
             try {
                 $requisition = null;
 
+                // CRITICAL: Log all existing drafts before any operation
+                $allExistingDrafts = Requisition::where('created_by', $userId)
+                    ->where('tenant_id', tenant_id())
+                    ->where('approval_status', 'Draft')
+                    ->where('status', 'Draft')
+                    ->get(['id', 'job_title', 'created_at', 'updated_at']);
+                
+                Log::info('saveDraft - Existing drafts BEFORE operation', [
+                    'user_id' => $userId,
+                    'draft_id_provided' => $draftId,
+                    'is_new_flag' => $isNewRequisition,
+                    'job_title_in_request' => $request->input('job_title'),
+                    'existing_drafts' => $allExistingDrafts->map(function($draft) {
+                        return [
+                            'id' => $draft->id,
+                            'job_title' => $draft->job_title,
+                            'created_at' => $draft->created_at,
+                            'updated_at' => $draft->updated_at,
+                        ];
+                    })->toArray(),
+                ]);
+                
                 // Only update existing draft if:
                 // 1. draft_id is explicitly provided (user is continuing to edit a specific draft)
                 // 2. AND is_new flag is NOT set (user is not creating a new requisition)
                 if ($draftId && !$isNewRequisition) {
-                    Log::debug('Checking for existing draft by ID', [
+                    Log::info('saveDraft - Attempting to UPDATE existing draft', [
                         'draft_id' => $draftId,
                         'user_id' => $userId,
+                        'job_title' => $request->input('job_title'),
                     ]);
                     
                     $requisition = Requisition::where('id', $draftId)
                         ->where('created_by', $userId)
                         ->where('status', 'Draft')
+                        ->where('approval_status', 'Draft')
                         ->first();
 
                     if ($requisition) {
@@ -802,27 +1134,39 @@ class RequisitionController extends Controller
                         $updateData = array_filter($validated, function($value) {
                             return $value !== null && $value !== '';
                         });
+                        
+                        Log::info('saveDraft - About to UPDATE draft', [
+                            'draft_id' => $draftId,
+                            'old_job_title' => $requisition->job_title,
+                            'new_job_title' => $updateData['job_title'] ?? null,
+                            'update_data_keys' => array_keys($updateData),
+                        ]);
+                        
                         $requisition->update($updateData);
-                        Log::info('Draft updated by explicit draft_id', [
+                        
+                        Log::info('saveDraft - Draft UPDATED', [
                             'draft_id' => $draftId,
                             'user_id' => $userId,
                             'updated_fields' => array_keys($updateData),
+                            'new_job_title' => $requisition->fresh()->job_title,
                         ]);
                     } else {
-                        Log::warning('Draft ID provided but not found or not owned by user', [
+                        Log::warning('saveDraft - Draft ID provided but not found or not owned by user', [
                             'draft_id' => $draftId,
                             'user_id' => $userId,
                         ]);
                     }
                 } else {
                     if ($isNewRequisition) {
-                        Log::debug('Creating new requisition - skipping draft update logic', [
+                        Log::info('saveDraft - Creating NEW draft (is_new=true), skipping update', [
                             'user_id' => $userId,
                             'draft_id_provided' => $draftId,
+                            'job_title' => $request->input('job_title'),
                         ]);
                     } else {
-                        Log::debug('No draft_id provided - will create new draft', [
+                        Log::info('saveDraft - No draft_id provided - will create new draft', [
                             'user_id' => $userId,
+                            'job_title' => $request->input('job_title'),
                         ]);
                     }
                 }
@@ -909,7 +1253,43 @@ class RequisitionController extends Controller
                     ]);
 
                     try {
+                        Log::info('saveDraft - About to CREATE new draft', [
+                            'user_id' => $userId,
+                            'job_title' => $validated['job_title'] ?? null,
+                            'is_new_flag' => $isNewRequisition,
+                            'validated_data' => $validated,
+                        ]);
+                        
                         $requisition = Requisition::create($validated);
+                        
+                        Log::info('saveDraft - New draft CREATED', [
+                            'new_draft_id' => $requisition->id,
+                            'user_id' => $userId,
+                            'job_title' => $requisition->job_title,
+                            'created_at' => $requisition->created_at,
+                        ]);
+                        
+                        // CRITICAL: Verify no other drafts were updated
+                        $updatedDrafts = Requisition::where('created_by', $userId)
+                            ->where('tenant_id', tenant_id())
+                            ->where('approval_status', 'Draft')
+                            ->where('status', 'Draft')
+                            ->where('id', '!=', $requisition->id)
+                            ->where('updated_at', '>', now()->subSeconds(5))
+                            ->get(['id', 'job_title', 'updated_at']);
+                        
+                        if ($updatedDrafts->isNotEmpty()) {
+                            Log::error('saveDraft - CRITICAL: Other drafts were updated during creation!', [
+                                'new_draft_id' => $requisition->id,
+                                'updated_drafts' => $updatedDrafts->map(function($draft) {
+                                    return [
+                                        'id' => $draft->id,
+                                        'job_title' => $draft->job_title,
+                                        'updated_at' => $draft->updated_at,
+                                    ];
+                                })->toArray(),
+                            ]);
+                        }
                     } catch (\Exception $createException) {
                         DB::rollBack();
                         Log::error('Draft creation failed', [
@@ -1128,9 +1508,10 @@ class RequisitionController extends Controller
             DB::beginTransaction();
             try {
                 if ($draftId) {
-                    // Delete specific draft
+                    // Delete specific draft - only if it's truly a draft (not submitted for approval)
                     $draft = Requisition::where('id', $draftId)
                         ->where('created_by', $userId)
+                        ->where('approval_status', 'Draft')
                         ->where('status', 'Draft')
                         ->first();
 
@@ -1140,16 +1521,32 @@ class RequisitionController extends Controller
                             'draft_id' => $draftId,
                             'user_id' => $userId,
                         ]);
+                    } else {
+                        Log::warning('Attempted to delete non-draft requisition', [
+                            'draft_id' => $draftId,
+                            'user_id' => $userId,
+                        ]);
                     }
                 } else {
-                    // Delete all drafts for user (optional - for cleanup)
+                    // Delete all drafts for user - only actual drafts (not submitted for approval)
+                    // Exclude recently created requisitions (within last 5 seconds) to prevent deleting
+                    // requisitions that were just created via form submission
+                    $excludeRecent = now()->subSeconds(5);
+                    
                     $deleted = Requisition::where('created_by', $userId)
+                        ->where('approval_status', 'Draft')
                         ->where('status', 'Draft')
+                        ->where('created_at', '<', $excludeRecent) // Exclude very recently created ones
                         ->delete();
 
                     Log::info('All drafts deleted', [
                         'user_id' => $userId,
                         'deleted_count' => $deleted,
+                        'excluded_recent' => Requisition::where('created_by', $userId)
+                            ->where('approval_status', 'Draft')
+                            ->where('status', 'Draft')
+                            ->where('created_at', '>=', $excludeRecent)
+                            ->count(),
                     ]);
                 }
 

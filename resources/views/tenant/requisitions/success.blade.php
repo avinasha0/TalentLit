@@ -28,7 +28,11 @@
                     Requisition Created Successfully!
                 </h1>
                 <p class="text-lg text-gray-600 mb-2">
-                    Your requisition has been submitted for approval.
+                    @if($requisition->approval_status === 'Pending')
+                        Your requisition has been submitted for approval.
+                    @else
+                        Your requisition has been created and saved as draft.
+                    @endif
                 </p>
                 <p class="text-sm text-gray-500 mb-8">
                     Requisition ID: <span class="font-semibold text-gray-900">{{ $requisition->id }}</span>
@@ -56,15 +60,34 @@
                         </div>
                         <div>
                             <p class="text-sm text-gray-500">Status</p>
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                                {{ $requisition->status }}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+                                @if($requisition->approval_status === 'Pending') bg-yellow-100 text-yellow-800
+                                @elseif($requisition->approval_status === 'Approved') bg-green-100 text-green-800
+                                @elseif($requisition->approval_status === 'Rejected') bg-red-100 text-red-800
+                                @else bg-gray-100 text-gray-800
+                                @endif">
+                                {{ $requisition->approval_status ?? $requisition->status }}
                             </span>
                         </div>
+                        @if($requisition->approval_status === 'Draft')
+                        <div class="md:col-span-2">
+                            <p class="text-sm text-gray-500 mb-2">Next Steps</p>
+                            <p class="text-sm text-gray-700">
+                                To submit this requisition for approval, go to the requisition details page and click "Submit for Approval".
+                            </p>
+                        </div>
+                        @endif
                     </div>
                 </div>
 
                 <!-- Action Buttons (Task 85) -->
                 <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                    @if($requisition->approval_status === 'Draft')
+                    <a href="{{ tenantRoute('tenant.requisitions.show', [$tenantSlug, $requisition->id]) }}"
+                       class="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500">
+                        View Requisition & Submit for Approval
+                    </a>
+                    @endif
                     <a href="{{ tenantRoute('tenant.requisitions.index', $tenantSlug) }}"
                        class="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500">
                         Go to All Requisitions

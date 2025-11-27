@@ -435,6 +435,7 @@ $tenantRoutes = function () {
         Route::get('/{tenant}/requisitions/pending', [RequisitionController::class, 'pending'])->name('tenant.requisitions.pending');
         Route::get('/{tenant}/requisitions/approved', [RequisitionController::class, 'approved'])->name('tenant.requisitions.approved');
         Route::get('/{tenant}/requisitions/rejected', [RequisitionController::class, 'rejected'])->name('tenant.requisitions.rejected');
+        Route::get('/{tenant}/requisitions/{id}', [RequisitionController::class, 'show'])->name('tenant.requisitions.show');
     });
 
     Route::middleware(['custom.permission:create_jobs'])->group(function () {
@@ -852,6 +853,7 @@ Route::domain('{subdomain}.' . $appDomain)->middleware(['subdomain.redirect', 's
         Route::get('/requisitions/pending', [RequisitionController::class, 'pending'])->name('subdomain.requisitions.pending');
         Route::get('/requisitions/approved', [RequisitionController::class, 'approved'])->name('subdomain.requisitions.approved');
         Route::get('/requisitions/rejected', [RequisitionController::class, 'rejected'])->name('subdomain.requisitions.rejected');
+        Route::get('/requisitions/{id}', [RequisitionController::class, 'show'])->name('subdomain.requisitions.show');
     });
 
     Route::middleware(['custom.permission:create_jobs'])->group(function () {

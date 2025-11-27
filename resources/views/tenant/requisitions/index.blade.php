@@ -153,26 +153,32 @@
                                         {{ $requisition->created_at->format('M j, Y') }}
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                        @if($requisition->status === 'Pending')
-                                            <form method="POST" action="{{ tenantRoute('tenant.requisitions.approve', [$tenantSlug, $requisition->id]) }}" class="inline-block mr-2">
-                                                @csrf
-                                                <button type="submit" 
-                                                        class="text-green-600 hover:text-green-900 focus:outline-none"
-                                                        onclick="return confirm('Are you sure you want to approve this requisition?')">
-                                                    Approve
-                                                </button>
-                                            </form>
-                                            <form method="POST" action="{{ tenantRoute('tenant.requisitions.reject', [$tenantSlug, $requisition->id]) }}" class="inline-block">
-                                                @csrf
-                                                <button type="submit" 
-                                                        class="text-red-600 hover:text-red-900 focus:outline-none"
-                                                        onclick="return confirm('Are you sure you want to reject this requisition?')">
-                                                    Reject
-                                                </button>
-                                            </form>
-                                        @else
-                                            <span class="text-gray-400">—</span>
-                                        @endif
+                                        <div class="flex items-center space-x-2">
+                                            <a href="{{ tenantRoute('tenant.requisitions.show', [$tenantSlug, $requisition->id]) }}" 
+                                               class="text-blue-600 hover:text-blue-900 focus:outline-none">
+                                                View
+                                            </a>
+                                            @if($requisition->status === 'Pending')
+                                                <span class="text-gray-300">|</span>
+                                                <form method="POST" action="{{ tenantRoute('tenant.requisitions.approve', [$tenantSlug, $requisition->id]) }}" class="inline-block">
+                                                    @csrf
+                                                    <button type="submit" 
+                                                            class="text-green-600 hover:text-green-900 focus:outline-none"
+                                                            onclick="return confirm('Are you sure you want to approve this requisition?')">
+                                                        Approve
+                                                    </button>
+                                                </form>
+                                                <span class="text-gray-300">|</span>
+                                                <form method="POST" action="{{ tenantRoute('tenant.requisitions.reject', [$tenantSlug, $requisition->id]) }}" class="inline-block">
+                                                    @csrf
+                                                    <button type="submit" 
+                                                            class="text-red-600 hover:text-red-900 focus:outline-none"
+                                                            onclick="return confirm('Are you sure you want to reject this requisition?')">
+                                                        Reject
+                                                    </button>
+                                                </form>
+                                            @endif
+                                        </div>
                                     </td>
                                 </tr>
                             @endforeach

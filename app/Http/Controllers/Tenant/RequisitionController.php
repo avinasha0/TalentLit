@@ -86,6 +86,32 @@ class RequisitionController extends Controller
     }
 
     /**
+     * Display the specified requisition
+     */
+    public function show($id, string $tenant = null)
+    {
+        try {
+            $requisition = Requisition::findOrFail($id);
+
+            Log::info('RequisitionController@show', [
+                'requisition_id' => $id,
+                'user_id' => auth()->id(),
+            ]);
+
+            return view('tenant.requisitions.show', compact('requisition'));
+        } catch (\Exception $e) {
+            Log::error('RequisitionController@show error', [
+                'requisition_id' => $id,
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            
+            return redirect(tenantRoute('tenant.requisitions.index', $tenant))
+                ->with('error', 'Requisition not found.');
+        }
+    }
+
+    /**
      * Show the form for creating a new requisition
      */
     public function create(string $tenant = null)

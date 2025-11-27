@@ -106,6 +106,35 @@
             </div>
 
             @if($requisitions->count() > 0)
+                @php
+                    $currentCreatedSort = strtolower(request('created_sort', 'desc')) === 'asc' ? 'asc' : 'desc';
+                    $nextCreatedSort = $currentCreatedSort === 'desc' ? 'asc' : 'desc';
+                    $createdSortIcon = $currentCreatedSort === 'desc' ? '↓' : '↑';
+                    $createdSortUrl = request()->fullUrlWithQuery([
+                        'created_sort' => $nextCreatedSort,
+                        'page' => 1,
+                    ]);
+                @endphp
+                <div class="px-4 py-4 bg-white border-b border-gray-200 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                    <div class="w-full sm:w-auto">
+                        <label for="requisition-status-filter" class="text-sm font-medium text-gray-700">Filter by Status</label>
+                        <select id="requisition-status-filter"
+                                class="mt-1 w-full sm:w-52 border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="all" selected>All</option>
+                            <option value="draft">Draft</option>
+                            <option value="pending">Pending</option>
+                            <option value="approved">Approved</option>
+                            <option value="rejected">Rejected</option>
+                        </select>
+                    </div>
+                    <div class="w-full sm:w-auto">
+                        <label for="requisition-search" class="text-sm font-medium text-gray-700">Search</label>
+                        <input id="requisition-search"
+                               type="search"
+                               placeholder="Search job, dept, or status"
+                               class="mt-1 w-full sm:w-64 border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                </div>
                 <div class="overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
@@ -114,13 +143,30 @@
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Headcount</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    <button type="button"
+                                            class="flex items-center gap-1 text-gray-600 hover:text-gray-900 focus:outline-none"
+                                            title="Sort by Created Date"
+                                            onclick="window.location='{{ $createdSortUrl }}'">
+                                        <span>Created Date</span>
+                                        <span aria-hidden="true" class="text-xs">{{ $createdSortIcon }}</span>
+                                        <span class="sr-only">Current sort: {{ $currentCreatedSort === 'desc' ? 'Newest to oldest' : 'Oldest to newest' }}</span>
+                                    </button>
+                                </th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                             </tr>
                         </thead>
-                        <tbody class="bg-white divide-y divide-gray-200">
+                        <tbody id="requisition-table-body" class="bg-white divide-y divide-gray-200">
                             @foreach($requisitions as $requisition)
-                                <tr>
+                                @php
+                                    $rowJobTitle = strtolower($requisition->job_title ?? '');
+                                    $rowDepartment = strtolower($requisition->department ?? '');
+                                    $rowStatus = strtolower($requisition->status ?? '');
+                                @endphp
+                                <tr class="requisition-row"
+                                    data-job-title="{{ $rowJobTitle }}"
+                                    data-department="{{ $rowDepartment }}"
+                                    data-status="{{ $rowStatus }}">
                                     <td class="px-6 py-4">
                                         <div class="text-sm font-medium text-gray-900">{{ $requisition->job_title }}</div>
                                         @if($requisition->justification)
@@ -150,7 +196,7 @@
                                         </span>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        {{ $requisition->created_at->format('M j, Y') }}
+                                        {{ optional($requisition->created_at)->format('d M Y') ?? 'N/A' }}
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                         <div class="flex items-center space-x-2">
@@ -182,6 +228,11 @@
                                     </td>
                                 </tr>
                             @endforeach
+                            <tr id="requisition-no-results-row" class="hidden">
+                                <td colspan="6" class="px-6 py-6 text-center text-sm text-gray-500">
+                                    No requisitions match your filters.
+                                </td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
@@ -208,4 +259,59 @@
         </x-card>
     </div>
 </x-app-layout>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const searchInput = document.getElementById('requisition-search');
+        const statusFilter = document.getElementById('requisition-status-filter');
+        const rows = Array.from(document.querySelectorAll('.requisition-row'));
+        const noResultsRow = document.getElementById('requisition-no-results-row');
+
+        if (!searchInput || !statusFilter || rows.length === 0) {
+            console.warn('Requisition filters unavailable: required elements missing.', {
+                hasSearchInput: Boolean(searchInput),
+                hasStatusFilter: Boolean(statusFilter),
+                rowCount: rows.length,
+            });
+            return;
+        }
+
+        const normalize = (value) => (value || '').toString().toLowerCase();
+
+        const applyFilters = () => {
+            const searchTerm = normalize(searchInput.value).trim();
+            const statusValue = normalize(statusFilter.value);
+            let visibleCount = 0;
+
+            rows.forEach((row) => {
+                const jobTitle = normalize(row.dataset.jobTitle);
+                const department = normalize(row.dataset.department);
+                const status = normalize(row.dataset.status);
+
+                const matchesSearch =
+                    !searchTerm ||
+                    jobTitle.includes(searchTerm) ||
+                    department.includes(searchTerm) ||
+                    status.includes(searchTerm);
+
+                const matchesStatus = statusValue === 'all' || status === statusValue;
+
+                if (matchesSearch && matchesStatus) {
+                    row.classList.remove('hidden');
+                    visibleCount++;
+                } else {
+                    row.classList.add('hidden');
+                }
+            });
+
+            if (noResultsRow) {
+                noResultsRow.classList.toggle('hidden', visibleCount !== 0);
+            }
+        };
+
+        searchInput.addEventListener('input', applyFilters);
+        statusFilter.addEventListener('change', applyFilters);
+        applyFilters();
+    });
+</script>
 

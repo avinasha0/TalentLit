@@ -20,9 +20,20 @@ class RequisitionController extends Controller
     public function index(Request $request, string $tenant = null)
     {
         try {
+            // Determine created date sort direction with safe defaults
+            $createdSort = strtolower($request->input('created_sort', 'desc'));
+            if (!in_array($createdSort, ['asc', 'desc'], true)) {
+                Log::warning('Invalid created_sort parameter provided, falling back to desc.', [
+                    'provided_value' => $request->input('created_sort'),
+                    'tenant_id' => tenant_id(),
+                    'user_id' => optional(auth()->user())->id,
+                ]);
+                $createdSort = 'desc';
+            }
+
             // Use the new Requisition model
             $query = Requisition::query()
-                ->orderBy('created_at', 'desc');
+                ->orderBy('created_at', $createdSort);
 
             // Apply filters
             if ($request->filled('status')) {
@@ -72,7 +83,8 @@ class RequisitionController extends Controller
             Log::info('RequisitionController@index', [
                 'total_requisitions' => $requisitions->total(),
                 'current_page' => $requisitions->currentPage(),
-                'filters' => $request->only(['status', 'department', 'keyword']),
+                'filters' => $request->only(['status', 'department', 'keyword', 'created_sort']),
+                'created_sort_applied' => $createdSort,
             ]);
 
             return view('tenant.requisitions.index', compact('requisitions', 'allDepartments', 'allLocations', 'statuses'));

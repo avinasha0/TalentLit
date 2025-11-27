@@ -39,11 +39,21 @@ class RequisitionController extends Controller
                 $headcountSort = null;
             }
 
+            // Determine job title sort direction with safe defaults
+            $jobTitleSort = strtolower($request->input('job_title_sort', ''));
+            if (!in_array($jobTitleSort, ['asc', 'desc'], true)) {
+                $jobTitleSort = null;
+            }
+
             // Use the new Requisition model
             $query = Requisition::query();
 
-            // Apply sorting - headcount sort takes priority if specified
-            if ($headcountSort) {
+            // Apply sorting - priority: job_title_sort > headcount_sort > created_sort
+            if ($jobTitleSort) {
+                $query->orderBy('job_title', $jobTitleSort);
+                // Secondary sort by created_at for consistent ordering
+                $query->orderBy('created_at', 'desc');
+            } elseif ($headcountSort) {
                 $query->orderBy('headcount', $headcountSort);
                 // Secondary sort by created_at for consistent ordering
                 $query->orderBy('created_at', 'desc');
@@ -77,7 +87,16 @@ class RequisitionController extends Controller
                 });
             }
 
-            $requisitions = $query->paginate(20);
+            if ($request->filled('contract_type')) {
+                $contractType = $request->contract_type;
+                $query->where('contract_type', $contractType);
+            }
+
+            // Get per page value with safe defaults
+            $perPage = $request->input('per_page', 20);
+            $perPage = in_array($perPage, [10, 20, 50, 100], true) ? (int)$perPage : 20;
+
+            $requisitions = $query->paginate($perPage)->appends($request->query());
 
             // Get filter options for departments (from existing tables for backward compatibility)
             $departments = Department::orderBy('name')->pluck('name')->unique()->values();
@@ -99,8 +118,10 @@ class RequisitionController extends Controller
             Log::info('RequisitionController@index', [
                 'total_requisitions' => $requisitions->total(),
                 'current_page' => $requisitions->currentPage(),
-                'filters' => $request->only(['status', 'department', 'keyword', 'created_sort']),
+                'per_page' => $perPage,
+                'filters' => $request->only(['status', 'department', 'keyword', 'contract_type', 'created_sort', 'job_title_sort', 'headcount_sort']),
                 'created_sort_applied' => $createdSort,
+                'job_title_sort_applied' => $jobTitleSort,
             ]);
 
             return view('tenant.requisitions.index', compact('requisitions', 'allDepartments', 'allLocations', 'statuses'));
@@ -519,18 +540,30 @@ class RequisitionController extends Controller
             });
         }
 
-        // Apply sorting - headcount sort takes priority if specified
-        $headcountSort = strtolower($request->input('headcount_sort', ''));
-        if (in_array($headcountSort, ['asc', 'desc'], true)) {
-            $query->orderBy('headcount', $headcountSort);
+        if ($request->filled('contract_type')) {
+            $contractType = $request->contract_type;
+            $query->where('contract_type', $contractType);
+        }
+
+        // Apply sorting - priority: job_title_sort > headcount_sort > created_sort
+        $jobTitleSort = strtolower($request->input('job_title_sort', ''));
+        if (in_array($jobTitleSort, ['asc', 'desc'], true)) {
+            $query->orderBy('job_title', $jobTitleSort);
             // Secondary sort by created_at for consistent ordering
             $query->orderBy('created_at', 'desc');
         } else {
-            $createdSort = strtolower($request->input('created_sort', 'desc'));
-            if (!in_array($createdSort, ['asc', 'desc'], true)) {
-                $createdSort = 'desc';
+            $headcountSort = strtolower($request->input('headcount_sort', ''));
+            if (in_array($headcountSort, ['asc', 'desc'], true)) {
+                $query->orderBy('headcount', $headcountSort);
+                // Secondary sort by created_at for consistent ordering
+                $query->orderBy('created_at', 'desc');
+            } else {
+                $createdSort = strtolower($request->input('created_sort', 'desc'));
+                if (!in_array($createdSort, ['asc', 'desc'], true)) {
+                    $createdSort = 'desc';
+                }
+                $query->orderBy('created_at', $createdSort);
             }
-            $query->orderBy('created_at', $createdSort);
         }
 
         return $query;

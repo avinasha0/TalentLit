@@ -87,10 +87,28 @@
                         </select>
                     </div>
 
-                    <div class="flex items-end">
+                    <div>
+                        <label for="contract_type" class="block text-sm font-medium text-black mb-1">Contract Type</label>
+                        <select name="contract_type" 
+                                id="contract_type"
+                                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black">
+                            <option value="">All</option>
+                            <option value="Full-Time" {{ request('contract_type') == 'Full-Time' ? 'selected' : '' }}>Full-Time</option>
+                            <option value="Contract" {{ request('contract_type') == 'Contract' ? 'selected' : '' }}>Contract</option>
+                            <option value="Intern" {{ request('contract_type') == 'Intern' ? 'selected' : '' }}>Intern</option>
+                            <option value="Temporary" {{ request('contract_type') == 'Temporary' ? 'selected' : '' }}>Temporary</option>
+                        </select>
+                    </div>
+
+                    <div class="flex items-end gap-2">
                         <button type="submit" 
-                                class="w-full bg-blue-600 text-white px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                class="flex-1 bg-blue-600 text-white px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                             Filter
+                        </button>
+                        <button type="button" 
+                                id="reset-filters-btn"
+                                class="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500">
+                            Reset
                         </button>
                     </div>
                 </form>
@@ -99,11 +117,62 @@
 
         <!-- Requisitions Table -->
         <x-card>
+            <!-- Status Color Legend -->
+            <div class="px-4 py-3 border-b border-gray-200 bg-gray-50">
+                <div class="flex flex-wrap items-center gap-4 text-sm">
+                    <span class="font-medium text-gray-700">Status Legend:</span>
+                    <div class="flex items-center gap-1">
+                        <span class="inline-block w-4 h-4 rounded-full bg-yellow-400"></span>
+                        <span class="text-gray-600">Pending</span>
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <span class="inline-block w-4 h-4 rounded-full bg-green-400"></span>
+                        <span class="text-gray-600">Approved</span>
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <span class="inline-block w-4 h-4 rounded-full bg-red-400"></span>
+                        <span class="text-gray-600">Rejected</span>
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <span class="inline-block w-4 h-4 rounded-full bg-gray-300"></span>
+                        <span class="text-gray-600">Draft</span>
+                    </div>
+                </div>
+            </div>
+
             <div class="px-4 py-5 sm:px-6 border-b border-gray-200 flex items-center justify-between">
                 <div>
                     <h3 class="text-lg leading-6 font-medium text-black">
                         <span id="total-requisitions-counter">Total Requisitions: {{ $requisitions->total() }}</span>
                     </h3>
+                </div>
+                <div class="flex items-center gap-2">
+                    <!-- View Toggle -->
+                    <div class="flex items-center gap-2 border border-gray-300 rounded-md overflow-hidden">
+                        <button type="button" 
+                                id="table-view-btn"
+                                class="px-3 py-2 text-sm font-medium bg-blue-600 text-white view-toggle-btn"
+                                data-view="table">
+                            Table
+                        </button>
+                        <button type="button" 
+                                id="card-view-btn"
+                                class="px-3 py-2 text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 view-toggle-btn"
+                                data-view="card">
+                            Cards
+                        </button>
+                    </div>
+                    <!-- Page Size Selector -->
+                    <div class="flex items-center gap-2">
+                        <label for="page-size-selector" class="text-sm text-gray-700">Show:</label>
+                        <select id="page-size-selector"
+                                class="px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="10" {{ request('per_page', 20) == 10 ? 'selected' : '' }}>10</option>
+                            <option value="20" {{ request('per_page', 20) == 20 ? 'selected' : '' }}>20</option>
+                            <option value="50" {{ request('per_page', 20) == 50 ? 'selected' : '' }}>50</option>
+                            <option value="100" {{ request('per_page', 20) == 100 ? 'selected' : '' }}>100</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="flex items-center gap-2">
                     <!-- Bulk Actions -->
@@ -158,6 +227,10 @@
                                 <label class="flex items-center px-2 py-1 hover:bg-gray-100 cursor-pointer">
                                     <input type="checkbox" class="column-toggle" data-column="created-date" checked>
                                     <span class="ml-2 text-sm text-gray-700">Created Date</span>
+                                </label>
+                                <label class="flex items-center px-2 py-1 hover:bg-gray-100 cursor-pointer">
+                                    <input type="checkbox" class="column-toggle" data-column="updated-date" checked>
+                                    <span class="ml-2 text-sm text-gray-700">Last Updated</span>
                                 </label>
                                 <label class="flex items-center px-2 py-1 hover:bg-gray-100 cursor-pointer">
                                     <input type="checkbox" class="column-toggle" data-column="actions" checked>
@@ -235,6 +308,11 @@
                     <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
                 </div>
 
+                <!-- Card View Container -->
+                <div id="card-view-container" class="hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
+                    <!-- Cards will be rendered here by JavaScript -->
+                </div>
+
                 <div class="overflow-x-auto" id="table-container">
                     <table class="min-w-full divide-y divide-gray-200" id="requisitions-table">
                         <thead class="bg-gray-50 sticky top-0 z-10">
@@ -242,7 +320,37 @@
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     <input type="checkbox" id="select-all-checkbox" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
                                 </th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider column-header" data-column="job-title">Job Title</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider column-header" data-column="job-title">
+                                    @php
+                                        $currentJobTitleSort = strtolower(request('job_title_sort', ''));
+                                        $nextJobTitleSort = '';
+                                        $jobTitleSortIcon = '';
+                                        if ($currentJobTitleSort === 'asc') {
+                                            $nextJobTitleSort = 'desc';
+                                            $jobTitleSortIcon = '↑';
+                                        } elseif ($currentJobTitleSort === 'desc') {
+                                            $nextJobTitleSort = 'asc';
+                                            $jobTitleSortIcon = '↓';
+                                        } else {
+                                            $nextJobTitleSort = 'asc';
+                                            $jobTitleSortIcon = '';
+                                        }
+                                        $jobTitleSortUrl = request()->fullUrlWithQuery([
+                                            'job_title_sort' => $nextJobTitleSort,
+                                            'page' => 1,
+                                        ]);
+                                    @endphp
+                                    <button type="button"
+                                            class="flex items-center gap-1 text-gray-600 hover:text-gray-900 focus:outline-none"
+                                            title="Sort by Job Title"
+                                            onclick="window.location='{{ $jobTitleSortUrl }}'">
+                                        <span>Job Title</span>
+                                        @if($jobTitleSortIcon)
+                                            <span aria-hidden="true" class="text-xs">{{ $jobTitleSortIcon }}</span>
+                                        @endif
+                                        <span class="sr-only">Current sort: {{ $currentJobTitleSort === 'asc' ? 'A to Z' : ($currentJobTitleSort === 'desc' ? 'Z to A' : 'Not sorted') }}</span>
+                                    </button>
+                                </th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider column-header" data-column="department">Department</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider column-header" data-column="headcount">
                                     @php
@@ -287,6 +395,7 @@
                                         <span class="sr-only">Current sort: {{ $currentCreatedSort === 'desc' ? 'Newest to oldest' : 'Oldest to newest' }}</span>
                                     </button>
                                 </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider column-header" data-column="updated-date">Last Updated</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider column-header" data-column="actions">Actions</th>
                             </tr>
                         </thead>
@@ -302,14 +411,18 @@
                                     data-department="{{ $rowDepartment }}"
                                     data-status="{{ $rowStatus }}"
                                     data-headcount="{{ $requisition->headcount ?? 0 }}"
-                                    data-requisition-id="{{ $requisition->id }}">
+                                    data-contract-type="{{ strtolower($requisition->contract_type ?? '') }}"
+                                    data-requisition-id="{{ $requisition->id }}"
+                                    tabindex="0"
+                                    role="row">
                                     <td class="px-6 py-4">
                                         <input type="checkbox" class="requisition-checkbox rounded border-gray-300 text-blue-600 focus:ring-blue-500" value="{{ $requisition->id }}">
                                     </td>
                                     <td class="px-6 py-4 column-cell" data-column="job-title">
                                         <div class="text-sm font-medium text-gray-900">
                                             <a href="{{ tenantRoute('tenant.requisitions.show', [$tenantSlug, $requisition->id]) }}" 
-                                               class="text-blue-600 hover:text-blue-900 hover:underline focus:outline-none focus:underline">
+                                               class="text-blue-600 hover:text-blue-900 hover:underline focus:outline-none focus:underline truncate block max-w-xs"
+                                               title="{{ $requisition->job_title }}">
                                                 {{ $requisition->job_title }}
                                             </a>
                                         </div>
@@ -317,8 +430,25 @@
                                             <div class="text-sm text-gray-500 truncate max-w-xs">{{ Str::limit($requisition->justification, 50) }}</div>
                                         @endif
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 column-cell" data-column="department">
-                                        {{ $requisition->department ?? 'N/A' }}
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm column-cell" data-column="department">
+                                        @php
+                                            $deptName = $requisition->department ?? 'N/A';
+                                            $deptHash = md5($deptName);
+                                            $badgeColors = [
+                                                'bg-blue-100 text-blue-800',
+                                                'bg-purple-100 text-purple-800',
+                                                'bg-indigo-100 text-indigo-800',
+                                                'bg-pink-100 text-pink-800',
+                                                'bg-teal-100 text-teal-800',
+                                                'bg-orange-100 text-orange-800',
+                                                'bg-cyan-100 text-cyan-800',
+                                            ];
+                                            $colorIndex = abs(crc32($deptName)) % count($badgeColors);
+                                            $badgeColor = $badgeColors[$colorIndex];
+                                        @endphp
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $badgeColor }}">
+                                            {{ $deptName }}
+                                        </span>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 column-cell" data-column="headcount">
                                         {{ $requisition->headcount }}
@@ -345,6 +475,9 @@
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 column-cell" data-column="created-date">
                                         {{ optional($requisition->created_at)->format('d M Y') ?? 'N/A' }}
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 column-cell" data-column="updated-date">
+                                        {{ optional($requisition->updated_at)->format('d M Y') ?? 'N/A' }}
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium column-cell" data-column="actions">
                                         <div class="relative">
@@ -396,7 +529,7 @@
                                 </tr>
                             @endforeach
                             <tr id="requisition-no-results-row" class="hidden">
-                                <td colspan="8" class="px-6 py-6 text-center text-sm text-gray-500">
+                                <td colspan="9" class="px-6 py-6 text-center text-sm text-gray-500">
                                     No requisitions found. Try adjusting your filters.
                                 </td>
                             </tr>
@@ -496,6 +629,7 @@
         const searchInput = document.getElementById('requisition-search');
         const statusFilter = document.getElementById('requisition-status-filter');
         const departmentFilter = document.getElementById('requisition-department-filter');
+        const contractTypeFilter = document.getElementById('contract_type');
         const refreshBtn = document.getElementById('refresh-requisitions-btn');
         const totalCounter = document.getElementById('total-requisitions-counter');
         const rows = Array.from(document.querySelectorAll('.requisition-row'));
@@ -503,8 +637,11 @@
         const paginationContainer = document.getElementById('requisition-pagination');
         const tableContainer = document.querySelector('.overflow-x-auto');
         const emptyStateMessage = document.getElementById('empty-state-message');
-        const rowsPerPage = 10;
+        const pageSizeSelector = document.getElementById('page-size-selector');
+        let rowsPerPage = parseInt(pageSizeSelector?.value || localStorage.getItem('requisitions_per_page') || '20', 10);
         let currentPage = 1;
+        let currentView = localStorage.getItem('requisitions_view') || 'table';
+        let selectedRowIndex = -1;
 
         if (!searchInput || !statusFilter || !paginationContainer) {
             console.warn('Requisition filters unavailable: required elements missing.', {
@@ -522,11 +659,13 @@
             const searchTerm = normalize(searchInput.value).trim();
             const statusValue = normalize(statusFilter.value);
             const departmentValue = departmentFilter ? normalize(departmentFilter.value) : 'all';
+            const contractTypeValue = contractTypeFilter ? normalize(contractTypeFilter.value) : '';
 
             return rows.filter((row) => {
                 const jobTitle = normalize(row.dataset.jobTitle);
                 const department = normalize(row.dataset.department);
                 const status = normalize(row.dataset.status);
+                const contractType = normalize(row.dataset.contractType || '');
 
                 const matchesSearch =
                     !searchTerm ||
@@ -536,8 +675,9 @@
 
                 const matchesStatus = statusValue === 'all' || status === statusValue;
                 const matchesDepartment = departmentValue === 'all' || department === departmentValue;
+                const matchesContractType = !contractTypeValue || contractType === contractTypeValue;
 
-                return matchesSearch && matchesStatus && matchesDepartment;
+                return matchesSearch && matchesStatus && matchesDepartment && matchesContractType;
             });
         };
 
@@ -590,7 +730,11 @@
             paginationContainer.appendChild(
                 createButton('Previous', currentPage === 1, () => {
                     currentPage = Math.max(1, currentPage - 1);
-                    refreshView();
+                    if (currentView === 'card') {
+                        renderCardView();
+                    } else {
+                        refreshView();
+                    }
                 })
             );
 
@@ -601,7 +745,11 @@
                         false,
                         () => {
                             currentPage = pageNumber;
-                            refreshView();
+                            if (currentView === 'card') {
+                                renderCardView();
+                            } else {
+                                refreshView();
+                            }
                         },
                         pageNumber === currentPage
                     )
@@ -611,7 +759,11 @@
             paginationContainer.appendChild(
                 createButton('Next', currentPage === totalPages, () => {
                     currentPage = Math.min(totalPages, currentPage + 1);
-                    refreshView();
+                    if (currentView === 'card') {
+                        renderCardView();
+                    } else {
+                        refreshView();
+                    }
                 })
             );
         };
@@ -624,6 +776,9 @@
                     noResultsRow.classList.remove('hidden');
                 }
                 toggleEmptyState(false);
+                if (currentView === 'card') {
+                    renderCardView();
+                }
                 return;
             }
 
@@ -641,12 +796,20 @@
             if (noResultsRow) {
                 noResultsRow.classList.add('hidden');
             }
+            
+            if (currentView === 'card') {
+                renderCardView();
+            }
         };
 
         const refreshView = () => {
             const filteredRows = getFilteredRows();
             updateTotalCounter(filteredRows.length);
-            renderTable(filteredRows);
+            if (currentView === 'table') {
+                renderTable(filteredRows);
+            } else {
+                renderCardView();
+            }
             renderPagination(filteredRows.length);
         };
 
@@ -668,6 +831,250 @@
         if (departmentFilter) {
             departmentFilter.addEventListener('change', resetAndRefresh);
         }
+        if (contractTypeFilter) {
+            contractTypeFilter.addEventListener('change', resetAndRefresh);
+        }
+
+        // Reset Filters Button
+        const resetFiltersBtn = document.getElementById('reset-filters-btn');
+        if (resetFiltersBtn) {
+            resetFiltersBtn.addEventListener('click', function() {
+                try {
+                    // Clear all filters
+                    if (searchInput) searchInput.value = '';
+                    if (statusFilter) statusFilter.value = 'all';
+                    if (departmentFilter) departmentFilter.value = 'all';
+                    if (contractTypeFilter) contractTypeFilter.value = '';
+                    
+                    // Clear URL parameters and reload
+                    const url = new URL(window.location.href);
+                    url.searchParams.delete('keyword');
+                    url.searchParams.delete('status');
+                    url.searchParams.delete('department');
+                    url.searchParams.delete('contract_type');
+                    url.searchParams.delete('job_title_sort');
+                    url.searchParams.delete('created_sort');
+                    url.searchParams.delete('headcount_sort');
+                    url.searchParams.delete('page');
+                    window.location.href = url.toString();
+                } catch (error) {
+                    console.error('Error resetting filters:', error);
+                    window.location.href = window.location.pathname;
+                }
+            });
+        }
+
+        // Page Size Selector
+        if (pageSizeSelector) {
+            pageSizeSelector.value = rowsPerPage.toString();
+            pageSizeSelector.addEventListener('change', function() {
+                rowsPerPage = parseInt(this.value, 10);
+                localStorage.setItem('requisitions_per_page', rowsPerPage.toString());
+                currentPage = 1;
+                
+                // Update URL with per_page parameter
+                const url = new URL(window.location.href);
+                url.searchParams.set('per_page', rowsPerPage.toString());
+                url.searchParams.set('page', '1');
+                window.history.pushState({}, '', url.toString());
+                
+                refreshView();
+            });
+        }
+
+        // View Toggle (Table/Card)
+        const tableViewBtn = document.getElementById('table-view-btn');
+        const cardViewBtn = document.getElementById('card-view-btn');
+        const cardViewContainer = document.getElementById('card-view-container');
+        const viewToggleBtns = document.querySelectorAll('.view-toggle-btn');
+
+        function setView(view) {
+            currentView = view;
+            localStorage.setItem('requisitions_view', view);
+            
+            if (view === 'table') {
+                if (tableContainer) tableContainer.style.display = '';
+                if (cardViewContainer) cardViewContainer.classList.add('hidden');
+                if (tableViewBtn) {
+                    tableViewBtn.classList.add('bg-blue-600', 'text-white');
+                    tableViewBtn.classList.remove('bg-white', 'text-gray-700');
+                }
+                if (cardViewBtn) {
+                    cardViewBtn.classList.remove('bg-blue-600', 'text-white');
+                    cardViewBtn.classList.add('bg-white', 'text-gray-700');
+                }
+            } else {
+                if (tableContainer) tableContainer.style.display = 'none';
+                if (cardViewContainer) cardViewContainer.classList.remove('hidden');
+                if (cardViewBtn) {
+                    cardViewBtn.classList.add('bg-blue-600', 'text-white');
+                    cardViewBtn.classList.remove('bg-white', 'text-gray-700');
+                }
+                if (tableViewBtn) {
+                    tableViewBtn.classList.remove('bg-blue-600', 'text-white');
+                    tableViewBtn.classList.add('bg-white', 'text-gray-700');
+                }
+                renderCardView();
+            }
+        }
+
+        function renderCardView() {
+            if (!cardViewContainer) return;
+            
+            const filteredRows = getFilteredRows();
+            const totalPages = Math.max(1, Math.ceil(filteredRows.length / rowsPerPage));
+            if (currentPage > totalPages) {
+                currentPage = totalPages;
+            }
+            
+            const start = (currentPage - 1) * rowsPerPage;
+            const end = start + rowsPerPage;
+            const visibleRows = filteredRows.slice(start, end);
+            
+            cardViewContainer.innerHTML = '';
+            
+            if (visibleRows.length === 0) {
+                cardViewContainer.innerHTML = '<div class="col-span-full text-center py-12 text-gray-500">No requisitions found. Try adjusting your filters.</div>';
+                return;
+            }
+            
+            visibleRows.forEach(row => {
+                try {
+                    const requisitionId = row.dataset.requisitionId;
+                    const jobTitleLink = row.querySelector('[data-column="job-title"] a');
+                    const jobTitle = jobTitleLink ? jobTitleLink.textContent.trim() : (row.dataset.jobTitle || 'N/A');
+                    // Get the URL from the existing link in the table row
+                    const showUrl = jobTitleLink ? jobTitleLink.href : '';
+                    
+                    if (!showUrl) {
+                        console.warn('Could not determine URL for requisition:', requisitionId);
+                        return;
+                    }
+                    
+                    const departmentCell = row.querySelector('[data-column="department"]');
+                    const department = departmentCell ? departmentCell.textContent.trim() : (row.dataset.department || 'N/A');
+                    const headcount = row.dataset.headcount || '0';
+                    const contractTypeCell = row.querySelector('[data-column="contract-type"]');
+                    const contractType = contractTypeCell ? contractTypeCell.textContent.trim() : (row.dataset.contractType || 'N/A');
+                    const status = row.dataset.status || 'Draft';
+                    const createdDateCell = row.querySelector('[data-column="created-date"]');
+                    const createdDate = createdDateCell ? createdDateCell.textContent.trim() : 'N/A';
+                    const updatedDateCell = row.querySelector('[data-column="updated-date"]');
+                    const updatedDate = updatedDateCell ? updatedDateCell.textContent.trim() : 'N/A';
+                    
+                    const statusColors = {
+                        'pending': 'bg-yellow-100 text-yellow-800',
+                        'approved': 'bg-green-100 text-green-800',
+                        'rejected': 'bg-red-100 text-red-800',
+                        'draft': 'bg-gray-100 text-gray-800'
+                    };
+                    const statusColor = statusColors[status.toLowerCase()] || 'bg-gray-100 text-gray-800';
+                    const statusDisplay = status.charAt(0).toUpperCase() + status.slice(1);
+                    
+                    const card = document.createElement('div');
+                    card.className = 'bg-white border border-gray-200 rounded-lg shadow-sm p-4 hover:shadow-md transition-shadow';
+                    card.innerHTML = `
+                        <div class="flex justify-between items-start mb-3">
+                            <h3 class="text-lg font-semibold text-gray-900 truncate flex-1" title="${jobTitle}">${jobTitle}</h3>
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium ${statusColor} ml-2">
+                                ${statusDisplay}
+                            </span>
+                        </div>
+                        <div class="space-y-2 text-sm text-gray-600">
+                            <div class="flex items-center">
+                                <span class="font-medium w-24">Department:</span>
+                                <span class="truncate">${department}</span>
+                            </div>
+                            <div class="flex items-center">
+                                <span class="font-medium w-24">Headcount:</span>
+                                <span>${headcount}</span>
+                            </div>
+                            <div class="flex items-center">
+                                <span class="font-medium w-24">Contract:</span>
+                                <span>${contractType}</span>
+                            </div>
+                            <div class="flex items-center">
+                                <span class="font-medium w-24">Created:</span>
+                                <span>${createdDate}</span>
+                            </div>
+                            <div class="flex items-center">
+                                <span class="font-medium w-24">Updated:</span>
+                                <span>${updatedDate}</span>
+                            </div>
+                        </div>
+                        <div class="mt-4 pt-3 border-t border-gray-200">
+                            <a href="${showUrl}" 
+                               class="text-blue-600 hover:text-blue-900 text-sm font-medium">
+                                View Details →
+                            </a>
+                        </div>
+                    `;
+                    cardViewContainer.appendChild(card);
+                } catch (error) {
+                    console.error('Error rendering card:', error);
+                }
+            });
+        }
+
+        if (tableViewBtn) {
+            tableViewBtn.addEventListener('click', () => setView('table'));
+        }
+        if (cardViewBtn) {
+            cardViewBtn.addEventListener('click', () => setView('card'));
+        }
+        
+        // Initialize view
+        setView(currentView);
+
+        // Keyboard Navigation
+        function handleKeyboardNavigation(e) {
+            if (currentView !== 'table') return;
+            
+            const filteredRows = getFilteredRows();
+            if (filteredRows.length === 0) return;
+            
+            const visibleRows = filteredRows.filter(row => !row.classList.contains('hidden'));
+            
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                selectedRowIndex = Math.min(selectedRowIndex + 1, visibleRows.length - 1);
+                updateSelectedRow(visibleRows);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                selectedRowIndex = Math.max(selectedRowIndex - 1, 0);
+                updateSelectedRow(visibleRows);
+            } else if (e.key === 'Enter' && selectedRowIndex >= 0 && selectedRowIndex < visibleRows.length) {
+                e.preventDefault();
+                const selectedRow = visibleRows[selectedRowIndex];
+                const link = selectedRow.querySelector('[data-column="job-title"] a');
+                if (link) {
+                    link.click();
+                }
+            }
+        }
+
+        function updateSelectedRow(visibleRows) {
+            // Remove previous selection
+            document.querySelectorAll('.requisition-row').forEach(row => {
+                row.classList.remove('bg-blue-100', 'ring-2', 'ring-blue-500');
+            });
+            
+            if (selectedRowIndex >= 0 && selectedRowIndex < visibleRows.length) {
+                const selectedRow = visibleRows[selectedRowIndex];
+                selectedRow.classList.add('bg-blue-100', 'ring-2', 'ring-blue-500');
+                selectedRow.focus();
+                selectedRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        }
+
+        // Only enable keyboard navigation when not typing in input fields
+        document.addEventListener('keydown', function(e) {
+            const activeElement = document.activeElement;
+            if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA' || activeElement.tagName === 'SELECT')) {
+                return;
+            }
+            handleKeyboardNavigation(e);
+        });
 
         // ========== BULK SELECT FUNCTIONALITY ==========
         const selectAllCheckbox = document.getElementById('select-all-checkbox');
@@ -1154,6 +1561,16 @@
                     showToast('Failed to refresh. Please try again.', 'error');
                 }
             });
+        }
+
+        // Update pagination when page size changes
+        if (pageSizeSelector) {
+            const urlParams = new URLSearchParams(window.location.search);
+            const urlPerPage = urlParams.get('per_page');
+            if (urlPerPage && ['10', '20', '50', '100'].includes(urlPerPage)) {
+                rowsPerPage = parseInt(urlPerPage, 10);
+                pageSizeSelector.value = rowsPerPage.toString();
+            }
         }
 
         // Initial render

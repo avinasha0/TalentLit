@@ -16,6 +16,7 @@
     $isInterviews = str_starts_with($currentRoute, 'tenant.interviews') || str_starts_with($currentRoute, 'subdomain.interviews');
     $isOffers = str_starts_with($currentRoute, 'tenant.offers') || str_starts_with($currentRoute, 'subdomain.offers');
     $isAnalytics = str_starts_with($currentRoute, 'tenant.analytics') || str_starts_with($currentRoute, 'subdomain.analytics');
+    $isReporting = $isAnalytics; // Reporting includes Analytics
     $isSettings = str_starts_with($currentRoute, 'tenant.settings') || str_starts_with($currentRoute, 'subdomain.settings');
     $isEmployeeOnboarding = str_starts_with($currentRoute, 'tenant.employee-onboarding') || str_starts_with($currentRoute, 'subdomain.employee-onboarding');
 
@@ -26,9 +27,10 @@
 
 <div x-data='{ 
     sidebarOpen: $store.sidebar?.open ?? (window.innerWidth >= 1024),
-    recruitingOpen: {{ ($isRecruiting || $isJobs || $isCandidates || $isInterviews || $isOffers || $isAnalytics) ? 'true' : 'false' }},
+    recruitingOpen: {{ ($isRecruiting || $isJobs || $isCandidates || $isInterviews || $isOffers) ? 'true' : 'false' }},
     jobsOpen: false,
     candidatesOpen: {{ ($isCandidates || $isInterviews || $isOffers) ? 'true' : 'false' }},
+    reportingOpen: {{ $isReporting ? 'true' : 'false' }},
     settingsOpen: {{ $isSettings ? 'true' : 'false' }},
     employeeOnboardingOpen: {{ $isEmployeeOnboarding ? 'true' : 'false' }},
     analyticsLocked: {{ $analyticsLocked ? 'true' : 'false' }}
@@ -203,32 +205,10 @@ class="fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 text-white lg:translate-x-0"
                         Pipeline
                     </a>
                     @endif
-
-                    <!-- Analytics -->
-                    @customCan('view_analytics', $tenant)
-                        @if($analyticsLocked)
-                            <a href="{{ $analyticsUpgradeUrl }}"
-                               class="flex items-center px-3 py-2 text-sm text-gray-400 rounded-lg border border-dashed border-purple-500/40 hover:bg-gray-800 hover:text-white transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-gray-900">
-                                <svg class="w-4 h-4 mr-3 text-purple-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-                                </svg>
-                                <span class="flex-1 text-left">Analytics</span>
-                                <span class="ml-3 px-2 py-0.5 text-xs font-semibold rounded-full bg-purple-600/20 text-purple-200">Pro+</span>
-                            </a>
-                        @else
-                            <a href="{{ tenantRoute('tenant.analytics.index', $tenant->slug) }}"
-                               class="flex items-center px-3 py-2 text-sm text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors duration-200 {{ $isAnalytics ? 'bg-gray-700 text-white' : '' }}">
-                                <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-                                </svg>
-                                Analytics
-                            </a>
-                        @endif
-                    @endcustomCan
                 </div>
             </div>
 
-            <!-- Employee Onboarding -->
+            <!-- Onboarding -->
             <div>
                 <button type="button" @click="employeeOnboardingOpen = !employeeOnboardingOpen" 
                         class="flex items-center justify-between w-full px-3 py-2 text-sm font-medium rounded-lg transition-colors duration-200 {{ $isEmployeeOnboarding ? 'bg-purple-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">
@@ -236,7 +216,7 @@ class="fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 text-white lg:translate-x-0"
                         <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
                         </svg>
-                        <span>Employee Onboarding</span>
+                        <span>Onboarding</span>
                         <span class="ml-2 px-2 py-0.5 text-xs font-semibold rounded-full bg-orange-600/30 text-orange-300 border border-orange-500/50">Under Development</span>
                     </div>
                     <svg class="w-4 h-4 transition-transform duration-200" :class="{ 'rotate-180': employeeOnboardingOpen }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -317,6 +297,45 @@ class="fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 text-white lg:translate-x-0"
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
                 </svg>
             </a>
+
+            <!-- Reporting -->
+            <div>
+                <button type="button" @click="reportingOpen = !reportingOpen" 
+                        class="flex items-center justify-between w-full px-3 py-2 text-sm font-medium rounded-lg transition-colors duration-200 {{ $isReporting ? 'bg-purple-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">
+                    <div class="flex items-center">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                        </svg>
+                        Reporting
+                    </div>
+                    <svg class="w-4 h-4 transition-transform duration-200" :class="{ 'rotate-180': reportingOpen }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                </button>
+                <div x-show="reportingOpen" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 transform -translate-y-2" x-transition:enter-end="opacity-100 transform translate-y-0" class="ml-8 mt-2 space-y-1">
+                    <!-- Analytics -->
+                    @customCan('view_analytics', $tenant)
+                        @if($analyticsLocked)
+                            <a href="{{ $analyticsUpgradeUrl }}"
+                               class="flex items-center px-3 py-2 text-sm text-gray-400 rounded-lg border border-dashed border-purple-500/40 hover:bg-gray-800 hover:text-white transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-gray-900">
+                                <svg class="w-4 h-4 mr-3 text-purple-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                                </svg>
+                                <span class="flex-1 text-left">Analytics</span>
+                                <span class="ml-3 px-2 py-0.5 text-xs font-semibold rounded-full bg-purple-600/20 text-purple-200">Pro+</span>
+                            </a>
+                        @else
+                            <a href="{{ tenantRoute('tenant.analytics.index', $tenant->slug) }}"
+                               class="flex items-center px-3 py-2 text-sm text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors duration-200 {{ $isAnalytics ? 'bg-gray-700 text-white' : '' }}">
+                                <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                                </svg>
+                                Analytics
+                            </a>
+                        @endif
+                    @endcustomCan
+                </div>
+            </div>
 
             <!-- Settings (Owner/Admin only) -->
             @customCan('manage_settings', $tenant)

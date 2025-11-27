@@ -142,6 +142,7 @@ function initializeCollapsibles() {
   setupCollapsible('[data-mobile-recruiting-toggle]', '[data-mobile-recruiting-content]', '[data-mobile-recruiting-arrow]');
   setupCollapsible('[data-mobile-jobs-toggle]', '[data-mobile-jobs-content]', '[data-mobile-jobs-arrow]');
   setupCollapsible('[data-mobile-candidates-toggle]', '[data-mobile-candidates-content]', '[data-mobile-candidates-arrow]');
+  setupCollapsible('[data-mobile-reporting-toggle]', '[data-mobile-reporting-content]', '[data-mobile-reporting-arrow]');
   setupCollapsible('[data-mobile-settings-toggle]', '[data-mobile-settings-content]', '[data-mobile-settings-arrow]');
   setupCollapsible('[data-mobile-onboarding-toggle]', '[data-mobile-onboarding-content]', '[data-mobile-onboarding-arrow]');
 }

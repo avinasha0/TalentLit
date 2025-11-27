@@ -430,17 +430,20 @@ $tenantRoutes = function () {
     });
 
     // Requisition Management Routes - Owner, Admin, Recruiter
+    // IMPORTANT: Specific routes (create, pending, approved, etc.) must come BEFORE generic {id} route
+    Route::middleware(['custom.permission:create_jobs'])->group(function () {
+        Route::get('/{tenant}/requisitions/create', [RequisitionController::class, 'create'])->name('tenant.requisitions.create');
+        Route::post('/{tenant}/requisitions', [RequisitionController::class, 'store'])->name('tenant.requisitions.store');
+    });
+
     Route::middleware('custom.permission:view_jobs')->group(function () {
         Route::get('/{tenant}/requisitions', [RequisitionController::class, 'index'])->name('tenant.requisitions.index');
         Route::get('/{tenant}/requisitions/pending', [RequisitionController::class, 'pending'])->name('tenant.requisitions.pending');
         Route::get('/{tenant}/requisitions/approved', [RequisitionController::class, 'approved'])->name('tenant.requisitions.approved');
         Route::get('/{tenant}/requisitions/rejected', [RequisitionController::class, 'rejected'])->name('tenant.requisitions.rejected');
+        Route::get('/{tenant}/requisitions/export/csv', [RequisitionController::class, 'exportCsv'])->name('tenant.requisitions.export.csv');
+        Route::get('/{tenant}/requisitions/export/excel', [RequisitionController::class, 'exportExcel'])->name('tenant.requisitions.export.excel');
         Route::get('/{tenant}/requisitions/{id}', [RequisitionController::class, 'show'])->name('tenant.requisitions.show');
-    });
-
-    Route::middleware(['custom.permission:create_jobs'])->group(function () {
-        Route::get('/{tenant}/requisitions/create', [RequisitionController::class, 'create'])->name('tenant.requisitions.create');
-        Route::post('/{tenant}/requisitions', [RequisitionController::class, 'store'])->name('tenant.requisitions.store');
     });
 
     Route::middleware(['custom.permission:edit_jobs'])->group(function () {
@@ -450,8 +453,6 @@ $tenantRoutes = function () {
     Route::middleware(['custom.permission:view_jobs'])->group(function () {
         Route::post('/{tenant}/requisitions/{id}/approve', [RequisitionController::class, 'approve'])->name('tenant.requisitions.approve');
         Route::post('/{tenant}/requisitions/{id}/reject', [RequisitionController::class, 'reject'])->name('tenant.requisitions.reject');
-        Route::get('/{tenant}/requisitions/export/csv', [RequisitionController::class, 'exportCsv'])->name('tenant.requisitions.export.csv');
-        Route::get('/{tenant}/requisitions/export/excel', [RequisitionController::class, 'exportExcel'])->name('tenant.requisitions.export.excel');
     });
 
     // Job Management Routes - Owner, Admin, Recruiter
@@ -854,17 +855,20 @@ Route::domain('{subdomain}.' . $appDomain)->middleware(['subdomain.redirect', 's
     });
 
     // Requisition Management Routes
+    // IMPORTANT: Specific routes (create, pending, approved, etc.) must come BEFORE generic {id} route
+    Route::middleware(['custom.permission:create_jobs'])->group(function () {
+        Route::get('/requisitions/create', [RequisitionController::class, 'create'])->name('subdomain.requisitions.create');
+        Route::post('/requisitions', [RequisitionController::class, 'store'])->name('subdomain.requisitions.store');
+    });
+
     Route::middleware('custom.permission:view_jobs')->group(function () {
         Route::get('/requisitions', [RequisitionController::class, 'index'])->name('subdomain.requisitions.index');
         Route::get('/requisitions/pending', [RequisitionController::class, 'pending'])->name('subdomain.requisitions.pending');
         Route::get('/requisitions/approved', [RequisitionController::class, 'approved'])->name('subdomain.requisitions.approved');
         Route::get('/requisitions/rejected', [RequisitionController::class, 'rejected'])->name('subdomain.requisitions.rejected');
+        Route::get('/requisitions/export/csv', [RequisitionController::class, 'exportCsv'])->name('subdomain.requisitions.export.csv');
+        Route::get('/requisitions/export/excel', [RequisitionController::class, 'exportExcel'])->name('subdomain.requisitions.export.excel');
         Route::get('/requisitions/{id}', [RequisitionController::class, 'show'])->name('subdomain.requisitions.show');
-    });
-
-    Route::middleware(['custom.permission:create_jobs'])->group(function () {
-        Route::get('/requisitions/create', [RequisitionController::class, 'create'])->name('subdomain.requisitions.create');
-        Route::post('/requisitions', [RequisitionController::class, 'store'])->name('subdomain.requisitions.store');
     });
 
     Route::middleware(['custom.permission:edit_jobs'])->group(function () {
@@ -874,8 +878,6 @@ Route::domain('{subdomain}.' . $appDomain)->middleware(['subdomain.redirect', 's
     Route::middleware(['custom.permission:view_jobs'])->group(function () {
         Route::post('/requisitions/{id}/approve', [RequisitionController::class, 'approve'])->name('subdomain.requisitions.approve');
         Route::post('/requisitions/{id}/reject', [RequisitionController::class, 'reject'])->name('subdomain.requisitions.reject');
-        Route::get('/requisitions/export/csv', [RequisitionController::class, 'exportCsv'])->name('subdomain.requisitions.export.csv');
-        Route::get('/requisitions/export/excel', [RequisitionController::class, 'exportExcel'])->name('subdomain.requisitions.export.excel');
     });
 
     // Employee Onboarding

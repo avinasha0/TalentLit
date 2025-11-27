@@ -65,6 +65,8 @@
                         </button>
                         <div data-mobile-candidates-content class="ml-4 space-y-1 hidden">
                             <a href="<?php echo e(tenantRoute('tenant.candidates.index', $tenant->slug ?? tenant()->slug)); ?>" class="block py-1 text-gray-700 hover:text-blue-600">All Candidates</a>
+                            <a href="<?php echo e(tenantRoute('tenant.interviews.index', $tenant->slug ?? tenant()->slug)); ?>" class="block py-1 text-gray-700 hover:text-blue-600">Interviews</a>
+                            <a href="<?php echo e(tenantRoute('tenant.offers.index', $tenant->slug ?? tenant()->slug)); ?>" class="block py-1 text-gray-700 hover:text-blue-600">Offer</a>
                         </div>
                     </div>
 
@@ -75,10 +77,6 @@
                     ?>
                     <a href="<?php echo e(tenantRoute('tenant.jobs.pipeline', [$tenant->slug ?? tenant()->slug, $jobId])); ?>" class="block py-1 text-gray-700 hover:text-blue-600">Pipeline</a>
                     <?php endif; ?>
-
-                    <a href="<?php echo e(tenantRoute('tenant.interviews.index', $tenant->slug ?? tenant()->slug)); ?>" class="block py-1 text-gray-700 hover:text-blue-600">Interviews</a>
-
-                    <a href="<?php echo e(tenantRoute('tenant.offers.index', $tenant->slug ?? tenant()->slug)); ?>" class="block py-1 text-gray-700 hover:text-blue-600">Offer</a>
 
                     <?php if (app('App\Support\CustomPermissionChecker')->check('view_analytics', $tenant ?? tenant())): ?>
                         <?php if($mobileAnalyticsLocked): ?>

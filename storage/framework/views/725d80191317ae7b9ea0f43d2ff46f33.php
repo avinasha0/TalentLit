@@ -28,7 +28,7 @@
     sidebarOpen: $store.sidebar?.open ?? (window.innerWidth >= 1024),
     recruitingOpen: <?php echo e(($isRecruiting || $isJobs || $isCandidates || $isInterviews || $isOffers || $isAnalytics) ? 'true' : 'false'); ?>,
     jobsOpen: false,
-    candidatesOpen: false,
+    candidatesOpen: <?php echo e(($isCandidates || $isInterviews || $isOffers) ? 'true' : 'false'); ?>,
     settingsOpen: <?php echo e($isSettings ? 'true' : 'false'); ?>,
     employeeOnboardingOpen: <?php echo e($isEmployeeOnboarding ? 'true' : 'false'); ?>,
     analyticsLocked: <?php echo e($analyticsLocked ? 'true' : 'false'); ?>
@@ -169,6 +169,24 @@ class="fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 text-white lg:translate-x-0"
                                 </svg>
                                 All Candidates
                             </a>
+                            
+                            <!-- Interviews -->
+                            <a href="<?php echo e(tenantRoute('tenant.interviews.index', $tenant->slug)); ?>" 
+                               class="flex items-center px-3 py-2 text-sm text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors duration-200 <?php echo e($isInterviews ? 'bg-gray-700 text-white' : ''); ?>">
+                                <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                </svg>
+                                Interviews
+                            </a>
+
+                            <!-- Offer -->
+                            <a href="<?php echo e(tenantRoute('tenant.offers.index', $tenant->slug)); ?>" 
+                               class="flex items-center px-3 py-2 text-sm text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors duration-200 <?php echo e($isOffers ? 'bg-gray-700 text-white' : ''); ?>">
+                                <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                Offer
+                            </a>
                         </div>
                     </div>
 
@@ -186,24 +204,6 @@ class="fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 text-white lg:translate-x-0"
                         Pipeline
                     </a>
                     <?php endif; ?>
-
-                    <!-- Interviews -->
-                    <a href="<?php echo e(tenantRoute('tenant.interviews.index', $tenant->slug)); ?>" 
-                       class="flex items-center px-3 py-2 text-sm text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors duration-200 <?php echo e($isInterviews ? 'bg-gray-700 text-white' : ''); ?>">
-                        <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                        </svg>
-                        Interviews
-                    </a>
-
-                    <!-- Offer -->
-                    <a href="<?php echo e(tenantRoute('tenant.offers.index', $tenant->slug)); ?>" 
-                       class="flex items-center px-3 py-2 text-sm text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors duration-200 <?php echo e($isOffers ? 'bg-gray-700 text-white' : ''); ?>">
-                        <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
-                        Offer
-                    </a>
 
                     <!-- Analytics -->
                     <?php if (app('App\Support\CustomPermissionChecker')->check('view_analytics', $tenant)): ?>

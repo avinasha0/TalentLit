@@ -13,6 +13,7 @@ use App\Models\RequisitionAuditLog;
 use App\Models\RequisitionApproval;
 use App\Models\Task;
 use App\Models\InAppNotification;
+use App\Models\User;
 use App\Services\ApprovalWorkflowService;
 use App\Mail\RequisitionApprovalRequest;
 use Illuminate\Http\Request;
@@ -328,7 +329,10 @@ class RequisitionController extends Controller
                 ]),
             ]);
             
-            $validated = $request->validate([
+            // Check if submitting for approval to conditionally validate approver_email
+            $submitForApproval = $request->input('submit_action') === 'approval';
+            
+            $validationRules = [
                 'department' => 'required|string|max:150',
                 'job_title' => 'required|string|max:200',
                 'justification' => 'required|string',
@@ -344,13 +348,24 @@ class RequisitionController extends Controller
                 'location' => 'required|string|max:200',
                 'additional_notes' => 'nullable|string',
                 'attachments.*' => 'nullable|file|mimes:pdf,doc,docx|max:5120', // 5MB max (Task 68, 69)
-            ], [
+            ];
+            
+            // Require approver_email when submitting for approval
+            if ($submitForApproval) {
+                $validationRules['approver_email'] = 'required|email|max:255';
+            } else {
+                $validationRules['approver_email'] = 'nullable|email|max:255';
+            }
+            
+            $validated = $request->validate($validationRules, [
                 'budget_max.gte' => 'Maximum budget must be greater than or equal to minimum budget.',
                 'experience_max.gte' => 'Maximum experience must be greater than or equal to minimum experience.',
                 'headcount.min' => 'Headcount must be at least 1.',
                 'skills.required' => 'At least one skill is required.',
                 'attachments.*.max' => 'Each attachment must not exceed 5MB.',
                 'attachments.*.mimes' => 'Attachments must be PDF or DOC files.',
+                'approver_email.required' => 'Approver email is required when submitting for approval.',
+                'approver_email.email' => 'Please enter a valid email address for the approver.',
             ]);
 
             // Convert numeric strings to integers
@@ -546,19 +561,28 @@ class RequisitionController extends Controller
                     'user_agent' => $request->userAgent(),
                 ]);
 
-                // If submitting for approval, set up approval workflow
+                // If submitting for approval, find approver by email and create task
                 if ($submitForApproval) {
                     try {
-                        // Evaluate workflow
-                        $workflow = $this->workflowService->evaluateWorkflow($requisition);
+                        $approverEmail = $validated['approver_email'] ?? null;
                         
-                        // Get first approver
-                        $firstApproverId = $this->workflowService->getFirstApprover($requisition);
+                        if (!$approverEmail) {
+                            throw new \Exception('Approver email is required when submitting for approval');
+                        }
                         
-                        if ($firstApproverId) {
+                        // Find user by email who belongs to the tenant
+                        $tenantModel = tenant();
+                        $approver = User::where('email', $approverEmail)
+                            ->whereHas('tenants', function ($query) use ($tenantModel) {
+                                $query->where('tenant_id', $tenantModel->id);
+                            })
+                            ->first();
+                        
+                        if ($approver) {
+                            $firstApproverId = $approver->id;
                             // Update requisition with approver
                             $requisition->current_approver_id = $firstApproverId;
-                            $requisition->approval_workflow = $workflow;
+                            $requisition->approval_workflow = null; // No workflow, direct approval by email
                             $requisition->save();
                             
                             // Create approval record
@@ -601,16 +625,13 @@ class RequisitionController extends Controller
                             }
                             
                             Task::create([
-                                'title' => "Approve – {$requisition->job_title}",
-                                'description' => "Requisition '{$requisition->job_title}' requires your approval.",
+                                'user_id' => $firstApproverId,
                                 'task_type' => 'approval',
-                                'related_type' => 'requisition',
-                                'related_id' => $requisition->id,
-                                'assignee' => $firstApproverId,
-                                'status' => 'pending',
+                                'title' => "Approve Requisition: {$requisition->job_title}",
+                                'requisition_id' => $requisition->id,
+                                'status' => 'Pending',
                                 'link' => $approvalUrl,
                                 'created_by' => auth()->id(),
-                                'tenant_id' => tenant_id(),
                             ]);
                             
                             // Create in-app notification
@@ -641,18 +662,27 @@ class RequisitionController extends Controller
                             Log::info('Requisition submitted for approval during creation', [
                                 'requisition_id' => $requisition->id,
                                 'first_approver_id' => $firstApproverId,
+                                'approver_email' => $approverEmail,
                             ]);
                         } else {
-                            // No approver found, revert to Draft
+                            // Approver not found, revert to Draft
                             $requisition->approval_status = 'Draft';
                             $requisition->status = 'Draft';
                             $requisition->approval_level = 0;
                             $requisition->current_approver_id = null;
                             $requisition->save();
                             
-                            Log::warning('No approver found for requisition, saved as Draft', [
+                            Log::warning('Approver not found for requisition, saved as Draft', [
                                 'requisition_id' => $requisition->id,
+                                'approver_email' => $approverEmail,
                             ]);
+                            
+                            DB::rollBack();
+                            return response()->json([
+                                'success' => false,
+                                'message' => 'No employee found with the provided email address. Please verify the email and try again.',
+                                'errors' => ['approver_email' => ['No employee found with this email address in your organization.']]
+                            ], 422);
                         }
                     } catch (\Exception $e) {
                         Log::error('Failed to set up approval workflow during creation', [

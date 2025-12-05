@@ -571,6 +571,48 @@
                         </div>
                     </x-card>
 
+                    <!-- Approver Section -->
+                    <x-card>
+                        <x-slot name="header">
+                            <div class="flex items-center">
+                                <svg class="w-5 h-5 text-purple-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                <h2 class="text-lg font-semibold text-gray-900">Approval</h2>
+                            </div>
+                        </x-slot>
+
+                        <div class="space-y-4">
+                            <!-- Approver Email Field -->
+                            <div>
+                                <label for="approver_email" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Approver Email ID <span x-show="submitAction === 'approval'" class="text-red-500">*</span>
+                                    <button type="button" 
+                                            @click="showTooltip('approver_email')"
+                                            class="ml-1 text-gray-400 hover:text-gray-600"
+                                            title="Enter the email of the employee who will approve this requisition">
+                                        <svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                        </svg>
+                                    </button>
+                                </label>
+                                <input type="email"
+                                       id="approver_email"
+                                       name="approver_email"
+                                       x-model="formData.approver_email"
+                                       @input="updatePreview(); validateField('approver_email')"
+                                       :class="{'border-red-500': errors.approver_email}"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-900"
+                                       placeholder="approver@example.com"
+                                       :required="submitAction === 'approval'"
+                                       aria-label="Approver email address"
+                                       :aria-required="submitAction === 'approval'">
+                                <p x-show="errors.approver_email" x-text="errors.approver_email" class="mt-1 text-sm text-red-600"></p>
+                                <p class="mt-1 text-xs text-gray-500">A task will be created for the employee linked with this email address when you submit for approval.</p>
+                            </div>
+                        </div>
+                    </x-card>
+
                     <!-- Form Actions -->
                     <div class="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 border-t border-gray-200">
                         <div class="flex flex-wrap gap-2">
@@ -796,7 +838,8 @@
                 headcount: @json(old('headcount', 1)),
                 priority: @json(old('priority', 'Medium')),
                 location: @json(old('location', '')),
-                additional_notes: @json(old('additional_notes', ''))
+                additional_notes: @json(old('additional_notes', '')),
+                approver_email: @json(old('approver_email', ''))
             },
             
             // UI State
@@ -908,6 +951,19 @@
                 // Conditional validation
                 if (this.showDurationField && !this.formData.duration) {
                     this.errors.duration = 'Duration is required for this contract type';
+                }
+                
+                // Require approver email when submitting for approval
+                if (this.submitAction === 'approval') {
+                    if (!this.formData.approver_email || this.formData.approver_email.trim() === '') {
+                        this.errors.approver_email = 'Approver email is required when submitting for approval';
+                    } else {
+                        // Basic email format validation
+                        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                        if (!emailRegex.test(this.formData.approver_email.trim())) {
+                            this.errors.approver_email = 'Please enter a valid email address';
+                        }
+                    }
                 }
                 
                 // Range validations
@@ -1320,7 +1376,8 @@
                         headcount: 1,
                         priority: 'Medium',
                         location: '',
-                        additional_notes: ''
+                        additional_notes: '',
+                        approver_email: ''
                     };
                     this.errors = {};
                     this.uploadedFiles = [];

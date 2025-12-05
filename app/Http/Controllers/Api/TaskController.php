@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class TaskController extends Controller
 {
@@ -29,7 +30,14 @@ class TaskController extends Controller
             }
 
             $query = Task::where('user_id', $user->id)
-                ->with(['requisition', 'creator', 'assignee']);
+                ->with([
+                    'requisition' => function ($q) {
+                        // Requisition is tenant-scoped, so this will automatically filter by tenant
+                        // If requisition doesn't exist or belongs to different tenant, it will be null
+                    },
+                    'creator',
+                    'assignee'
+                ]);
 
             // Filter by status
             if ($request->filled('status')) {
@@ -49,25 +57,45 @@ class TaskController extends Controller
                 $search = $request->input('search');
                 $query->where(function ($q) use ($search) {
                     $q->where('title', 'like', "%{$search}%")
+                        ->orWhere('requisition_id', 'like', "%{$search}%")
                         ->orWhereHas('requisition', function ($rq) use ($search) {
+                            // Requisition is tenant-scoped, so this will only search within current tenant
                             $rq->where('id', 'like', "%{$search}%");
                         });
                 });
             }
 
             // Sort
-            $sortBy = $request->input('sort_by', 'due_at');
+            $sortBy = $request->input('sort_by', 'created_at'); // Default to created_at instead of due_at
             $sortOrder = strtolower($request->input('sort_order', 'asc'));
             if (!in_array($sortOrder, ['asc', 'desc'], true)) {
                 $sortOrder = 'asc';
             }
 
-            if ($sortBy === 'due_at') {
-                $query->orderBy('due_at', $sortOrder);
+            // Check if due_at column exists (cache check per request)
+            static $hasDueAtColumn = null;
+            if ($hasDueAtColumn === null) {
+                $hasDueAtColumn = Schema::hasColumn('tasks', 'due_at');
+            }
+
+            if ($sortBy === 'due_at' && $hasDueAtColumn) {
+                // Handle null values - put nulls last
+                $query->orderByRaw('due_at IS NULL')
+                      ->orderBy('due_at', $sortOrder);
+            } elseif ($sortBy === 'due_at' && !$hasDueAtColumn) {
+                // Column doesn't exist, fallback to created_at
+                Log::warning('due_at column not found in tasks table, falling back to created_at');
+                $query->orderBy('created_at', $sortOrder);
             } elseif ($sortBy === 'created_at') {
                 $query->orderBy('created_at', $sortOrder);
             } else {
-                $query->orderBy('status')->orderBy('due_at', 'asc');
+                $query->orderBy('status');
+                if ($hasDueAtColumn) {
+                    $query->orderByRaw('due_at IS NULL')
+                          ->orderBy('due_at', 'asc');
+                } else {
+                    $query->orderBy('created_at', 'desc');
+                }
             }
 
             // Pagination
@@ -94,11 +122,13 @@ class TaskController extends Controller
                 'user_id' => Auth::id(),
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
             ]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to fetch tasks.',
+                'message' => 'Failed to fetch tasks: ' . $e->getMessage(),
             ], 500);
         }
     }

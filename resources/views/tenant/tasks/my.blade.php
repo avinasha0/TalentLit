@@ -72,8 +72,8 @@
                         <select name="sort_by" 
                                 id="sort_by"
                                 class="w-full px-3 py-2 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black">
-                            <option value="due_at">Due Date</option>
                             <option value="created_at">Created Date</option>
+                            <option value="due_at">Due Date</option>
                         </select>
                     </div>
                 </form>
@@ -187,7 +187,7 @@
             const status = document.getElementById('status').value;
             const taskType = document.getElementById('task_type').value;
             const search = document.getElementById('search').value;
-            const sortBy = document.getElementById('sort_by').value;
+            const sortBy = document.getElementById('sort_by').value || 'created_at';
 
             const params = new URLSearchParams({
                 page: page,
@@ -206,18 +206,25 @@
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                 }
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(err => {
+                        throw new Error(err.message || `HTTP error! status: ${response.status}`);
+                    });
+                }
+                return response.json();
+            })
             .then(data => {
                 if (data.success) {
                     renderTasks(data.data);
                     renderPagination(data.pagination);
                 } else {
-                    showError('Failed to load tasks');
+                    showError(data.message || 'Failed to load tasks');
                 }
             })
             .catch(error => {
-                console.error('Error:', error);
-                showError('Failed to load tasks');
+                console.error('Error loading tasks:', error);
+                showError('Failed to load tasks: ' + error.message);
             });
         }
 

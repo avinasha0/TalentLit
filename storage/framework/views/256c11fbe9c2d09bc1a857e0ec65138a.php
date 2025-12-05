@@ -30,6 +30,7 @@
         <div class="space-y-2">
             <a href="<?php echo e(tenantRoute('tenant.dashboard', $tenant->slug ?? tenant()->slug)); ?>" class="block py-2 text-gray-700 hover:text-blue-600">Dashboard</a>
             <a href="<?php echo e(tenantRoute('tenant.organization.index', $tenant->slug ?? tenant()->slug)); ?>" class="block py-2 text-gray-700 hover:text-blue-600">Organisation</a>
+            <a href="<?php echo e(tenantRoute('tenant.tasks.my', $tenant->slug ?? tenant()->slug)); ?>" class="block py-2 text-gray-700 hover:text-blue-600">My Tasks</a>
             
             
             <div class="mt-4">

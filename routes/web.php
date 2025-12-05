@@ -759,8 +759,9 @@ if (app()->environment('local')) {
 // Having both ensures compatibility with both path-based and subdomain-based tenant routing
 Route::middleware(['capture.tenant', 'tenant', 'auth', 'custom.permission:create_jobs'])->group(function () {
     Route::prefix('{tenant}/api/requisitions')->group(function () {
-        Route::get('/job-titles', [RequisitionController::class, 'getJobTitleSuggestions'])->name('tenant.api.requisitions.job-titles');
-        Route::get('/skills', [RequisitionController::class, 'getSkillSuggestions'])->name('tenant.api.requisitions.skills');
+            Route::get('/job-titles', [RequisitionController::class, 'getJobTitleSuggestions'])->name('tenant.api.requisitions.job-titles');
+            Route::get('/skills', [RequisitionController::class, 'getSkillSuggestions'])->name('tenant.api.requisitions.skills');
+            Route::get('/employees', [RequisitionController::class, 'getEmployeeSuggestions'])->name('tenant.api.requisitions.employees');
         Route::post('/draft', [RequisitionController::class, 'saveDraft'])->name('tenant.api.requisitions.draft.save');
         Route::get('/draft', [RequisitionController::class, 'loadDraft'])->name('tenant.api.requisitions.draft.load');
         Route::delete('/draft', [RequisitionController::class, 'deleteDraft'])->name('tenant.api.requisitions.draft.delete');
@@ -928,6 +929,21 @@ Route::domain('{subdomain}.' . $appDomain)->middleware(['subdomain.redirect', 's
         Route::get('/organization', [OrganizationController::class, 'index'])->name('subdomain.organization.index');
     });
 
+    // Tasks Routes
+    Route::middleware(['custom.permission:view_jobs'])->group(function () {
+        // Web routes for Tasks UI
+        Route::get('/tasks/my', [\App\Http\Controllers\Tenant\TaskController::class, 'index'])->name('subdomain.tasks.my');
+        
+        // API routes for Tasks
+        Route::prefix('api/tasks')->group(function () {
+            Route::get('/my', [\App\Http\Controllers\Api\TaskController::class, 'myTasks'])->name('subdomain.api.tasks.my');
+            Route::get('/{id}', [\App\Http\Controllers\Api\TaskController::class, 'show'])->name('subdomain.api.tasks.show');
+            Route::post('/{id}/start', [\App\Http\Controllers\Api\TaskController::class, 'start'])->name('subdomain.api.tasks.start');
+            Route::post('/{id}/complete', [\App\Http\Controllers\Api\TaskController::class, 'complete'])->name('subdomain.api.tasks.complete');
+            Route::post('/{id}/reassign', [\App\Http\Controllers\Api\TaskController::class, 'reassign'])->name('subdomain.api.tasks.reassign');
+        });
+    });
+
     // Requisition Management Routes
     // IMPORTANT: Specific routes (create, pending, approved, etc.) must come BEFORE generic {id} route
     Route::middleware(['custom.permission:create_jobs'])->group(function () {
@@ -936,8 +952,9 @@ Route::domain('{subdomain}.' . $appDomain)->middleware(['subdomain.redirect', 's
         
         // API routes for requisition creation features (Tasks 49-55)
         Route::prefix('api/requisitions')->group(function () {
-            Route::get('/job-titles', [RequisitionController::class, 'getJobTitleSuggestions'])->name('subdomain.api.requisitions.job-titles');
-            Route::get('/skills', [RequisitionController::class, 'getSkillSuggestions'])->name('subdomain.api.requisitions.skills');
+                            Route::get('/job-titles', [RequisitionController::class, 'getJobTitleSuggestions'])->name('subdomain.api.requisitions.job-titles');
+                            Route::get('/skills', [RequisitionController::class, 'getSkillSuggestions'])->name('subdomain.api.requisitions.skills');
+                            Route::get('/employees', [RequisitionController::class, 'getEmployeeSuggestions'])->name('subdomain.api.requisitions.employees');
             Route::post('/draft', [RequisitionController::class, 'saveDraft'])->name('subdomain.api.requisitions.draft.save');
             Route::get('/draft', [RequisitionController::class, 'loadDraft'])->name('subdomain.api.requisitions.draft.load');
             Route::delete('/draft', [RequisitionController::class, 'deleteDraft'])->name('subdomain.api.requisitions.draft.delete');

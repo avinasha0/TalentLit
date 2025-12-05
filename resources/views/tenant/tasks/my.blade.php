@@ -1,6 +1,10 @@
 @php
     $tenant = tenant();
     $tenantSlug = $tenant->slug;
+    $currentRoute = request()->route() ? request()->route()->getName() : '';
+    $isSubdomain = str_starts_with($currentRoute, 'subdomain.');
+    $apiBasePath = $isSubdomain ? '/api/tasks' : "/{$tenantSlug}/api/tasks";
+    $requisitionBasePath = $isSubdomain ? '/requisitions' : "/{$tenantSlug}/requisitions";
     $breadcrumbs = [
         ['label' => 'Dashboard', 'url' => tenantRoute('tenant.dashboard', $tenantSlug)],
         ['label' => 'Tasks', 'url' => null],
@@ -150,6 +154,8 @@
     @push('scripts')
     <script>
         const tenantSlug = '{{ $tenantSlug }}';
+        const apiBasePath = '{{ $apiBasePath }}';
+        const requisitionBasePath = '{{ $requisitionBasePath }}';
         let currentPage = 1;
         let currentTaskId = null;
 
@@ -194,7 +200,7 @@
             if (sortBy) params.append('sort_by', sortBy);
             params.append('sort_order', 'asc');
 
-            fetch(`/${tenantSlug}/api/tasks/my?${params.toString()}`, {
+            fetch(`${apiBasePath}/my?${params.toString()}`, {
                 headers: {
                     'Accept': 'application/json',
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
@@ -246,7 +252,7 @@
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="text-sm text-gray-500">
-                                ${task.requisition_id ? `<a href="/${tenantSlug}/requisitions/${task.requisition_id}" class="text-blue-600 hover:underline" onclick="event.stopPropagation()">Req #${task.requisition_id}</a>` : 'N/A'}
+                                ${task.requisition_id ? `<a href="${requisitionBasePath}/${task.requisition_id}" class="text-blue-600 hover:underline" onclick="event.stopPropagation()">Req #${task.requisition_id}</a>` : 'N/A'}
                             </div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
@@ -321,7 +327,7 @@
 
         function openTaskModal(taskId) {
             currentTaskId = taskId;
-            fetch(`/${tenantSlug}/api/tasks/${taskId}`, {
+            fetch(`${apiBasePath}/${taskId}`, {
                 headers: {
                     'Accept': 'application/json',
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
@@ -371,7 +377,7 @@
                                 <div><span class="font-medium">Job Title:</span> ${escapeHtml(task.requisition.job_title)}</div>
                                 <div><span class="font-medium">Department:</span> ${escapeHtml(task.requisition.department || 'N/A')}</div>
                                 <div><span class="font-medium">Status:</span> ${escapeHtml(task.requisition.status || 'N/A')}</div>
-                                <a href="/${tenantSlug}/requisitions/${task.requisition_id}" class="text-blue-600 hover:underline">View Requisition →</a>
+                                <a href="${requisitionBasePath}/${task.requisition_id}" class="text-blue-600 hover:underline">View Requisition →</a>
                             </div>
                         ` : '<p class="text-sm text-gray-500">No related requisition</p>'}
                     </div>
@@ -403,7 +409,7 @@
 
         function openApproval() {
             if (currentTaskId) {
-                fetch(`/${tenantSlug}/api/tasks/${currentTaskId}`, {
+                fetch(`${apiBasePath}/${currentTaskId}`, {
                     headers: {
                         'Accept': 'application/json',
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
@@ -426,7 +432,7 @@
                 return;
             }
 
-            fetch(`/${tenantSlug}/api/tasks/${id}/complete`, {
+            fetch(`${apiBasePath}/${id}/complete`, {
                 method: 'POST',
                 headers: {
                     'Accept': 'application/json',

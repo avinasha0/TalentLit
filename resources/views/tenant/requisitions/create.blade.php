@@ -584,7 +584,7 @@
 
                         <div class="space-y-4">
                             <!-- Approver Email Field -->
-                            <div>
+                            <div class="relative">
                                 <label for="approver_email" class="block text-sm font-medium text-gray-700 mb-1">
                                     Approver Email ID <span x-show="submitAction === 'approval'" class="text-red-500">*</span>
                                     <button type="button" 
@@ -596,17 +596,45 @@
                                         </svg>
                                     </button>
                                 </label>
-                                <input type="email"
+                                <input type="text"
                                        id="approver_email"
                                        name="approver_email"
                                        x-model="formData.approver_email"
-                                       @input="updatePreview(); validateField('approver_email')"
+                                       @input.debounce.300ms="autocompleteEmployee($event.target.value); updatePreview(); validateField('approver_email')"
+                                       @focus="showEmployeeSuggestions = true"
+                                       @blur="setTimeout(() => showEmployeeSuggestions = false, 200)"
+                                       @keydown.arrow-down.prevent="navigateEmployeeSuggestions('down')"
+                                       @keydown.arrow-up.prevent="navigateEmployeeSuggestions('up')"
+                                       @keydown.enter.prevent="selectEmployeeSuggestion()"
                                        :class="{'border-red-500': errors.approver_email}"
                                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-900"
-                                       placeholder="approver@example.com"
+                                       placeholder="Start typing employee name or email..."
                                        :required="submitAction === 'approval'"
+                                       autocomplete="off"
                                        aria-label="Approver email address"
-                                       :aria-required="submitAction === 'approval'">
+                                       :aria-required="submitAction === 'approval'"
+                                       aria-autocomplete="list"
+                                       :aria-expanded="showEmployeeSuggestions"
+                                       aria-controls="employee-suggestions">
+                                
+                                <!-- Employee Suggestions Dropdown -->
+                                <div x-show="showEmployeeSuggestions && employeeSuggestions.length > 0"
+                                     x-cloak
+                                     id="employee-suggestions"
+                                     class="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto"
+                                     role="listbox">
+                                    <template x-for="(suggestion, index) in employeeSuggestions" :key="index">
+                                        <div @click="selectEmployeeSuggestion(suggestion)"
+                                             @mouseenter="selectedEmployeeIndex = index"
+                                             class="px-4 py-2 hover:bg-purple-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+                                             :class="{'bg-purple-50': selectedEmployeeIndex === index}"
+                                             role="option">
+                                            <div class="text-sm font-medium text-gray-900" x-text="suggestion.name"></div>
+                                            <div class="text-xs text-gray-500" x-text="suggestion.email"></div>
+                                        </div>
+                                    </template>
+                                </div>
+                                
                                 <p x-show="errors.approver_email" x-text="errors.approver_email" class="mt-1 text-sm text-red-600"></p>
                                 <p class="mt-1 text-xs text-gray-500">A task will be created for the employee linked with this email address when you submit for approval.</p>
                             </div>
@@ -847,6 +875,9 @@
             showDurationField: false,
             showJobTitleSuggestions: false,
             showSkillSuggestions: false,
+            showEmployeeSuggestions: false,
+            employeeSuggestions: [],
+            selectedEmployeeIndex: -1,
             jobTitleSuggestions: [],
             skillSuggestions: [],
             selectedJobTitleIndex: -1,
@@ -1094,6 +1125,72 @@
                 this.addSkill(suggestion);
                 this.skillInput = '';
                 this.skillSuggestions = [];
+            },
+            
+            // Employee Autocomplete Methods
+            async autocompleteEmployee(query) {
+                if (!query || query.length < 1) {
+                    this.employeeSuggestions = [];
+                    return;
+                }
+                
+                try {
+                    @php
+                        $currentRoute = request()->route() ? request()->route()->getName() : '';
+                        $isSubdomain = str_starts_with($currentRoute, 'subdomain.');
+                        $apiBasePath = $isSubdomain ? '/api/requisitions' : "/{$tenantSlug}/api/requisitions";
+                    @endphp
+                    const apiBasePath = '{{ $apiBasePath }}';
+                    
+                    const response = await fetch(`${apiBasePath}/employees?q=${encodeURIComponent(query)}`, {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                            'Accept': 'application/json'
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        this.employeeSuggestions = data.suggestions || [];
+                    }
+                } catch (error) {
+                    console.error('Employee autocomplete error:', error);
+                    this.employeeSuggestions = [];
+                }
+            },
+            
+            navigateEmployeeSuggestions(direction) {
+                if (this.employeeSuggestions.length === 0) return;
+                
+                if (direction === 'down') {
+                    this.selectedEmployeeIndex = (this.selectedEmployeeIndex + 1) % this.employeeSuggestions.length;
+                } else if (direction === 'up') {
+                    this.selectedEmployeeIndex = this.selectedEmployeeIndex <= 0 
+                        ? this.employeeSuggestions.length - 1 
+                        : this.selectedEmployeeIndex - 1;
+                }
+                
+                // Scroll into view
+                const suggestionsEl = document.getElementById('employee-suggestions');
+                if (suggestionsEl) {
+                    const selectedEl = suggestionsEl.children[this.selectedEmployeeIndex];
+                    if (selectedEl) {
+                        selectedEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                    }
+                }
+            },
+            
+            selectEmployeeSuggestion(suggestion = null) {
+                const selected = suggestion || (this.selectedEmployeeIndex >= 0 && this.employeeSuggestions[this.selectedEmployeeIndex]);
+                if (selected) {
+                    this.formData.approver_email = selected.email;
+                    this.employeeSuggestions = [];
+                    this.showEmployeeSuggestions = false;
+                    this.selectedEmployeeIndex = -1;
+                    this.validateField('approver_email');
+                    this.updatePreview();
+                }
             },
             
             addSkill(skill = null) {

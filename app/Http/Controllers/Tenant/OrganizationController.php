@@ -91,6 +91,113 @@ class OrganizationController extends Controller
             return $user->tenant_role ?? 'No Role';
         });
         
+        // Build hierarchical tree structure
+        // Hierarchy: CEO -> Line Manager -> HR Manager -> HR Recruiter
+        $roleHierarchy = [
+            'CEO' => 1,
+            'Line Manager' => 2,
+            'HR Manager' => 3,
+            'HR Recruiter' => 4,
+        ];
+        
+        // Map old roles to new roles for backward compatibility
+        $roleMapping = [
+            'Owner' => 'CEO',
+            'DepartmentHead' => 'Line Manager',
+            'HRManager' => 'HR Manager',
+            'Recruiter' => 'HR Recruiter',
+        ];
+        
+        // Normalize user roles to new structure
+        $users->each(function ($user) use ($roleMapping) {
+            $currentRole = $user->tenant_role ?? '';
+            if (isset($roleMapping[$currentRole])) {
+                $user->display_role = $roleMapping[$currentRole];
+            } else {
+                $user->display_role = $currentRole;
+            }
+        });
+        
+        // Helper function to build tree with parent info
+        $buildNode = function($user, $role, $level, $parent = null) use (&$buildNode, $users, $roleHierarchy, $roleMapping) {
+            $node = [
+                'user' => $user,
+                'role' => $role,
+                'level' => $level,
+                'parent' => $parent,
+                'parentName' => $parent ? $parent['user']->name : null,
+                'parentRole' => $parent ? $parent['role'] : null,
+                'children' => []
+            ];
+            
+            // Determine next level role
+            $nextRole = null;
+            if ($role === 'CEO' || $role === 'Owner') {
+                $nextRole = 'Line Manager';
+            } elseif ($role === 'Line Manager' || $role === 'DepartmentHead') {
+                $nextRole = 'HR Manager';
+            } elseif ($role === 'HR Manager' || $role === 'HRManager') {
+                $nextRole = 'HR Recruiter';
+            }
+            
+            // Get children for this node - check both new and old role names
+            if ($nextRole) {
+                $children = $users->filter(function ($u) use ($nextRole, $roleMapping) {
+                    $userRole = $u->tenant_role ?? '';
+                    $displayRole = $u->display_role ?? $userRole;
+                    
+                    // Check if user matches next role (either new name or mapped old name)
+                    return $displayRole === $nextRole || 
+                           (isset($roleMapping[$userRole]) && $roleMapping[$userRole] === $nextRole);
+                });
+                
+                foreach ($children as $child) {
+                    $childDisplayRole = $child->display_role ?? ($child->tenant_role ?? '');
+                    $node['children'][] = $buildNode($child, $childDisplayRole, $level + 1, $node);
+                }
+            }
+            
+            return $node;
+        };
+        
+        // Build tree structure
+        $orgTree = [];
+        
+        // Get CEO/Owner users (top level)
+        $ceos = $users->filter(function ($user) {
+            $role = $user->tenant_role ?? '';
+            $displayRole = $user->display_role ?? $role;
+            return $displayRole === 'CEO' || $role === 'Owner';
+        });
+        
+        if ($ceos->count() > 0) {
+            foreach ($ceos as $ceo) {
+                $ceoDisplayRole = $ceo->display_role ?? ($ceo->tenant_role ?? '');
+                $orgTree[] = $buildNode($ceo, $ceoDisplayRole === 'Owner' ? 'CEO' : $ceoDisplayRole, 1, null);
+            }
+        }
+        
+        // If no CEO/Owner found, show other roles at top level
+        if (empty($orgTree)) {
+            // Try to show any available roles in hierarchy order
+            foreach ($roleHierarchy as $roleName => $level) {
+                $roleUsers = $users->filter(function ($user) use ($roleName, $roleMapping) {
+                    $userRole = $user->tenant_role ?? '';
+                    $displayRole = $user->display_role ?? $userRole;
+                    return $displayRole === $roleName || 
+                           (isset($roleMapping[$userRole]) && $roleMapping[$userRole] === $roleName);
+                });
+                
+                if ($roleUsers->count() > 0) {
+                    foreach ($roleUsers as $user) {
+                        $userDisplayRole = $user->display_role ?? ($user->tenant_role ?? '');
+                        $orgTree[] = $buildNode($user, $userDisplayRole, $level, null);
+                    }
+                    break; // Show only the highest level role found
+                }
+            }
+        }
+        
         return view('tenant.organization.index', compact(
             'tenantModel',
             'departments',
@@ -98,6 +205,7 @@ class OrganizationController extends Controller
             'users',
             'usersByRole',
             'stats',
+            'orgTree',
             'tenant'
         ));
     }

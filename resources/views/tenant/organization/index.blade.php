@@ -18,6 +18,54 @@
             </p>
         </div>
 
+        <!-- Organizational Tree Structure -->
+        @if(!empty($orgTree))
+        <x-card>
+            <x-slot name="header">
+                <h3 class="text-lg font-medium text-black">Organizational Hierarchy</h3>
+                <p class="mt-1 text-sm text-gray-600">Tree structure showing reporting hierarchy: CEO → Line Manager → HR Manager → HR Recruiter</p>
+            </x-slot>
+
+            <div class="py-4 overflow-x-auto max-h-[calc(100vh-300px)]">
+                <style>
+                    .org-tree-container {
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        min-width: max-content;
+                    }
+                    .org-tree-node {
+                        position: relative;
+                    }
+                    .org-tree-connector {
+                        position: absolute;
+                        background-color: #6b7280;
+                    }
+                    .org-tree-connector-vertical {
+                        width: 2px;
+                        height: 16px;
+                    }
+                    .org-tree-connector-horizontal {
+                        height: 2px;
+                        width: 100%;
+                    }
+                    /* Level indicators for better visibility */
+                    .org-level-1 { border-width: 3px; }
+                    .org-level-2 { border-width: 2px; }
+                    .org-level-3 { border-width: 2px; }
+                    .org-level-4 { border-width: 2px; }
+                </style>
+                <div class="org-tree-container">
+                    @foreach($orgTree as $rootNode)
+                        <div class="w-full flex justify-center">
+                            @include('tenant.organization.partials.tree-node', ['node' => $rootNode, 'isRoot' => true])
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        </x-card>
+        @endif
+
         <!-- Statistics Cards -->
         <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
             <!-- Total Departments -->

@@ -974,6 +974,60 @@ class RequisitionController extends Controller
     }
 
     /**
+     * Get employee email suggestions for autocomplete
+     * Searches employees (users) by email or name starting with the query
+     */
+    public function getEmployeeSuggestions(Request $request, string $tenant = null)
+    {
+        try {
+            // Permission check
+            if (!auth()->check()) {
+                return response()->json(['suggestions' => []], 401);
+            }
+
+            $query = $request->input('q', '');
+            
+            if (strlen($query) < 1) {
+                return response()->json(['suggestions' => []]);
+            }
+
+            $tenantModel = tenant();
+            if (!$tenantModel) {
+                return response()->json(['suggestions' => []], 400);
+            }
+
+            // Search users by email or name starting with the query
+            $users = \App\Models\User::whereHas('tenants', function ($q) use ($tenantModel) {
+                $q->where('tenant_id', $tenantModel->id);
+            })
+            ->where(function ($q) use ($query) {
+                $q->where('email', 'like', "{$query}%")
+                  ->orWhere('name', 'like', "{$query}%");
+            })
+            ->select('id', 'name', 'email')
+            ->limit(10)
+            ->get();
+
+            // Format suggestions as array of objects with email and name
+            $suggestions = $users->map(function ($user) {
+                return [
+                    'email' => $user->email,
+                    'name' => $user->name,
+                    'display' => "{$user->name} ({$user->email})"
+                ];
+            })->toArray();
+
+            return response()->json(['suggestions' => $suggestions]);
+        } catch (\Exception $e) {
+            Log::error('Employee autocomplete error', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            return response()->json(['suggestions' => []], 500);
+        }
+    }
+
+    /**
      * Save draft requisition (Tasks 38-42)
      * Security: Validate token/session before saving (Task 80)
      * Idempotent: Updates existing draft or creates new one

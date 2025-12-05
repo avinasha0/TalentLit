@@ -19,6 +19,7 @@ class Task extends Model
         'due_at',
         'link',
         'created_by',
+        'tenant_id',
     ];
 
     protected $casts = [

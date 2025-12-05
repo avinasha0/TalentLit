@@ -624,7 +624,7 @@ class RequisitionController extends Controller
                                 $approvalUrl = url("/requisitions/{$requisition->id}/approval");
                             }
                             
-                            // Check if due_at column exists before setting it
+                            // Check if due_at column exists (it may not exist in some databases)
                             $hasDueAtColumn = Schema::hasColumn('tasks', 'due_at');
                             
                             $taskData = [
@@ -636,6 +636,12 @@ class RequisitionController extends Controller
                                 'link' => $approvalUrl,
                                 'created_by' => auth()->id(),
                             ];
+                            
+                            // Add tenant_id if available
+                            $currentTenantId = tenant_id();
+                            if ($currentTenantId) {
+                                $taskData['tenant_id'] = $currentTenantId;
+                            }
                             
                             // Only add due_at if column exists
                             if ($hasDueAtColumn) {
@@ -658,10 +664,12 @@ class RequisitionController extends Controller
                                 'user_id' => $firstApproverId,
                                 'type' => 'requisition_approval_request',
                                 'title' => "New Requisition Requires Approval",
-                                'body' => "Requisition '{$requisition->job_title}' requires your approval.",
+                                'message' => "Requisition '{$requisition->job_title}' requires your approval.",
                                 'link' => $approvalUrl,
-                                'notifiable_type' => Requisition::class,
-                                'notifiable_id' => $requisition->id,
+                                'data' => [
+                                    'requisition_id' => $requisition->id,
+                                ],
+                                'read' => false,
                             ]);
                             
                             // Send email notification
@@ -737,6 +745,33 @@ class RequisitionController extends Controller
                     'user_id' => auth()->id(),
                     'tenant_id' => tenant_id(),
                 ]);
+                
+                // Verify task was created after transaction commit
+                if ($submitForApproval && $requisition->current_approver_id) {
+                    $createdTask = Task::where('requisition_id', $requisition->id)
+                        ->where('user_id', $requisition->current_approver_id)
+                        ->first();
+                    
+                    if ($createdTask) {
+                        Log::info('Task verified after commit', [
+                            'task_id' => $createdTask->id,
+                            'task_user_id' => $createdTask->user_id,
+                            'requisition_id' => $requisition->id,
+                            'task_type' => $createdTask->task_type,
+                            'task_status' => $createdTask->status,
+                            'expected_approver_id' => $requisition->current_approver_id,
+                        ]);
+                    } else {
+                        // Check all tasks for this requisition
+                        $allTasks = Task::where('requisition_id', $requisition->id)->get(['id', 'user_id', 'task_type', 'status', 'created_at']);
+                        Log::error('Task NOT FOUND after commit - task creation may have failed', [
+                            'requisition_id' => $requisition->id,
+                            'expected_approver_id' => $requisition->current_approver_id,
+                            'all_tasks_for_requisition' => $allTasks->toArray(),
+                            'total_tasks_found' => $allTasks->count(),
+                        ]);
+                    }
+                }
 
                 $tenantModel = tenant();
                 $tenantSlug = $tenantModel ? $tenantModel->slug : $tenant;

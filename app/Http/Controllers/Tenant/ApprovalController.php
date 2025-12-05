@@ -938,8 +938,8 @@ class ApprovalController extends Controller
             $tenant = tenant();
             $tenantSlug = $tenant ? $tenant->slug : 'tenant';
             
-            // Check if due_at column exists before setting it
-            $hasDueAtColumn = \Schema::hasColumn('tasks', 'due_at');
+            // Check if due_at column exists (it may not exist in some databases)
+            $hasDueAtColumn = Schema::hasColumn('tasks', 'due_at');
             
             $taskData = [
                 'user_id' => $approverId,
@@ -950,6 +950,12 @@ class ApprovalController extends Controller
                 'link' => "/{$tenantSlug}/requisitions/{$requisition->id}/approval",
                 'created_by' => Auth::id(),
             ];
+            
+            // Add tenant_id if available
+            $currentTenantId = tenant_id();
+            if ($currentTenantId) {
+                $taskData['tenant_id'] = $currentTenantId;
+            }
             
             // Only add due_at if column exists
             if ($hasDueAtColumn) {
@@ -990,16 +996,31 @@ class ApprovalController extends Controller
             $tenant = tenant();
             $tenantSlug = $tenant ? $tenant->slug : 'tenant';
             
-            $task = Task::create([
+            // Check if due_at column exists (it may not exist in some databases)
+            $hasDueAtColumn = Schema::hasColumn('tasks', 'due_at');
+            
+            $taskData = [
                 'user_id' => $requisition->created_by,
                 'task_type' => 'Requisition Edit Needed',
                 'title' => "Update Requisition – {$requisition->job_title}",
                 'requisition_id' => $requisition->id,
                 'status' => 'Pending',
-                'due_at' => now()->addDays(3),
                 'link' => "/{$tenantSlug}/requisitions/{$requisition->id}/edit",
                 'created_by' => Auth::id(),
-            ]);
+            ];
+            
+            // Add tenant_id if available
+            $currentTenantId = tenant_id();
+            if ($currentTenantId) {
+                $taskData['tenant_id'] = $currentTenantId;
+            }
+            
+            // Only add due_at if column exists
+            if ($hasDueAtColumn) {
+                $taskData['due_at'] = now()->addDays(3);
+            }
+            
+            $task = Task::create($taskData);
 
             // Send notification
             $this->sendTaskCreatedNotification($task);

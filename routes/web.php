@@ -24,6 +24,7 @@ use App\Http\Controllers\Tenant\JobQuestionsController;
 use App\Http\Controllers\Tenant\JobStageController;
 use App\Http\Controllers\Tenant\PipelineController;
 use App\Http\Controllers\Tenant\EmployeeOnboardingController;
+use App\Http\Controllers\Tenant\OrganizationController;
 use App\Models\Application;
 use App\Models\Candidate;
 use Illuminate\Http\Request;
@@ -422,6 +423,11 @@ $tenantRoutes = function () {
     Route::middleware('custom.permission:view_dashboard')->group(function () {
         Route::get('/{tenant}/dashboard', [DashboardController::class, 'index'])->name('tenant.dashboard');
         Route::get('/{tenant}/dashboard.json', [DashboardController::class, 'json'])->name('tenant.dashboard.json');
+    });
+
+    // Organization Structure - accessible by all authenticated users with view dashboard permission
+    Route::middleware('custom.permission:view_dashboard')->group(function () {
+        Route::get('/{tenant}/organization', [OrganizationController::class, 'index'])->name('tenant.organization.index');
     });
 
     // Recruiting - accessible by all authenticated users with view dashboard permission
@@ -915,6 +921,11 @@ Route::domain('{subdomain}.' . $appDomain)->middleware(['subdomain.redirect', 's
     // Recruiting
     Route::middleware('custom.permission:view_dashboard')->group(function () {
         Route::get('/recruiting', [RecruitingController::class, 'index'])->name('subdomain.recruiting.index');
+    });
+
+    // Organization Structure - accessible by all authenticated users with view dashboard permission
+    Route::middleware('custom.permission:view_dashboard')->group(function () {
+        Route::get('/organization', [OrganizationController::class, 'index'])->name('subdomain.organization.index');
     });
 
     // Requisition Management Routes

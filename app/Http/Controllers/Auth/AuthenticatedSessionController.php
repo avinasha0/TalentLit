@@ -40,12 +40,17 @@ class AuthenticatedSessionController extends Controller
             $tenant = Tenant::where('slug', $lastTenantSlug)->first();
             if ($tenant && $user->tenants->contains($tenant)) {
                 return redirect($tenant->getDashboardUrl());
+            } else {
+                // User doesn't belong to the last tenant, clear it from session
+                $request->session()->forget('last_tenant_slug');
             }
         }
         
         // Try to find a tenant that the user has access to
         $userTenant = $user->tenants->first();
         if ($userTenant) {
+            // Set the correct tenant in session for future use
+            $request->session()->put('last_tenant_slug', $userTenant->slug);
             return redirect($userTenant->getDashboardUrl());
         }
         

@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Schema;
 
 class ApprovalController extends Controller
 {
@@ -937,16 +938,25 @@ class ApprovalController extends Controller
             $tenant = tenant();
             $tenantSlug = $tenant ? $tenant->slug : 'tenant';
             
-            $task = Task::create([
+            // Check if due_at column exists before setting it
+            $hasDueAtColumn = \Schema::hasColumn('tasks', 'due_at');
+            
+            $taskData = [
                 'user_id' => $approverId,
                 'task_type' => 'Requisition Approval',
                 'title' => "Approve Requisition – {$requisition->job_title}",
                 'requisition_id' => $requisition->id,
                 'status' => 'Pending',
-                'due_at' => now()->addDays(2), // Configurable: +2 days
                 'link' => "/{$tenantSlug}/requisitions/{$requisition->id}/approval",
                 'created_by' => Auth::id(),
-            ]);
+            ];
+            
+            // Only add due_at if column exists
+            if ($hasDueAtColumn) {
+                $taskData['due_at'] = now()->addDays(2);
+            }
+            
+            $task = Task::create($taskData);
 
             // Send notification
             $this->sendTaskCreatedNotification($task);
@@ -955,6 +965,9 @@ class ApprovalController extends Controller
                 'task_id' => $task->id,
                 'requisition_id' => $requisition->id,
                 'approver_id' => $approverId,
+                'task_user_id' => $task->user_id,
+                'task_type' => $task->task_type,
+                'has_due_at' => $hasDueAtColumn,
             ]);
         } catch (\Exception $e) {
             Log::error('Failed to create approval task', [
@@ -962,6 +975,8 @@ class ApprovalController extends Controller
                 'approver_id' => $approverId,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
             ]);
         }
     }

@@ -26,7 +26,8 @@ class TaskPolicy
         }
 
         // HR Admin or SuperAdmin can view
-        if ($user->hasAnyRole(['Owner', 'Admin'], tenant_id())) {
+        $tenantId = tenant_id();
+        if ($tenantId && $user->hasAnyRole(['Owner', 'Admin'], $tenantId)) {
             return true;
         }
 
@@ -44,7 +45,8 @@ class TaskPolicy
         }
 
         // HR Admin or SuperAdmin can update
-        if ($user->hasAnyRole(['Owner', 'Admin'], tenant_id())) {
+        $tenantId = tenant_id();
+        if ($tenantId && $user->hasAnyRole(['Owner', 'Admin'], $tenantId)) {
             return true;
         }
 
@@ -62,7 +64,8 @@ class TaskPolicy
         }
 
         // HR Admin or SuperAdmin can reassign
-        if ($user->hasAnyRole(['Owner', 'Admin'], tenant_id())) {
+        $tenantId = tenant_id();
+        if ($tenantId && $user->hasAnyRole(['Owner', 'Admin'], $tenantId)) {
             return true;
         }
 

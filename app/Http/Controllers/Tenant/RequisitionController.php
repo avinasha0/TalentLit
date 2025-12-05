@@ -624,14 +624,33 @@ class RequisitionController extends Controller
                                 $approvalUrl = url("/requisitions/{$requisition->id}/approval");
                             }
                             
-                            Task::create([
+                            // Check if due_at column exists before setting it
+                            $hasDueAtColumn = Schema::hasColumn('tasks', 'due_at');
+                            
+                            $taskData = [
                                 'user_id' => $firstApproverId,
-                                'task_type' => 'approval',
+                                'task_type' => 'Requisition Approval',
                                 'title' => "Approve Requisition: {$requisition->job_title}",
                                 'requisition_id' => $requisition->id,
                                 'status' => 'Pending',
                                 'link' => $approvalUrl,
                                 'created_by' => auth()->id(),
+                            ];
+                            
+                            // Only add due_at if column exists
+                            if ($hasDueAtColumn) {
+                                $taskData['due_at'] = now()->addDays(2);
+                            }
+                            
+                            $task = Task::create($taskData);
+                            
+                            Log::info('Task created for approver', [
+                                'task_id' => $task->id,
+                                'task_user_id' => $firstApproverId,
+                                'requisition_id' => $requisition->id,
+                                'task_type' => $task->task_type,
+                                'approver_email' => $approver->email ?? 'N/A',
+                                'has_due_at' => $hasDueAtColumn,
                             ]);
                             
                             // Create in-app notification

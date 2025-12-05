@@ -168,6 +168,24 @@
             document.getElementById('task_type').addEventListener('change', loadTasks);
             document.getElementById('search').addEventListener('input', debounce(loadTasks, 500));
             document.getElementById('sort_by').addEventListener('change', loadTasks);
+            
+            // Event delegation for task row clicks
+            // Buttons use inline onclick handlers for reliability with dynamic content
+            const tasksTable = document.getElementById('tasksTable');
+            if (tasksTable) {
+                tasksTable.addEventListener('click', function(e) {
+                    // Only handle row clicks if not clicking on buttons, inputs, or links
+                    if (!e.target.closest('button') && !e.target.closest('input[type="checkbox"]') && !e.target.closest('a')) {
+                        const row = e.target.closest('.task-row');
+                        if (row) {
+                            const taskId = row.getAttribute('data-task-id');
+                            if (taskId && taskId !== 'undefined' && taskId !== 'null' && !isNaN(parseInt(taskId, 10))) {
+                                openTaskModal(taskId);
+                            }
+                        }
+                    }
+                });
+            }
         });
 
         function debounce(func, wait) {
@@ -215,7 +233,28 @@
                 return response.json();
             })
             .then(data => {
+                console.log('Tasks API response:', {
+                    success: data.success,
+                    dataCount: data.data ? data.data.length : 0,
+                    sampleTask: data.data && data.data.length > 0 ? data.data[0] : null,
+                    pagination: data.pagination
+                });
+                
                 if (data.success) {
+                    // Log each task's ID to verify they're present
+                    if (data.data && data.data.length > 0) {
+                        const taskIds = data.data.map(t => t.id).filter(id => id != null);
+                        console.log('Task IDs received:', taskIds);
+                        
+                        if (taskIds.length !== data.data.length) {
+                            console.warn('Some tasks are missing IDs:', {
+                                total: data.data.length,
+                                withIds: taskIds.length,
+                                tasks: data.data
+                            });
+                        }
+                    }
+                    
                     renderTasks(data.data);
                     renderPagination(data.pagination);
                 } else {
@@ -242,7 +281,29 @@
                 return;
             }
 
-            tbody.innerHTML = tasks.map(task => {
+            tbody.innerHTML = tasks.map((task, index) => {
+                // Ensure task has an ID
+                if (task.id === undefined || task.id === null) {
+                    console.error('Task missing ID at index', index, ':', {
+                        task: task,
+                        keys: Object.keys(task),
+                        id: task.id,
+                        idType: typeof task.id
+                    });
+                    return '';
+                }
+                
+                const taskId = parseInt(task.id, 10);
+                if (isNaN(taskId) || taskId <= 0) {
+                    console.error('Invalid task ID at index', index, ':', {
+                        originalId: task.id,
+                        idType: typeof task.id,
+                        parsedId: taskId,
+                        task: task
+                    });
+                    return '';
+                }
+                
                 const dueDate = task.due_at ? new Date(task.due_at).toLocaleDateString() : 'N/A';
                 const createdBy = task.creator ? task.creator.name : 'N/A';
                 const reqId = task.requisition_id || 'N/A';
@@ -250,12 +311,12 @@
                 const typeBadge = getTypeBadge(task.task_type);
 
                 return `
-                    <tr class="hover:bg-gray-50 cursor-pointer" onclick="openTaskModal(${task.id})">
+                    <tr class="hover:bg-gray-50 cursor-pointer task-row" data-task-id="${taskId}">
                         <td class="px-6 py-4 whitespace-nowrap" onclick="event.stopPropagation()">
-                            <input type="checkbox" class="task-checkbox rounded border-gray-300" value="${task.id}">
+                            <input type="checkbox" class="task-checkbox rounded border-gray-300" value="${taskId}">
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm font-medium text-gray-900">${escapeHtml(task.title)}</div>
+                            <div class="text-sm font-medium text-gray-900">${escapeHtml(task.title || 'Untitled Task')}</div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="text-sm text-gray-500">
@@ -275,12 +336,12 @@
                             ${statusBadge}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium" onclick="event.stopPropagation()">
-                            <button onclick="openTaskModal(${task.id})" class="text-blue-600 hover:text-blue-900 mr-2">Open</button>
-                            ${task.status !== 'Completed' ? `<button onclick="completeTask(${task.id})" class="text-green-600 hover:text-green-900">Complete</button>` : ''}
+                            <button type="button" class="open-task-btn text-blue-600 hover:text-blue-900 mr-2" data-task-id="${taskId}" onclick="console.log('Open button clicked, taskId:', ${taskId}); event.stopPropagation(); if(typeof openTaskModal === 'function') { openTaskModal(${taskId}); } else { console.error('openTaskModal function not found'); alert('openTaskModal function not found'); } return false;">Open</button>
+                            ${task.status !== 'Completed' ? `<button type="button" class="complete-task-btn text-green-600 hover:text-green-900" data-task-id="${taskId}" onclick="console.log('Complete button clicked, taskId:', ${taskId}); event.stopPropagation(); if(typeof completeTask === 'function') { completeTask(${taskId}); } else { console.error('completeTask function not found'); alert('completeTask function not found'); } return false;">Complete</button>` : ''}
                         </td>
                     </tr>
                 `;
-            }).join('');
+            }).filter(row => row !== '').join('');
         }
 
         function getStatusBadge(status) {
@@ -333,43 +394,102 @@
         }
 
         function openTaskModal(taskId) {
-            currentTaskId = taskId;
-            fetch(`${apiBasePath}/${taskId}`, {
+            console.log('openTaskModal called with:', taskId, typeof taskId);
+            
+            // Validate task ID
+            const id = parseInt(taskId, 10);
+            if (isNaN(id) || id <= 0) {
+                console.error('Invalid task ID provided:', taskId, 'parsed as:', id);
+                showError('Invalid task ID. Please refresh the page and try again.');
+                return;
+            }
+            
+            currentTaskId = id;
+            const url = `${apiBasePath}/${id}`;
+            
+            console.log('Fetching task details:', {
+                taskId: id,
+                originalTaskId: taskId,
+                apiBasePath: apiBasePath,
+                url: url
+            });
+            
+            fetch(url, {
                 headers: {
                     'Accept': 'application/json',
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                 }
             })
-            .then(response => response.json())
+            .then(response => {
+                console.log('Task fetch response:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    ok: response.ok
+                });
+                
+                if (!response.ok) {
+                    return response.json().then(err => {
+                        console.error('Task fetch error response:', err);
+                        throw new Error(err.message || `HTTP error! status: ${response.status}`);
+                    });
+                }
+                return response.json();
+            })
             .then(data => {
+                console.log('Task fetch data:', data);
+                
                 if (data.success) {
                     renderTaskModal(data.data);
                     document.getElementById('taskModal').classList.remove('hidden');
                 } else {
-                    showError('Failed to load task details');
+                    showError(data.message || 'Failed to load task details');
                 }
             })
             .catch(error => {
-                console.error('Error:', error);
-                showError('Failed to load task details');
+                console.error('Error loading task details:', {
+                    error: error,
+                    message: error.message,
+                    taskId: taskId,
+                    url: url
+                });
+                showError('Failed to load task details: ' + error.message);
             });
         }
 
         function renderTaskModal(task) {
-            document.getElementById('modalTitle').textContent = task.title;
+            console.log('Rendering task modal with data:', task);
+            
+            // Set modal title with fallback
+            const taskTitle = task.title || task.task_type || 'Untitled Task';
+            document.getElementById('modalTitle').textContent = taskTitle;
             
             const modalContent = document.getElementById('modalContent');
             const dueDate = task.due_at ? new Date(task.due_at).toLocaleString() : 'N/A';
             const createdDate = task.created_at ? new Date(task.created_at).toLocaleString() : 'N/A';
-            const createdBy = task.creator ? task.creator.name : 'N/A';
-            const assignee = task.assignee ? task.assignee.name : 'N/A';
+            
+            // Get creator name with multiple fallbacks
+            let createdBy = 'N/A';
+            if (task.creator) {
+                createdBy = task.creator.name || task.creator.email || 'Unknown User';
+            } else if (task.created_by) {
+                createdBy = `User ID: ${task.created_by}`;
+            }
+            
+            // Get assignee name with multiple fallbacks
+            let assignee = 'N/A';
+            if (task.assignee) {
+                assignee = task.assignee.name || task.assignee.email || 'Unknown User';
+            } else if (task.user_id) {
+                assignee = `User ID: ${task.user_id}`;
+            }
 
             modalContent.innerHTML = `
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <h4 class="font-semibold text-black mb-2">Task Information</h4>
                         <div class="space-y-2 text-sm">
-                            <div><span class="font-medium">Type:</span> ${escapeHtml(task.task_type)}</div>
+                            <div><span class="font-medium">Title:</span> ${escapeHtml(taskTitle)}</div>
+                            <div><span class="font-medium">Type:</span> ${escapeHtml(task.task_type || 'N/A')}</div>
                             <div><span class="font-medium">Status:</span> ${getStatusBadge(task.status)}</div>
                             <div><span class="font-medium">Due Date:</span> ${dueDate}</div>
                             <div><span class="font-medium">Assigned To:</span> ${escapeHtml(assignee)}</div>

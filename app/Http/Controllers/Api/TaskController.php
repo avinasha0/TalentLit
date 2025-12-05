@@ -14,6 +14,35 @@ use Illuminate\Support\Facades\Schema;
 class TaskController extends Controller
 {
     /**
+     * Extract task ID from route parameters (handles subdomain route parameter binding issues)
+     */
+    private function extractTaskId($methodParam, Request $request): ?int
+    {
+        $routeParams = $request->route()->parameters();
+        $taskId = null;
+        
+        // First, try to get from route parameters array (most reliable)
+        if (isset($routeParams['id']) && is_numeric($routeParams['id'])) {
+            $taskId = (int) $routeParams['id'];
+        } else {
+            // Fallback: check if route('id') works
+            $routeId = $request->route('id');
+            if ($routeId && is_numeric($routeId)) {
+                $taskId = (int) $routeId;
+            }
+        }
+        
+        // For subdomain routes, Laravel swaps parameters, so check method parameter
+        // If method parameter is numeric, it's likely the actual task ID
+        if (!$taskId || !is_numeric($taskId)) {
+            if (is_numeric($methodParam)) {
+                $taskId = (int) $methodParam;
+            }
+        }
+        
+        return $taskId && $taskId > 0 ? $taskId : null;
+    }
+    /**
      * List my tasks
      * GET /api/tasks/my
      */
@@ -102,9 +131,28 @@ class TaskController extends Controller
             $perPage = min((int) $request->input('per_page', 20), 100);
             $tasks = $query->paginate($perPage);
 
+            // Extract task IDs and check structure for logging
+            $taskIds = [];
+            $taskData = [];
+            
+            if ($tasks->items()) {
+                foreach ($tasks->items() as $task) {
+                    $taskIds[] = $task->id;
+                    $taskData[] = [
+                        'id' => $task->id,
+                        'title' => $task->title,
+                        'user_id' => $task->user_id,
+                        'status' => $task->status,
+                    ];
+                }
+            }
+
             Log::info('Tasks fetched', [
                 'user_id' => $user->id,
                 'total' => $tasks->total(),
+                'task_ids' => $taskIds,
+                'count' => count($taskIds),
+                'sample_task' => $taskData[0] ?? null,
             ]);
 
             return response()->json([
@@ -137,20 +185,108 @@ class TaskController extends Controller
      * Get task details
      * GET /api/tasks/{id}
      */
-    public function show($id)
+    public function show($id, Request $request)
     {
         try {
-            $task = Task::with(['requisition', 'creator', 'assignee'])
-                ->findOrFail($id);
+            $user = Auth::user();
+            
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized.',
+                ], 401);
+            }
+
+            // Extract task ID from route parameters (handles subdomain route binding issues)
+            $taskId = $this->extractTaskId($id, $request);
+            
+            if (!$taskId) {
+                $routeParams = $request->route()->parameters();
+                Log::warning('Invalid task ID - route parameter binding issue', [
+                    'method_param_id' => $id,
+                    'method_param_type' => gettype($id),
+                    'route_params' => $routeParams,
+                    'route_id' => $request->route('id'),
+                    'request_url' => $request->fullUrl(),
+                    'user_id' => $user->id,
+                ]);
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid task ID format: ' . $id,
+                    'debug' => [
+                        'method_param' => $id,
+                        'route_params' => $routeParams,
+                    ],
+                ], 400);
+            }
+
+            Log::info('Fetching task details', [
+                'task_id' => $taskId,
+                'method_param_id' => $id,
+                'user_id' => $user->id,
+            ]);
+
+            // First check if task exists at all
+            $task = Task::find($taskId);
+            
+            if (!$task) {
+                // Also check if any tasks exist for debugging
+                $totalTasks = Task::count();
+                $userTasks = Task::where('user_id', $user->id)->count();
+                
+                Log::warning('Task not found in database', [
+                    'task_id' => $taskId,
+                    'user_id' => $user->id,
+                    'total_tasks' => $totalTasks,
+                    'user_tasks_count' => $userTasks,
+                ]);
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Task not found.',
+                ], 404);
+            }
+
+            // Load relationships
+            $task->load([
+                'requisition' => function ($q) {
+                    // Requisition is tenant-scoped, so this will automatically filter by tenant
+                    // If requisition doesn't exist or belongs to different tenant, it will be null
+                },
+                'creator:id,name,email',
+                'assignee:id,name,email'
+            ]);
 
             // Permission check
             $this->authorize('view', $task);
+
+            // Ensure title is set (fallback if null)
+            if (empty($task->title)) {
+                $task->title = 'Untitled Task';
+            }
+
+            Log::info('Task fetched successfully', [
+                'task_id' => $taskId,
+                'user_id' => $user->id,
+                'task_user_id' => $task->user_id,
+                'task_title' => $task->title,
+                'created_by' => $task->created_by,
+                'creator_name' => $task->creator ? $task->creator->name : 'N/A',
+                'assignee_name' => $task->assignee ? $task->assignee->name : 'N/A',
+            ]);
 
             return response()->json([
                 'success' => true,
                 'data' => $task,
             ]);
         } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            Log::warning('Unauthorized task access attempt', [
+                'task_id' => $id,
+                'user_id' => Auth::id(),
+                'error' => $e->getMessage(),
+            ]);
+
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized to view this task.',
@@ -158,12 +294,16 @@ class TaskController extends Controller
         } catch (\Exception $e) {
             Log::error('Failed to fetch task', [
                 'task_id' => $id,
+                'user_id' => Auth::id(),
                 'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
             ]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to fetch task.',
+                'message' => 'Failed to fetch task: ' . $e->getMessage(),
             ], 500);
         }
     }
@@ -175,7 +315,15 @@ class TaskController extends Controller
     public function start(Request $request, $id)
     {
         try {
-            $task = Task::findOrFail($id);
+            $taskId = $this->extractTaskId($id, $request);
+            if (!$taskId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid task ID.',
+                ], 400);
+            }
+            
+            $task = Task::findOrFail($taskId);
 
             // Permission check
             $this->authorize('update', $task);
@@ -233,7 +381,15 @@ class TaskController extends Controller
     public function complete(Request $request, $id)
     {
         try {
-            $task = Task::findOrFail($id);
+            $taskId = $this->extractTaskId($id, $request);
+            if (!$taskId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid task ID.',
+                ], 400);
+            }
+            
+            $task = Task::findOrFail($taskId);
 
             // Permission check
             $this->authorize('update', $task);
@@ -288,7 +444,15 @@ class TaskController extends Controller
                 'user_id' => 'required|integer|exists:users,id',
             ]);
 
-            $task = Task::findOrFail($id);
+            $taskId = $this->extractTaskId($id, $request);
+            if (!$taskId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid task ID.',
+                ], 400);
+            }
+            
+            $task = Task::findOrFail($taskId);
 
             // Permission check
             $this->authorize('reassign', $task);

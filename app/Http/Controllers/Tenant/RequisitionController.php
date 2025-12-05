@@ -62,7 +62,21 @@ class RequisitionController extends Controller
 
             // Use the new Requisition model - CRITICAL: Filter by tenant_id
             $tenantId = tenant_id();
-            $query = Requisition::where('tenant_id', $tenantId);
+            $currentUserId = auth()->id();
+            
+            // Filter to show only requisitions where the current user is involved
+            // User is involved if they: created it, are current approver, or have approval history
+            $query = Requisition::where('tenant_id', $tenantId)
+                ->where(function ($q) use ($currentUserId) {
+                    $q->where('created_by', $currentUserId)
+                        ->orWhere('current_approver_id', $currentUserId)
+                        ->orWhereExists(function ($subQuery) use ($currentUserId) {
+                            $subQuery->select(DB::raw(1))
+                                ->from('requisition_approvals')
+                                ->whereColumn('requisition_approvals.requisition_id', 'requisitions.id')
+                                ->where('requisition_approvals.approver_id', $currentUserId);
+                        });
+                });
 
             // Apply sorting - priority: job_title_sort > headcount_sort > created_sort
             if ($jobTitleSort) {
@@ -120,8 +134,23 @@ class RequisitionController extends Controller
             $globalDepartments = GlobalDepartment::orderBy('name')->pluck('name')->unique()->values();
             $allDepartments = $departments->merge($globalDepartments)->unique()->sort()->values();
 
-            // Also get unique departments from requisitions table
-            $requisitionDepartments = Requisition::distinct()->pluck('department')->filter()->sort()->values();
+            // Also get unique departments from requisitions table (only user's requisitions)
+            $requisitionDepartments = Requisition::where('tenant_id', $tenantId)
+                ->where(function ($q) use ($currentUserId) {
+                    $q->where('created_by', $currentUserId)
+                        ->orWhere('current_approver_id', $currentUserId)
+                        ->orWhereExists(function ($subQuery) use ($currentUserId) {
+                            $subQuery->select(DB::raw(1))
+                                ->from('requisition_approvals')
+                                ->whereColumn('requisition_approvals.requisition_id', 'requisitions.id')
+                                ->where('requisition_approvals.approver_id', $currentUserId);
+                        });
+                })
+                ->distinct()
+                ->pluck('department')
+                ->filter()
+                ->sort()
+                ->values();
             $allDepartments = $allDepartments->merge($requisitionDepartments)->unique()->sort()->values();
 
             $locations = Location::orderBy('name')->pluck('name')->unique()->values();
@@ -142,10 +171,20 @@ class RequisitionController extends Controller
                 'job_title_sort_applied' => $jobTitleSort,
             ];
             
-            // If filtering by status, log detailed info
+            // If filtering by status, log detailed info (only user's requisitions)
             if ($statusFilter) {
                 $allWithStatus = Requisition::where('tenant_id', $tenantId)
                     ->where('status', $statusMap[strtolower($statusFilter)] ?? $statusFilter)
+                    ->where(function ($q) use ($currentUserId) {
+                        $q->where('created_by', $currentUserId)
+                            ->orWhere('current_approver_id', $currentUserId)
+                            ->orWhereExists(function ($subQuery) use ($currentUserId) {
+                                $subQuery->select(DB::raw(1))
+                                    ->from('requisition_approvals')
+                                    ->whereColumn('requisition_approvals.requisition_id', 'requisitions.id')
+                                    ->where('requisition_approvals.approver_id', $currentUserId);
+                            });
+                    })
                     ->get(['id', 'job_title', 'status', 'approval_status', 'created_at']);
                     
                 $debugInfo['status_filter_applied'] = $statusFilter;

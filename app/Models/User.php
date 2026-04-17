@@ -193,4 +193,101 @@ class User extends Authenticatable
     {
         $this->notify(new \App\Notifications\ResetPasswordNotification($token));
     }
+
+    /**
+     * Assign a role to user for a tenant (enforces single role per tenant)
+     * This replaces any existing role for this tenant
+     */
+    public function assignRoleForTenant(string $roleName, string $tenantId, ?int $actorId = null): void
+    {
+        // Remove any existing role for this tenant (enforce single role)
+        DB::table('custom_user_roles')
+            ->where('user_id', $this->id)
+            ->where('tenant_id', $tenantId)
+            ->delete();
+
+        // Assign new role
+        DB::table('custom_user_roles')->insert([
+            'user_id' => $this->id,
+            'tenant_id' => $tenantId,
+            'role_name' => $roleName,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        // Log role assignment if actor is provided
+        if ($actorId) {
+            app(\App\Services\PermissionService::class)->logRoleAssignment(
+                $actorId,
+                $this->id,
+                $roleName,
+                $tenantId
+            );
+        }
+    }
+
+    /**
+     * Remove role from user for a tenant
+     */
+    public function removeRoleForTenant(string $tenantId, ?int $actorId = null): void
+    {
+        $roleName = DB::table('custom_user_roles')
+            ->where('user_id', $this->id)
+            ->where('tenant_id', $tenantId)
+            ->value('role_name');
+
+        if ($roleName) {
+            DB::table('custom_user_roles')
+                ->where('user_id', $this->id)
+                ->where('tenant_id', $tenantId)
+                ->delete();
+
+            // Log role removal if actor is provided
+            if ($actorId) {
+                app(\App\Services\PermissionService::class)->logRoleRemoval(
+                    $actorId,
+                    $this->id,
+                    $roleName,
+                    $tenantId
+                );
+            }
+        }
+    }
+
+    /**
+     * Sync role for tenant (assigns role, replacing any existing)
+     * Legacy method for compatibility
+     */
+    public function syncRoles(array $roles, string $tenantId = null, ?int $actorId = null): void
+    {
+        $tenantId = $tenantId ?? tenant_id();
+        if (!$tenantId) {
+            throw new \Exception('Tenant ID is required for role assignment');
+        }
+
+        // Get the first role (we only support one role per tenant)
+        $role = $roles[0] ?? null;
+        if (!$role) {
+            throw new \Exception('At least one role is required');
+        }
+
+        // Handle both TenantRole model and role name string
+        $roleName = is_object($role) ? $role->name : $role;
+
+        $this->assignRoleForTenant($roleName, $tenantId, $actorId);
+    }
+
+    /**
+     * Assign role (legacy method for compatibility)
+     */
+    public function assignRole($role, string $tenantId = null, ?int $actorId = null): void
+    {
+        $tenantId = $tenantId ?? tenant_id();
+        if (!$tenantId) {
+            throw new \Exception('Tenant ID is required for role assignment');
+        }
+
+        $roleName = is_object($role) ? $role->name : $role;
+        $this->assignRoleForTenant($roleName, $tenantId, $actorId);
+    }
 }

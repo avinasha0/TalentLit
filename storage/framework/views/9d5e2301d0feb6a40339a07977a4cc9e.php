@@ -117,4 +117,84 @@
     <?php endif; ?>
 <?php endif; ?>
 
+<!-- Global 419 Error Handler -->
+<script>
+(function() {
+    'use strict';
+    
+    // Store original fetch
+    const originalFetch = window.fetch;
+    
+    // Intercept fetch requests to handle 419 errors
+    window.fetch = function(...args) {
+        return originalFetch.apply(this, args)
+            .then(response => {
+                // Check for 419 errors
+                if (response.status === 419) {
+                    // For AJAX requests, try to get JSON response
+                    if (args[1] && args[1].headers && args[1].headers['Accept'] && args[1].headers['Accept'].includes('application/json')) {
+                        return response.json().then(data => {
+                            // Show user-friendly message
+                            if (data.redirect) {
+                                // Show notification before redirect
+                                if (typeof window.showNotification === 'function') {
+                                    window.showNotification('Your session has expired. Redirecting to login...', 'warning');
+                                } else {
+                                    alert('Your session has expired. You will be redirected to the login page.');
+                                }
+                                setTimeout(() => {
+                                    window.location.href = data.redirect;
+                                }, 1500);
+                            }
+                            throw new Error(data.message || 'Session expired');
+                        });
+                    }
+                    
+                    // For regular requests, redirect to login
+                    const loginUrl = '<?php echo e(route("login")); ?>';
+                    if (typeof window.showNotification === 'function') {
+                        window.showNotification('Your session has expired. Redirecting to login...', 'warning');
+                    }
+                    setTimeout(() => {
+                        window.location.href = loginUrl;
+                    }, 1500);
+                    
+                    return Promise.reject(new Error('Session expired'));
+                }
+                return response;
+            })
+            .catch(error => {
+                // Re-throw non-419 errors
+                if (error.message !== 'Session expired') {
+                    throw error;
+                }
+                return Promise.reject(error);
+            });
+    };
+    
+    // Handle form submissions that might result in 419 errors
+    document.addEventListener('submit', function(e) {
+        const form = e.target;
+        if (form.tagName === 'FORM' && form.method.toUpperCase() === 'POST') {
+            const originalSubmit = form.onsubmit;
+            form.addEventListener('submit', function(event) {
+                // This will be handled by the fetch interceptor above
+                // or by Laravel's default form handling
+            }, true);
+        }
+    });
+    
+    // Handle page load with 419 error in URL or response
+    if (document.body && document.body.innerHTML.includes('419') || 
+        document.body && document.body.innerHTML.includes('Page Expired')) {
+        const loginUrl = '<?php echo e(route("login")); ?>';
+        // Check if we're not already on the login or 419 error page
+        if (!window.location.pathname.includes('login') && 
+            !window.location.pathname.includes('errors/419')) {
+            window.location.href = loginUrl;
+        }
+    }
+})();
+</script>
+
 <?php /**PATH C:\xampp\htdocs\hirehub2\resources\views/layouts/partials/head.blade.php ENDPATH**/ ?>

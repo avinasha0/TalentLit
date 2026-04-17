@@ -3,6 +3,7 @@
         @php
             $breadcrumbs = [
                 ['label' => 'Dashboard', 'url' => route('tenant.dashboard', $tenant->slug)],
+                ['label' => 'Reporting', 'url' => null],
                 ['label' => 'Analytics', 'url' => null]
             ];
         @endphp

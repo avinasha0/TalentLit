@@ -1,6 +1,6 @@
 {
   "resources/css/app.css": {
-    "file": "assets/app-BXf9d9sU.css",
+    "file": "assets/app-CmihOrxS.css",
     "src": "resources/css/app.css",
     "isEntry": true,
     "names": [
@@ -14,9 +14,15 @@
     "isEntry": true
   },
   "resources/js/app.js": {
-    "file": "assets/app-eV_-e7a7.js",
+    "file": "assets/app-DjLZa-hN.js",
     "name": "app",
     "src": "resources/js/app.js",
+    "isEntry": true
+  },
+  "resources/js/employee-onboarding-all.js": {
+    "file": "assets/employee-onboarding-all-CUrW1Zhk.js",
+    "name": "employee-onboarding-all",
+    "src": "resources/js/employee-onboarding-all.js",
     "isEntry": true
   }
 }

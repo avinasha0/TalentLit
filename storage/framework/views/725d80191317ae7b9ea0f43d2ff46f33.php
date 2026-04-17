@@ -14,9 +14,14 @@
     $isJobs = str_starts_with($currentRoute, 'tenant.jobs') || str_starts_with($currentRoute, 'subdomain.jobs');
     $isCandidates = str_starts_with($currentRoute, 'tenant.candidates') || str_starts_with($currentRoute, 'subdomain.candidates');
     $isInterviews = str_starts_with($currentRoute, 'tenant.interviews') || str_starts_with($currentRoute, 'subdomain.interviews');
+    $isOffers = str_starts_with($currentRoute, 'tenant.offers') || str_starts_with($currentRoute, 'subdomain.offers');
+    $isRequisitions = str_starts_with($currentRoute, 'tenant.requisitions') || str_starts_with($currentRoute, 'subdomain.requisitions');
     $isAnalytics = str_starts_with($currentRoute, 'tenant.analytics') || str_starts_with($currentRoute, 'subdomain.analytics');
+    $isReporting = $isAnalytics; // Reporting includes Analytics
     $isSettings = str_starts_with($currentRoute, 'tenant.settings') || str_starts_with($currentRoute, 'subdomain.settings');
     $isEmployeeOnboarding = str_starts_with($currentRoute, 'tenant.employee-onboarding') || str_starts_with($currentRoute, 'subdomain.employee-onboarding');
+    $isOrganization = str_starts_with($currentRoute, 'tenant.organization') || str_starts_with($currentRoute, 'subdomain.organization');
+    $isTasks = str_starts_with($currentRoute, 'tenant.tasks') || str_starts_with($currentRoute, 'subdomain.tasks');
 
     $currentPlan = $tenant && is_object($tenant) ? $tenant->activeSubscription?->plan : null;
     $analyticsLocked = !$currentPlan || !$currentPlan->analytics_enabled || $currentPlan->slug === 'free';
@@ -25,16 +30,16 @@
 
 <div x-data='{ 
     sidebarOpen: $store.sidebar?.open ?? (window.innerWidth >= 1024),
-    recruitingOpen: <?php echo e(($isRecruiting || $isJobs || $isCandidates || $isInterviews || $isAnalytics) ? 'true' : 'false'); ?>,
+    recruitingOpen: <?php echo e(($isRecruiting || $isJobs || $isCandidates || $isInterviews || $isOffers || $isRequisitions) ? 'true' : 'false'); ?>,
     jobsOpen: false,
-    candidatesOpen: false,
+    candidatesOpen: <?php echo e(($isCandidates || $isInterviews || $isOffers) ? 'true' : 'false'); ?>,
+    requisitionsOpen: <?php echo e($isRequisitions ? 'true' : 'false'); ?>,
+    reportingOpen: <?php echo e($isReporting ? 'true' : 'false'); ?>,
     settingsOpen: <?php echo e($isSettings ? 'true' : 'false'); ?>,
     employeeOnboardingOpen: <?php echo e($isEmployeeOnboarding ? 'true' : 'false'); ?>,
-    analyticsLocked: <?php echo e($analyticsLocked ? 'true' : 'false'); ?>,
-    showAnalyticsUpgradeModal: false,
-    analyticsUpgradeUrl: <?php echo json_encode($analyticsUpgradeUrl, 15, 512) ?>
-}' 
-x-on:open-analytics-upgrade.window="showAnalyticsUpgradeModal = true"
+    analyticsLocked: <?php echo e($analyticsLocked ? 'true' : 'false'); ?>
+
+}'
 x-show="sidebarOpen"
 x-init="
     sidebarOpen = $store.sidebar?.open ?? (window.innerWidth >= 1024);
@@ -99,10 +104,28 @@ class="fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 text-white lg:translate-x-0"
                 Dashboard
             </a>
 
+            <!-- Organisation -->
+            <a href="<?php echo e(tenantRoute('tenant.organization.index', $tenant->slug)); ?>"
+               class="flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors duration-200 <?php echo e($isOrganization ? 'bg-purple-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'); ?>">
+                <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                </svg>
+                Organisation
+            </a>
+
+            <!-- My Tasks -->
+            <a href="<?php echo e(tenantRoute('tenant.tasks.my', $tenant->slug)); ?>"
+               class="flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors duration-200 <?php echo e($isTasks ? 'bg-purple-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'); ?>">
+                <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
+                </svg>
+                My Tasks
+            </a>
+
             <!-- Recruiting -->
             <div>
                 <button type="button" @click="recruitingOpen = !recruitingOpen" 
-                        class="flex items-center justify-between w-full px-3 py-2 text-sm font-medium rounded-lg transition-colors duration-200 <?php echo e(($isRecruiting || $isJobs || $isCandidates || $isInterviews || $isAnalytics) ? 'bg-purple-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'); ?>">
+                        class="flex items-center justify-between w-full px-3 py-2 text-sm font-medium rounded-lg transition-colors duration-200 <?php echo e(($isRecruiting || $isJobs || $isCandidates || $isInterviews || $isOffers || $isRequisitions || $isAnalytics) ? 'bg-purple-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'); ?>">
                     <div class="flex items-center">
                         <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
@@ -114,6 +137,59 @@ class="fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 text-white lg:translate-x-0"
                     </svg>
                 </button>
                 <div x-show="recruitingOpen" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 transform -translate-y-2" x-transition:enter-end="opacity-100 transform translate-y-0" class="ml-8 mt-2 space-y-1">
+                    <!-- Requisitions -->
+                    <div>
+                        <button type="button" @click="requisitionsOpen = !requisitionsOpen" 
+                                class="flex items-center justify-between w-full px-3 py-2 text-sm font-medium text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors duration-200">
+                            <div class="flex items-center">
+                                <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                </svg>
+                                Requisitions
+                            </div>
+                            <svg class="w-4 h-4 transition-transform duration-200" :class="{ 'rotate-180': requisitionsOpen }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </button>
+                        <div x-show="requisitionsOpen" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 transform -translate-y-2" x-transition:enter-end="opacity-100 transform translate-y-0" class="ml-8 mt-2 space-y-1">
+                            <a href="<?php echo e(tenantRoute('tenant.requisitions.index', $tenant->slug)); ?>"
+                               class="flex items-center px-3 py-2 text-sm text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors duration-200 <?php echo e((str_starts_with($currentRoute, 'tenant.requisitions.index') || str_starts_with($currentRoute, 'subdomain.requisitions.index')) ? 'bg-gray-700 text-white' : ''); ?>">
+                                <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                                </svg>
+                                All Requisitions
+                            </a>
+                            <a href="<?php echo e(tenantRoute('tenant.requisitions.create', $tenant->slug)); ?>"
+                               class="flex items-center px-3 py-2 text-sm text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors duration-200 <?php echo e(in_array($currentRoute, ['tenant.requisitions.create', 'subdomain.requisitions.create']) ? 'bg-gray-700 text-white' : ''); ?>">
+                                <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                                </svg>
+                                Create Requisition
+                            </a>
+                            <a href="<?php echo e(tenantRoute('tenant.requisitions.pending', $tenant->slug)); ?>"
+                               class="flex items-center px-3 py-2 text-sm text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors duration-200 <?php echo e(in_array($currentRoute, ['tenant.requisitions.pending', 'subdomain.requisitions.pending']) ? 'bg-gray-700 text-white' : ''); ?>">
+                                <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                Pending Approvals
+                            </a>
+                            <a href="<?php echo e(tenantRoute('tenant.requisitions.approved', $tenant->slug)); ?>"
+                               class="flex items-center px-3 py-2 text-sm text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors duration-200 <?php echo e(in_array($currentRoute, ['tenant.requisitions.approved', 'subdomain.requisitions.approved']) ? 'bg-gray-700 text-white' : ''); ?>">
+                                <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                Approved Requisitions
+                            </a>
+                            <a href="<?php echo e(tenantRoute('tenant.requisitions.rejected', $tenant->slug)); ?>"
+                               class="flex items-center px-3 py-2 text-sm text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors duration-200 <?php echo e(in_array($currentRoute, ['tenant.requisitions.rejected', 'subdomain.requisitions.rejected']) ? 'bg-gray-700 text-white' : ''); ?>">
+                                <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                Rejected Requisitions
+                            </a>
+                        </div>
+                    </div>
+
                     <!-- Jobs -->
                     <div>
                         <button type="button" @click="jobsOpen = !jobsOpen" 
@@ -170,6 +246,24 @@ class="fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 text-white lg:translate-x-0"
                                 </svg>
                                 All Candidates
                             </a>
+                            
+                            <!-- Interviews -->
+                            <a href="<?php echo e(tenantRoute('tenant.interviews.index', $tenant->slug)); ?>" 
+                               class="flex items-center px-3 py-2 text-sm text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors duration-200 <?php echo e($isInterviews ? 'bg-gray-700 text-white' : ''); ?>">
+                                <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                </svg>
+                                Interviews
+                            </a>
+
+                            <!-- Offer -->
+                            <a href="<?php echo e(tenantRoute('tenant.offers.index', $tenant->slug)); ?>" 
+                               class="flex items-center px-3 py-2 text-sm text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors duration-200 <?php echo e($isOffers ? 'bg-gray-700 text-white' : ''); ?>">
+                                <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                Offer
+                            </a>
                         </div>
                     </div>
 
@@ -187,42 +281,10 @@ class="fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 text-white lg:translate-x-0"
                         Pipeline
                     </a>
                     <?php endif; ?>
-
-                    <!-- Interviews -->
-                    <a href="<?php echo e(tenantRoute('tenant.interviews.index', $tenant->slug)); ?>" 
-                       class="flex items-center px-3 py-2 text-sm text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors duration-200 <?php echo e($isInterviews ? 'bg-gray-700 text-white' : ''); ?>">
-                        <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                        </svg>
-                        Interviews
-                    </a>
-
-                    <!-- Analytics -->
-                    <?php if (app('App\Support\CustomPermissionChecker')->check('view_analytics', $tenant)): ?>
-                        <?php if($analyticsLocked): ?>
-                            <button type="button"
-                                    @click="showAnalyticsUpgradeModal = true"
-                                    class="flex items-center px-3 py-2 text-sm text-gray-400 rounded-lg border border-dashed border-purple-500/40 hover:bg-gray-800 hover:text-white transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-gray-900">
-                                <svg class="w-4 h-4 mr-3 text-purple-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-                                </svg>
-                                <span class="flex-1 text-left">Analytics</span>
-                                <span class="ml-3 px-2 py-0.5 text-xs font-semibold rounded-full bg-purple-600/20 text-purple-200">Pro+</span>
-                            </button>
-                        <?php else: ?>
-                            <a href="<?php echo e(tenantRoute('tenant.analytics.index', $tenant->slug)); ?>"
-                               class="flex items-center px-3 py-2 text-sm text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors duration-200 <?php echo e($isAnalytics ? 'bg-gray-700 text-white' : ''); ?>">
-                                <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-                                </svg>
-                                Analytics
-                            </a>
-                        <?php endif; ?>
-                    <?php endif; ?>
                 </div>
             </div>
 
-            <!-- Employee Onboarding -->
+            <!-- Onboarding -->
             <div>
                 <button type="button" @click="employeeOnboardingOpen = !employeeOnboardingOpen" 
                         class="flex items-center justify-between w-full px-3 py-2 text-sm font-medium rounded-lg transition-colors duration-200 <?php echo e($isEmployeeOnboarding ? 'bg-purple-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'); ?>">
@@ -230,7 +292,7 @@ class="fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 text-white lg:translate-x-0"
                         <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
                         </svg>
-                        <span>Employee Onboarding</span>
+                        <span>Onboarding</span>
                         <span class="ml-2 px-2 py-0.5 text-xs font-semibold rounded-full bg-orange-600/30 text-orange-300 border border-orange-500/50">Under Development</span>
                     </div>
                     <svg class="w-4 h-4 transition-transform duration-200" :class="{ 'rotate-180': employeeOnboardingOpen }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -238,6 +300,22 @@ class="fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 text-white lg:translate-x-0"
                     </svg>
                 </button>
                 <div x-show="employeeOnboardingOpen" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 transform -translate-y-2" x-transition:enter-end="opacity-100 transform translate-y-0" class="ml-8 mt-2 space-y-1">
+                    <?php
+                        $permissionService = app(\App\Services\PermissionService::class);
+                        $user = auth()->user();
+                        $userRole = $user ? $permissionService->getUserRole($user->id, $tenant->id) : null;
+                        $allowedRoles = ['Owner', 'Admin', 'Recruiter', 'Hiring Manager'];
+                        $canViewDashboard = $userRole && in_array($userRole, $allowedRoles);
+                    ?>
+                    <?php if($canViewDashboard): ?>
+                    <a href="<?php echo e(tenantRoute('tenant.employee-onboarding.dashboard', $tenant->slug)); ?>"
+                       class="flex items-center px-3 py-2 text-sm text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors duration-200 <?php echo e((str_starts_with($currentRoute, 'tenant.employee-onboarding.dashboard') || str_starts_with($currentRoute, 'subdomain.employee-onboarding.dashboard')) ? 'bg-gray-700 text-white' : ''); ?>">
+                        <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                        </svg>
+                        Dashboard
+                    </a>
+                    <?php endif; ?>
                     <a href="<?php echo e(tenantRoute('tenant.employee-onboarding.all', $tenant->slug)); ?>"
                        class="flex items-center px-3 py-2 text-sm text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors duration-200 <?php echo e((str_starts_with($currentRoute, 'tenant.employee-onboarding.all') || str_starts_with($currentRoute, 'subdomain.employee-onboarding.all')) ? 'bg-gray-700 text-white' : ''); ?>">
                         <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -295,6 +373,45 @@ class="fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 text-white lg:translate-x-0"
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
                 </svg>
             </a>
+
+            <!-- Reporting -->
+            <div>
+                <button type="button" @click="reportingOpen = !reportingOpen" 
+                        class="flex items-center justify-between w-full px-3 py-2 text-sm font-medium rounded-lg transition-colors duration-200 <?php echo e($isReporting ? 'bg-purple-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'); ?>">
+                    <div class="flex items-center">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                        </svg>
+                        Reporting
+                    </div>
+                    <svg class="w-4 h-4 transition-transform duration-200" :class="{ 'rotate-180': reportingOpen }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                </button>
+                <div x-show="reportingOpen" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 transform -translate-y-2" x-transition:enter-end="opacity-100 transform translate-y-0" class="ml-8 mt-2 space-y-1">
+                    <!-- Analytics -->
+                    <?php if (app('App\Support\CustomPermissionChecker')->check('view_analytics', $tenant)): ?>
+                        <?php if($analyticsLocked): ?>
+                            <a href="<?php echo e($analyticsUpgradeUrl); ?>"
+                               class="flex items-center px-3 py-2 text-sm text-gray-400 rounded-lg border border-dashed border-purple-500/40 hover:bg-gray-800 hover:text-white transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-gray-900">
+                                <svg class="w-4 h-4 mr-3 text-purple-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                                </svg>
+                                <span class="flex-1 text-left">Analytics</span>
+                                <span class="ml-3 px-2 py-0.5 text-xs font-semibold rounded-full bg-purple-600/20 text-purple-200">Pro+</span>
+                            </a>
+                        <?php else: ?>
+                            <a href="<?php echo e(tenantRoute('tenant.analytics.index', $tenant->slug)); ?>"
+                               class="flex items-center px-3 py-2 text-sm text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors duration-200 <?php echo e($isAnalytics ? 'bg-gray-700 text-white' : ''); ?>">
+                                <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                                </svg>
+                                Analytics
+                            </a>
+                        <?php endif; ?>
+                    <?php endif; ?>
+                </div>
+            </div>
 
             <!-- Settings (Owner/Admin only) -->
             <?php if (app('App\Support\CustomPermissionChecker')->check('manage_settings', $tenant)): ?>
@@ -370,65 +487,6 @@ class="fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 text-white lg:translate-x-0"
         <!-- Footer -->
         <div class="border-t border-gray-700 p-3 sm:p-4 mt-auto flex-shrink-0">
             <p class="text-xs sm:text-sm font-medium text-white text-center break-words">TalentLit - HR Recruit Tool</p>
-        </div>
-    </div>
-
-    <!-- Analytics Upgrade Modal -->
-    <div x-cloak
-         x-show="showAnalyticsUpgradeModal"
-         x-transition.opacity
-         class="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-        <div class="absolute inset-0 bg-gray-900 bg-opacity-80" @click="showAnalyticsUpgradeModal = false"></div>
-        <div x-transition
-             class="relative bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 lg:p-8">
-            <div class="flex items-start justify-between space-x-4">
-                <div>
-                    <p class="text-xs font-semibold tracking-widest text-purple-600 uppercase">Pro Feature</p>
-                    <h3 class="mt-1 text-2xl font-bold text-gray-900">Unlock Recruiting Analytics</h3>
-                </div>
-                <button type="button"
-                        class="text-gray-400 hover:text-gray-600"
-                        @click="showAnalyticsUpgradeModal = false">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                    </svg>
-                </button>
-            </div>
-            <p class="mt-4 text-sm text-gray-600">
-                Advanced analytics are available for TalentLit Pro and Enterprise customers. Upgrade to visualize your pipeline, time-to-hire, and source performance.
-            </p>
-            <ul class="mt-4 space-y-2 text-sm text-gray-700">
-                <li class="flex items-center">
-                    <svg class="w-4 h-4 text-purple-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                    </svg>
-                    Applications & hires over time
-                </li>
-                <li class="flex items-center">
-                    <svg class="w-4 h-4 text-purple-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                    </svg>
-                    Real-time pipeline snapshot
-                </li>
-                <li class="flex items-center">
-                    <svg class="w-4 h-4 text-purple-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                    </svg>
-                    Source effectiveness breakdown
-                </li>
-            </ul>
-            <div class="mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3">
-                <button type="button"
-                        class="w-full sm:w-auto px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
-                        @click="showAnalyticsUpgradeModal = false">
-                    Maybe Later
-                </button>
-                <a :href="analyticsUpgradeUrl"
-                   class="w-full sm:w-auto px-5 py-2.5 rounded-lg text-sm font-semibold text-white"
-                   style="background: linear-gradient(90deg, #6E46AE, #00B6B4);">
-                    Upgrade & Unlock
-                </a>
-            </div>
         </div>
     </div>
 </div>

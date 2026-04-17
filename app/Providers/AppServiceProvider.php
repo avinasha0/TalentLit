@@ -15,7 +15,9 @@ class AppServiceProvider extends ServiceProvider
     {
         // Register the custom permission checker
         $this->app->singleton('App\\Support\\CustomPermissionChecker', function ($app) {
-            return new \App\Support\CustomPermissionChecker();
+            return new \App\Support\CustomPermissionChecker(
+                $app->make(\App\Services\PermissionService::class)
+            );
         });
     }
 

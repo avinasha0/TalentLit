@@ -46,6 +46,30 @@ if (! function_exists('hasPermission')) {
     }
 }
 
+if (! function_exists('hasCustomPermission')) {
+    /**
+     * Check if current user has a custom permission for the current tenant
+     * Uses PermissionService for centralized permission checking
+     */
+    function hasCustomPermission(string $permission, $tenant = null): bool
+    {
+        $user = auth()->user();
+        if (!$user) {
+            return false;
+        }
+
+        $tenant = $tenant ?? tenant();
+        if (!$tenant) {
+            return false;
+        }
+
+        $tenantId = is_object($tenant) ? $tenant->id : $tenant;
+        
+        // Use PermissionService (don't log UI checks to avoid spam, but log important ones)
+        return app(\App\Services\PermissionService::class)->userHasPermission($user->id, $tenantId, $permission, false);
+    }
+}
+
 // Currency helper functions
 if (! function_exists('currency')) {
     function currency($amount, $currency = null)

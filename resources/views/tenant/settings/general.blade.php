@@ -45,7 +45,7 @@
         @endif
 
         <!-- Form -->
-        <form method="POST" action="{{ route('tenant.settings.general.update', $tenant->slug) }}" enctype="multipart/form-data" class="space-y-6">
+        <form method="POST" action="{{ request()->routeIs('subdomain.*') ? route('subdomain.settings.general.update', ['subdomain' => request()->route('subdomain') ?? $tenant->subdomain]) : route('tenant.settings.general.update', $tenant->slug) }}" enctype="multipart/form-data" class="space-y-6">
             @csrf
             @method('PUT')
 

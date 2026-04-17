@@ -98,17 +98,7 @@ if (logout && form) {
   });
 }
 
-// Analytics upgrade CTA
-if (analyticsUpgradeTriggers.length) {
-  analyticsUpgradeTriggers.forEach(trigger => {
-    trigger.addEventListener('click', (e) => {
-      e.preventDefault();
-      console.log('Analytics upgrade prompt opened from mobile menu');
-      window.dispatchEvent(new CustomEvent('open-analytics-upgrade'));
-      closeMenu();
-    });
-  });
-}
+// Analytics upgrade CTA removed - now direct links to subscription page
 
 // Collapsible sections
 function setupCollapsible(toggleSelector, contentSelector, arrowSelector) {
@@ -150,8 +140,10 @@ function setupCollapsible(toggleSelector, contentSelector, arrowSelector) {
 function initializeCollapsibles() {
   // Use setupCollapsible for ALL sections, including Recruiting (same as Settings)
   setupCollapsible('[data-mobile-recruiting-toggle]', '[data-mobile-recruiting-content]', '[data-mobile-recruiting-arrow]');
+  setupCollapsible('[data-mobile-requisitions-toggle]', '[data-mobile-requisitions-content]', '[data-mobile-requisitions-arrow]');
   setupCollapsible('[data-mobile-jobs-toggle]', '[data-mobile-jobs-content]', '[data-mobile-jobs-arrow]');
   setupCollapsible('[data-mobile-candidates-toggle]', '[data-mobile-candidates-content]', '[data-mobile-candidates-arrow]');
+  setupCollapsible('[data-mobile-reporting-toggle]', '[data-mobile-reporting-content]', '[data-mobile-reporting-arrow]');
   setupCollapsible('[data-mobile-settings-toggle]', '[data-mobile-settings-content]', '[data-mobile-settings-arrow]');
   setupCollapsible('[data-mobile-onboarding-toggle]', '[data-mobile-onboarding-content]', '[data-mobile-onboarding-arrow]');
 }

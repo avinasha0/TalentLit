@@ -2,13 +2,21 @@
 
 namespace App\Support;
 
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use App\Services\PermissionService;
 
 class CustomPermissionChecker
 {
+    protected $permissionService;
+
+    public function __construct(PermissionService $permissionService)
+    {
+        $this->permissionService = $permissionService;
+    }
+
     /**
      * Check if user has custom permission
+     * Used by Blade directives - logs permission checks
      */
     public function check($permission, $tenant = null)
     {
@@ -24,25 +32,8 @@ class CustomPermissionChecker
         // Handle both tenant object and tenant ID string
         $tenantId = is_object($tenant) ? $tenant->id : $tenant;
 
-        $userRole = DB::table('custom_user_roles')
-            ->where('user_id', Auth::id())
-            ->where('tenant_id', $tenantId)
-            ->value('role_name');
-
-        if (!$userRole) {
-            return false;
-        }
-
-        $rolePermissions = DB::table('custom_tenant_roles')
-            ->where('tenant_id', $tenantId)
-            ->where('name', $userRole)
-            ->value('permissions');
-
-        if (!$rolePermissions) {
-            return false;
-        }
-
-        $permissions = json_decode($rolePermissions, true);
-        return in_array($permission, $permissions);
+        // Use PermissionService for centralized permission checking
+        // Log permission checks from UI (set logCheck to true for audit trail)
+        return $this->permissionService->userHasPermission(Auth::id(), $tenantId, $permission, true);
     }
 }

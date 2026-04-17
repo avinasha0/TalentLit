@@ -29,6 +29,8 @@
         @if($tenant && is_object($tenant))
         <div class="space-y-2">
             <a href="{{ tenantRoute('tenant.dashboard', $tenant->slug ?? tenant()->slug) }}" class="block py-2 text-gray-700 hover:text-blue-600">Dashboard</a>
+            <a href="{{ tenantRoute('tenant.organization.index', $tenant->slug ?? tenant()->slug) }}" class="block py-2 text-gray-700 hover:text-blue-600">Organisation</a>
+            <a href="{{ tenantRoute('tenant.tasks.my', $tenant->slug ?? tenant()->slug) }}" class="block py-2 text-gray-700 hover:text-blue-600">My Tasks</a>
             
             {{-- Recruiting Section --}}
             <div class="mt-4">
@@ -39,6 +41,23 @@
                     </svg>
                 </button>
                 <div data-mobile-recruiting-content class="ml-4 space-y-1 hidden">
+                    {{-- Requisitions Section --}}
+                    <div class="mt-2">
+                        <button type="button" data-mobile-requisitions-toggle class="flex items-center justify-between w-full text-left text-sm font-semibold text-gray-500 mb-2 hover:text-gray-700">
+                            <span>Requisitions</span>
+                            <svg class="w-4 h-4 transition-transform duration-200" data-mobile-requisitions-arrow fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </button>
+                        <div data-mobile-requisitions-content class="ml-4 space-y-1 hidden">
+                            <a href="{{ tenantRoute('tenant.requisitions.index', $tenant->slug ?? tenant()->slug) }}" class="block py-1 text-gray-700 hover:text-blue-600">All Requisitions</a>
+                            <a href="{{ tenantRoute('tenant.requisitions.create', $tenant->slug ?? tenant()->slug) }}" class="block py-1 text-gray-700 hover:text-blue-600">Create Requisition</a>
+                            <a href="{{ tenantRoute('tenant.requisitions.pending', $tenant->slug ?? tenant()->slug) }}" class="block py-1 text-gray-700 hover:text-blue-600">Pending Approvals</a>
+                            <a href="{{ tenantRoute('tenant.requisitions.approved', $tenant->slug ?? tenant()->slug) }}" class="block py-1 text-gray-700 hover:text-blue-600">Approved Requisitions</a>
+                            <a href="{{ tenantRoute('tenant.requisitions.rejected', $tenant->slug ?? tenant()->slug) }}" class="block py-1 text-gray-700 hover:text-blue-600">Rejected Requisitions</a>
+                        </div>
+                    </div>
+
                     {{-- Jobs Section --}}
                     <div class="mt-2">
                         <button type="button" data-mobile-jobs-toggle class="flex items-center justify-between w-full text-left text-sm font-semibold text-gray-500 mb-2 hover:text-gray-700">
@@ -65,6 +84,8 @@
                         </button>
                         <div data-mobile-candidates-content class="ml-4 space-y-1 hidden">
                             <a href="{{ tenantRoute('tenant.candidates.index', $tenant->slug ?? tenant()->slug) }}" class="block py-1 text-gray-700 hover:text-blue-600">All Candidates</a>
+                            <a href="{{ tenantRoute('tenant.interviews.index', $tenant->slug ?? tenant()->slug) }}" class="block py-1 text-gray-700 hover:text-blue-600">Interviews</a>
+                            <a href="{{ tenantRoute('tenant.offers.index', $tenant->slug ?? tenant()->slug) }}" class="block py-1 text-gray-700 hover:text-blue-600">Offer</a>
                         </div>
                     </div>
 
@@ -75,31 +96,14 @@
                     @endphp
                     <a href="{{ tenantRoute('tenant.jobs.pipeline', [$tenant->slug ?? tenant()->slug, $jobId]) }}" class="block py-1 text-gray-700 hover:text-blue-600">Pipeline</a>
                     @endif
-
-                    <a href="{{ tenantRoute('tenant.interviews.index', $tenant->slug ?? tenant()->slug) }}" class="block py-1 text-gray-700 hover:text-blue-600">Interviews</a>
-
-                    @customCan('view_analytics', $tenant ?? tenant())
-                        @if($mobileAnalyticsLocked)
-                            <button type="button"
-                                    data-analytics-upgrade-trigger
-                                    class="w-full flex items-center justify-between py-1 text-sm font-medium text-purple-600">
-                                <span>Analytics (Pro+)</span>
-                                <svg class="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5-5 5M6 12h12"></path>
-                                </svg>
-                            </button>
-                        @else
-                            <a href="{{ tenantRoute('tenant.analytics.index', $tenant->slug ?? tenant()->slug) }}" class="block py-1 text-gray-700 hover:text-blue-600">Analytics</a>
-                        @endif
-                    @endcustomCan
                 </div>
             </div>
 
-            {{-- Employee Onboarding Section --}}
+            {{-- Onboarding Section --}}
             <div class="mt-4">
                 <button type="button" data-mobile-onboarding-toggle class="flex items-center justify-between w-full text-left text-sm font-semibold text-gray-500 mb-2 hover:text-gray-700">
                     <div class="flex items-center">
-                        <span>Employee Onboarding</span>
+                        <span>Onboarding</span>
                         <span class="ml-2 px-2 py-0.5 text-xs font-semibold rounded-full bg-orange-100 text-orange-700 border border-orange-300">Under Development</span>
                     </div>
                     <svg class="w-4 h-4 transition-transform duration-200" data-mobile-onboarding-arrow fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -117,6 +121,31 @@
             </div>
 
             <a href="{{ tenantRoute('careers.index', $tenant->slug ?? tenant()->slug) }}" target="_blank" class="block py-2 text-gray-700 hover:text-blue-600">Careers Site</a>
+
+            {{-- Reporting Section --}}
+            <div class="mt-4">
+                <button type="button" data-mobile-reporting-toggle class="flex items-center justify-between w-full text-left text-sm font-semibold text-gray-500 mb-2 hover:text-gray-700">
+                    <span>Reporting</span>
+                    <svg class="w-4 h-4 transition-transform duration-200" data-mobile-reporting-arrow fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                </button>
+                <div data-mobile-reporting-content class="ml-4 space-y-1 hidden">
+                    @customCan('view_analytics', $tenant ?? tenant())
+                        @if($mobileAnalyticsLocked)
+                            <a href="{{ $analyticsUpgradeUrl }}"
+                               class="w-full flex items-center justify-between py-1 text-sm font-medium text-purple-600 hover:text-purple-700">
+                                <span>Analytics (Pro+)</span>
+                                <svg class="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5-5 5M6 12h12"></path>
+                                </svg>
+                            </a>
+                        @else
+                            <a href="{{ tenantRoute('tenant.analytics.index', $tenant->slug ?? tenant()->slug) }}" class="block py-1 text-gray-700 hover:text-blue-600">Analytics</a>
+                        @endif
+                    @endcustomCan
+                </div>
+            </div>
 
             @customCan('manage_settings', $tenant ?? tenant())
             {{-- Settings Section --}}

@@ -1,5 +1,5 @@
 @php
-    $tenant = $tenant ?? tenant();
+    $tenant = $tenantModel ?? $tenant ?? tenant();
     $tenantSlug = $tenant->slug;
     
     $breadcrumbs = [
@@ -15,6 +15,66 @@
     </x-slot>
 
     <div class="space-y-6" id="onboardings-page" data-tenant-slug="{{ $tenantSlug }}">
+        <!-- Export function - defined early so onclick can access it -->
+        <script>
+        window.exportOnboardingsCSV = function(e) {
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            
+            console.log('Export CSV button clicked!');
+            
+            try {
+                const tenantSlug = @json($tenantSlug);
+                console.log('Tenant slug:', tenantSlug);
+                
+                if (!tenantSlug) {
+                    console.error('Tenant slug is missing');
+                    alert('Error: Unable to determine tenant. Please refresh the page.');
+                    return false;
+                }
+                
+                // Get current filter values
+                const searchInput = document.getElementById('search-input');
+                const departmentSelect = document.getElementById('filter-department');
+                const managerSelect = document.getElementById('filter-manager');
+                const statusSelect = document.getElementById('filter-status');
+                const joiningMonthInput = document.getElementById('filter-joining-month');
+                
+                const searchValue = searchInput?.value?.trim() || '';
+                const departmentValue = departmentSelect?.value || '';
+                const managerValue = managerSelect?.value || '';
+                const statusValue = statusSelect?.value || '';
+                const joiningMonthValue = joiningMonthInput?.value || '';
+                
+                console.log('Filter values:', { searchValue, departmentValue, managerValue, statusValue, joiningMonthValue });
+                
+                // Build query string with current filters
+                const params = new URLSearchParams();
+                if (searchValue) params.append('search', searchValue);
+                if (departmentValue) params.append('department', departmentValue);
+                if (managerValue) params.append('manager', managerValue);
+                if (statusValue) params.append('status', statusValue);
+                if (joiningMonthValue) params.append('joiningMonth', joiningMonthValue);
+                
+                // Build export URL with filters
+                const queryString = params.toString();
+                const exportUrl = `/${tenantSlug}/api/onboardings/export/csv${queryString ? '?' + queryString : ''}`;
+                
+                console.log('Exporting CSV to:', exportUrl);
+                
+                // Trigger download
+                window.location.href = exportUrl;
+                return false;
+            } catch (error) {
+                console.error('Export CSV error:', error);
+                alert('An error occurred while exporting. Please try again.');
+                return false;
+            }
+        };
+        </script>
+        
         <!-- Page Header -->
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
             <div>
@@ -26,12 +86,14 @@
             <div class="mt-4 sm:mt-0 flex flex-col sm:flex-row gap-2">
                 <button type="button" 
                         id="import-candidates-btn"
-                        class="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-300 hover:text-white">
+                        class="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-300 hover:text-white"
+                        onclick="(function(){ const modal = document.getElementById('import-modal'); if(modal) { modal.classList.remove('hidden'); } })();">
                     Import Candidates
                 </button>
                 <span class="hidden sm:inline text-gray-500">·</span>
                 <button type="button" 
                         id="export-csv-btn"
+                        onclick="exportOnboardingsCSV(event)"
                         class="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-300 hover:text-white">
                     Export CSV
                 </button>
@@ -50,12 +112,26 @@
         <x-card>
             <div class="p-4 space-y-4">
                 <!-- Search -->
-                <div>
-                    <label for="search-input" class="sr-only">Search</label>
-                    <input type="text" 
-                           id="search-input"
-                           placeholder="Search by name, email, department or role"
-                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                <div class="flex gap-2">
+                    <div class="flex-1 relative">
+                        <label for="search-input" class="sr-only">Search</label>
+                        <input type="text" 
+                               id="search-input"
+                               name="search"
+                               value="{{ request('search', '') }}"
+                               placeholder="Search by name, email, department or role"
+                               class="w-full px-4 py-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                        <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                    <button type="button" 
+                            id="clear-search-btn"
+                            class="px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 whitespace-nowrap">
+                        Clear
+                    </button>
                 </div>
 
                 <!-- Filters -->
@@ -137,20 +213,20 @@
         </div>
 
         <!-- Table Container -->
+        @if($onboardings->isNotEmpty())
         <x-card>
-            <div class="overflow-x-auto">
-                <!-- Desktop Table -->
-                <div class="hidden lg:block">
-                    <table role="table" aria-label="All onboardings table" class="min-w-full divide-y divide-gray-200">
+            <!-- Desktop Table -->
+            <div class="hidden lg:block overflow-hidden">
+                <table role="table" aria-label="All onboardings table" class="w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">
                                     <input type="checkbox" 
                                            id="select-all-checkbox"
                                            aria-label="Select all on this page"
                                            class="rounded border-gray-300 text-purple-600 focus:ring-purple-500">
                                 </th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[180px]">
                                     <button type="button" class="sort-btn" data-sort="fullName">
                                         Candidate
                                         <svg class="w-4 h-4 inline ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -158,9 +234,9 @@
                                         </svg>
                                     </button>
                                 </th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role / Department</th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[200px]">Email</th>
+                                <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[150px]">Role / Dept</th>
+                                <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[120px]">
                                     <button type="button" class="sort-btn" data-sort="joiningDate">
                                         Joining Date
                                         <svg class="w-4 h-4 inline ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -168,31 +244,237 @@
                                         </svg>
                                     </button>
                                 </th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Progress</th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[120px]">Progress</th>
+                                <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[130px]">Status</th>
+                                <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[80px]">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="onboardings-tbody" class="bg-white divide-y divide-gray-200">
-                            <!-- Table rows will be populated by JavaScript -->
+                            @forelse($onboardings as $item)
+                                <tr class="onboarding-item hover:bg-gray-50 transition-colors"
+                                    data-name="{{ strtolower($item->first_name . ' ' . $item->last_name) }}"
+                                    data-email="{{ strtolower($item->email ?? '') }}"
+                                    data-department="{{ strtolower($item->department ?? 'not assigned') }}"
+                                    data-role="{{ strtolower($item->role ?? 'not assigned') }}">
+                                    <td class="px-3 py-3 whitespace-nowrap">
+                                        <input type="checkbox" 
+                                               class="rounded border-gray-300 text-purple-600 focus:ring-purple-500">
+                                    </td>
+                                    <td class="px-3 py-3">
+                                        <div class="flex items-center min-w-0">
+                                            <div class="flex-shrink-0 h-8 w-8">
+                                                <div class="h-8 w-8 rounded-full bg-purple-600 flex items-center justify-center text-white font-medium text-xs">
+                                                    {{ strtoupper(substr($item->first_name, 0, 1) . substr($item->last_name, 0, 1)) }}
+                                                </div>
+                                            </div>
+                                            <div class="ml-2 min-w-0 flex-1">
+                                                <div class="text-sm font-medium text-gray-900 truncate">
+                                                    {{ $item->first_name }} {{ $item->last_name }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-3 py-3">
+                                        <div class="text-sm text-gray-900 truncate" title="{{ $item->email }}">{{ $item->email }}</div>
+                                    </td>
+                                    <td class="px-3 py-3">
+                                        <div class="text-sm text-gray-900 truncate" title="{{ $item->role ?? 'N/A' }}">{{ $item->role ?? 'N/A' }}</div>
+                                        <div class="text-xs text-gray-500 truncate" title="{{ $item->department ?? 'N/A' }}">{{ $item->department ?? 'N/A' }}</div>
+                                    </td>
+                                    <td class="px-3 py-3 whitespace-nowrap">
+                                        <div class="text-sm text-gray-900">
+                                            @if($item->joining_date)
+                                                {{ \Carbon\Carbon::parse($item->joining_date)->format('M d, Y') }}
+                                            @else
+                                                N/A
+                                            @endif
+                                        </div>
+                                    </td>
+                                    <td class="px-3 py-3">
+                                        <div class="flex items-center space-x-1.5">
+                                            <div class="flex-1 bg-gray-200 rounded-full h-2 min-w-[60px] max-w-[70px]">
+                                                @php
+                                                    $progress = str_replace('%', '', $item->progress ?? '0');
+                                                    $progress = is_numeric($progress) ? (int)$progress : 0;
+                                                @endphp
+                                                <div class="bg-purple-600 h-2 rounded-full transition-all duration-300" 
+                                                     style="width: {{ $progress }}%"
+                                                     role="progressbar" 
+                                                     aria-valuemin="0" 
+                                                     aria-valuemax="100" 
+                                                     aria-valuenow="{{ $progress }}"></div>
+                                            </div>
+                                            <span class="text-xs text-gray-600 whitespace-nowrap">{{ $item->progress ?? '0%' }}</span>
+                                        </div>
+                                    </td>
+                                    <td class="px-3 py-3 whitespace-nowrap">
+                                        @php
+                                            $status = $item->status ?? 'Pre-boarding';
+                                            $statusConfig = [
+                                                'Pre-boarding' => ['bg' => 'bg-yellow-400', 'text' => 'text-yellow-800'],
+                                                'Pending Docs' => ['bg' => 'bg-orange-400', 'text' => 'text-orange-800'],
+                                                'IT Pending' => ['bg' => 'bg-blue-400', 'text' => 'text-blue-800'],
+                                                'Joining Soon' => ['bg' => 'bg-indigo-500', 'text' => 'text-indigo-800'],
+                                                'Completed' => ['bg' => 'bg-green-400', 'text' => 'text-green-800'],
+                                                'Overdue' => ['bg' => 'bg-red-400', 'text' => 'text-red-800']
+                                            ];
+                                            $config = $statusConfig[$status] ?? ['bg' => 'bg-gray-400', 'text' => 'text-gray-800'];
+                                        @endphp
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium {{ $config['bg'] }} {{ $config['text'] }}">
+                                            {{ $status }}
+                                        </span>
+                                    </td>
+                                    <td class="px-3 py-3 whitespace-nowrap text-sm font-medium">
+                                        <a href="javascript:void(0)" 
+                                           class="view-candidate-btn text-blue-600 hover:text-blue-800" 
+                                           data-candidate-id="{{ $item->id }}">View</a>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="8" class="px-6 py-12 text-center">
+                                        <div class="text-sm text-gray-500">No onboardings found</div>
+                                    </td>
+                                </tr>
+                            @endforelse
                         </tbody>
                     </table>
                 </div>
 
                 <!-- Mobile Cards -->
-                <div id="mobile-cards" class="lg:hidden space-y-4 p-4">
-                    <!-- Cards will be populated by JavaScript -->
+                <div id="mobile-cards" class="lg:hidden space-y-3 px-2 py-2">
+                    @forelse($onboardings as $item)
+                        <x-card class="onboarding-item" 
+                                data-name="{{ strtolower($item->first_name . ' ' . $item->last_name) }}"
+                                data-email="{{ strtolower($item->email ?? '') }}"
+                                data-department="{{ strtolower($item->department ?? 'not assigned') }}"
+                                data-role="{{ strtolower($item->role ?? 'not assigned') }}">
+                            <div class="p-3 space-y-2.5">
+                                <!-- Candidate Header -->
+                                <div class="flex items-start justify-between gap-2">
+                                    <div class="flex items-center space-x-2.5 flex-1 min-w-0">
+                                        <div class="flex-shrink-0 h-10 w-10">
+                                            <div class="h-10 w-10 rounded-full bg-purple-600 flex items-center justify-center text-white font-medium text-sm">
+                                                {{ strtoupper(substr($item->first_name, 0, 1) . substr($item->last_name, 0, 1)) }}
+                                            </div>
+                                        </div>
+                                        <div class="flex-1 min-w-0">
+                                            <div class="text-sm font-semibold text-gray-900 truncate">
+                                                {{ $item->first_name }} {{ $item->last_name }}
+                                            </div>
+                                            <div class="text-xs text-gray-500 truncate mt-0.5">{{ $item->email }}</div>
+                                        </div>
+                                    </div>
+                                    @php
+                                        $status = $item->status ?? 'Pre-boarding';
+                                        $statusConfig = [
+                                            'Pre-boarding' => ['bg' => 'bg-yellow-400', 'text' => 'text-yellow-800'],
+                                            'Pending Docs' => ['bg' => 'bg-orange-400', 'text' => 'text-orange-800'],
+                                            'IT Pending' => ['bg' => 'bg-blue-400', 'text' => 'text-blue-800'],
+                                            'Joining Soon' => ['bg' => 'bg-indigo-500', 'text' => 'text-indigo-800'],
+                                            'Completed' => ['bg' => 'bg-green-400', 'text' => 'text-green-800'],
+                                            'Overdue' => ['bg' => 'bg-red-400', 'text' => 'text-red-800']
+                                        ];
+                                        $config = $statusConfig[$status] ?? ['bg' => 'bg-gray-400', 'text' => 'text-gray-800'];
+                                    @endphp
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium {{ $config['bg'] }} {{ $config['text'] }} flex-shrink-0">
+                                        {{ $status }}
+                                    </span>
+                                </div>
+                                
+                                <!-- Details - Compact Layout -->
+                                <div class="grid grid-cols-2 gap-2.5 pt-2 border-t border-gray-100">
+                                    <div class="min-w-0">
+                                        <div class="text-xs font-medium text-gray-500 mb-0.5">Role</div>
+                                        <div class="text-sm font-medium text-gray-900 truncate" title="{{ $item->role ?? 'Not Assigned' }}">
+                                            {{ $item->role ?? 'Not Assigned' }}
+                                        </div>
+                                        <div class="text-xs text-gray-500 truncate mt-0.5" title="{{ $item->department ?? 'Not Assigned' }}">
+                                            {{ $item->department ?? 'Not Assigned' }}
+                                        </div>
+                                    </div>
+                                    <div class="min-w-0">
+                                        <div class="text-xs font-medium text-gray-500 mb-0.5">Joining</div>
+                                        <div class="text-sm font-medium text-gray-900">
+                                            @if($item->joining_date)
+                                                {{ \Carbon\Carbon::parse($item->joining_date)->format('M d, Y') }}
+                                            @else
+                                                N/A
+                                            @endif
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Progress -->
+                                <div class="pt-2 border-t border-gray-100">
+                                    <div class="flex items-center justify-between mb-1.5">
+                                        <span class="text-xs font-medium text-gray-600">Progress</span>
+                                        <span class="text-xs font-semibold text-gray-900">{{ $item->progress ?? '0%' }}</span>
+                                    </div>
+                                    @php
+                                        $progress = str_replace('%', '', $item->progress ?? '0');
+                                        $progress = is_numeric($progress) ? (int)$progress : 0;
+                                    @endphp
+                                    <div class="w-full bg-gray-200 rounded-full h-2.5">
+                                        <div class="bg-purple-600 h-2.5 rounded-full transition-all duration-300" 
+                                             style="width: {{ $progress }}%"
+                                             role="progressbar" 
+                                             aria-valuemin="0" 
+                                             aria-valuemax="100" 
+                                             aria-valuenow="{{ $progress }}"></div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Actions -->
+                                <div class="pt-2 border-t border-gray-100">
+                                    <a href="javascript:void(0)" 
+                                       class="view-candidate-btn inline-flex items-center text-sm font-medium text-purple-600 hover:text-purple-800" 
+                                       data-candidate-id="{{ $item->id }}">
+                                        View Details
+                                        <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                        </svg>
+                                    </a>
+                                </div>
+                            </div>
+                        </x-card>
+                    @empty
+                        <x-card>
+                            <div class="px-4 py-8 text-center">
+                                <div class="text-sm text-gray-500">No onboardings found</div>
+                            </div>
+                        </x-card>
+                    @endforelse
                 </div>
             </div>
 
             <!-- Pagination -->
+            @if(method_exists($onboardings, 'links'))
             <div id="pagination-container" class="px-6 py-4 border-t border-gray-200">
-                <!-- Pagination will be populated by JavaScript -->
+                {{ $onboardings->appends(request()->except('page'))->links() }}
             </div>
+            @endif
         </x-card>
+        @endif
+
+        <!-- No Search Results State -->
+        <div id="no-results-message" class="hidden">
+            <x-card>
+                <div class="px-6 py-12 text-center">
+                    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                    <h3 class="mt-2 text-sm font-medium text-gray-900">No results found</h3>
+                    <p class="mt-1 text-sm text-gray-500">
+                        No onboardings match your search criteria. Try adjusting your search or filters.
+                    </p>
+                </div>
+            </x-card>
+        </div>
 
         <!-- Empty State -->
-        <div id="empty-state" class="hidden">
+        @if($onboardings->isEmpty())
+        <div id="empty-state">
             <x-card>
                 <div class="text-center py-12">
                     <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -203,15 +485,15 @@
                         There are no active onboarding flows. Click "Start Onboarding" to create the first one.
                     </p>
                     <div class="mt-6">
-                        <button type="button" 
-                                id="start-onboarding-empty"
-                                class="inline-flex items-center px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700">
+                        <a href="{{ route('tenant.employee-onboarding.new', $tenantSlug) }}" 
+                           class="inline-flex items-center px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700">
                             Start Onboarding
-                        </button>
+                        </a>
                     </div>
                 </div>
             </x-card>
         </div>
+        @endif
 
         <!-- Loading Skeleton -->
         <div id="loading-skeleton" class="hidden">
@@ -231,11 +513,29 @@
         </div>
     </div>
 
+    <!-- Inline test script to verify JavaScript is working -->
+    <script>
+    console.log('=== INLINE TEST SCRIPT RUNNING ===');
+    console.log('Timestamp:', new Date().toISOString());
+    console.log('Page URL:', window.location.href);
+    console.log('Document ready state:', document.readyState);
+    
+    // Test if buttons exist
+    setTimeout(function() {
+        const testButtons = document.querySelectorAll('.view-candidate-btn');
+        console.log('=== INLINE TEST: Found', testButtons.length, 'View buttons ===');
+        if (testButtons.length > 0) {
+            console.log('First button:', testButtons[0]);
+            console.log('First button ID:', testButtons[0].getAttribute('data-candidate-id'));
+        }
+    }, 500);
+    </script>
+
     <!-- Slide-over for View Details -->
     <div id="slide-over" class="hidden fixed inset-0 z-50 overflow-hidden" aria-labelledby="slide-over-title" role="dialog" aria-modal="true">
         <div class="absolute inset-0 bg-gray-500 bg-opacity-75 transition-opacity" id="slide-over-backdrop"></div>
-        <div class="fixed inset-y-0 right-0 pl-10 max-w-full flex">
-            <div class="relative w-screen max-w-2xl">
+        <div class="fixed inset-y-0 right-0 pl-10 max-w-full flex sm:pl-0">
+            <div class="relative w-screen max-w-md">
                 <div class="absolute top-0 left-0 -ml-8 pt-4 pr-2 flex sm:-ml-10 sm:pr-4">
                     <button type="button" 
                             id="close-slide-over"
@@ -248,22 +548,232 @@
                 </div>
                 <div class="h-full flex flex-col bg-white shadow-xl overflow-y-scroll">
                     <div class="px-4 py-6 sm:px-6 border-b border-gray-200">
-                        <h2 class="text-lg font-medium text-gray-900" id="slide-over-title">Onboarding Details</h2>
+                        <h2 class="text-lg font-medium text-gray-900" id="slide-over-title">Candidate Details</h2>
+                    </div>
+                    <!-- Tabs -->
+                    <div class="border-b border-gray-200">
+                        <nav class="flex -mb-px px-4 sm:px-6" aria-label="Tabs">
+                            <button type="button" 
+                                    id="tab-overview"
+                                    class="tab-btn active py-4 px-1 border-b-2 font-medium text-sm border-purple-500 text-purple-600">
+                                Overview
+                            </button>
+                            <button type="button" 
+                                    id="tab-documents"
+                                    class="tab-btn py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">
+                                Documents
+                            </button>
+                            <button type="button" 
+                                    id="tab-tasks"
+                                    class="tab-btn py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">
+                                Tasks
+                            </button>
+                            <button type="button" 
+                                    id="tab-it-assets"
+                                    class="tab-btn py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">
+                                IT & Assets
+                            </button>
+                            <button type="button" 
+                                    id="tab-approvals"
+                                    class="tab-btn py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">
+                                Approvals
+                            </button>
+                        </nav>
                     </div>
                     <div class="flex-1 px-4 py-6 sm:px-6">
-                        <!-- Tabs -->
-                        <div class="border-b border-gray-200">
-                            <nav class="-mb-px flex space-x-8" aria-label="Tabs">
-                                <button type="button" class="tab-btn active border-purple-500 text-purple-600 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" data-tab="overview">Overview</button>
-                                <button type="button" class="tab-btn border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" data-tab="tasks">Tasks</button>
-                                <button type="button" class="tab-btn border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" data-tab="documents">Documents</button>
-                                <button type="button" class="tab-btn border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" data-tab="it-assets">IT & Assets</button>
-                                <button type="button" class="tab-btn border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" data-tab="approvals">Approvals</button>
-                            </nav>
+                        <!-- Loading State -->
+                        <div id="slide-over-loading" class="hidden">
+                            <div class="flex items-center justify-center py-12">
+                                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+                                <span class="ml-3 text-gray-600">Loading...</span>
+                            </div>
                         </div>
-                        <!-- Tab Content -->
-                        <div id="tab-content" class="mt-6">
-                            <!-- Content will be populated by JavaScript -->
+                        
+                        <!-- Error State -->
+                        <div id="slide-over-error" class="hidden">
+                            <div class="text-center py-12">
+                                <p class="text-sm text-gray-600">Unable to load candidate details. Try again.</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Overview Tab Content -->
+                        <div id="tab-content-overview" class="tab-content space-y-6">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-500 mb-1">Name</label>
+                                <p class="text-sm text-gray-900" id="candidate-name">-</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-500 mb-1">Email</label>
+                                <p class="text-sm text-gray-900" id="candidate-email">-</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-500 mb-1">Phone</label>
+                                <p class="text-sm text-gray-900" id="candidate-phone">-</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-500 mb-1">Designation</label>
+                                <p class="text-sm text-gray-900" id="candidate-designation">-</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-500 mb-1">Department</label>
+                                <p class="text-sm text-gray-900" id="candidate-department">-</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-500 mb-1">Manager</label>
+                                <p class="text-sm text-gray-900" id="candidate-manager">-</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-500 mb-1">Joining Date</label>
+                                <p class="text-sm text-gray-900" id="candidate-joining-date">-</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-500 mb-1">Status</label>
+                                <p class="text-sm text-gray-900" id="candidate-status">-</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-500 mb-1">Progress</label>
+                                <p class="text-sm text-gray-900" id="candidate-progress">-</p>
+                            </div>
+                            
+                            <!-- Send Reminder Button -->
+                            <div class="pt-4 border-t border-gray-200">
+                                <button type="button" 
+                                        id="send-reminder-btn"
+                                        class="w-full inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                                    <span id="send-reminder-text">Send Reminder</span>
+                                    <span id="send-reminder-loader" class="hidden ml-2">
+                                        <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                    </span>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Documents Tab Content -->
+                        <div id="tab-content-documents" class="tab-content hidden">
+                            <!-- Documents Loading State -->
+                            <div id="documents-loading" class="hidden">
+                                <div class="flex items-center justify-center py-12">
+                                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+                                    <span class="ml-3 text-gray-600">Loading documents...</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Documents Error State -->
+                            <div id="documents-error" class="hidden">
+                                <div class="text-center py-12">
+                                    <p class="text-sm text-gray-600">Unable to load documents. Try again.</p>
+                                </div>
+                            </div>
+                            
+                            <!-- Documents List -->
+                            <div id="documents-list" class="space-y-3">
+                                <!-- Documents will be loaded here -->
+                            </div>
+                        </div>
+                        
+                        <!-- Tasks Tab Content -->
+                        <div id="tab-content-tasks" class="tab-content hidden">
+                            <!-- Tasks Loading State -->
+                            <div id="tasks-loading" class="hidden">
+                                <div class="flex items-center justify-center py-12">
+                                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+                                    <span class="ml-3 text-gray-600">Loading tasks...</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Tasks Error State -->
+                            <div id="tasks-error" class="hidden">
+                                <div class="text-center py-12">
+                                    <p class="text-sm text-gray-600">Unable to load tasks. Try again.</p>
+                                </div>
+                            </div>
+                            
+                            <!-- Tasks List -->
+                            <div id="tasks-list" class="space-y-3">
+                                <!-- Tasks will be loaded here -->
+                            </div>
+                        </div>
+                        
+                        <!-- IT & Assets Tab Content -->
+                        <div id="tab-content-it-assets" class="tab-content hidden">
+                            <!-- IT Assets Loading State -->
+                            <div id="it-assets-loading" class="hidden">
+                                <div class="flex items-center justify-center py-12">
+                                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+                                    <span class="ml-3 text-gray-600">Loading asset requests...</span>
+                                </div>
+                            </div>
+                            
+                            <!-- IT Assets Error State -->
+                            <div id="it-assets-error" class="hidden">
+                                <div class="text-center py-12">
+                                    <p class="text-sm text-gray-600">Unable to load asset requests. Try again.</p>
+                                </div>
+                            </div>
+                            
+                            <!-- Request Asset Button -->
+                            <div class="mb-4">
+                                <button type="button" 
+                                        id="request-asset-btn"
+                                        class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500">
+                                    Request Asset
+                                </button>
+                            </div>
+                            
+                            <!-- Asset Requests List -->
+                            <div id="it-assets-list" class="space-y-3">
+                                <!-- Asset requests will be loaded here -->
+                            </div>
+                        </div>
+                        
+                        <!-- Approvals Tab Content -->
+                        <div id="tab-content-approvals" class="tab-content hidden">
+                            <!-- Approvals Loading State -->
+                            <div id="approvals-loading" class="hidden">
+                                <div class="flex items-center justify-center py-12">
+                                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+                                    <span class="ml-3 text-gray-600">Loading approvals...</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Approvals Error State -->
+                            <div id="approvals-error" class="hidden">
+                                <div class="text-center py-12">
+                                    <p class="text-sm text-gray-600">Unable to load approvals. Try again.</p>
+                                </div>
+                            </div>
+                            
+                            <!-- Approvals List -->
+                            <div id="approvals-list" class="space-y-3">
+                                <!-- Approvals will be loaded here -->
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Footer with Convert Button -->
+                    <div class="flex-shrink-0 px-4 py-4 sm:px-6 border-t border-gray-200 bg-gray-50">
+                        <div class="flex items-center justify-between gap-3">
+                            <button type="button" 
+                                    id="close-slide-over-footer"
+                                    class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500">
+                                Close
+                            </button>
+                            <button type="button" 
+                                    id="convert-to-employee-btn"
+                                    class="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    disabled
+                                    title="Convert disabled — checking requirements...">
+                                <span id="convert-btn-text">Convert to Employee</span>
+                                <span id="convert-btn-loader" class="hidden ml-2">
+                                    <svg class="animate-spin h-4 w-4 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                </span>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -273,8 +783,2117 @@
 
     <!-- Toast Container -->
     <div id="toast-container" class="fixed bottom-4 right-4 z-50 space-y-2"></div>
+    
+    <!-- Import Modal (hidden by default) -->
+    <div id="import-modal" class="hidden fixed inset-0 z-50 overflow-hidden">
+        <div class="absolute inset-0 bg-gray-500 bg-opacity-75" id="import-modal-backdrop"></div>
+        <div class="fixed inset-0 z-50 overflow-y-auto">
+            <div class="flex min-h-full items-center justify-center p-4">
+                <div class="relative bg-white rounded-lg shadow-xl max-w-lg w-full p-6">
+                    <h3 class="text-lg font-semibold mb-4">Import Candidates</h3>
+                    <form id="import-form" enctype="multipart/form-data">
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Select CSV/Excel File</label>
+                            <input type="file" id="import-file" name="file" accept=".csv,.xlsx,.xls" required class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700">
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <a href="{{ route('api.onboardings.import.template', $tenantSlug) }}" class="text-sm text-purple-600 hover:text-purple-800">Download Template</a>
+                            <div class="flex gap-2">
+                                <button type="button" id="cancel-import" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">Cancel</button>
+                                <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700">Import</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Request Asset Modal (hidden by default) -->
+    <div id="request-asset-modal" class="hidden fixed inset-0 z-50 overflow-hidden">
+        <div class="absolute inset-0 bg-gray-500 bg-opacity-75" id="request-asset-modal-backdrop"></div>
+        <div class="fixed inset-0 z-50 overflow-y-auto">
+            <div class="flex min-h-full items-center justify-center p-4">
+                <div class="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+                    <h3 class="text-lg font-semibold mb-4">Request Asset</h3>
+                    <form id="request-asset-form">
+                        <div class="mb-4">
+                            <label for="asset-type" class="block text-sm font-medium text-gray-700 mb-2">Asset Type <span class="text-red-500">*</span></label>
+                            <select id="asset-type" name="asset_type" required class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500">
+                                <option value="">Select asset type</option>
+                                <option value="Laptop">Laptop</option>
+                                <option value="Monitor">Monitor</option>
+                                <option value="Access Card">Access Card</option>
+                                <option value="Keyboard">Keyboard</option>
+                                <option value="Mouse">Mouse</option>
+                                <option value="Headset">Headset</option>
+                                <option value="Phone">Phone</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div class="mb-4">
+                            <label for="asset-notes" class="block text-sm font-medium text-gray-700 mb-2">Notes (Optional)</label>
+                            <textarea id="asset-notes" name="notes" rows="3" class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500" placeholder="Any additional information..."></textarea>
+                        </div>
+                        <div id="request-asset-error" class="hidden mb-4">
+                            <p class="text-sm text-red-600">Failed to submit request. Try again.</p>
+                        </div>
+                        <div class="flex justify-end gap-2">
+                            <button type="button" id="cancel-request-asset" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">Cancel</button>
+                            <button type="submit" id="submit-request-asset" class="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                                <span id="submit-request-asset-text">Submit</span>
+                                <span id="submit-request-asset-loader" class="hidden ml-2">
+                                    <svg class="animate-spin h-4 w-4 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                </span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Convert to Employee Confirmation Modal -->
+    <div id="convert-confirm-modal" class="hidden fixed inset-0 z-50 overflow-hidden">
+        <div class="absolute inset-0 bg-gray-500 bg-opacity-75" id="convert-confirm-modal-backdrop"></div>
+        <div class="fixed inset-0 z-50 overflow-y-auto">
+            <div class="flex min-h-full items-center justify-center p-4">
+                <div class="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Confirm conversion</h3>
+                    <p class="text-sm text-gray-600 mb-6">Convert this onboarding into an employee account? This action will create an employee profile and cannot be undone.</p>
+                    <div id="convert-error-message" class="hidden mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+                        <p class="text-sm text-red-800"></p>
+                    </div>
+                    <div class="flex justify-end gap-2">
+                        <button type="button" id="cancel-convert" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">Cancel</button>
+                        <button type="button" id="confirm-convert" class="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <span id="confirm-convert-text">Confirm Convert</span>
+                            <span id="confirm-convert-loader" class="hidden ml-2">
+                                <svg class="animate-spin h-4 w-4 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                <span class="ml-1">Converting…</span>
+                            </span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide-over JavaScript - Inline to ensure it runs -->
+    <script>
+    console.log('=== SLIDE-OVER SCRIPT LOADING (INLINE) ===');
+    console.log('Timestamp:', new Date().toISOString());
+    console.log('Document ready state:', document.readyState);
+    
+    // Move the entire slide-over script here to ensure it runs
+    (function() {
+        'use strict';
+        
+        const tenantSlug = @json($tenantSlug);
+        console.log('[Slide-over INLINE] IIFE executing, tenantSlug:', tenantSlug);
+        let slideOver, slideOverBackdrop, closeSlideOverBtn, slideOverLoading, slideOverError;
+        let currentCandidateId = null;
+        
+        function initSlideOver() {
+            console.log('[Slide-over INLINE] Initializing slide-over elements...');
+            slideOver = document.getElementById('slide-over');
+            slideOverBackdrop = document.getElementById('slide-over-backdrop');
+            closeSlideOverBtn = document.getElementById('close-slide-over');
+            slideOverLoading = document.getElementById('slide-over-loading');
+            slideOverError = document.getElementById('slide-over-error');
+            
+            console.log('[Slide-over INLINE] Elements found:', {
+                slideOver: !!slideOver,
+                slideOverBackdrop: !!slideOverBackdrop,
+                closeSlideOverBtn: !!closeSlideOverBtn,
+                slideOverLoading: !!slideOverLoading,
+                slideOverError: !!slideOverError
+            });
+        }
+        
+        function openSlideOver() {
+            console.log('[Slide-over INLINE] Opening slide-over, element exists:', !!slideOver);
+            if (slideOver) {
+                slideOver.classList.remove('hidden');
+                document.body.style.overflow = 'hidden';
+                console.log('[Slide-over INLINE] Slide-over opened successfully');
+            } else {
+                console.error('[Slide-over INLINE] Cannot open: slide-over element not found');
+            }
+        }
+        
+        function closeSlideOver() {
+            if (slideOver) {
+                slideOver.classList.add('hidden');
+                document.body.style.overflow = '';
+                if (slideOverLoading) slideOverLoading.classList.add('hidden');
+                if (slideOverError) slideOverError.classList.add('hidden');
+                
+                // Log slide-over close event
+                if (currentCandidateId) {
+                    const tenantSlug = document.getElementById('onboardings-page')?.getAttribute('data-tenant-slug');
+                    if (tenantSlug) {
+                        const closeUrl = `/${tenantSlug}/api/onboardings/${currentCandidateId}/close`;
+                        // Fire-and-forget request to log close event
+                        fetch(closeUrl, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                            },
+                            credentials: 'same-origin',
+                        }).catch(err => {
+                            console.warn('[Slide-over] Failed to log close event:', err);
+                        });
+                    }
+                }
+                
+                currentCandidateId = null;
+                // Reset to Overview tab
+                switchTab('overview');
+            }
+        }
+        
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            try {
+                const date = new Date(dateString);
+                return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+            } catch (e) {
+                return dateString;
+            }
+        }
+        
+        function formatStatus(status) {
+            const statusConfig = {
+                'Pre-boarding': { bg: 'bg-yellow-400', text: 'text-yellow-800' },
+                'Pending Docs': { bg: 'bg-orange-400', text: 'text-orange-800' },
+                'IT Pending': { bg: 'bg-blue-400', text: 'text-blue-800' },
+                'Joining Soon': { bg: 'bg-indigo-500', text: 'text-indigo-800' },
+                'Completed': { bg: 'bg-green-400', text: 'text-green-800' },
+                'Overdue': { bg: 'bg-red-400', text: 'text-red-800' }
+            };
+            const config = statusConfig[status] || { bg: 'bg-gray-400', text: 'text-gray-800' };
+            return `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${config.bg} ${config.text}">${status}</span>`;
+        }
+        
+        function loadCandidateDetails(candidateId) {
+            console.log('[Slide-over INLINE] loadCandidateDetails called with ID:', candidateId);
+            if (!candidateId) {
+                console.error('[Slide-over INLINE] Candidate ID is missing');
+                return;
+            }
+            
+            if (slideOverLoading) slideOverLoading.classList.remove('hidden');
+            if (slideOverError) slideOverError.classList.add('hidden');
+            
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.add('hidden');
+            });
+            
+            const apiUrl = `/${tenantSlug}/api/onboardings/${candidateId}`;
+            console.log('[Slide-over INLINE] Fetching from URL:', apiUrl);
+            
+            fetch(apiUrl, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                }
+            })
+            .then(response => {
+                console.log('[Slide-over INLINE] API response status:', response.status);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                return response.json();
+            })
+            .then(data => {
+                console.log('[Slide-over INLINE] API response data:', data);
+                if (slideOverLoading) slideOverLoading.classList.add('hidden');
+                if (slideOverError) slideOverError.classList.add('hidden');
+                
+                const fullName = `${data.firstName || ''} ${data.lastName || ''}`.trim() || 'N/A';
+                document.getElementById('candidate-name').textContent = fullName;
+                document.getElementById('candidate-email').textContent = data.email || 'N/A';
+                
+                const phoneElement = document.getElementById('candidate-phone');
+                if (phoneElement) phoneElement.textContent = data.phone || 'N/A';
+                
+                document.getElementById('candidate-designation').textContent = data.designation || 'N/A';
+                document.getElementById('candidate-department').textContent = data.department || 'N/A';
+                document.getElementById('candidate-manager').textContent = data.manager || 'N/A';
+                document.getElementById('candidate-joining-date').textContent = formatDate(data.joiningDate);
+                document.getElementById('candidate-status').innerHTML = formatStatus(data.status || 'Pre-boarding');
+                
+                const progressElement = document.getElementById('candidate-progress');
+                if (progressElement) {
+                    progressElement.textContent = (data.progressPercent !== undefined && data.progressPercent !== null) 
+                        ? `${data.progressPercent}%` : 'N/A';
+                }
+                
+                // Store candidate ID for send reminder button
+                currentCandidateId = candidateId;
+                
+                // Check preconditions for convert button
+                checkConvertPreconditions(candidateId, data);
+                
+                // Show Overview tab content
+                const overviewContent = document.getElementById('tab-content-overview');
+                if (overviewContent) {
+                    overviewContent.classList.remove('hidden');
+                }
+            })
+            .catch(error => {
+                console.error('[Slide-over INLINE] Error loading candidate details:', error);
+                if (slideOverLoading) slideOverLoading.classList.add('hidden');
+                if (slideOverError) slideOverError.classList.remove('hidden');
+                currentCandidateId = null;
+            });
+        }
+        
+        function showToast(message, type = 'success') {
+            const toastContainer = document.getElementById('toast-container');
+            if (!toastContainer) return;
+            
+            const toast = document.createElement('div');
+            const bgColor = type === 'success' ? 'bg-green-500' : 'bg-red-500';
+            toast.className = `${bgColor} text-white px-4 py-3 rounded-lg shadow-lg flex items-center justify-between min-w-[300px] max-w-md`;
+            toast.innerHTML = `
+                <span>${message}</span>
+                <button type="button" class="ml-4 text-white hover:text-gray-200" onclick="this.parentElement.remove()">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            `;
+            
+            toastContainer.appendChild(toast);
+            
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                if (toast.parentElement) {
+                    toast.remove();
+                }
+            }, 5000);
+        }
+        
+        function checkConvertPreconditions(candidateId, candidateData) {
+            const convertBtn = document.getElementById('convert-to-employee-btn');
+            if (!convertBtn) return;
+            
+            // Initially disable and show checking state
+            convertBtn.disabled = true;
+            convertBtn.title = 'Checking requirements...';
+            
+            // Check basic progress condition first (client-side quick check)
+            const progressPercent = candidateData.progressPercent || 0;
+            const isProgressComplete = progressPercent >= 100;
+            
+            if (!isProgressComplete) {
+                convertBtn.disabled = true;
+                convertBtn.title = `Convert disabled — Progress incomplete (${progressPercent}%)`;
+                return;
+            }
+            
+            // Fetch detailed preconditions from API
+            const apiUrl = `/${tenantSlug}/api/onboardings/${candidateId}/check-convert`;
+            
+            fetch(apiUrl, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.canConvert) {
+                    convertBtn.disabled = false;
+                    convertBtn.title = 'Convert this onboarding to an employee account';
+                } else {
+                    convertBtn.disabled = true;
+                    const missingItems = [];
+                    if (data.missingProgress) missingItems.push('progress incomplete');
+                    if (data.missingApprovals > 0) missingItems.push(`${data.missingApprovals} approval${data.missingApprovals !== 1 ? 's' : ''} pending`);
+                    if (data.missingDocuments > 0) missingItems.push(`${data.missingDocuments} document${data.missingDocuments !== 1 ? 's' : ''} pending`);
+                    if (data.missingAssets > 0) missingItems.push(`${data.missingAssets} asset${data.missingAssets !== 1 ? 's' : ''} pending`);
+                    convertBtn.title = `Convert disabled — ${missingItems.join(', ')}`;
+                }
+            })
+            .catch(error => {
+                console.error('[Convert] Error checking preconditions:', error);
+                convertBtn.disabled = true;
+                convertBtn.title = 'Convert disabled — Unable to verify requirements';
+            });
+        }
+        
+        function showConvertConfirmModal() {
+            const modal = document.getElementById('convert-confirm-modal');
+            const backdrop = document.getElementById('convert-confirm-modal-backdrop');
+            const errorDiv = document.getElementById('convert-error-message');
+            
+            if (modal) {
+                // Hide error message
+                if (errorDiv) {
+                    errorDiv.classList.add('hidden');
+                }
+                modal.classList.remove('hidden');
+                document.body.style.overflow = 'hidden';
+            }
+        }
+        
+        function closeConvertConfirmModal() {
+            const modal = document.getElementById('convert-confirm-modal');
+            const errorDiv = document.getElementById('convert-error-message');
+            
+            if (modal) {
+                modal.classList.add('hidden');
+                document.body.style.overflow = '';
+                // Reset error state
+                if (errorDiv) {
+                    errorDiv.classList.add('hidden');
+                }
+                // Reset confirm button state
+                const confirmBtn = document.getElementById('confirm-convert');
+                const confirmText = document.getElementById('confirm-convert-text');
+                const confirmLoader = document.getElementById('confirm-convert-loader');
+                if (confirmBtn) confirmBtn.disabled = false;
+                if (confirmText) confirmText.textContent = 'Confirm Convert';
+                if (confirmLoader) confirmLoader.classList.add('hidden');
+            }
+        }
+        
+        function convertToEmployee() {
+            if (!currentCandidateId) {
+                showToast('No candidate selected', 'error');
+                return;
+            }
+            
+            const confirmBtn = document.getElementById('confirm-convert');
+            const confirmText = document.getElementById('confirm-convert-text');
+            const confirmLoader = document.getElementById('confirm-convert-loader');
+            const errorDiv = document.getElementById('convert-error-message');
+            const errorText = errorDiv ? errorDiv.querySelector('p') : null;
+            
+            // Disable button and show loading
+            if (confirmBtn) confirmBtn.disabled = true;
+            if (confirmText) confirmText.textContent = '';
+            if (confirmLoader) confirmLoader.classList.remove('hidden');
+            if (errorDiv) errorDiv.classList.add('hidden');
+            
+            const apiUrl = `/${tenantSlug}/api/onboardings/${currentCandidateId}/convert`;
+            
+            fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(err => {
+                        throw new Error(err.error || err.message || 'Conversion failed');
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Success - close modal and slide-over
+                closeConvertConfirmModal();
+                closeSlideOver();
+                
+                // Show success toast with employee ID if available
+                let message = 'Onboarding converted to employee.';
+                if (data.employeeId) {
+                    message += ` Employee ID: ${data.employeeId}.`;
+                }
+                showToast(message, 'success');
+                
+                // Update the row in the table if visible
+                const row = document.querySelector(`[data-candidate-id="${currentCandidateId}"]`);
+                if (row) {
+                    const statusCell = row.closest('tr')?.querySelector('.status-cell');
+                    if (statusCell) {
+                        statusCell.innerHTML = '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-500 text-blue-800">Converted</span>';
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('[Convert] Error converting to employee:', error);
+                
+                // Re-enable button
+                if (confirmBtn) confirmBtn.disabled = false;
+                if (confirmText) confirmText.textContent = 'Confirm Convert';
+                if (confirmLoader) confirmLoader.classList.add('hidden');
+                
+                // Show error message in modal
+                if (errorDiv && errorText) {
+                    errorText.textContent = `Conversion failed: ${error.message}. Try again.`;
+                    errorDiv.classList.remove('hidden');
+                } else {
+                    showToast(`Conversion failed: ${error.message}`, 'error');
+                }
+            });
+        }
+        
+        function sendReminder() {
+            if (!currentCandidateId) {
+                showToast('No candidate selected', 'error');
+                return;
+            }
+            
+            const btn = document.getElementById('send-reminder-btn');
+            const text = document.getElementById('send-reminder-text');
+            const loader = document.getElementById('send-reminder-loader');
+            
+            if (!btn || !text || !loader) return;
+            
+            // Disable button and show loading state
+            btn.disabled = true;
+            text.textContent = 'Sending...';
+            loader.classList.remove('hidden');
+            
+            const apiUrl = `/${tenantSlug}/api/onboardings/${currentCandidateId}/remind`;
+            
+            fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Re-enable button
+                btn.disabled = false;
+                text.textContent = 'Send Reminder';
+                loader.classList.add('hidden');
+                
+                // Show success toast
+                showToast('Reminder sent successfully.', 'success');
+            })
+            .catch(error => {
+                console.error('[Slide-over INLINE] Error sending reminder:', error);
+                
+                // Re-enable button
+                btn.disabled = false;
+                text.textContent = 'Send Reminder';
+                loader.classList.add('hidden');
+                
+                // Show error toast
+                showToast('Failed to send reminder. Try again.', 'error');
+            });
+        }
+        
+        function switchTab(tabName) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.add('hidden');
+            });
+            
+            // Remove active class from all tabs
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active', 'border-purple-500', 'text-purple-600');
+                btn.classList.add('border-transparent', 'text-gray-500');
+            });
+            
+            // Show selected tab content
+            const tabContent = document.getElementById(`tab-content-${tabName}`);
+            if (tabContent) {
+                tabContent.classList.remove('hidden');
+            }
+            
+            // Activate selected tab button
+            const tabBtn = document.getElementById(`tab-${tabName}`);
+            if (tabBtn) {
+                tabBtn.classList.add('active', 'border-purple-500', 'text-purple-600');
+                tabBtn.classList.remove('border-transparent', 'text-gray-500');
+            }
+            
+            // Log tab view for Overview tab (other tabs are logged via their API endpoints)
+            if (tabName === 'overview' && currentCandidateId) {
+                const tenantSlug = document.getElementById('onboardings-page')?.getAttribute('data-tenant-slug');
+                if (tenantSlug) {
+                    const logUrl = `/${tenantSlug}/api/onboardings/${currentCandidateId}/log-tab-view`;
+                    // Fire-and-forget request to log Overview tab view
+                    fetch(logUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                        },
+                        credentials: 'same-origin',
+                        body: JSON.stringify({ tab: 'Overview' }),
+                    }).catch(err => {
+                        console.warn('[Slide-over] Failed to log Overview tab view:', err);
+                    });
+                }
+            }
+            
+            // Load documents if Documents tab is clicked
+            if (tabName === 'documents' && currentCandidateId) {
+                loadDocuments(currentCandidateId);
+            }
+            
+            // Load tasks if Tasks tab is clicked
+            if (tabName === 'tasks' && currentCandidateId) {
+                loadTasks(currentCandidateId);
+            }
+            
+            // Load assets if IT & Assets tab is clicked
+            if (tabName === 'it-assets' && currentCandidateId) {
+                loadAssetRequests(currentCandidateId);
+            }
+            
+            // Load approvals if Approvals tab is clicked
+            if (tabName === 'approvals' && currentCandidateId) {
+                loadApprovals(currentCandidateId);
+            }
+        }
+        
+        function loadAssetRequests(candidateId) {
+            if (!candidateId) {
+                console.error('[Slide-over INLINE] Cannot load asset requests: no candidate ID');
+                return;
+            }
+            
+            const assetsLoading = document.getElementById('it-assets-loading');
+            const assetsError = document.getElementById('it-assets-error');
+            const assetsList = document.getElementById('it-assets-list');
+            
+            // Show loading state
+            if (assetsLoading) assetsLoading.classList.remove('hidden');
+            if (assetsError) assetsError.classList.add('hidden');
+            if (assetsList) assetsList.innerHTML = '';
+            
+            const apiUrl = `/${tenantSlug}/api/onboardings/${candidateId}/assets`;
+            
+            fetch(apiUrl, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                }
+            })
+            .then(response => {
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                return response.json();
+            })
+            .then(data => {
+                if (assetsLoading) assetsLoading.classList.add('hidden');
+                if (assetsError) assetsError.classList.add('hidden');
+                
+                if (!assetsList) return;
+                
+                if (!data.assets || data.assets.length === 0) {
+                    assetsList.innerHTML = '<p class="text-sm text-gray-500 text-center py-8">No asset requests found.</p>';
+                    return;
+                }
+                
+                // Render asset requests
+                assetsList.innerHTML = data.assets.map(asset => {
+                    const statusBadge = getAssetStatusBadge(asset.status);
+                    const requestedDate = asset.requested_on ? formatDate(asset.requested_on) : 'N/A';
+                    const assignedTo = asset.assigned_to || '-';
+                    const serialTag = asset.serial_tag || '-';
+                    
+                    return `
+                        <div class="flex items-start justify-between py-3 border-b border-gray-200">
+                            <div class="flex-1 min-w-0">
+                                <div class="text-sm font-medium text-gray-900">${asset.asset_type || 'Unknown Asset'}</div>
+                                <div class="mt-1 space-y-1">
+                                    <div class="text-xs text-gray-500">Requested On: ${requestedDate}</div>
+                                    <div class="text-xs text-gray-500">Assigned To: ${assignedTo}</div>
+                                    <div class="text-xs text-gray-500">Serial/Tag: ${serialTag}</div>
+                                </div>
+                                <div class="mt-2">
+                                    ${statusBadge}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            })
+            .catch(error => {
+                console.error('[Slide-over INLINE] Error loading asset requests:', error);
+                if (assetsLoading) assetsLoading.classList.add('hidden');
+                if (assetsError) assetsError.classList.remove('hidden');
+            });
+        }
+        
+        function getAssetStatusBadge(status) {
+            const statusConfig = {
+                'Requested': { bg: 'bg-yellow-100', text: 'text-yellow-800' },
+                'Approved': { bg: 'bg-blue-100', text: 'text-blue-800' },
+                'Assigned': { bg: 'bg-green-100', text: 'text-green-800' },
+                'Returned': { bg: 'bg-gray-100', text: 'text-gray-800' }
+            };
+            const config = statusConfig[status] || { bg: 'bg-gray-100', text: 'text-gray-800' };
+            return `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${config.bg} ${config.text}">${status}</span>`;
+        }
+        
+        function submitAssetRequest() {
+            if (!currentCandidateId) {
+                showToast('No candidate selected', 'error');
+                return;
+            }
+            
+            const submitBtn = document.getElementById('submit-request-asset');
+            const submitText = document.getElementById('submit-request-asset-text');
+            const submitLoader = document.getElementById('submit-request-asset-loader');
+            const errorDiv = document.getElementById('request-asset-error');
+            const assetType = document.getElementById('asset-type');
+            const assetNotes = document.getElementById('asset-notes');
+            
+            if (!submitBtn || !assetType) return;
+            
+            const assetTypeValue = assetType.value.trim();
+            if (!assetTypeValue) {
+                if (errorDiv) {
+                    errorDiv.textContent = 'Asset type is required';
+                    errorDiv.classList.remove('hidden');
+                }
+                return;
+            }
+            
+            // Show loading state
+            submitBtn.disabled = true;
+            if (submitText) submitText.textContent = 'Submitting…';
+            if (submitLoader) submitLoader.classList.remove('hidden');
+            if (errorDiv) errorDiv.classList.add('hidden');
+            
+            const apiUrl = `/${tenantSlug}/api/onboardings/${currentCandidateId}/assets`;
+            
+            fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                },
+                body: JSON.stringify({
+                    asset_type: assetTypeValue,
+                    notes: assetNotes ? assetNotes.value.trim() : null
+                })
+            })
+            .then(response => {
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    // Close modal
+                    const requestAssetModal = document.getElementById('request-asset-modal');
+                    if (requestAssetModal) {
+                        requestAssetModal.classList.add('hidden');
+                    }
+                    
+                    // Reset form
+                    const requestAssetForm = document.getElementById('request-asset-form');
+                    if (requestAssetForm) {
+                        requestAssetForm.reset();
+                    }
+                    
+                    // Show success toast
+                    showToast('Asset request submitted.', 'success');
+                    
+                    // Reload asset requests to show new one
+                    loadAssetRequests(currentCandidateId);
+                } else {
+                    throw new Error(data.error || 'Failed to submit request');
+                }
+            })
+            .catch(error => {
+                console.error('[Slide-over INLINE] Error submitting asset request:', error);
+                
+                // Re-enable button
+                submitBtn.disabled = false;
+                if (submitText) submitText.textContent = 'Submit';
+                if (submitLoader) submitLoader.classList.add('hidden');
+                
+                // Show error
+                if (errorDiv) {
+                    errorDiv.textContent = 'Failed to submit request. Try again.';
+                    errorDiv.classList.remove('hidden');
+                }
+            });
+        }
+        
+        function loadDocuments(candidateId) {
+            if (!candidateId) {
+                console.error('[Slide-over INLINE] Cannot load documents: no candidate ID');
+                return;
+            }
+            
+            const documentsLoading = document.getElementById('documents-loading');
+            const documentsError = document.getElementById('documents-error');
+            const documentsList = document.getElementById('documents-list');
+            
+            // Show loading state
+            if (documentsLoading) documentsLoading.classList.remove('hidden');
+            if (documentsError) documentsError.classList.add('hidden');
+            if (documentsList) documentsList.innerHTML = '';
+            
+            const apiUrl = `/${tenantSlug}/api/onboardings/${candidateId}/documents`;
+            
+            fetch(apiUrl, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                }
+            })
+            .then(response => {
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                return response.json();
+            })
+            .then(data => {
+                if (documentsLoading) documentsLoading.classList.add('hidden');
+                if (documentsError) documentsError.classList.add('hidden');
+                
+                if (!documentsList) return;
+                
+                if (!data.documents || data.documents.length === 0) {
+                    documentsList.innerHTML = '<p class="text-sm text-gray-500 text-center py-8">No documents found.</p>';
+                    return;
+                }
+                
+                // Render documents
+                documentsList.innerHTML = data.documents.map(doc => {
+                    const statusBadge = getDocumentStatusBadge(doc.status);
+                    const uploadedDate = doc.uploaded_at ? formatDate(doc.uploaded_at) : 'N/A';
+                    
+                    let actionButton = '';
+                    if (doc.status === 'Uploaded' && doc.file_url) {
+                        actionButton = `<a href="${doc.file_url}" target="_blank" class="text-sm text-blue-600 hover:text-blue-800">View</a>`;
+                    } else if (doc.status === 'Pending' || doc.status === 'Missing') {
+                        actionButton = `<button type="button" 
+                                                class="remind-document-btn text-sm px-3 py-1 text-purple-600 hover:text-purple-800 border border-purple-300 rounded-md hover:bg-purple-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                data-document-id="${doc.id || ''}"
+                                                data-document-name="${doc.name || ''}">
+                                            <span class="remind-text">Remind</span>
+                                            <span class="remind-loader hidden ml-1">
+                                                <svg class="animate-spin h-3 w-3 inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                </svg>
+                                            </span>
+                                        </button>`;
+                    }
+                    
+                    return `
+                        <div class="flex items-center justify-between py-3 border-b border-gray-200">
+                            <div class="flex-1 min-w-0">
+                                <div class="text-sm font-medium text-gray-900">${doc.name || 'Untitled Document'}</div>
+                                <div class="mt-1 flex items-center space-x-2">
+                                    ${statusBadge}
+                                    <span class="text-xs text-gray-500">${uploadedDate}</span>
+                                </div>
+                            </div>
+                            <div class="ml-4 flex-shrink-0">
+                                ${actionButton}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                
+                // Attach event listeners to Remind buttons
+                documentsList.querySelectorAll('.remind-document-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const documentId = this.getAttribute('data-document-id');
+                        const documentName = this.getAttribute('data-document-name');
+                        sendDocumentReminder(candidateId, documentId, documentName, this);
+                    });
+                });
+            })
+            .catch(error => {
+                console.error('[Slide-over INLINE] Error loading documents:', error);
+                if (documentsLoading) documentsLoading.classList.add('hidden');
+                if (documentsError) documentsError.classList.remove('hidden');
+            });
+        }
+        
+        function getDocumentStatusBadge(status) {
+            const statusConfig = {
+                'Uploaded': { bg: 'bg-green-100', text: 'text-green-800' },
+                'Pending': { bg: 'bg-yellow-100', text: 'text-yellow-800' },
+                'Missing': { bg: 'bg-red-100', text: 'text-red-800' }
+            };
+            const config = statusConfig[status] || { bg: 'bg-gray-100', text: 'text-gray-800' };
+            return `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${config.bg} ${config.text}">${status}</span>`;
+        }
+        
+        function sendDocumentReminder(candidateId, documentId, documentName, buttonElement) {
+            if (!candidateId || !documentId) {
+                showToast('Document information is missing', 'error');
+                return;
+            }
+            
+            const remindText = buttonElement.querySelector('.remind-text');
+            const remindLoader = buttonElement.querySelector('.remind-loader');
+            
+            // Disable button and show loading
+            buttonElement.disabled = true;
+            if (remindText) remindText.textContent = 'Sending…';
+            if (remindLoader) remindLoader.classList.remove('hidden');
+            
+            const apiUrl = `/${tenantSlug}/api/onboardings/${candidateId}/documents/${documentId}/remind`;
+            
+            fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                },
+                body: JSON.stringify({
+                    document_name: documentName
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Re-enable button
+                buttonElement.disabled = false;
+                if (remindText) remindText.textContent = 'Remind';
+                if (remindLoader) remindLoader.classList.add('hidden');
+                
+                // Show success toast
+                showToast('Reminder sent.', 'success');
+            })
+            .catch(error => {
+                console.error('[Slide-over INLINE] Error sending document reminder:', error);
+                
+                // Re-enable button
+                buttonElement.disabled = false;
+                if (remindText) remindText.textContent = 'Remind';
+                if (remindLoader) remindLoader.classList.add('hidden');
+                
+                // Show error message
+                showToast('Could not send reminder.', 'error');
+            });
+        }
+        
+        function loadTasks(candidateId) {
+            if (!candidateId) {
+                console.error('[Slide-over INLINE] Cannot load tasks: no candidate ID');
+                return;
+            }
+            
+            const tasksLoading = document.getElementById('tasks-loading');
+            const tasksError = document.getElementById('tasks-error');
+            const tasksList = document.getElementById('tasks-list');
+            
+            // Show loading state
+            if (tasksLoading) tasksLoading.classList.remove('hidden');
+            if (tasksError) tasksError.classList.add('hidden');
+            if (tasksList) tasksList.innerHTML = '';
+            
+            // Detect tenant format (slug or subdomain)
+            const tenantSlug = @json($tenantSlug);
+            const isSubdomain = window.location.hostname.split('.').length > 2 && !window.location.pathname.includes('/' + tenantSlug);
+            const tenantFormat = isSubdomain ? 'subdomain' : 'slug';
+            
+            const apiUrl = `/${tenantSlug}/api/onboardings/${candidateId}/tasks`;
+            
+            // Log task load attempt
+            console.log('[Slide-over INLINE] Loading tasks', {
+                candidateId: candidateId,
+                tenantSlug: tenantSlug,
+                tenantFormat: tenantFormat,
+                apiUrl: apiUrl
+            });
+            
+            fetch(apiUrl, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                }
+            })
+            .then(response => {
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                return response.json();
+            })
+            .then(data => {
+                if (tasksLoading) tasksLoading.classList.add('hidden');
+                if (tasksError) tasksError.classList.add('hidden');
+                
+                if (!tasksList) return;
+                
+                // Log successful task load
+                console.log('[Slide-over INLINE] Tasks loaded successfully', {
+                    candidateId: candidateId,
+                    tenantSlug: tenantSlug,
+                    tenantFormat: tenantFormat,
+                    taskCount: data.tasks ? data.tasks.length : 0
+                });
+                
+                if (!data.tasks || data.tasks.length === 0) {
+                    tasksList.innerHTML = '<p class="text-sm text-gray-500 text-center py-8">No tasks found.</p>';
+                    return;
+                }
+                
+                // Render tasks
+                tasksList.innerHTML = data.tasks.map(task => {
+                    const isCompleted = task.status === 'Completed';
+                    const dueDate = task.due_date ? formatDate(task.due_date) : 'N/A';
+                    const assignedTo = task.assigned_to || 'N/A';
+                    
+                    let statusBadge = '';
+                    let actionButton = '';
+                    
+                    if (isCompleted) {
+                        statusBadge = '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Completed</span>';
+                    } else {
+                        statusBadge = '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Pending</span>';
+                        actionButton = `
+                            <button type="button" 
+                                    class="mark-task-complete-btn text-sm px-3 py-1 text-purple-600 hover:text-purple-800 border border-purple-300 rounded-md hover:bg-purple-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    data-task-id="${task.id || ''}">
+                                <span class="mark-complete-text">Mark Complete</span>
+                                <span class="mark-complete-loader hidden ml-1">
+                                    <svg class="animate-spin h-3 w-3 inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                </span>
+                            </button>`;
+                    }
+                    
+                    return `
+                        <div class="flex items-center justify-between py-3 border-b border-gray-200 task-item" data-task-id="${task.id || ''}">
+                            <div class="flex-1 min-w-0">
+                                <div class="text-sm font-medium text-gray-900">${task.title || 'Untitled Task'}</div>
+                                <div class="mt-1 flex items-center space-x-2">
+                                    <span class="text-xs text-gray-500">Assigned to: ${assignedTo}</span>
+                                    <span class="text-xs text-gray-400">•</span>
+                                    <span class="text-xs text-gray-500">Due: ${dueDate}</span>
+                                </div>
+                                <div class="mt-1">
+                                    ${statusBadge}
+                                </div>
+                            </div>
+                            <div class="ml-4 flex-shrink-0">
+                                ${actionButton}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                
+                // Attach event listeners to Mark Complete buttons
+                tasksList.querySelectorAll('.mark-task-complete-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const taskId = this.getAttribute('data-task-id');
+                        markTaskComplete(candidateId, taskId, this);
+                    });
+                });
+            })
+            .catch(error => {
+                console.error('[Slide-over INLINE] Error loading tasks:', error);
+                if (tasksLoading) tasksLoading.classList.add('hidden');
+                if (tasksError) tasksError.classList.remove('hidden');
+                
+                // Log error
+                console.error('[Slide-over INLINE] Task load failed', {
+                    candidateId: candidateId,
+                    tenantSlug: tenantSlug,
+                    tenantFormat: tenantFormat,
+                    error: error.message
+                });
+            });
+        }
+        
+        function markTaskComplete(candidateId, taskId, buttonElement) {
+            if (!candidateId || !taskId) {
+                showToast('Task information is missing', 'error');
+                return;
+            }
+            
+            const markCompleteText = buttonElement.querySelector('.mark-complete-text');
+            const markCompleteLoader = buttonElement.querySelector('.mark-complete-loader');
+            
+            // Disable button and show loading
+            buttonElement.disabled = true;
+            if (markCompleteText) markCompleteText.textContent = 'Updating…';
+            if (markCompleteLoader) markCompleteLoader.classList.remove('hidden');
+            
+            // Detect tenant format
+            const tenantSlug = @json($tenantSlug);
+            const isSubdomain = window.location.hostname.split('.').length > 2 && !window.location.pathname.includes('/' + tenantSlug);
+            const tenantFormat = isSubdomain ? 'subdomain' : 'slug';
+            
+            const apiUrl = `/${tenantSlug}/api/onboardings/${candidateId}/tasks/${taskId}/complete`;
+            
+            // Log task complete attempt
+            console.log('[Slide-over INLINE] Marking task complete', {
+                candidateId: candidateId,
+                taskId: taskId,
+                tenantSlug: tenantSlug,
+                tenantFormat: tenantFormat,
+                apiUrl: apiUrl
+            });
+            
+            fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Log success
+                console.log('[Slide-over INLINE] Task marked complete successfully', {
+                    candidateId: candidateId,
+                    taskId: taskId,
+                    tenantSlug: tenantSlug,
+                    tenantFormat: tenantFormat
+                });
+                
+                // Reload tasks to update UI
+                loadTasks(candidateId);
+                
+                // Show success toast
+                showToast('Task marked as completed.', 'success');
+            })
+            .catch(error => {
+                console.error('[Slide-over INLINE] Error marking task complete:', error);
+                
+                // Log error
+                console.error('[Slide-over INLINE] Task complete failed', {
+                    candidateId: candidateId,
+                    taskId: taskId,
+                    tenantSlug: tenantSlug,
+                    tenantFormat: tenantFormat,
+                    error: error.message
+                });
+                
+                // Re-enable button
+                buttonElement.disabled = false;
+                if (markCompleteText) markCompleteText.textContent = 'Mark Complete';
+                if (markCompleteLoader) markCompleteLoader.classList.add('hidden');
+                
+                // Show error message
+                showToast('Failed. Try again.', 'error');
+            });
+        }
+        
+        function loadApprovals(candidateId) {
+            if (!candidateId) {
+                console.error('[Slide-over INLINE] Cannot load approvals: no candidate ID');
+                return;
+            }
+            
+            const approvalsLoading = document.getElementById('approvals-loading');
+            const approvalsError = document.getElementById('approvals-error');
+            const approvalsList = document.getElementById('approvals-list');
+            
+            // Show loading state
+            if (approvalsLoading) approvalsLoading.classList.remove('hidden');
+            if (approvalsError) approvalsError.classList.add('hidden');
+            if (approvalsList) approvalsList.innerHTML = '';
+            
+            // Detect tenant format (slug or subdomain)
+            const tenantSlug = @json($tenantSlug);
+            const isSubdomain = window.location.hostname.split('.').length > 2 && !window.location.pathname.includes('/' + tenantSlug);
+            const tenantFormat = isSubdomain ? 'subdomain' : 'slug';
+            
+            // Log tab opened
+            console.log('ApprovalsTab.Opened', {
+                tenant: tenantSlug,
+                candidateID: candidateId,
+                source: tenantFormat
+            });
+            
+            const apiUrl = `/${tenantSlug}/api/onboardings/${candidateId}/approvals`;
+            
+            fetch(apiUrl, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                }
+            })
+            .then(response => {
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                return response.json();
+            })
+            .then(data => {
+                if (approvalsLoading) approvalsLoading.classList.add('hidden');
+                if (approvalsError) approvalsError.classList.add('hidden');
+                
+                if (!approvalsList) return;
+                
+                // Log fetch success
+                const stepsCount = data.approvals ? data.approvals.length : 0;
+                console.log('ApprovalsTab.Fetch.Success', {
+                    count: stepsCount
+                });
+                
+                if (!data.approvals || data.approvals.length === 0) {
+                    approvalsList.innerHTML = '<p class="text-sm text-gray-500 text-center py-8">No approvals configured for this onboarding.</p>';
+                    return;
+                }
+                
+                // Render approvals
+                approvalsList.innerHTML = data.approvals.map(approval => {
+                    const statusBadge = getApprovalStatusBadge(approval.status);
+                    const approverName = approval.approver_name || 'N/A';
+                    const stepName = approval.step_name || 'Untitled Step';
+                    const timestamp = approval.timestamp ? formatDate(approval.timestamp) : 'N/A';
+                    const comments = approval.comments || '';
+                    
+                    return `
+                        <div class="py-3 border-b border-gray-200">
+                            <div class="flex items-start justify-between">
+                                <div class="flex-1 min-w-0">
+                                    <div class="text-sm font-medium text-gray-900">${stepName}</div>
+                                    <div class="mt-1 text-sm text-gray-600">
+                                        <span class="font-medium">Approver:</span> ${approverName}
+                                    </div>
+                                    ${timestamp !== 'N/A' ? `
+                                    <div class="mt-1 text-xs text-gray-500">
+                                        ${timestamp}
+                                    </div>
+                                    ` : ''}
+                                    ${comments ? `
+                                    <div class="mt-2 text-sm text-gray-600">
+                                        <span class="font-medium">Comments:</span> ${comments}
+                                    </div>
+                                    ` : ''}
+                                </div>
+                                <div class="ml-4 flex-shrink-0">
+                                    ${statusBadge}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            })
+            .catch(error => {
+                console.error('[Slide-over INLINE] Error loading approvals:', error);
+                if (approvalsLoading) approvalsLoading.classList.add('hidden');
+                if (approvalsError) approvalsError.classList.remove('hidden');
+                
+                // Log fetch error
+                console.error('ApprovalsTab.Fetch.Error', {
+                    error: error.message || 'Unknown error',
+                    tenant: tenantSlug,
+                    candidateID: candidateId
+                });
+            });
+        }
+        
+        function getApprovalStatusBadge(status) {
+            const statusConfig = {
+                'Approved': { bg: 'bg-green-100', text: 'text-green-800' },
+                'Pending': { bg: 'bg-yellow-100', text: 'text-yellow-800' },
+                'Rejected': { bg: 'bg-red-100', text: 'text-red-800' }
+            };
+            const config = statusConfig[status] || { bg: 'bg-gray-100', text: 'text-gray-800' };
+            return `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${config.bg} ${config.text}">${status}</span>`;
+        }
+        
+        function handleViewClick(e) {
+            console.log('=== [Slide-over INLINE] Click event detected! ===');
+            console.log('[Slide-over INLINE] Event target:', e.target);
+            console.log('[Slide-over INLINE] Target tagName:', e.target.tagName);
+            console.log('[Slide-over INLINE] Target className:', e.target.className);
+            
+            const btn = e.target.closest('.view-candidate-btn');
+            console.log('[Slide-over INLINE] Button found via closest:', !!btn);
+            
+            if (!btn) {
+                console.log('[Slide-over INLINE] No .view-candidate-btn found, ignoring click');
+                return;
+            }
+            
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const candidateId = btn.getAttribute('data-candidate-id');
+            console.log('[Slide-over INLINE] Candidate ID:', candidateId);
+            
+            if (candidateId) {
+                console.log('[Slide-over INLINE] Opening slide-over...');
+                openSlideOver();
+                loadCandidateDetails(candidateId);
+                // Reset to Overview tab when opening
+                switchTab('overview');
+            } else {
+                console.error('[Slide-over INLINE] No candidate ID found on button');
+            }
+        }
+        
+        function init() {
+            console.log('[Slide-over INLINE] Init function called');
+            initSlideOver();
+            
+            const viewButtons = document.querySelectorAll('.view-candidate-btn');
+            console.log('[Slide-over INLINE] Found View buttons:', viewButtons.length);
+            
+            if (viewButtons.length > 0) {
+                console.log('[Slide-over INLINE] First button:', viewButtons[0]);
+                console.log('[Slide-over INLINE] First button ID:', viewButtons[0].getAttribute('data-candidate-id'));
+            } else {
+                console.warn('[Slide-over INLINE] WARNING: No View buttons found!');
+            }
+            
+            const onboardingPage = document.getElementById('onboardings-page');
+            console.log('[Slide-over INLINE] onboarding-page element found:', !!onboardingPage);
+            
+            if (onboardingPage) {
+                console.log('[Slide-over INLINE] Attaching click handler to onboarding-page');
+                onboardingPage.addEventListener('click', handleViewClick);
+            } else {
+                console.log('[Slide-over INLINE] Attaching click handler to document');
+                document.addEventListener('click', handleViewClick);
+            }
+            
+            // Direct attachment as fallback
+            viewButtons.forEach((btn, index) => {
+                console.log(`[Slide-over INLINE] Attaching direct handler to button ${index}`);
+                btn.addEventListener('click', function(e) {
+                    console.log('[Slide-over INLINE] Direct button click handler fired');
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const candidateId = this.getAttribute('data-candidate-id');
+                    if (candidateId) {
+                        openSlideOver();
+                        loadCandidateDetails(candidateId);
+                    }
+                });
+            });
+            
+            if (closeSlideOverBtn) {
+                closeSlideOverBtn.addEventListener('click', closeSlideOver);
+            }
+            if (slideOverBackdrop) {
+                slideOverBackdrop.addEventListener('click', closeSlideOver);
+            }
+            
+            // Send reminder button handler
+            const sendReminderBtn = document.getElementById('send-reminder-btn');
+            if (sendReminderBtn) {
+                sendReminderBtn.addEventListener('click', sendReminder);
+            }
+            
+            // Convert to employee button handler
+            const convertBtn = document.getElementById('convert-to-employee-btn');
+            if (convertBtn) {
+                convertBtn.addEventListener('click', function() {
+                    if (!convertBtn.disabled && currentCandidateId) {
+                        showConvertConfirmModal();
+                    }
+                });
+            }
+            
+            // Close slide-over footer button
+            const closeFooterBtn = document.getElementById('close-slide-over-footer');
+            if (closeFooterBtn) {
+                closeFooterBtn.addEventListener('click', closeSlideOver);
+            }
+            
+            // Convert confirmation modal handlers
+            const convertConfirmModal = document.getElementById('convert-confirm-modal');
+            const convertConfirmBackdrop = document.getElementById('convert-confirm-modal-backdrop');
+            const cancelConvertBtn = document.getElementById('cancel-convert');
+            const confirmConvertBtn = document.getElementById('confirm-convert');
+            
+            if (convertConfirmBackdrop) {
+                convertConfirmBackdrop.addEventListener('click', closeConvertConfirmModal);
+            }
+            if (cancelConvertBtn) {
+                cancelConvertBtn.addEventListener('click', closeConvertConfirmModal);
+            }
+            if (confirmConvertBtn) {
+                confirmConvertBtn.addEventListener('click', convertToEmployee);
+            }
+            
+            // Close modal on Escape key
+            if (convertConfirmModal) {
+                document.addEventListener('keydown', function(e) {
+                    if (e.key === 'Escape' && convertConfirmModal && !convertConfirmModal.classList.contains('hidden')) {
+                        closeConvertConfirmModal();
+                    }
+                });
+            }
+            
+            // Tab click handlers
+            const tabOverview = document.getElementById('tab-overview');
+            const tabDocuments = document.getElementById('tab-documents');
+            const tabTasks = document.getElementById('tab-tasks');
+            const tabItAssets = document.getElementById('tab-it-assets');
+            const tabApprovals = document.getElementById('tab-approvals');
+            if (tabOverview) {
+                tabOverview.addEventListener('click', function() {
+                    switchTab('overview');
+                });
+            }
+            if (tabDocuments) {
+                tabDocuments.addEventListener('click', function() {
+                    switchTab('documents');
+                });
+            }
+            if (tabTasks) {
+                tabTasks.addEventListener('click', function() {
+                    switchTab('tasks');
+                });
+            }
+            if (tabItAssets) {
+                tabItAssets.addEventListener('click', function() {
+                    switchTab('it-assets');
+                });
+            }
+            if (tabApprovals) {
+                tabApprovals.addEventListener('click', function() {
+                    switchTab('approvals');
+                });
+            }
+            
+            // Request Asset modal handlers
+            const requestAssetBtn = document.getElementById('request-asset-btn');
+            const requestAssetModal = document.getElementById('request-asset-modal');
+            const requestAssetModalBackdrop = document.getElementById('request-asset-modal-backdrop');
+            const cancelRequestAssetBtn = document.getElementById('cancel-request-asset');
+            const requestAssetForm = document.getElementById('request-asset-form');
+            
+            if (requestAssetBtn) {
+                requestAssetBtn.addEventListener('click', function() {
+                    if (requestAssetModal) {
+                        requestAssetModal.classList.remove('hidden');
+                    }
+                });
+            }
+            
+            if (cancelRequestAssetBtn) {
+                cancelRequestAssetBtn.addEventListener('click', function() {
+                    if (requestAssetModal) {
+                        requestAssetModal.classList.add('hidden');
+                    }
+                    if (requestAssetForm) {
+                        requestAssetForm.reset();
+                    }
+                    const errorDiv = document.getElementById('request-asset-error');
+                    if (errorDiv) {
+                        errorDiv.classList.add('hidden');
+                    }
+                });
+            }
+            
+            if (requestAssetModalBackdrop) {
+                requestAssetModalBackdrop.addEventListener('click', function() {
+                    if (requestAssetModal) {
+                        requestAssetModal.classList.add('hidden');
+                    }
+                    if (requestAssetForm) {
+                        requestAssetForm.reset();
+                    }
+                    const errorDiv = document.getElementById('request-asset-error');
+                    if (errorDiv) {
+                        errorDiv.classList.add('hidden');
+                    }
+                });
+            }
+            
+            if (requestAssetForm) {
+                requestAssetForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    submitAssetRequest();
+                });
+            }
+            
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && slideOver && !slideOver.classList.contains('hidden')) {
+                    closeSlideOver();
+                }
+            });
+            
+            console.log('[Slide-over INLINE] Initialization complete');
+        }
+        
+        // Run when DOM is ready
+        console.log('[Slide-over INLINE] Document ready state:', document.readyState);
+        if (document.readyState === 'loading') {
+            console.log('[Slide-over INLINE] Waiting for DOMContentLoaded');
+            document.addEventListener('DOMContentLoaded', function() {
+                console.log('[Slide-over INLINE] DOMContentLoaded fired');
+                init();
+            });
+        } else {
+            console.log('[Slide-over INLINE] DOM already ready, calling init');
+            init();
+        }
+        
+        // Test after delay
+        setTimeout(function() {
+            console.log('[Slide-over INLINE] TEST: Checking buttons after 1 second');
+            const testButtons = document.querySelectorAll('.view-candidate-btn');
+            console.log('[Slide-over INLINE] TEST: Found', testButtons.length, 'buttons');
+        }, 1000);
+    })();
+    </script>
 </x-app-layout>
 
 @push('scripts')
-<script src="{{ asset('js/employee-onboarding-all.js') }}"></script>
+<script>
+console.log('Employee Onboarding page script loading...');
+(function() {
+    'use strict';
+    
+    console.log('Employee Onboarding script initialized');
+    
+    function openImportModal() {
+        const modal = document.getElementById('import-modal');
+        if (modal) {
+            modal.classList.remove('hidden');
+        }
+    }
+    
+    function closeImportModal() {
+        const modal = document.getElementById('import-modal');
+        if (modal) {
+            modal.classList.add('hidden');
+        }
+    }
+    
+    function initImportButton() {
+        const btn = document.getElementById('import-candidates-btn');
+        if (btn) {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                openImportModal();
+            });
+        }
+    }
+    
+    // Initialize when DOM is ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initImportButton);
+    } else {
+        initImportButton();
+    }
+    
+    // Modal close handlers
+    document.addEventListener('DOMContentLoaded', function() {
+        const backdrop = document.getElementById('import-modal-backdrop');
+        const cancelBtn = document.getElementById('cancel-import');
+        const form = document.getElementById('import-form');
+        
+        if (backdrop) {
+            backdrop.addEventListener('click', closeImportModal);
+        }
+        
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', closeImportModal);
+        }
+        
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const formData = new FormData(this);
+                const submitBtn = this.querySelector('button[type="submit"]');
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Importing...';
+                
+                const importUrl = @json(route('api.onboardings.import.candidates', $tenantSlug));
+                fetch(importUrl, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Import';
+                    if (data.success) {
+                        alert(data.message || 'Candidates imported successfully');
+                        closeImportModal();
+                        // Reload page to show updated data
+                        location.reload();
+                    } else {
+                        alert(data.message || 'Import failed');
+                    }
+                })
+                .catch(error => {
+                    console.error('Import error:', error);
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Import';
+                    alert('Import failed. Please try again.');
+                });
+            });
+        }
+    });
+    
+    // Make globally available
+    window.openImportModal = openImportModal;
+    window.closeImportModal = closeImportModal;
+})();
+</script>
+{{-- JavaScript for interactive features (search, filters) - works with already-rendered data --}}
+<script>
+(function() {
+    'use strict';
+    
+    // Client-side search functionality (works with rendered data)
+    const searchInput = document.getElementById('search-input');
+    const onboardingItems = document.querySelectorAll('.onboarding-item');
+    const mobileCardsContainer = document.getElementById('mobile-cards');
+    const tableBody = document.getElementById('onboardings-tbody');
+    const noResultsMessage = document.getElementById('no-results-message');
+    
+    function performSearch() {
+        const searchTerm = (searchInput?.value || '').trim().toLowerCase();
+        let visibleCount = 0;
+        
+        if (onboardingItems.length === 0) return;
+        
+        onboardingItems.forEach(item => {
+            const name = item.getAttribute('data-name') || '';
+            const email = item.getAttribute('data-email') || '';
+            const department = item.getAttribute('data-department') || '';
+            const role = item.getAttribute('data-role') || '';
+            
+            const matches = !searchTerm || 
+                name.includes(searchTerm) || 
+                email.includes(searchTerm) || 
+                department.includes(searchTerm) || 
+                role.includes(searchTerm);
+            
+            if (matches) {
+                item.style.display = '';
+                visibleCount++;
+            } else {
+                item.style.display = 'none';
+            }
+        });
+        
+        // Show/hide empty state
+        if (visibleCount === 0 && noResultsMessage) {
+            noResultsMessage.classList.remove('hidden');
+            if (tableBody) tableBody.closest('table').style.display = 'none';
+            if (mobileCardsContainer) mobileCardsContainer.style.display = 'none';
+        } else {
+            if (noResultsMessage) noResultsMessage.classList.add('hidden');
+            if (tableBody) tableBody.closest('table').style.display = '';
+            if (mobileCardsContainer) mobileCardsContainer.style.display = '';
+        }
+    }
+    
+    // Search on input (debounced)
+    if (searchInput) {
+        let searchTimeout;
+        searchInput.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(performSearch, 300);
+        });
+        
+        // Search on Enter
+        searchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                performSearch();
+            }
+        });
+    }
+    
+    // Clear search button
+    const clearSearchBtn = document.getElementById('clear-search-btn');
+    if (clearSearchBtn) {
+        clearSearchBtn.addEventListener('click', function() {
+            if (searchInput) {
+                searchInput.value = '';
+                performSearch();
+            }
+        });
+    }
+    
+    // Import modal handlers (keep existing functionality)
+    const importBtn = document.getElementById('import-candidates-btn');
+    const importModal = document.getElementById('import-modal');
+    const closeModalBtn = document.getElementById('close-import-modal');
+    const cancelBtn = document.getElementById('cancel-import-btn');
+    
+    function openImportModal() {
+        if (importModal) importModal.classList.remove('hidden');
+    }
+    
+    function closeImportModal() {
+        if (importModal) importModal.classList.add('hidden');
+    }
+    
+    if (importBtn) {
+        importBtn.addEventListener('click', openImportModal);
+    }
+    if (closeModalBtn) {
+        closeModalBtn.addEventListener('click', closeImportModal);
+    }
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', closeImportModal);
+    }
+})();
+</script>
+{{-- JavaScript for slide-over panel --}}
+<script>
+console.log('========================================');
+console.log('[Slide-over] Script starting...');
+console.log('[Slide-over] Timestamp:', new Date().toISOString());
+console.log('========================================');
+
+(function() {
+    'use strict';
+    
+    const tenantSlug = @json($tenantSlug);
+    console.log('[Slide-over] IIFE executing, tenantSlug:', tenantSlug);
+    let slideOver, slideOverBackdrop, closeSlideOverBtn, slideOverLoading, slideOverError, slideOverContent;
+    let currentCandidateId = null;
+    
+    function initSlideOver() {
+        console.log('[Slide-over] Initializing slide-over elements...');
+        slideOver = document.getElementById('slide-over');
+        slideOverBackdrop = document.getElementById('slide-over-backdrop');
+        closeSlideOverBtn = document.getElementById('close-slide-over');
+        slideOverLoading = document.getElementById('slide-over-loading');
+        slideOverError = document.getElementById('slide-over-error');
+        slideOverContent = document.getElementById('slide-over-content');
+        
+        console.log('[Slide-over] Elements found:', {
+            slideOver: !!slideOver,
+            slideOverBackdrop: !!slideOverBackdrop,
+            closeSlideOverBtn: !!closeSlideOverBtn,
+            slideOverLoading: !!slideOverLoading,
+            slideOverError: !!slideOverError,
+            slideOverContent: !!slideOverContent
+        });
+    }
+    
+    function openSlideOver() {
+        console.log('[Slide-over] Opening slide-over, element exists:', !!slideOver);
+        if (slideOver) {
+            slideOver.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+            console.log('[Slide-over] Slide-over opened successfully');
+        } else {
+            console.error('[Slide-over] Cannot open: slide-over element not found');
+        }
+    }
+    
+    function closeSlideOver() {
+        if (slideOver) {
+            slideOver.classList.add('hidden');
+            document.body.style.overflow = '';
+            // Reset states
+            if (slideOverLoading) slideOverLoading.classList.add('hidden');
+            if (slideOverError) slideOverError.classList.add('hidden');
+            if (slideOverContent) slideOverContent.classList.add('hidden');
+            currentCandidateId = null;
+        }
+    }
+    
+    function formatDate(dateString) {
+        if (!dateString) return 'N/A';
+        try {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+        } catch (e) {
+            return dateString;
+        }
+    }
+    
+    function formatStatus(status) {
+        const statusConfig = {
+            'Pre-boarding': { bg: 'bg-yellow-400', text: 'text-yellow-800' },
+            'Pending Docs': { bg: 'bg-orange-400', text: 'text-orange-800' },
+            'IT Pending': { bg: 'bg-blue-400', text: 'text-blue-800' },
+            'Joining Soon': { bg: 'bg-indigo-500', text: 'text-indigo-800' },
+            'Completed': { bg: 'bg-green-400', text: 'text-green-800' },
+            'Overdue': { bg: 'bg-red-400', text: 'text-red-800' }
+        };
+        const config = statusConfig[status] || { bg: 'bg-gray-400', text: 'text-gray-800' };
+        return `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${config.bg} ${config.text}">${status}</span>`;
+    }
+    
+    function loadCandidateDetails(candidateId) {
+        console.log('[Slide-over] loadCandidateDetails called with ID:', candidateId);
+        if (!candidateId) {
+            console.error('[Slide-over] Candidate ID is missing');
+            return;
+        }
+        
+        // Show loading state
+        console.log('[Slide-over] Showing loading state');
+        if (slideOverLoading) slideOverLoading.classList.remove('hidden');
+        if (slideOverError) slideOverError.classList.add('hidden');
+        if (slideOverContent) slideOverContent.classList.add('hidden');
+        
+        // Build API URL
+        const apiUrl = `/${tenantSlug}/api/onboardings/${candidateId}`;
+        console.log('[Slide-over] Fetching from URL:', apiUrl);
+        
+        // Fetch candidate details
+        fetch(apiUrl, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+            }
+        })
+        .then(response => {
+            console.log('[Slide-over] API response status:', response.status);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('[Slide-over] API response data:', data);
+            // Hide loading, show content
+            if (slideOverLoading) slideOverLoading.classList.add('hidden');
+            if (slideOverError) slideOverError.classList.add('hidden');
+            if (slideOverContent) slideOverContent.classList.remove('hidden');
+            
+            // Populate fields
+            const fullName = `${data.firstName || ''} ${data.lastName || ''}`.trim() || 'N/A';
+            document.getElementById('candidate-name').textContent = fullName;
+            document.getElementById('candidate-email').textContent = data.email || 'N/A';
+            
+            // Phone
+            const phoneElement = document.getElementById('candidate-phone');
+            if (phoneElement) {
+                phoneElement.textContent = data.phone || 'N/A';
+            }
+            
+            document.getElementById('candidate-designation').textContent = data.designation || 'N/A';
+            document.getElementById('candidate-department').textContent = data.department || 'N/A';
+            document.getElementById('candidate-manager').textContent = data.manager || 'N/A';
+            document.getElementById('candidate-joining-date').textContent = formatDate(data.joiningDate);
+            document.getElementById('candidate-status').innerHTML = formatStatus(data.status || 'Pre-boarding');
+            
+            // Progress
+            const progressElement = document.getElementById('candidate-progress');
+            if (progressElement) {
+                if (data.progressPercent !== undefined && data.progressPercent !== null) {
+                    progressElement.textContent = `${data.progressPercent}%`;
+                } else {
+                    progressElement.textContent = 'N/A';
+                }
+            }
+            
+            // Store candidate ID for send reminder button
+            currentCandidateId = candidateId;
+        })
+        .catch(error => {
+            console.error('[Slide-over] Error loading candidate details:', error);
+            // Hide loading, show error
+            if (slideOverLoading) slideOverLoading.classList.add('hidden');
+            if (slideOverError) slideOverError.classList.remove('hidden');
+            if (slideOverContent) slideOverContent.classList.add('hidden');
+            currentCandidateId = null;
+        });
+    }
+    
+    function showToast(message, type = 'success') {
+        const toastContainer = document.getElementById('toast-container');
+        if (!toastContainer) return;
+        
+        const toast = document.createElement('div');
+        const bgColor = type === 'success' ? 'bg-green-500' : 'bg-red-500';
+        toast.className = `${bgColor} text-white px-4 py-3 rounded-lg shadow-lg flex items-center justify-between min-w-[300px] max-w-md`;
+        toast.innerHTML = `
+            <span>${message}</span>
+            <button type="button" class="ml-4 text-white hover:text-gray-200" onclick="this.parentElement.remove()">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        `;
+        
+        toastContainer.appendChild(toast);
+        
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+            if (toast.parentElement) {
+                toast.remove();
+            }
+        }, 5000);
+    }
+    
+    function sendReminder() {
+        if (!currentCandidateId) {
+            showToast('No candidate selected', 'error');
+            return;
+        }
+        
+        const btn = document.getElementById('send-reminder-btn');
+        const text = document.getElementById('send-reminder-text');
+        const loader = document.getElementById('send-reminder-loader');
+        
+        if (!btn || !text || !loader) return;
+        
+        // Disable button and show loading state
+        btn.disabled = true;
+        text.textContent = 'Sending...';
+        loader.classList.remove('hidden');
+        
+        const apiUrl = `/${tenantSlug}/api/onboardings/${currentCandidateId}/remind`;
+        
+        fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Re-enable button
+            btn.disabled = false;
+            text.textContent = 'Send Reminder';
+            loader.classList.add('hidden');
+            
+            // Show success toast
+            showToast('Reminder sent successfully.', 'success');
+        })
+        .catch(error => {
+            console.error('[Slide-over] Error sending reminder:', error);
+            
+            // Re-enable button
+            btn.disabled = false;
+            text.textContent = 'Send Reminder';
+            loader.classList.add('hidden');
+            
+            // Show error toast
+            showToast('Failed to send reminder. Try again.', 'error');
+        });
+    }
+    
+    // Use event delegation to handle clicks on View buttons
+    function handleViewClick(e) {
+        console.log('========================================');
+        console.log('[Slide-over] Click event detected!');
+        console.log('[Slide-over] Event target:', e.target);
+        console.log('[Slide-over] Event currentTarget:', e.currentTarget);
+        console.log('[Slide-over] Event type:', e.type);
+        console.log('[Slide-over] Target tagName:', e.target.tagName);
+        console.log('[Slide-over] Target className:', e.target.className);
+        
+        const btn = e.target.closest('.view-candidate-btn');
+        console.log('[Slide-over] Button found via closest:', !!btn);
+        if (btn) {
+            console.log('[Slide-over] Button element:', btn);
+        }
+        
+        if (!btn) {
+            console.log('[Slide-over] No .view-candidate-btn found, ignoring click');
+            return;
+        }
+        
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('[Slide-over] Default prevented, event stopped');
+        
+        const candidateId = btn.getAttribute('data-candidate-id');
+        console.log('[Slide-over] View clicked, candidate ID:', candidateId);
+        console.log('[Slide-over] Button element:', btn);
+        console.log('[Slide-over] Button classes:', btn.className);
+        console.log('[Slide-over] Button attributes:', Array.from(btn.attributes).map(attr => `${attr.name}="${attr.value}"`));
+        
+        if (candidateId) {
+            console.log('[Slide-over] Candidate ID found, opening slide-over...');
+            openSlideOver();
+            loadCandidateDetails(candidateId);
+        } else {
+            console.error('[Slide-over] No candidate ID found on button');
+        }
+    }
+    
+    // Initialize when DOM is ready
+    function init() {
+        console.log('[Slide-over] Init function called');
+        initSlideOver();
+        
+        // Check for View buttons
+        const viewButtons = document.querySelectorAll('.view-candidate-btn');
+        console.log('========================================');
+        console.log('[Slide-over] Searching for View buttons...');
+        console.log('[Slide-over] Found View buttons:', viewButtons.length);
+        
+        if (viewButtons.length > 0) {
+            console.log('[Slide-over] First button element:', viewButtons[0]);
+            console.log('[Slide-over] First button HTML:', viewButtons[0].outerHTML);
+            console.log('[Slide-over] First button ID:', viewButtons[0].getAttribute('data-candidate-id'));
+            console.log('[Slide-over] First button classes:', viewButtons[0].className);
+            console.log('[Slide-over] First button href:', viewButtons[0].getAttribute('href'));
+        } else {
+            console.warn('[Slide-over] WARNING: No View buttons found!');
+            console.log('[Slide-over] Searching for any links with view-candidate-btn class...');
+            const allLinks = document.querySelectorAll('a');
+            console.log('[Slide-over] Total links on page:', allLinks.length);
+            allLinks.forEach((link, idx) => {
+                if (link.className && link.className.includes('view')) {
+                    console.log(`[Slide-over] Link ${idx} with "view" in class:`, link.className, link);
+                }
+            });
+        }
+        console.log('========================================');
+        
+        // Use event delegation on the document or a parent container
+        const onboardingPage = document.getElementById('onboardings-page');
+        console.log('[Slide-over] onboarding-page element found:', !!onboardingPage);
+        
+        if (onboardingPage) {
+            console.log('[Slide-over] Attaching click handler to onboarding-page container');
+            onboardingPage.addEventListener('click', handleViewClick);
+        } else {
+            console.log('[Slide-over] onboarding-page not found, attaching to document');
+            // Fallback to document if container not found
+            document.addEventListener('click', handleViewClick);
+        }
+        
+        // Also try direct attachment to buttons as fallback
+        viewButtons.forEach((btn, index) => {
+            console.log(`[Slide-over] Attaching direct handler to button ${index}`);
+            btn.addEventListener('click', function(e) {
+                console.log('[Slide-over] Direct button click handler fired');
+                e.preventDefault();
+                e.stopPropagation();
+                const candidateId = this.getAttribute('data-candidate-id');
+                console.log('[Slide-over] Direct handler - candidate ID:', candidateId);
+                if (candidateId) {
+                    openSlideOver();
+                    loadCandidateDetails(candidateId);
+                }
+            });
+        });
+        
+        // Close handlers
+        if (closeSlideOverBtn) {
+            console.log('[Slide-over] Attaching close button handler');
+            closeSlideOverBtn.addEventListener('click', closeSlideOver);
+        }
+        
+        if (slideOverBackdrop) {
+            console.log('[Slide-over] Attaching backdrop click handler');
+            slideOverBackdrop.addEventListener('click', closeSlideOver);
+        }
+        
+        // Send reminder button handler
+        const sendReminderBtn = document.getElementById('send-reminder-btn');
+        if (sendReminderBtn) {
+            sendReminderBtn.addEventListener('click', sendReminder);
+        }
+        
+        // Close on Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && slideOver && !slideOver.classList.contains('hidden')) {
+                closeSlideOver();
+            }
+        });
+        
+        console.log('[Slide-over] Initialization complete');
+    }
+    
+    // Run when DOM is ready
+    console.log('[Slide-over] Document ready state:', document.readyState);
+    if (document.readyState === 'loading') {
+        console.log('[Slide-over] DOM still loading, waiting for DOMContentLoaded');
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('[Slide-over] DOMContentLoaded fired, calling init');
+            init();
+        });
+    } else {
+        console.log('[Slide-over] DOM already ready, calling init immediately');
+        // DOM is already ready
+        init();
+    }
+    
+    console.log('[Slide-over] Script setup complete');
+    console.log('========================================');
+    
+    // Test: Log all clickable elements after a short delay
+    setTimeout(function() {
+        console.log('[Slide-over] TEST: Checking page after 1 second...');
+        const testButtons = document.querySelectorAll('.view-candidate-btn');
+        console.log('[Slide-over] TEST: Found buttons:', testButtons.length);
+        if (testButtons.length === 0) {
+            console.error('[Slide-over] TEST FAILED: No buttons found!');
+            console.log('[Slide-over] TEST: Checking if script is in correct location...');
+            console.log('[Slide-over] TEST: Current script location:', window.location.href);
+        } else {
+            console.log('[Slide-over] TEST PASSED: Buttons found!');
+            testButtons.forEach((btn, idx) => {
+                console.log(`[Slide-over] TEST: Button ${idx}:`, {
+                    id: btn.getAttribute('data-candidate-id'),
+                    href: btn.getAttribute('href'),
+                    classes: btn.className,
+                    text: btn.textContent.trim()
+                });
+            });
+        }
+    }, 1000);
+})();
+
+// Global test function - can be called from console
+window.testSlideOver = function() {
+    console.log('[Slide-over] TEST FUNCTION CALLED');
+    const buttons = document.querySelectorAll('.view-candidate-btn');
+    console.log('Found buttons:', buttons.length);
+    buttons.forEach((btn, idx) => {
+        console.log(`Button ${idx}:`, btn);
+    });
+    return buttons.length;
+};
+</script>
 @endpush

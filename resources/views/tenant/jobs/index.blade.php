@@ -197,32 +197,46 @@
                                         @endif
                                         
                                         <div class="flex items-center space-x-2">
-                                            @if($job->status === 'draft')
-                                                <form method="POST" action="{{ route('tenant.jobs.publish', ['tenant' => $tenant->slug, 'job' => $job->id]) }}" class="inline">
-                                                    @csrf
-                                                    @method('PATCH')
-                                                    <button type="submit" class="text-green-600 hover:text-green-800 text-sm font-medium">
-                                                        Publish
-                                                    </button>
-                                                </form>
-                                            @elseif($job->status === 'published')
-                                                <form method="POST" action="{{ route('tenant.jobs.close', ['tenant' => $tenant->slug, 'job' => $job->id]) }}" class="inline">
-                                                    @csrf
-                                                    @method('PATCH')
-                                                    <button type="submit" class="text-red-600 hover:text-red-800 text-sm font-medium">
-                                                        Close
-                                                    </button>
-                                                </form>
-                                            @endif
+                                            @customCan('publish_jobs', $tenant)
+                                                @if($job->status === 'draft')
+                                                    <form method="POST" action="{{ route('tenant.jobs.publish', ['tenant' => $tenant->slug, 'job' => $job->id]) }}" class="inline">
+                                                        @csrf
+                                                        @method('PATCH')
+                                                        <button type="submit" class="text-green-600 hover:text-green-800 text-sm font-medium">
+                                                            Publish
+                                                        </button>
+                                                    </form>
+                                                @endif
+                                            @endcustomCan
                                             
-                                            <form method="POST" action="{{ route('tenant.jobs.destroy', ['tenant' => $tenant->slug, 'job' => $job->id]) }}" class="inline"
-                                                  onsubmit="return confirm('Are you sure you want to delete this job?')">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="text-red-600 hover:text-red-800 text-sm font-medium">
+                                            @customCan('close_jobs', $tenant)
+                                                @if($job->status === 'published')
+                                                    <form method="POST" action="{{ route('tenant.jobs.close', ['tenant' => $tenant->slug, 'job' => $job->id]) }}" class="inline">
+                                                        @csrf
+                                                        @method('PATCH')
+                                                        <button type="submit" class="text-red-600 hover:text-red-800 text-sm font-medium">
+                                                            Close
+                                                        </button>
+                                                    </form>
+                                                @endif
+                                            @endcustomCan
+                                            
+                                            @customCan('delete_jobs', $tenant)
+                                                <form method="POST" action="{{ route('tenant.jobs.destroy', ['tenant' => $tenant->slug, 'job' => $job->id]) }}" class="inline"
+                                                      onsubmit="return confirm('Are you sure you want to delete this job?')">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="text-red-600 hover:text-red-800 text-sm font-medium">
+                                                        Delete
+                                                    </button>
+                                                </form>
+                                            @else
+                                                <button type="button" 
+                                                        class="text-gray-400 text-sm font-medium cursor-not-allowed"
+                                                        title="Permission required: Delete Jobs">
                                                     Delete
                                                 </button>
-                                            </form>
+                                            @endcustomCan
                                         </div>
                                     </div>
                                 </div>

@@ -209,7 +209,7 @@
                                                 'withdrawn' => ['bg' => 'bg-gray-100', 'text' => 'text-gray-800'],
                                             ];
                                             $config = $status ? ($statusConfig[$status] ?? $statusConfig['applied']) : null;
-                                            $displayStatus = $latestApplication ? ($latestApplication->status === 'active' ? 'Applied' : ucfirst($latestApplication->status)) : 'No Application';
+                                            $displayStatus = $latestApplication ? ($latestApplication->status === 'active' ? 'Applied' : ($latestApplication->status === 'hired' ? 'Shortlisted' : ucfirst($latestApplication->status))) : 'No Application';
                                         @endphp
                                         @if($latestApplication && $config)
                                             <div class="flex items-center">
@@ -299,7 +299,7 @@
                                             'withdrawn' => ['bg' => 'bg-gray-100', 'text' => 'text-gray-800'],
                                         ];
                                         $config = $status ? ($statusConfig[$status] ?? $statusConfig['applied']) : null;
-                                        $displayStatus = $latestApplication ? ($latestApplication->status === 'active' ? 'Applied' : ucfirst($latestApplication->status)) : 'No Application';
+                                        $displayStatus = $latestApplication ? ($latestApplication->status === 'active' ? 'Applied' : ($latestApplication->status === 'hired' ? 'Shortlisted' : ucfirst($latestApplication->status))) : 'No Application';
                                     @endphp
                                     @if($latestApplication && $config)
                                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $config['bg'] }} {{ $config['text'] }}">

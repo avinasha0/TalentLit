@@ -22,6 +22,17 @@ class GeneralSettingsController extends Controller
     public function update(Request $request, string $tenant = null)
     {
         $tenantModel = tenant();
+        \Log::info('GeneralSettings.Update.Start', [
+            'tenant_id' => $tenantModel?->id,
+            'tenant_slug' => $tenantModel?->slug,
+            'route_name' => $request->route()?->getName(),
+            'host' => $request->getHost(),
+            'path' => $request->path(),
+            'is_subdomain_route' => str_starts_with((string) $request->route()?->getName(), 'subdomain.'),
+            'payload_subdomain' => $request->input('subdomain'),
+            'payload_subdomain_enabled_raw' => $request->input('subdomain_enabled'),
+            'payload_subdomain_enabled_bool' => $request->boolean('subdomain_enabled'),
+        ]);
         
         $validationRules = [
             'name' => 'required|string|max:255',
@@ -95,17 +106,36 @@ class GeneralSettingsController extends Controller
             $updateData['subdomain_enabled'] = $request->boolean('subdomain_enabled') && !empty($request->subdomain);
         }
 
+        \Log::info('GeneralSettings.Update.Prepared', [
+            'tenant_id' => $tenantModel?->id,
+            'plan_slug' => $currentPlan?->slug,
+            'will_update_subdomain' => array_key_exists('subdomain', $updateData),
+            'will_update_subdomain_enabled' => array_key_exists('subdomain_enabled', $updateData),
+            'update_subdomain' => $updateData['subdomain'] ?? null,
+            'update_subdomain_enabled' => $updateData['subdomain_enabled'] ?? null,
+        ]);
+
         // Only update password if provided
         if ($request->filled('smtp_password')) {
             $updateData['smtp_password'] = encrypt($request->smtp_password);
         }
 
         $tenantModel->update($updateData);
+        $tenantModel->refresh();
+
+        \Log::info('GeneralSettings.Update.AfterSave', [
+            'tenant_id' => $tenantModel->id,
+            'tenant_slug' => $tenantModel->slug,
+            'saved_subdomain' => $tenantModel->subdomain,
+            'saved_subdomain_enabled' => $tenantModel->subdomain_enabled,
+        ]);
 
         // Redirect based on route name (subdomain or path-based)
         $routeName = $request->route()->getName();
-        if (str_starts_with($routeName, 'subdomain.')) {
-            return redirect()->route('subdomain.settings.general')->with('success', 'General settings updated successfully.');
+        if (str_starts_with($routeName, 'subdomain.') && $tenantModel->subdomain_enabled && !empty($tenantModel->subdomain)) {
+            return redirect()->route('subdomain.settings.general', [
+                'subdomain' => $request->route('subdomain') ?? $tenantModel->subdomain,
+            ])->with('success', 'General settings updated successfully.');
         }
         return redirect()
             ->route('tenant.settings.general', $tenantModel->slug)
@@ -147,8 +177,10 @@ class GeneralSettingsController extends Controller
         }
 
         $routeName = $request->route()->getName();
-        if (str_starts_with($routeName, 'subdomain.')) {
-            return redirect()->route('subdomain.settings.general')->with('success', 'SMTP configuration saved successfully.');
+        if (str_starts_with($routeName, 'subdomain.') && $tenantModel->subdomain_enabled && !empty($tenantModel->subdomain)) {
+            return redirect()->route('subdomain.settings.general', [
+                'subdomain' => $request->route('subdomain') ?? $tenantModel->subdomain,
+            ])->with('success', 'SMTP configuration saved successfully.');
         }
         return redirect()
             ->route('tenant.settings.general', $tenantModel->slug)

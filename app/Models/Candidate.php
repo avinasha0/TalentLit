@@ -23,10 +23,18 @@ class Candidate extends Model
         'source',
         'resume_raw_text',
         'resume_json',
+        'designation',
+        'department',
+        'manager',
+        'joining_date',
+        'completed_steps',
+        'total_steps',
+        'status',
     ];
 
     protected $casts = [
         'resume_json' => 'array',
+        'joining_date' => 'date',
     ];
 
     public function contacts(): HasMany

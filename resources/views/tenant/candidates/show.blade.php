@@ -171,7 +171,7 @@
                                                 $config = $statusConfig[$status] ?? $statusConfig['applied'];
                                             @endphp
                                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $config['bg'] }} {{ $config['text'] }} {{ $config['dark_bg'] }} {{ $config['dark_text'] }}">
-                                                {{ ucfirst($application->status) }}
+                                                {{ $application->status === 'hired' ? 'Shortlisted' : ucfirst($application->status) }}
                                             </span>
                                         </div>
                                     </div>
@@ -530,7 +530,7 @@
                                                         @php
                                                             $status = strtolower($application->status);
                                                             $config = $statusConfig[$status] ?? $statusConfig['applied'];
-                                                            $displayStatus = $application->status === 'active' ? 'Applied' : ucfirst($application->status);
+                                                            $displayStatus = $application->status === 'active' ? 'Applied' : ($application->status === 'hired' ? 'Shortlisted' : ucfirst($application->status));
                                                         @endphp
                                                         <span id="status-badge-{{ $application->id }}" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $config['bg'] }} {{ $config['text'] }} {{ $config['dark_bg'] }} {{ $config['dark_text'] }}">
                                                             {{ $displayStatus }}
@@ -549,7 +549,7 @@
                                                             <option value="interviewed" {{ strtolower($application->status) === 'interviewed' ? 'selected' : '' }}>Interviewed</option>
                                                             <option value="hold" {{ strtolower($application->status) === 'hold' ? 'selected' : '' }}>Hold</option>
                                                             <option value="rejected" {{ strtolower($application->status) === 'rejected' ? 'selected' : '' }}>Rejected</option>
-                                                            <option value="hired" {{ strtolower($application->status) === 'hired' ? 'selected' : '' }}>Hired</option>
+                                                            <option value="hired" {{ strtolower($application->status) === 'hired' ? 'selected' : '' }}>Shortlisted</option>
                                                         </select>
                                                         <div class="mt-2 flex space-x-2">
                                                             <button type="button" 
@@ -563,6 +563,91 @@
                                                                 Cancel
                                                             </button>
                                                         </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Hiring Manager Details -->
+                                            <div class="mt-4 pt-4 border-t border-gray-200">
+                                                <div class="flex items-center justify-between mb-3">
+                                                    <h5 class="text-sm font-semibold text-gray-900">Hiring Manager Details</h5>
+                                                    @if($application->jobOpening)
+                                                        <button type="button" 
+                                                                onclick="openHiringManagerModal('{{ $application->id }}', '{{ $application->jobOpening->id }}')" 
+                                                                class="text-xs text-blue-600 hover:text-blue-800 font-medium">
+                                                            Edit
+                                                        </button>
+                                                    @endif
+                                                </div>
+                                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                    <!-- Primary Contact -->
+                                                    <div class="bg-gray-50 rounded-lg p-3">
+                                                        <div class="text-xs font-medium text-gray-500 mb-2">Primary Contact</div>
+                                                        @php
+                                                            $primaryContact = $application->jobOpening->hiring_manager_primary_name ?? null;
+                                                            $primaryEmail = $application->jobOpening->hiring_manager_primary_email ?? null;
+                                                            $primaryPhone = $application->jobOpening->hiring_manager_primary_phone ?? null;
+                                                        @endphp
+                                                        @if($primaryContact || $primaryEmail || $primaryPhone)
+                                                            <div class="space-y-1 text-sm text-gray-900">
+                                                                @if($primaryContact)
+                                                                    <div class="font-medium">{{ $primaryContact }}</div>
+                                                                @endif
+                                                                @if($primaryEmail)
+                                                                    <div class="flex items-center">
+                                                                        <svg class="w-4 h-4 mr-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                                                                        </svg>
+                                                                        <a href="mailto:{{ $primaryEmail }}" class="text-blue-600 hover:text-blue-800">{{ $primaryEmail }}</a>
+                                                                    </div>
+                                                                @endif
+                                                                @if($primaryPhone)
+                                                                    <div class="flex items-center">
+                                                                        <svg class="w-4 h-4 mr-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path>
+                                                                        </svg>
+                                                                        <a href="tel:{{ $primaryPhone }}" class="text-blue-600 hover:text-blue-800">{{ $primaryPhone }}</a>
+                                                                    </div>
+                                                                @endif
+                                                            </div>
+                                                        @else
+                                                            <div class="text-sm text-gray-400">Not available</div>
+                                                        @endif
+                                                    </div>
+                                                    
+                                                    <!-- Secondary Contact -->
+                                                    <div class="bg-gray-50 rounded-lg p-3">
+                                                        <div class="text-xs font-medium text-gray-500 mb-2">Secondary Contact</div>
+                                                        @php
+                                                            $secondaryContact = $application->jobOpening->hiring_manager_secondary_name ?? null;
+                                                            $secondaryEmail = $application->jobOpening->hiring_manager_secondary_email ?? null;
+                                                            $secondaryPhone = $application->jobOpening->hiring_manager_secondary_phone ?? null;
+                                                        @endphp
+                                                        @if($secondaryContact || $secondaryEmail || $secondaryPhone)
+                                                            <div class="space-y-1 text-sm text-gray-900">
+                                                                @if($secondaryContact)
+                                                                    <div class="font-medium">{{ $secondaryContact }}</div>
+                                                                @endif
+                                                                @if($secondaryEmail)
+                                                                    <div class="flex items-center">
+                                                                        <svg class="w-4 h-4 mr-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                                                                        </svg>
+                                                                        <a href="mailto:{{ $secondaryEmail }}" class="text-blue-600 hover:text-blue-800">{{ $secondaryEmail }}</a>
+                                                                    </div>
+                                                                @endif
+                                                                @if($secondaryPhone)
+                                                                    <div class="flex items-center">
+                                                                        <svg class="w-4 h-4 mr-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path>
+                                                                        </svg>
+                                                                        <a href="tel:{{ $secondaryPhone }}" class="text-blue-600 hover:text-blue-800">{{ $secondaryPhone }}</a>
+                                                                    </div>
+                                                                @endif
+                                                            </div>
+                                                        @else
+                                                            <div class="text-sm text-gray-400">Not available</div>
+                                                        @endif
                                                     </div>
                                                 </div>
                                             </div>
@@ -1114,7 +1199,7 @@
                 if (data.success) {
                     // Update status badge
                     const statusBadge = document.getElementById('status-badge-' + applicationId);
-                    const statusText = newStatus.charAt(0).toUpperCase() + newStatus.slice(1);
+                    const statusText = newStatus === 'hired' ? 'Shortlisted' : (newStatus.charAt(0).toUpperCase() + newStatus.slice(1));
                     statusBadge.textContent = statusText;
                     
                     // Update status badge colors based on status
@@ -1152,5 +1237,205 @@
                 alert('Error updating application status: ' + error.message);
             });
         }
+
+        // Hiring Manager Modal Functions
+        function openHiringManagerModal(applicationId, jobId) {
+            // Fetch current hiring manager data
+            fetch(`/${tenantSlug}/jobs/${jobId}/hiring-manager`, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': getCsrfToken()
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Populate form fields
+                document.getElementById('hiring-manager-primary-name').value = data.hiring_manager_primary_name || '';
+                document.getElementById('hiring-manager-primary-email').value = data.hiring_manager_primary_email || '';
+                document.getElementById('hiring-manager-primary-phone').value = data.hiring_manager_primary_phone || '';
+                document.getElementById('hiring-manager-secondary-name').value = data.hiring_manager_secondary_name || '';
+                document.getElementById('hiring-manager-secondary-email').value = data.hiring_manager_secondary_email || '';
+                document.getElementById('hiring-manager-secondary-phone').value = data.hiring_manager_secondary_phone || '';
+                
+                // Store job ID and application ID for update
+                document.getElementById('hiring-manager-modal').setAttribute('data-job-id', jobId);
+                document.getElementById('hiring-manager-modal').setAttribute('data-application-id', applicationId);
+                
+                // Show modal
+                document.getElementById('hiring-manager-modal').classList.remove('hidden');
+            })
+            .catch(error => {
+                console.error('Error fetching hiring manager data:', error);
+                // Still show modal with empty fields
+                document.getElementById('hiring-manager-modal').setAttribute('data-job-id', jobId);
+                document.getElementById('hiring-manager-modal').setAttribute('data-application-id', applicationId);
+                document.getElementById('hiring-manager-modal').classList.remove('hidden');
+            });
+        }
+
+        function closeHiringManagerModal() {
+            document.getElementById('hiring-manager-modal').classList.add('hidden');
+        }
+
+        function saveHiringManagerDetails() {
+            const jobId = document.getElementById('hiring-manager-modal').getAttribute('data-job-id');
+            const applicationId = document.getElementById('hiring-manager-modal').getAttribute('data-application-id');
+            
+            const data = {
+                hiring_manager_primary_name: document.getElementById('hiring-manager-primary-name').value,
+                hiring_manager_primary_email: document.getElementById('hiring-manager-primary-email').value,
+                hiring_manager_primary_phone: document.getElementById('hiring-manager-primary-phone').value,
+                hiring_manager_secondary_name: document.getElementById('hiring-manager-secondary-name').value,
+                hiring_manager_secondary_email: document.getElementById('hiring-manager-secondary-email').value,
+                hiring_manager_secondary_phone: document.getElementById('hiring-manager-secondary-phone').value,
+            };
+
+            const csrfToken = getCsrfToken();
+            const submitBtn = document.getElementById('save-hiring-manager-btn');
+            const originalText = submitBtn.textContent;
+            submitBtn.textContent = 'Saving...';
+            submitBtn.disabled = true;
+
+            fetch(`/${tenantSlug}/jobs/${jobId}/hiring-manager`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.text().then(text => {
+                        if (response.status === 419) {
+                            return refreshCsrfToken().then(newToken => {
+                                return fetch(`/${tenantSlug}/jobs/${jobId}/hiring-manager`, {
+                                    method: 'PATCH',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'X-CSRF-TOKEN': newToken,
+                                        'Accept': 'application/json'
+                                    },
+                                    body: JSON.stringify(data)
+                                });
+                            }).then(retryResponse => {
+                                if (!retryResponse.ok) {
+                                    throw new Error(`HTTP error! status: ${retryResponse.status}`);
+                                }
+                                return retryResponse.json();
+                            });
+                        }
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    // Reload the page to show updated data
+                    window.location.reload();
+                } else {
+                    alert('Error updating hiring manager details: ' + (data.message || 'Unknown error'));
+                    submitBtn.textContent = originalText;
+                    submitBtn.disabled = false;
+                }
+            })
+            .catch(error => {
+                console.error('Error updating hiring manager details:', error);
+                alert('Error updating hiring manager details: ' + error.message);
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+            });
+        }
     </script>
+
+    <!-- Hiring Manager Edit Modal -->
+    <div id="hiring-manager-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+        <div class="relative top-20 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white">
+            <div class="mt-3">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-medium text-gray-900">Edit Hiring Manager Details</h3>
+                    <button onclick="closeHiringManagerModal()" class="text-gray-400 hover:text-gray-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+                
+                <div class="space-y-6">
+                    <!-- Primary Contact -->
+                    <div>
+                        <h4 class="text-sm font-semibold text-gray-900 mb-3">Primary Contact</h4>
+                        <div class="space-y-3">
+                            <div>
+                                <label for="hiring-manager-primary-name" class="block text-sm font-medium text-gray-700">Name</label>
+                                <input type="text" 
+                                       id="hiring-manager-primary-name" 
+                                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                                       placeholder="Enter name">
+                            </div>
+                            <div>
+                                <label for="hiring-manager-primary-email" class="block text-sm font-medium text-gray-700">Email</label>
+                                <input type="email" 
+                                       id="hiring-manager-primary-email" 
+                                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                                       placeholder="Enter email">
+                            </div>
+                            <div>
+                                <label for="hiring-manager-primary-phone" class="block text-sm font-medium text-gray-700">Phone</label>
+                                <input type="tel" 
+                                       id="hiring-manager-primary-phone" 
+                                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                                       placeholder="Enter phone number">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Secondary Contact -->
+                    <div>
+                        <h4 class="text-sm font-semibold text-gray-900 mb-3">Secondary Contact</h4>
+                        <div class="space-y-3">
+                            <div>
+                                <label for="hiring-manager-secondary-name" class="block text-sm font-medium text-gray-700">Name</label>
+                                <input type="text" 
+                                       id="hiring-manager-secondary-name" 
+                                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                                       placeholder="Enter name">
+                            </div>
+                            <div>
+                                <label for="hiring-manager-secondary-email" class="block text-sm font-medium text-gray-700">Email</label>
+                                <input type="email" 
+                                       id="hiring-manager-secondary-email" 
+                                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                                       placeholder="Enter email">
+                            </div>
+                            <div>
+                                <label for="hiring-manager-secondary-phone" class="block text-sm font-medium text-gray-700">Phone</label>
+                                <input type="tel" 
+                                       id="hiring-manager-secondary-phone" 
+                                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                                       placeholder="Enter phone number">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-6 flex justify-end space-x-3">
+                    <button type="button" 
+                            onclick="closeHiringManagerModal()" 
+                            class="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500">
+                        Cancel
+                    </button>
+                    <button type="button" 
+                            id="save-hiring-manager-btn"
+                            onclick="saveHiringManagerDetails()" 
+                            class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        Save
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 </x-app-layout>

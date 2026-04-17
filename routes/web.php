@@ -19,10 +19,12 @@ use App\Http\Controllers\Tenant\DashboardController;
 use App\Http\Controllers\Tenant\InterviewController;
 use App\Http\Controllers\Tenant\JobController;
 use App\Http\Controllers\Tenant\RecruitingController;
+use App\Http\Controllers\Tenant\RequisitionController;
 use App\Http\Controllers\Tenant\JobQuestionsController;
 use App\Http\Controllers\Tenant\JobStageController;
 use App\Http\Controllers\Tenant\PipelineController;
 use App\Http\Controllers\Tenant\EmployeeOnboardingController;
+use App\Http\Controllers\Tenant\OrganizationController;
 use App\Models\Application;
 use App\Models\Candidate;
 use Illuminate\Http\Request;
@@ -348,7 +350,8 @@ require __DIR__.'/auth.php';
 // Only match on main domain, not subdomains - use domain constraint
 $appUrl = config('app.url');
 $appDomain = parse_url($appUrl, PHP_URL_HOST) ?? 'localhost';
-Route::domain($appDomain)->middleware('auth')->group(function () {
+// In local development, skip domain constraint to allow both localhost and 127.0.0.1
+$breezeRoutes = function () {
     // Minimal dashboard route used by Breeze tests/controllers
     Route::get('/dashboard', function () {
         // Redirect authenticated users to their tenant dashboard (only on main domain)
@@ -377,7 +380,17 @@ Route::domain($appDomain)->middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-});
+};
+// Apply domain constraint to prevent Breeze routes from matching on subdomains
+// In local development, register for both localhost and 127.0.0.1
+if (app()->environment('local')) {
+    // Register Breeze routes for localhost (main domain only, not subdomains)
+    Route::domain('localhost')->middleware('auth')->group($breezeRoutes);
+    // Also register for 127.0.0.1
+    Route::domain('127.0.0.1')->middleware('auth')->group($breezeRoutes);
+} else {
+    Route::domain($appDomain)->middleware('auth')->group($breezeRoutes);
+}
 
 // Public Career Site Routes
 Route::prefix('{tenant}/careers')->middleware(['capture.tenant', 'tenant'])->group(function () {
@@ -389,11 +402,32 @@ Route::prefix('{tenant}/careers')->middleware(['capture.tenant', 'tenant'])->gro
 });
 
 // Internal Tenant Management Routes (require authentication)
-Route::middleware(['capture.tenant', 'tenant', 'auth'])->group(function () {
+// Only match on main domain, not subdomains
+$tenantRoutes = function () {
+    // Employee Onboarding - accessible by all authenticated users with view dashboard permission
+    // IMPORTANT: More specific routes must come BEFORE generic routes to prevent route conflicts
+    Route::middleware('custom.permission:view_dashboard')->group(function () {
+        Route::get('/{tenant}/employee-onboarding', [EmployeeOnboardingController::class, 'index'])->name('tenant.employee-onboarding.index');
+        Route::get('/{tenant}/employee-onboarding/dashboard', [EmployeeOnboardingController::class, 'dashboard'])->name('tenant.employee-onboarding.dashboard');
+        Route::get('/{tenant}/employee-onboarding/all', [EmployeeOnboardingController::class, 'all'])->name('tenant.employee-onboarding.all');
+        Route::get('/{tenant}/employee-onboarding/new', [EmployeeOnboardingController::class, 'new'])->name('tenant.employee-onboarding.new');
+        Route::get('/{tenant}/employee-onboarding/tasks', [EmployeeOnboardingController::class, 'tasks'])->name('tenant.employee-onboarding.tasks');
+        Route::get('/{tenant}/employee-onboarding/documents', [EmployeeOnboardingController::class, 'documents'])->name('tenant.employee-onboarding.documents');
+        Route::get('/{tenant}/employee-onboarding/it-assets', [EmployeeOnboardingController::class, 'itAssets'])->name('tenant.employee-onboarding.it-assets');
+        Route::get('/{tenant}/employee-onboarding/approvals', [EmployeeOnboardingController::class, 'approvals'])->name('tenant.employee-onboarding.approvals');
+        Route::get('/{tenant}/employee-onboarding/export-csv', [EmployeeOnboardingController::class, 'exportCsv'])->name('tenant.employee-onboarding.export.csv');
+    });
+
     // Dashboard - accessible by all authenticated users with view dashboard permission
+    // NOTE: Dashboard routes come AFTER employee-onboarding routes to prevent conflicts
     Route::middleware('custom.permission:view_dashboard')->group(function () {
         Route::get('/{tenant}/dashboard', [DashboardController::class, 'index'])->name('tenant.dashboard');
         Route::get('/{tenant}/dashboard.json', [DashboardController::class, 'json'])->name('tenant.dashboard.json');
+    });
+
+    // Organization Structure - accessible by all authenticated users with view dashboard permission
+    Route::middleware('custom.permission:view_dashboard')->group(function () {
+        Route::get('/{tenant}/organization', [OrganizationController::class, 'index'])->name('tenant.organization.index');
     });
 
     // Recruiting - accessible by all authenticated users with view dashboard permission
@@ -401,15 +435,79 @@ Route::middleware(['capture.tenant', 'tenant', 'auth'])->group(function () {
         Route::get('/{tenant}/recruiting', [RecruitingController::class, 'index'])->name('tenant.recruiting.index');
     });
 
-    // Employee Onboarding - accessible by all authenticated users with view dashboard permission
-    Route::middleware('custom.permission:view_dashboard')->group(function () {
-        Route::get('/{tenant}/employee-onboarding', [EmployeeOnboardingController::class, 'index'])->name('tenant.employee-onboarding.index');
-        Route::get('/{tenant}/employee-onboarding/all', [EmployeeOnboardingController::class, 'all'])->name('tenant.employee-onboarding.all');
-        Route::get('/{tenant}/employee-onboarding/new', [EmployeeOnboardingController::class, 'new'])->name('tenant.employee-onboarding.new');
-        Route::get('/{tenant}/employee-onboarding/tasks', [EmployeeOnboardingController::class, 'tasks'])->name('tenant.employee-onboarding.tasks');
-        Route::get('/{tenant}/employee-onboarding/documents', [EmployeeOnboardingController::class, 'documents'])->name('tenant.employee-onboarding.documents');
-        Route::get('/{tenant}/employee-onboarding/it-assets', [EmployeeOnboardingController::class, 'itAssets'])->name('tenant.employee-onboarding.it-assets');
-        Route::get('/{tenant}/employee-onboarding/approvals', [EmployeeOnboardingController::class, 'approvals'])->name('tenant.employee-onboarding.approvals');
+    // Requisition Management Routes - Owner, Admin, Recruiter
+    // IMPORTANT: Specific routes (create, pending, approved, etc.) must come BEFORE generic {id} route
+    Route::middleware(['custom.permission:create_jobs'])->group(function () {
+        Route::get('/{tenant}/requisitions/create', [RequisitionController::class, 'create'])->name('tenant.requisitions.create');
+        Route::post('/{tenant}/requisitions', [RequisitionController::class, 'store'])->name('tenant.requisitions.store');
+        
+        // Note: API routes for requisition creation are registered separately without domain constraints
+        // to support both path-based and subdomain-based tenant routing (see below after $tenantRoutes registration)
+    });
+
+    Route::middleware('custom.permission:view_jobs')->group(function () {
+        Route::get('/{tenant}/requisitions', [RequisitionController::class, 'index'])->name('tenant.requisitions.index');
+        Route::get('/{tenant}/requisitions/pending', [RequisitionController::class, 'pending'])->name('tenant.requisitions.pending');
+        Route::get('/{tenant}/requisitions/approved', [RequisitionController::class, 'approved'])->name('tenant.requisitions.approved');
+        Route::get('/{tenant}/requisitions/rejected', [RequisitionController::class, 'rejected'])->name('tenant.requisitions.rejected');
+        Route::get('/{tenant}/requisitions/export/csv', [RequisitionController::class, 'exportCsv'])->name('tenant.requisitions.export.csv');
+        Route::get('/{tenant}/requisitions/export/excel', [RequisitionController::class, 'exportExcel'])->name('tenant.requisitions.export.excel');
+        Route::get('/{tenant}/requisitions/{id}/success', [RequisitionController::class, 'success'])->name('tenant.requisitions.success');
+        Route::get('/{tenant}/requisitions/{id}', [RequisitionController::class, 'show'])->name('tenant.requisitions.show');
+    });
+
+    Route::middleware(['custom.permission:edit_jobs'])->group(function () {
+        Route::get('/{tenant}/requisitions/{id}/edit', [RequisitionController::class, 'edit'])->name('tenant.requisitions.edit');
+    });
+
+    Route::middleware(['custom.permission:view_jobs'])->group(function () {
+        Route::post('/{tenant}/requisitions/{id}/approve', [RequisitionController::class, 'approve'])->name('tenant.requisitions.approve');
+        Route::post('/{tenant}/requisitions/{id}/reject', [RequisitionController::class, 'reject'])->name('tenant.requisitions.reject');
+        Route::post('/{tenant}/requisitions/bulk-delete', [RequisitionController::class, 'bulkDelete'])->name('tenant.requisitions.bulk-delete');
+        Route::post('/{tenant}/requisitions/bulk-status-update', [RequisitionController::class, 'bulkStatusUpdate'])->name('tenant.requisitions.bulk-status-update');
+        Route::post('/{tenant}/requisitions/{id}/duplicate', [RequisitionController::class, 'duplicate'])->name('tenant.requisitions.duplicate');
+        Route::get('/{tenant}/requisitions/{id}/audit-log', [RequisitionController::class, 'auditLog'])->name('tenant.requisitions.audit-log');
+    });
+
+    // Approval Workflow Routes
+    Route::middleware(['custom.permission:view_jobs'])->group(function () {
+        // Pending Approvals Page
+        Route::get('/{tenant}/requisitions/pending-approvals', [\App\Http\Controllers\Tenant\ApprovalController::class, 'pendingApprovalsPage'])->name('tenant.requisitions.pending-approvals');
+        
+        // Approval Detail Page
+        Route::get('/{tenant}/requisitions/{id}/approval', [\App\Http\Controllers\Tenant\ApprovalController::class, 'approvalDetail'])->name('tenant.requisitions.approval');
+    });
+
+    // Approval API Routes
+    Route::middleware(['custom.permission:create_jobs'])->group(function () {
+        Route::post('/{tenant}/api/requisitions/{id}/submit', [\App\Http\Controllers\Tenant\ApprovalController::class, 'submit'])->name('tenant.api.requisitions.submit');
+    });
+
+    Route::middleware(['custom.permission:view_jobs'])->group(function () {
+        Route::get('/{tenant}/api/approvals/pending', [\App\Http\Controllers\Tenant\ApprovalController::class, 'pending'])->name('tenant.api.approvals.pending');
+        Route::get('/{tenant}/api/requisitions/{id}/approvals', [\App\Http\Controllers\Tenant\ApprovalController::class, 'history'])->name('tenant.api.requisitions.approvals');
+    });
+
+    Route::middleware(['custom.permission:edit_jobs'])->group(function () {
+        Route::post('/{tenant}/api/requisitions/{id}/approve', [\App\Http\Controllers\Tenant\ApprovalController::class, 'approve'])->name('tenant.api.requisitions.approve');
+        Route::post('/{tenant}/api/requisitions/{id}/reject', [\App\Http\Controllers\Tenant\ApprovalController::class, 'reject'])->name('tenant.api.requisitions.reject');
+        Route::post('/{tenant}/api/requisitions/{id}/request-changes', [\App\Http\Controllers\Tenant\ApprovalController::class, 'requestChanges'])->name('tenant.api.requisitions.request-changes');
+        Route::post('/{tenant}/api/requisitions/{id}/delegate', [\App\Http\Controllers\Tenant\ApprovalController::class, 'delegate'])->name('tenant.api.requisitions.delegate');
+    });
+
+    // Tasks Routes
+    Route::middleware(['custom.permission:view_jobs'])->group(function () {
+        // Web routes for Tasks UI
+        Route::get('/{tenant}/tasks/my', [\App\Http\Controllers\Tenant\TaskController::class, 'index'])->name('tenant.tasks.my');
+        
+        // API routes for Tasks
+        Route::prefix('{tenant}/api/tasks')->group(function () {
+            Route::get('/my', [\App\Http\Controllers\Api\TaskController::class, 'myTasks'])->name('tenant.api.tasks.my');
+            Route::get('/{id}', [\App\Http\Controllers\Api\TaskController::class, 'show'])->name('tenant.api.tasks.show');
+            Route::post('/{id}/start', [\App\Http\Controllers\Api\TaskController::class, 'start'])->name('tenant.api.tasks.start');
+            Route::post('/{id}/complete', [\App\Http\Controllers\Api\TaskController::class, 'complete'])->name('tenant.api.tasks.complete');
+            Route::post('/{id}/reassign', [\App\Http\Controllers\Api\TaskController::class, 'reassign'])->name('tenant.api.tasks.reassign');
+        });
     });
 
     // Job Management Routes - Owner, Admin, Recruiter
@@ -522,6 +620,11 @@ Route::middleware(['capture.tenant', 'tenant', 'auth'])->group(function () {
         Route::delete('/{tenant}/interviews/{interview}', [InterviewController::class, 'destroy'])->name('tenant.interviews.destroy');
     });
 
+    // Offer Management Routes - Owner, Admin, Recruiter, Hiring Manager
+    Route::middleware('custom.permission:view_dashboard')->group(function () {
+        Route::get('/{tenant}/offers', [RecruitingController::class, 'index'])->name('tenant.offers.index');
+    });
+
     // Analytics Routes - Owner, Admin, Recruiter, Hiring Manager
     Route::middleware(['capture.tenant', 'tenant', 'custom.permission:view_analytics'])->group(function () {
         Route::get('/{tenant}/analytics', [App\Http\Controllers\Tenant\AnalyticsController::class, 'index'])->name('tenant.analytics.index');
@@ -589,6 +692,8 @@ Route::middleware(['capture.tenant', 'tenant', 'auth'])->group(function () {
     Route::middleware('custom.permission:edit_jobs')->group(function () {
         Route::get('/{tenant}/jobs/{job}/questions', [JobQuestionsController::class, 'edit'])->name('tenant.jobs.questions');
         Route::put('/{tenant}/jobs/{job}/questions', [JobQuestionsController::class, 'update'])->name('tenant.jobs.questions.update');
+        Route::get('/{tenant}/jobs/{job}/hiring-manager', [JobController::class, 'getHiringManager'])->name('tenant.jobs.hiring-manager.get');
+        Route::patch('/{tenant}/jobs/{job}/hiring-manager', [JobController::class, 'updateHiringManager'])->name('tenant.jobs.hiring-manager.update');
     });
 
     // Email Template Routes - Owner, Admin, Recruiter
@@ -603,6 +708,17 @@ Route::middleware(['capture.tenant', 'tenant', 'auth'])->group(function () {
         Route::get('/{tenant}/email-templates/{template}/preview', [App\Http\Controllers\Tenant\EmailTemplateController::class, 'preview'])->name('tenant.email-templates.preview');
         Route::post('/{tenant}/email-templates/{template}/duplicate', [App\Http\Controllers\Tenant\EmailTemplateController::class, 'duplicate'])->name('tenant.email-templates.duplicate');
         Route::post('/{tenant}/email-templates/load-premade', [App\Http\Controllers\Tenant\EmailTemplateController::class, 'loadPremadeTemplate'])->name('tenant.email-templates.load-premade');
+    });
+
+    // Onboarding Email Template Routes - Owner, Admin, Recruiter
+    Route::middleware('custom.permission:manage_email_templates')->group(function () {
+        Route::get('/{tenant}/onboarding-email-templates', [App\Http\Controllers\Tenant\OnboardingEmailTemplateController::class, 'index'])->name('tenant.onboarding-email-templates.index');
+        Route::get('/{tenant}/onboarding-email-templates/create', [App\Http\Controllers\Tenant\OnboardingEmailTemplateController::class, 'create'])->name('tenant.onboarding-email-templates.create');
+        Route::post('/{tenant}/onboarding-email-templates', [App\Http\Controllers\Tenant\OnboardingEmailTemplateController::class, 'store'])->name('tenant.onboarding-email-templates.store');
+        Route::get('/{tenant}/onboarding-email-templates/{template}', [App\Http\Controllers\Tenant\OnboardingEmailTemplateController::class, 'show'])->name('tenant.onboarding-email-templates.show');
+        Route::get('/{tenant}/onboarding-email-templates/{template}/edit', [App\Http\Controllers\Tenant\OnboardingEmailTemplateController::class, 'edit'])->name('tenant.onboarding-email-templates.edit');
+        Route::put('/{tenant}/onboarding-email-templates/{template}', [App\Http\Controllers\Tenant\OnboardingEmailTemplateController::class, 'update'])->name('tenant.onboarding-email-templates.update');
+        Route::delete('/{tenant}/onboarding-email-templates/{template}', [App\Http\Controllers\Tenant\OnboardingEmailTemplateController::class, 'destroy'])->name('tenant.onboarding-email-templates.destroy');
     });
 
     // Currency Demo Route (for testing)
@@ -625,6 +741,31 @@ Route::middleware(['capture.tenant', 'tenant', 'auth'])->group(function () {
         Route::put('/settings/password', [App\Http\Controllers\Tenant\AccountSettingsController::class, 'updatePassword'])->name('account.settings.password');
         Route::put('/settings/email', [App\Http\Controllers\Tenant\AccountSettingsController::class, 'updateEmail'])->name('account.settings.email');
     });
+};
+// Apply domain constraint to prevent slug routes from matching on subdomains
+// In local development, register for both localhost and 127.0.0.1
+if (app()->environment('local')) {
+    // Register slug routes for localhost
+    Route::domain('localhost')->middleware(['capture.tenant', 'tenant', 'auth'])->group($tenantRoutes);
+    // Also register for 127.0.0.1 so slug mode works on both
+    Route::domain('127.0.0.1')->middleware(['capture.tenant', 'tenant', 'auth'])->group($tenantRoutes);
+} else {
+    Route::domain($appDomain)->middleware(['capture.tenant', 'tenant', 'auth'])->group($tenantRoutes);
+}
+
+// Register API routes for requisitions without domain constraints to support path-based tenant routing
+// These routes must be accessible via /{tenant}/api/requisitions/* for path-based tenants
+// Note: These routes are also defined inside $tenantRoutes with domain constraints for subdomain routing
+// Having both ensures compatibility with both path-based and subdomain-based tenant routing
+Route::middleware(['capture.tenant', 'tenant', 'auth', 'custom.permission:create_jobs'])->group(function () {
+    Route::prefix('{tenant}/api/requisitions')->group(function () {
+            Route::get('/job-titles', [RequisitionController::class, 'getJobTitleSuggestions'])->name('tenant.api.requisitions.job-titles');
+            Route::get('/skills', [RequisitionController::class, 'getSkillSuggestions'])->name('tenant.api.requisitions.skills');
+            Route::get('/employees', [RequisitionController::class, 'getEmployeeSuggestions'])->name('tenant.api.requisitions.employees');
+        Route::post('/draft', [RequisitionController::class, 'saveDraft'])->name('tenant.api.requisitions.draft.save');
+        Route::get('/draft', [RequisitionController::class, 'loadDraft'])->name('tenant.api.requisitions.draft.load');
+        Route::delete('/draft', [RequisitionController::class, 'deleteDraft'])->name('tenant.api.requisitions.draft.delete');
+    });
 });
 
 // API Routes
@@ -644,13 +785,45 @@ Route::prefix('api')->group(function () {
     });
 });
 
-// Employee Onboarding API routes
-Route::middleware(['capture.tenant', 'tenant', 'auth', 'custom.permission:view_dashboard'])->group(function () {
+// Employee Onboarding API routes - Only match on main domain, not subdomains
+$onboardingApiRoutes = function () {
     Route::get('/{tenant}/api/onboardings', [EmployeeOnboardingController::class, 'apiIndex'])->name('api.onboardings.index');
-    Route::get('/{tenant}/api/onboardings/{id}', [EmployeeOnboardingController::class, 'apiShow'])->name('api.onboardings.show');
+    
+    // Dashboard API routes - MUST come before /{id} routes to avoid route conflicts
+    Route::get('/{tenant}/api/onboardings/dashboard/kpis', [EmployeeOnboardingController::class, 'apiDashboardKPIs'])->name('api.onboardings.dashboard.kpis');
+    Route::get('/{tenant}/api/onboardings/dashboard/bottlenecks', [EmployeeOnboardingController::class, 'apiDashboardBottlenecks'])->name('api.onboardings.dashboard.bottlenecks');
+    Route::get('/{tenant}/api/onboardings/dashboard/charts', [EmployeeOnboardingController::class, 'apiDashboardCharts'])->name('api.onboardings.dashboard.charts');
+    Route::get('/{tenant}/api/onboardings/dashboard/export', [EmployeeOnboardingController::class, 'apiDashboardExport'])->name('api.onboardings.dashboard.export');
+    
+    // Export and import routes - also before /{id} routes
+    Route::get('/{tenant}/api/onboardings/export/csv', [EmployeeOnboardingController::class, 'apiExportCSV'])->name('api.onboardings.export.csv');
+    Route::post('/{tenant}/api/onboardings/import/candidates', [EmployeeOnboardingController::class, 'importCandidates'])->name('api.onboardings.import.candidates');
+    Route::get('/{tenant}/api/onboardings/import/template', [EmployeeOnboardingController::class, 'downloadImportTemplate'])->name('api.onboardings.import.template');
+    
+    // Bulk operations - before /{id} routes
     Route::post('/{tenant}/api/onboardings/bulk/remind', [EmployeeOnboardingController::class, 'apiBulkRemind'])->name('api.onboardings.bulk.remind');
-    Route::post('/{tenant}/api/onboardings/{id}/convert', [EmployeeOnboardingController::class, 'apiConvert'])->name('api.onboardings.convert');
-});
+    
+    // Individual onboarding routes with {id} - these must come LAST
+    Route::get('/{tenant}/api/onboardings/{id}', [EmployeeOnboardingController::class, 'apiShow'])->whereUuid('id')->name('api.onboardings.show');
+    Route::post('/{tenant}/api/onboardings/{id}/remind', [EmployeeOnboardingController::class, 'apiSendReminder'])->whereUuid('id')->name('api.onboardings.remind');
+    Route::get('/{tenant}/api/onboardings/{id}/documents', [EmployeeOnboardingController::class, 'apiGetDocuments'])->whereUuid('id')->name('api.onboardings.documents');
+    Route::post('/{tenant}/api/onboardings/{id}/documents/{documentId}/remind', [EmployeeOnboardingController::class, 'apiSendDocumentReminder'])->whereUuid('id')->name('api.onboardings.documents.remind');
+    Route::get('/{tenant}/api/onboardings/{id}/tasks', [EmployeeOnboardingController::class, 'apiGetTasks'])->whereUuid('id')->name('api.onboardings.tasks');
+    Route::post('/{tenant}/api/onboardings/{id}/tasks/{taskId}/complete', [EmployeeOnboardingController::class, 'apiMarkTaskComplete'])->whereUuid('id')->name('api.onboardings.tasks.complete');
+    Route::get('/{tenant}/api/onboardings/{id}/assets', [EmployeeOnboardingController::class, 'apiGetAssetRequests'])->whereUuid('id')->name('api.onboardings.assets');
+    Route::post('/{tenant}/api/onboardings/{id}/assets', [EmployeeOnboardingController::class, 'apiCreateAssetRequest'])->whereUuid('id')->name('api.onboardings.assets.create');
+    Route::get('/{tenant}/api/onboardings/{id}/approvals', [EmployeeOnboardingController::class, 'apiGetApprovals'])->whereUuid('id')->name('api.onboardings.approvals');
+    Route::post('/{tenant}/api/onboardings/{id}/close', [EmployeeOnboardingController::class, 'apiLogSlideOverClose'])->whereUuid('id')->name('api.onboardings.close');
+    Route::post('/{tenant}/api/onboardings/{id}/log-tab-view', [EmployeeOnboardingController::class, 'apiLogTabView'])->whereUuid('id')->name('api.onboardings.log-tab-view');
+    Route::get('/{tenant}/api/onboardings/{id}/check-convert', [EmployeeOnboardingController::class, 'apiCheckConvert'])->whereUuid('id')->name('api.onboardings.check-convert');
+    Route::post('/{tenant}/api/onboardings/{id}/convert', [EmployeeOnboardingController::class, 'apiConvert'])->whereUuid('id')->name('api.onboardings.convert');
+};
+// Apply domain constraint only in non-local environments
+if (app()->environment('local')) {
+    Route::middleware(['capture.tenant', 'tenant', 'auth', 'custom.permission:view_dashboard'])->group($onboardingApiRoutes);
+} else {
+    Route::domain($appDomain)->middleware(['capture.tenant', 'tenant', 'auth', 'custom.permission:view_dashboard'])->group($onboardingApiRoutes);
+}
 
 // Add GET logout route for both testing and production
 Route::get('/logout', function() {
@@ -751,15 +924,101 @@ Route::domain('{subdomain}.' . $appDomain)->middleware(['subdomain.redirect', 's
         Route::get('/recruiting', [RecruitingController::class, 'index'])->name('subdomain.recruiting.index');
     });
 
+    // Organization Structure - accessible by all authenticated users with view dashboard permission
+    Route::middleware('custom.permission:view_dashboard')->group(function () {
+        Route::get('/organization', [OrganizationController::class, 'index'])->name('subdomain.organization.index');
+    });
+
+    // Tasks Routes
+    Route::middleware(['custom.permission:view_jobs'])->group(function () {
+        // Web routes for Tasks UI
+        Route::get('/tasks/my', [\App\Http\Controllers\Tenant\TaskController::class, 'index'])->name('subdomain.tasks.my');
+        
+        // API routes for Tasks
+        Route::prefix('api/tasks')->group(function () {
+            Route::get('/my', [\App\Http\Controllers\Api\TaskController::class, 'myTasks'])->name('subdomain.api.tasks.my');
+            Route::get('/{id}', [\App\Http\Controllers\Api\TaskController::class, 'show'])->name('subdomain.api.tasks.show');
+            Route::post('/{id}/start', [\App\Http\Controllers\Api\TaskController::class, 'start'])->name('subdomain.api.tasks.start');
+            Route::post('/{id}/complete', [\App\Http\Controllers\Api\TaskController::class, 'complete'])->name('subdomain.api.tasks.complete');
+            Route::post('/{id}/reassign', [\App\Http\Controllers\Api\TaskController::class, 'reassign'])->name('subdomain.api.tasks.reassign');
+        });
+    });
+
+    // Requisition Management Routes
+    // IMPORTANT: Specific routes (create, pending, approved, etc.) must come BEFORE generic {id} route
+    Route::middleware(['custom.permission:create_jobs'])->group(function () {
+        Route::get('/requisitions/create', [RequisitionController::class, 'create'])->name('subdomain.requisitions.create');
+        Route::post('/requisitions', [RequisitionController::class, 'store'])->name('subdomain.requisitions.store');
+        
+        // API routes for requisition creation features (Tasks 49-55)
+        Route::prefix('api/requisitions')->group(function () {
+                            Route::get('/job-titles', [RequisitionController::class, 'getJobTitleSuggestions'])->name('subdomain.api.requisitions.job-titles');
+                            Route::get('/skills', [RequisitionController::class, 'getSkillSuggestions'])->name('subdomain.api.requisitions.skills');
+                            Route::get('/employees', [RequisitionController::class, 'getEmployeeSuggestions'])->name('subdomain.api.requisitions.employees');
+            Route::post('/draft', [RequisitionController::class, 'saveDraft'])->name('subdomain.api.requisitions.draft.save');
+            Route::get('/draft', [RequisitionController::class, 'loadDraft'])->name('subdomain.api.requisitions.draft.load');
+            Route::delete('/draft', [RequisitionController::class, 'deleteDraft'])->name('subdomain.api.requisitions.draft.delete');
+        });
+    });
+
+    Route::middleware('custom.permission:view_jobs')->group(function () {
+        Route::get('/requisitions', [RequisitionController::class, 'index'])->name('subdomain.requisitions.index');
+        Route::get('/requisitions/pending', [RequisitionController::class, 'pending'])->name('subdomain.requisitions.pending');
+        Route::get('/requisitions/approved', [RequisitionController::class, 'approved'])->name('subdomain.requisitions.approved');
+        Route::get('/requisitions/rejected', [RequisitionController::class, 'rejected'])->name('subdomain.requisitions.rejected');
+        Route::get('/requisitions/export/csv', [RequisitionController::class, 'exportCsv'])->name('subdomain.requisitions.export.csv');
+        Route::get('/requisitions/export/excel', [RequisitionController::class, 'exportExcel'])->name('subdomain.requisitions.export.excel');
+        Route::get('/requisitions/{id}/success', [RequisitionController::class, 'success'])->name('subdomain.requisitions.success');
+        Route::get('/requisitions/{id}', [RequisitionController::class, 'show'])->name('subdomain.requisitions.show');
+    });
+
+    Route::middleware(['custom.permission:edit_jobs'])->group(function () {
+        Route::get('/requisitions/{id}/edit', [RequisitionController::class, 'edit'])->name('subdomain.requisitions.edit');
+    });
+
+    // Approval Routes for Subdomain
+    Route::middleware(['custom.permission:view_jobs'])->group(function () {
+        Route::get('/requisitions/pending-approvals', [\App\Http\Controllers\Tenant\ApprovalController::class, 'pendingApprovalsPage'])->name('subdomain.requisitions.pending-approvals');
+        Route::get('/requisitions/{id}/approval', [\App\Http\Controllers\Tenant\ApprovalController::class, 'approvalDetail'])->name('subdomain.requisitions.approval');
+    });
+
+    // Approval API Routes for Subdomain
+    Route::middleware(['custom.permission:create_jobs'])->group(function () {
+        Route::post('/api/requisitions/{id}/submit', [\App\Http\Controllers\Tenant\ApprovalController::class, 'submit'])->name('subdomain.api.requisitions.submit');
+    });
+
+    Route::middleware(['custom.permission:view_jobs'])->group(function () {
+        Route::get('/api/approvals/pending', [\App\Http\Controllers\Tenant\ApprovalController::class, 'pending'])->name('subdomain.api.approvals.pending');
+        Route::get('/api/requisitions/{id}/approvals', [\App\Http\Controllers\Tenant\ApprovalController::class, 'history'])->name('subdomain.api.requisitions.approvals');
+    });
+
+    Route::middleware(['custom.permission:edit_jobs'])->group(function () {
+        Route::post('/api/requisitions/{id}/approve', [\App\Http\Controllers\Tenant\ApprovalController::class, 'approve'])->name('subdomain.api.requisitions.approve');
+        Route::post('/api/requisitions/{id}/reject', [\App\Http\Controllers\Tenant\ApprovalController::class, 'reject'])->name('subdomain.api.requisitions.reject');
+        Route::post('/api/requisitions/{id}/request-changes', [\App\Http\Controllers\Tenant\ApprovalController::class, 'requestChanges'])->name('subdomain.api.requisitions.request-changes');
+        Route::post('/api/requisitions/{id}/delegate', [\App\Http\Controllers\Tenant\ApprovalController::class, 'delegate'])->name('subdomain.api.requisitions.delegate');
+    });
+
+    Route::middleware(['custom.permission:view_jobs'])->group(function () {
+        Route::post('/requisitions/{id}/approve', [RequisitionController::class, 'approve'])->name('subdomain.requisitions.approve');
+        Route::post('/requisitions/{id}/reject', [RequisitionController::class, 'reject'])->name('subdomain.requisitions.reject');
+        Route::post('/requisitions/bulk-delete', [RequisitionController::class, 'bulkDelete'])->name('subdomain.requisitions.bulk-delete');
+        Route::post('/requisitions/bulk-status-update', [RequisitionController::class, 'bulkStatusUpdate'])->name('subdomain.requisitions.bulk-status-update');
+        Route::post('/requisitions/{id}/duplicate', [RequisitionController::class, 'duplicate'])->name('subdomain.requisitions.duplicate');
+        Route::get('/requisitions/{id}/audit-log', [RequisitionController::class, 'auditLog'])->name('subdomain.requisitions.audit-log');
+    });
+
     // Employee Onboarding
     Route::middleware('custom.permission:view_dashboard')->group(function () {
         Route::get('/employee-onboarding', [EmployeeOnboardingController::class, 'index'])->name('subdomain.employee-onboarding.index');
+        Route::get('/employee-onboarding/dashboard', [EmployeeOnboardingController::class, 'dashboard'])->name('subdomain.employee-onboarding.dashboard');
         Route::get('/employee-onboarding/all', [EmployeeOnboardingController::class, 'all'])->name('subdomain.employee-onboarding.all');
         Route::get('/employee-onboarding/new', [EmployeeOnboardingController::class, 'new'])->name('subdomain.employee-onboarding.new');
         Route::get('/employee-onboarding/tasks', [EmployeeOnboardingController::class, 'tasks'])->name('subdomain.employee-onboarding.tasks');
         Route::get('/employee-onboarding/documents', [EmployeeOnboardingController::class, 'documents'])->name('subdomain.employee-onboarding.documents');
         Route::get('/employee-onboarding/it-assets', [EmployeeOnboardingController::class, 'itAssets'])->name('subdomain.employee-onboarding.it-assets');
         Route::get('/employee-onboarding/approvals', [EmployeeOnboardingController::class, 'approvals'])->name('subdomain.employee-onboarding.approvals');
+        Route::get('/employee-onboarding/export-csv', [EmployeeOnboardingController::class, 'exportCsv'])->name('subdomain.employee-onboarding.export.csv');
     });
 
     // Job Management Routes
@@ -871,6 +1130,11 @@ Route::domain('{subdomain}.' . $appDomain)->middleware(['subdomain.redirect', 's
         Route::delete('/interviews/{interview}', [InterviewController::class, 'destroy'])->name('subdomain.interviews.destroy');
     });
 
+    // Offer Management Routes
+    Route::middleware('custom.permission:view_dashboard')->group(function () {
+        Route::get('/offers', [RecruitingController::class, 'index'])->name('subdomain.offers.index');
+    });
+
     // Analytics Routes
     Route::middleware('custom.permission:view_analytics')->group(function () {
         Route::get('/analytics', [App\Http\Controllers\Tenant\AnalyticsController::class, 'index'])->name('subdomain.analytics.index');
@@ -938,6 +1202,8 @@ Route::domain('{subdomain}.' . $appDomain)->middleware(['subdomain.redirect', 's
     Route::middleware('custom.permission:edit_jobs')->group(function () {
         Route::get('/jobs/{job}/questions', [JobQuestionsController::class, 'edit'])->name('subdomain.jobs.questions');
         Route::put('/jobs/{job}/questions', [JobQuestionsController::class, 'update'])->name('subdomain.jobs.questions.update');
+        Route::get('/jobs/{job}/hiring-manager', [JobController::class, 'getHiringManager'])->name('subdomain.jobs.hiring-manager.get');
+        Route::patch('/jobs/{job}/hiring-manager', [JobController::class, 'updateHiringManager'])->name('subdomain.jobs.hiring-manager.update');
     });
 
     // Email Template Routes
@@ -954,6 +1220,17 @@ Route::domain('{subdomain}.' . $appDomain)->middleware(['subdomain.redirect', 's
         Route::post('/email-templates/load-premade', [App\Http\Controllers\Tenant\EmailTemplateController::class, 'loadPremadeTemplate'])->name('subdomain.email-templates.load-premade');
     });
 
+    // Onboarding Email Template Routes
+    Route::middleware('custom.permission:manage_email_templates')->group(function () {
+        Route::get('/onboarding-email-templates', [App\Http\Controllers\Tenant\OnboardingEmailTemplateController::class, 'index'])->name('subdomain.onboarding-email-templates.index');
+        Route::get('/onboarding-email-templates/create', [App\Http\Controllers\Tenant\OnboardingEmailTemplateController::class, 'create'])->name('subdomain.onboarding-email-templates.create');
+        Route::post('/onboarding-email-templates', [App\Http\Controllers\Tenant\OnboardingEmailTemplateController::class, 'store'])->name('subdomain.onboarding-email-templates.store');
+        Route::get('/onboarding-email-templates/{template}', [App\Http\Controllers\Tenant\OnboardingEmailTemplateController::class, 'show'])->name('subdomain.onboarding-email-templates.show');
+        Route::get('/onboarding-email-templates/{template}/edit', [App\Http\Controllers\Tenant\OnboardingEmailTemplateController::class, 'edit'])->name('subdomain.onboarding-email-templates.edit');
+        Route::put('/onboarding-email-templates/{template}', [App\Http\Controllers\Tenant\OnboardingEmailTemplateController::class, 'update'])->name('subdomain.onboarding-email-templates.update');
+        Route::delete('/onboarding-email-templates/{template}', [App\Http\Controllers\Tenant\OnboardingEmailTemplateController::class, 'destroy'])->name('subdomain.onboarding-email-templates.destroy');
+    });
+
     // Account Routes
     Route::prefix('account')->group(function () {
         // Profile routes
@@ -968,6 +1245,40 @@ Route::domain('{subdomain}.' . $appDomain)->middleware(['subdomain.redirect', 's
         Route::put('/settings/notifications', [App\Http\Controllers\Tenant\AccountSettingsController::class, 'updateNotifications'])->name('subdomain.account.settings.notifications');
         Route::put('/settings/password', [App\Http\Controllers\Tenant\AccountSettingsController::class, 'updatePassword'])->name('subdomain.account.settings.password');
         Route::put('/settings/email', [App\Http\Controllers\Tenant\AccountSettingsController::class, 'updateEmail'])->name('subdomain.account.settings.email');
+    });
+
+    // Employee Onboarding API routes
+    Route::middleware('custom.permission:view_dashboard')->group(function () {
+        Route::get('/api/onboardings', [EmployeeOnboardingController::class, 'apiIndex'])->name('subdomain.api.onboardings.index');
+        
+        // Dashboard API routes - MUST come before /{id} routes to avoid route conflicts
+        Route::get('/api/onboardings/dashboard/kpis', [EmployeeOnboardingController::class, 'apiDashboardKPIs'])->name('subdomain.api.onboardings.dashboard.kpis');
+        Route::get('/api/onboardings/dashboard/bottlenecks', [EmployeeOnboardingController::class, 'apiDashboardBottlenecks'])->name('subdomain.api.onboardings.dashboard.bottlenecks');
+        Route::get('/api/onboardings/dashboard/charts', [EmployeeOnboardingController::class, 'apiDashboardCharts'])->name('subdomain.api.onboardings.dashboard.charts');
+        Route::get('/api/onboardings/dashboard/export', [EmployeeOnboardingController::class, 'apiDashboardExport'])->name('subdomain.api.onboardings.dashboard.export');
+        
+        // Export and import routes - also before /{id} routes
+        Route::get('/api/onboardings/export/csv', [EmployeeOnboardingController::class, 'apiExportCSV'])->name('subdomain.api.onboardings.export.csv');
+        Route::post('/api/onboardings/import/candidates', [EmployeeOnboardingController::class, 'importCandidates'])->name('subdomain.api.onboardings.import.candidates');
+        Route::get('/api/onboardings/import/template', [EmployeeOnboardingController::class, 'downloadImportTemplate'])->name('subdomain.api.onboardings.import.template');
+        
+        // Bulk operations - before /{id} routes
+        Route::post('/api/onboardings/bulk/remind', [EmployeeOnboardingController::class, 'apiBulkRemind'])->name('subdomain.api.onboardings.bulk.remind');
+        
+        // Individual onboarding routes with {id} - these must come LAST
+        Route::get('/api/onboardings/{id}', [EmployeeOnboardingController::class, 'apiShow'])->whereUuid('id')->name('subdomain.api.onboardings.show');
+        Route::post('/api/onboardings/{id}/remind', [EmployeeOnboardingController::class, 'apiSendReminder'])->whereUuid('id')->name('subdomain.api.onboardings.remind');
+        Route::get('/api/onboardings/{id}/documents', [EmployeeOnboardingController::class, 'apiGetDocuments'])->whereUuid('id')->name('subdomain.api.onboardings.documents');
+        Route::post('/api/onboardings/{id}/documents/{documentId}/remind', [EmployeeOnboardingController::class, 'apiSendDocumentReminder'])->whereUuid('id')->name('subdomain.api.onboardings.documents.remind');
+        Route::get('/api/onboardings/{id}/tasks', [EmployeeOnboardingController::class, 'apiGetTasks'])->whereUuid('id')->name('subdomain.api.onboardings.tasks');
+        Route::post('/api/onboardings/{id}/tasks/{taskId}/complete', [EmployeeOnboardingController::class, 'apiMarkTaskComplete'])->whereUuid('id')->name('subdomain.api.onboardings.tasks.complete');
+        Route::get('/api/onboardings/{id}/assets', [EmployeeOnboardingController::class, 'apiGetAssetRequests'])->whereUuid('id')->name('subdomain.api.onboardings.assets');
+        Route::post('/api/onboardings/{id}/assets', [EmployeeOnboardingController::class, 'apiCreateAssetRequest'])->whereUuid('id')->name('subdomain.api.onboardings.assets.create');
+        Route::get('/api/onboardings/{id}/approvals', [EmployeeOnboardingController::class, 'apiGetApprovals'])->whereUuid('id')->name('subdomain.api.onboardings.approvals');
+        Route::post('/api/onboardings/{id}/close', [EmployeeOnboardingController::class, 'apiLogSlideOverClose'])->whereUuid('id')->name('subdomain.api.onboardings.close');
+        Route::post('/api/onboardings/{id}/log-tab-view', [EmployeeOnboardingController::class, 'apiLogTabView'])->whereUuid('id')->name('subdomain.api.onboardings.log-tab-view');
+        Route::get('/api/onboardings/{id}/check-convert', [EmployeeOnboardingController::class, 'apiCheckConvert'])->whereUuid('id')->name('subdomain.api.onboardings.check-convert');
+        Route::post('/api/onboardings/{id}/convert', [EmployeeOnboardingController::class, 'apiConvert'])->whereUuid('id')->name('subdomain.api.onboardings.convert');
     });
 });
 

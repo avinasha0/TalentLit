@@ -177,8 +177,20 @@ class Tenant extends Model
      */
     public function getDashboardUrl(): string
     {
-        // Check if tenant has subdomain enabled
-        if ($this->subdomain_enabled && $this->subdomain) {
+        $planSlug = $this->activeSubscription?->plan?->slug;
+        $shouldUseSubdomain = $this->subdomain_enabled && $this->subdomain && $planSlug === 'enterprise';
+
+        \Log::info('Tenant.GetDashboardUrl.Decision', [
+            'tenant_id' => $this->id,
+            'tenant_slug' => $this->slug,
+            'subdomain' => $this->subdomain,
+            'subdomain_enabled' => $this->subdomain_enabled,
+            'plan_slug' => $planSlug,
+            'should_use_subdomain' => $shouldUseSubdomain,
+        ]);
+
+        // Use subdomain only when explicitly enabled and tenant is on Enterprise.
+        if ($shouldUseSubdomain) {
             // Build subdomain URL
             $appUrl = config('app.url');
             $appDomain = parse_url($appUrl, PHP_URL_HOST) ?? 'localhost';
@@ -191,10 +203,22 @@ class Tenant extends Model
                 $subdomainUrl .= ':' . $port;
             }
             
-            return $subdomainUrl . '/dashboard';
+            $finalUrl = $subdomainUrl . '/dashboard';
+            \Log::info('Tenant.GetDashboardUrl.Result', [
+                'tenant_id' => $this->id,
+                'url_type' => 'subdomain',
+                'url' => $finalUrl,
+            ]);
+            return $finalUrl;
         }
         
         // Use path-based routing for non-subdomain tenants
-        return route('tenant.dashboard', $this->slug);
+        $finalUrl = route('tenant.dashboard', $this->slug);
+        \Log::info('Tenant.GetDashboardUrl.Result', [
+            'tenant_id' => $this->id,
+            'url_type' => 'path',
+            'url' => $finalUrl,
+        ]);
+        return $finalUrl;
     }
 }

@@ -38,8 +38,24 @@ class AuthenticatedSessionController extends Controller
         // If we have a last tenant, check if user has access to it
         if ($lastTenantSlug) {
             $tenant = Tenant::where('slug', $lastTenantSlug)->first();
+            \Log::info('Auth.Login.LastTenantCheck', [
+                'user_id' => $user?->id,
+                'last_tenant_slug' => $lastTenantSlug,
+                'tenant_found' => (bool) $tenant,
+                'belongs_to_user' => $tenant ? $user->tenants->contains($tenant) : false,
+                'tenant_subdomain' => $tenant?->subdomain,
+                'tenant_subdomain_enabled' => $tenant?->subdomain_enabled,
+                'tenant_plan_slug' => $tenant?->activeSubscription?->plan?->slug,
+            ]);
             if ($tenant && $user->tenants->contains($tenant)) {
-                return redirect($tenant->getDashboardUrl());
+                $targetUrl = $tenant->getDashboardUrl();
+                \Log::info('Auth.Login.Redirecting.LastTenant', [
+                    'user_id' => $user?->id,
+                    'tenant_id' => $tenant->id,
+                    'tenant_slug' => $tenant->slug,
+                    'target_url' => $targetUrl,
+                ]);
+                return redirect($targetUrl);
             } else {
                 // User doesn't belong to the last tenant, clear it from session
                 $request->session()->forget('last_tenant_slug');
@@ -51,7 +67,17 @@ class AuthenticatedSessionController extends Controller
         if ($userTenant) {
             // Set the correct tenant in session for future use
             $request->session()->put('last_tenant_slug', $userTenant->slug);
-            return redirect($userTenant->getDashboardUrl());
+            $targetUrl = $userTenant->getDashboardUrl();
+            \Log::info('Auth.Login.Redirecting.FirstTenant', [
+                'user_id' => $user?->id,
+                'tenant_id' => $userTenant->id,
+                'tenant_slug' => $userTenant->slug,
+                'tenant_subdomain' => $userTenant->subdomain,
+                'tenant_subdomain_enabled' => $userTenant->subdomain_enabled,
+                'tenant_plan_slug' => $userTenant->activeSubscription?->plan?->slug,
+                'target_url' => $targetUrl,
+            ]);
+            return redirect($targetUrl);
         }
         
         // In tests, Breeze expects redirect to global dashboard

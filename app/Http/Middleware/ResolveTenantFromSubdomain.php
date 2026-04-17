@@ -44,8 +44,23 @@ class ResolveTenantFromSubdomain
         
         $matchMethod = 'subdomain_field';
         
-        // In local development, also try matching by slug if subdomain not configured
+        // In local development, also try matching by slug if subdomain not configured.
+        // Important: do NOT fallback when this exact subdomain exists but is disabled.
         if (!$tenant && app()->environment('local', 'testing')) {
+            $disabledSubdomainTenant = Tenant::query()
+                ->where('subdomain', $subdomain)
+                ->where('subdomain_enabled', false)
+                ->first();
+
+            if ($disabledSubdomainTenant) {
+                \Log::info('ResolveTenantFromSubdomain: Redirecting because subdomain is disabled', [
+                    'subdomain' => $subdomain,
+                    'tenant_slug' => $disabledSubdomainTenant->slug,
+                ]);
+
+                return redirect()->route('tenant.dashboard', $disabledSubdomainTenant->slug);
+            }
+
             \Log::info('ResolveTenantFromSubdomain: Trying slug match in local dev', [
                 'subdomain' => $subdomain,
             ]);
@@ -68,6 +83,21 @@ class ResolveTenantFromSubdomain
         }
         
         if (!$tenant) {
+            // If subdomain belongs to a tenant but is currently disabled, redirect to path-based dashboard.
+            $disabledSubdomainTenant = Tenant::query()
+                ->where('subdomain', $subdomain)
+                ->where('subdomain_enabled', false)
+                ->first();
+
+            if ($disabledSubdomainTenant) {
+                \Log::info('ResolveTenantFromSubdomain: Redirecting disabled subdomain to path-based dashboard', [
+                    'subdomain' => $subdomain,
+                    'tenant_slug' => $disabledSubdomainTenant->slug,
+                ]);
+
+                return redirect()->route('tenant.dashboard', $disabledSubdomainTenant->slug);
+            }
+
             // Log available tenants for debugging
             $availableTenants = Tenant::query()
                 ->select('id', 'slug', 'subdomain', 'subdomain_enabled')
@@ -98,12 +128,11 @@ class ResolveTenantFromSubdomain
             'tenant_slug' => $tenant->slug,
         ]);
         
-        // Verify tenant has Enterprise plan (skip in local development)
-        if (!app()->environment('local', 'testing')) {
-            $subscription = $tenant->activeSubscription;
-            if (!$subscription || !$subscription->plan || $subscription->plan->slug !== 'enterprise') {
-                throw new NotFoundHttpException('Subdomain access is only available for Enterprise plans.');
-            }
+        // Verify tenant has Enterprise plan in all environments.
+        // This keeps behavior consistent for login redirects and local testing.
+        $subscription = $tenant->activeSubscription;
+        if (!$subscription || !$subscription->plan || $subscription->plan->slug !== 'enterprise') {
+            throw new NotFoundHttpException('Subdomain access is only available for Enterprise plans.');
         }
         
         // Set tenant context (same as ResolveTenantFromPath)

@@ -26,6 +26,12 @@ class Candidate extends Model
         'designation',
         'department',
         'manager',
+        'buddy_name',
+        'buddy_email',
+        'hr_contact_name',
+        'hr_contact_email',
+        'welcome_kit_status',
+        'preboarding_started_at',
         'joining_date',
         'completed_steps',
         'total_steps',
@@ -35,6 +41,7 @@ class Candidate extends Model
     protected $casts = [
         'resume_json' => 'array',
         'joining_date' => 'date',
+        'preboarding_started_at' => 'datetime',
     ];
 
     public function contacts(): HasMany
@@ -79,6 +86,11 @@ class Candidate extends Model
     public function activities(): HasMany
     {
         return $this->hasMany(Activity::class);
+    }
+
+    public function preboardingItems(): HasMany
+    {
+        return $this->hasMany(PreboardingItem::class);
     }
 
     public function privacyEvents(): HasMany

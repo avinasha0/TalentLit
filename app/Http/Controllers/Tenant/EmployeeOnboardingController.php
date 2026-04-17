@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Tenant;
 use App\Http\Controllers\Controller;
 use App\Models\Candidate;
 use App\Models\AssetRequest;
+use App\Models\PreboardingItem;
+use App\Services\PreboardingAutomationService;
 use App\Services\OnboardingViewLogService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -76,7 +78,8 @@ class EmployeeOnboardingController extends Controller
         })
         ->where(function($q) {
             $q->where('source', 'Onboarding')
-              ->orWhere('source', 'Onboarding Import');
+              ->orWhere('source', 'Onboarding Import')
+              ->orWhereNotNull('preboarding_started_at');
         });
         
         $candidates = $query->orderBy('created_at', 'desc')->get();
@@ -255,7 +258,8 @@ class EmployeeOnboardingController extends Controller
         $query = \App\Models\Candidate::where('tenant_id', $tenantModel->id)
             ->where(function($q) {
                 $q->where('source', 'Onboarding')
-                  ->orWhere('source', 'Onboarding Import');
+                  ->orWhere('source', 'Onboarding Import')
+                  ->orWhereNotNull('preboarding_started_at');
             });
         
         // Log for debugging
@@ -500,6 +504,13 @@ class EmployeeOnboardingController extends Controller
         $total = intval($candidate->total_steps ?? 5);
         $progressPercent = $total > 0 ? intval(($completed / $total) * 100) : 0;
 
+        $checklistItems = PreboardingItem::where('tenant_id', $tenantModel->id)
+            ->where('candidate_id', $candidate->id)
+            ->where('track', 'checklist')
+            ->get();
+        $gatePassed = $checklistItems->isNotEmpty()
+            && $checklistItems->every(fn ($item) => in_array($item->status, ['completed', 'waived'], true));
+
         // Format response
         $onboarding = [
             'id' => $candidate->id,
@@ -510,9 +521,16 @@ class EmployeeOnboardingController extends Controller
             'designation' => $candidate->designation ?? 'Not Assigned',
             'department' => $candidate->department ?? 'Not Assigned',
             'manager' => $candidate->manager ?? 'Not Assigned',
+            'buddyName' => $candidate->buddy_name,
+            'buddyEmail' => $candidate->buddy_email,
+            'hrContactName' => $candidate->hr_contact_name,
+            'hrContactEmail' => $candidate->hr_contact_email,
             'joiningDate' => $candidate->joining_date ? $candidate->joining_date->format('Y-m-d') : null,
             'status' => $candidate->status ?? 'Pre-boarding',
             'progressPercent' => $progressPercent,
+            'welcomeKitStatus' => $candidate->welcome_kit_status ?? 'pending',
+            'preboardingStartedAt' => $candidate->preboarding_started_at?->toIso8601String(),
+            'gateStatus' => $gatePassed ? 'ready' : 'blocked',
         ];
 
         return response()->json($onboarding);
@@ -644,45 +662,24 @@ class EmployeeOnboardingController extends Controller
             Log::warning('Failed to log Tab.View event', ['error' => $e->getMessage()]);
         }
 
-        // For now, return mock document data
-        // In a real implementation, this would fetch from a documents table
-        $documents = [
-            [
-                'id' => 'doc-1',
-                'name' => 'ID Proof',
-                'status' => 'Uploaded',
-                'uploaded_at' => now()->subDays(2)->toIso8601String(),
-                'file_url' => '#'
-            ],
-            [
-                'id' => 'doc-2',
-                'name' => 'Address Proof',
-                'status' => 'Pending',
-                'uploaded_at' => null,
-                'file_url' => null
-            ],
-            [
-                'id' => 'doc-3',
-                'name' => 'Educational Certificates',
-                'status' => 'Missing',
-                'uploaded_at' => null,
-                'file_url' => null
-            ],
-            [
-                'id' => 'doc-4',
-                'name' => 'Employment Contract',
-                'status' => 'Uploaded',
-                'uploaded_at' => now()->subDays(1)->toIso8601String(),
-                'file_url' => '#'
-            ],
-            [
-                'id' => 'doc-5',
-                'name' => 'Medical Certificate',
-                'status' => 'Pending',
-                'uploaded_at' => null,
-                'file_url' => null
-            ]
-        ];
+        $documents = PreboardingItem::where('tenant_id', $tenantModel->id)
+            ->where('candidate_id', $candidateId)
+            ->where('track', 'document')
+            ->orderBy('sort_order')
+            ->get()
+            ->map(function (PreboardingItem $item) {
+                return [
+                    'id' => $item->id,
+                    'name' => $item->title,
+                    'status' => ucfirst(str_replace('_', ' ', $item->status)),
+                    'uploaded_at' => $item->completed_at?->toIso8601String(),
+                    'file_url' => null,
+                    'requires_esign' => $item->requires_esign,
+                    'esign_status' => $item->esign_status,
+                    'due_date' => $item->due_date?->toDateString(),
+                ];
+            })
+            ->values();
 
         return response()->json([
             'documents' => $documents
@@ -733,45 +730,23 @@ class EmployeeOnboardingController extends Controller
             Log::warning('Failed to log Tab.View event', ['error' => $e->getMessage()]);
         }
 
-        // For now, return mock task data
-        // In a real implementation, this would fetch from a tasks table
-        $tasks = [
-            [
-                'id' => 'task-1',
-                'title' => 'Complete background verification',
-                'assigned_to' => 'HR Team',
-                'due_date' => now()->addDays(5)->toIso8601String(),
-                'status' => 'Pending'
-            ],
-            [
-                'id' => 'task-2',
-                'title' => 'Submit bank account details',
-                'assigned_to' => 'Finance Team',
-                'due_date' => now()->addDays(3)->toIso8601String(),
-                'status' => 'Pending'
-            ],
-            [
-                'id' => 'task-3',
-                'title' => 'Attend orientation session',
-                'assigned_to' => 'People Ops',
-                'due_date' => now()->addDays(7)->toIso8601String(),
-                'status' => 'Completed'
-            ],
-            [
-                'id' => 'task-4',
-                'title' => 'Complete IT setup form',
-                'assigned_to' => 'IT Team',
-                'due_date' => now()->addDays(2)->toIso8601String(),
-                'status' => 'Pending'
-            ],
-            [
-                'id' => 'task-5',
-                'title' => 'Review employee handbook',
-                'assigned_to' => 'HR Team',
-                'due_date' => now()->addDays(4)->toIso8601String(),
-                'status' => 'Pending'
-            ]
-        ];
+        $tasks = PreboardingItem::where('tenant_id', $tenantModel->id)
+            ->where('candidate_id', $candidateId)
+            ->whereIn('track', ['it', 'benefits', 'checklist'])
+            ->orderBy('track')
+            ->orderBy('sort_order')
+            ->get()
+            ->map(function (PreboardingItem $item) {
+                return [
+                    'id' => $item->id,
+                    'title' => $item->title,
+                    'assigned_to' => $item->assigned_to_name ?? 'Unassigned',
+                    'due_date' => $item->due_date?->toIso8601String(),
+                    'status' => ucfirst(str_replace('_', ' ', $item->status)),
+                    'track' => $item->track,
+                ];
+            })
+            ->values();
 
         return response()->json([
             'tasks' => $tasks
@@ -814,9 +789,25 @@ class EmployeeOnboardingController extends Controller
         $tenantFormat = $isSubdomain ? 'subdomain' : 'slug';
         
         try {
-            // TODO: Implement actual task completion logic
-            // For now, this is a placeholder that returns success
-            // In a real implementation, this would update a tasks table
+            $item = PreboardingItem::where('tenant_id', $tenantModel->id)
+                ->where('candidate_id', $candidateId)
+                ->find($taskIdParam);
+
+            if (!$item) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Task not found'
+                ], 404);
+            }
+
+            $item->status = 'completed';
+            $item->completed_at = now();
+            if ($item->requires_esign && $item->esign_status !== 'signed') {
+                $item->esign_status = 'signed';
+            }
+            $item->save();
+
+            app(PreboardingAutomationService::class)->syncProgress($candidate);
             
             // Log task completion
             Log::info('Onboarding task marked complete', [
@@ -1913,42 +1904,28 @@ class EmployeeOnboardingController extends Controller
         }
 
         try {
-            // For now, return mock approval data
-            // In a real implementation, this would fetch from an approvals table
-            $approvals = [
-                [
-                    'id' => 'approval-1',
-                    'step_name' => 'HR Manager Approval',
-                    'approver_name' => 'Sarah Johnson',
-                    'status' => 'Approved',
-                    'timestamp' => now()->subDays(2)->toIso8601String(),
-                    'comments' => 'All documents verified. Approved for onboarding.'
-                ],
-                [
-                    'id' => 'approval-2',
-                    'step_name' => 'Department Head Approval',
-                    'approver_name' => 'Michael Chen',
-                    'status' => 'Approved',
-                    'timestamp' => now()->subDays(1)->toIso8601String(),
-                    'comments' => 'Role requirements confirmed.'
-                ],
-                [
-                    'id' => 'approval-3',
-                    'step_name' => 'Finance Approval',
-                    'approver_name' => 'Emily Davis',
-                    'status' => 'Pending',
-                    'timestamp' => null,
-                    'comments' => ''
-                ],
-                [
-                    'id' => 'approval-4',
-                    'step_name' => 'IT Security Clearance',
-                    'approver_name' => 'David Wilson',
-                    'status' => 'Pending',
-                    'timestamp' => null,
-                    'comments' => ''
-                ]
-            ];
+            $approvals = PreboardingItem::where('tenant_id', $tenantModel->id)
+                ->where('candidate_id', $candidateId)
+                ->whereIn('track', ['document', 'it', 'benefits', 'checklist'])
+                ->orderBy('track')
+                ->orderBy('sort_order')
+                ->get()
+                ->map(function (PreboardingItem $item) use ($candidate) {
+                    $approvalStatus = in_array($item->status, ['completed', 'waived'], true) ? 'Approved' : 'Pending';
+                    return [
+                        'id' => $item->id,
+                        'step_name' => $item->title,
+                        'approver_name' => $item->assigned_to_name
+                            ?? ($item->track === 'it' ? ($candidate->manager ?? 'IT Team') : ($candidate->hr_contact_name ?? 'HR Team')),
+                        'status' => $approvalStatus,
+                        'timestamp' => $item->completed_at?->toIso8601String(),
+                        'comments' => $approvalStatus === 'Approved'
+                            ? 'Pre-boarding item completed.'
+                            : 'Awaiting completion.',
+                        'track' => $item->track,
+                    ];
+                })
+                ->values();
 
             // Log fetch success
             Log::info('ApprovalsTab.Fetch.Success', [

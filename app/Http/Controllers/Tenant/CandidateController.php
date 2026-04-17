@@ -7,6 +7,7 @@ use App\Models\Candidate;
 use App\Models\Resume;
 use App\Models\Application;
 use App\Http\Requests\StoreCandidateRequest;
+use App\Services\PreboardingAutomationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -299,6 +300,10 @@ class CandidateController extends Controller
         }
 
         $application->update($updateData);
+
+        if ($request->status === 'hired') {
+            app(PreboardingAutomationService::class)->initializeFromHire($application);
+        }
 
         // Reload the relationship to get the updated stage name
         $application->load('currentStage');

@@ -171,7 +171,7 @@
                                                 $config = $statusConfig[$status] ?? $statusConfig['applied'];
                                             @endphp
                                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $config['bg'] }} {{ $config['text'] }} {{ $config['dark_bg'] }} {{ $config['dark_text'] }}">
-                                                {{ $application->status === 'hired' ? 'Shortlisted' : ucfirst($application->status) }}
+                                                {{ $application->status === 'hired' ? 'Hired' : ucfirst($application->status) }}
                                             </span>
                                         </div>
                                     </div>
@@ -530,7 +530,7 @@
                                                         @php
                                                             $status = strtolower($application->status);
                                                             $config = $statusConfig[$status] ?? $statusConfig['applied'];
-                                                            $displayStatus = $application->status === 'active' ? 'Applied' : ($application->status === 'hired' ? 'Shortlisted' : ucfirst($application->status));
+                                                            $displayStatus = $application->status === 'active' ? 'Applied' : ($application->status === 'hired' ? 'Hired' : ucfirst($application->status));
                                                         @endphp
                                                         <span id="status-badge-{{ $application->id }}" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $config['bg'] }} {{ $config['text'] }} {{ $config['dark_bg'] }} {{ $config['dark_text'] }}">
                                                             {{ $displayStatus }}
@@ -549,7 +549,7 @@
                                                             <option value="interviewed" {{ strtolower($application->status) === 'interviewed' ? 'selected' : '' }}>Interviewed</option>
                                                             <option value="hold" {{ strtolower($application->status) === 'hold' ? 'selected' : '' }}>Hold</option>
                                                             <option value="rejected" {{ strtolower($application->status) === 'rejected' ? 'selected' : '' }}>Rejected</option>
-                                                            <option value="hired" {{ strtolower($application->status) === 'hired' ? 'selected' : '' }}>Shortlisted</option>
+                                                            <option value="hired" {{ strtolower($application->status) === 'hired' ? 'selected' : '' }}>Hired</option>
                                                         </select>
                                                         <div class="mt-2 flex space-x-2">
                                                             <button type="button" 
@@ -1199,7 +1199,7 @@
                 if (data.success) {
                     // Update status badge
                     const statusBadge = document.getElementById('status-badge-' + applicationId);
-                    const statusText = newStatus === 'hired' ? 'Shortlisted' : (newStatus.charAt(0).toUpperCase() + newStatus.slice(1));
+                    const statusText = newStatus === 'hired' ? 'Hired' : (newStatus.charAt(0).toUpperCase() + newStatus.slice(1));
                     statusBadge.textContent = statusText;
                     
                     // Update status badge colors based on status

@@ -583,10 +583,49 @@
                         </x-slot>
 
                         <div class="space-y-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">L1 Manager</label>
+                                    <div class="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-50 text-gray-900">
+                                        <div>{{ $l1ManagerName ?: 'Not configured in hierarchy' }}</div>
+                                        @if(!empty($l1ManagerEmail))
+                                            <div class="text-xs text-gray-500">{{ $l1ManagerEmail }}</div>
+                                        @endif
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">L2 Manager</label>
+                                    <div class="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-50 text-gray-900">
+                                        <div>{{ $l2ManagerName ?: 'Not configured in hierarchy' }}</div>
+                                        @if(!empty($l2ManagerEmail))
+                                            <div class="text-xs text-gray-500">{{ $l2ManagerEmail }}</div>
+                                        @endif
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Finance Approvers</label>
+                                <div class="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-50 text-gray-900">
+                                    @if(!empty($financeApprovers) && count($financeApprovers) > 0)
+                                        <div class="space-y-1">
+                                            @foreach($financeApprovers as $financeApprover)
+                                                <div>
+                                                    <div>{{ $financeApprover['name'] ?? 'N/A' }}</div>
+                                                    <div class="text-xs text-gray-500">{{ $financeApprover['email'] ?? 'No email' }}</div>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    @else
+                                        <div>Not configured in hierarchy</div>
+                                    @endif
+                                </div>
+                            </div>
+
                             <!-- Approver Email Field -->
                             <div class="relative">
                                 <label for="approver_email" class="block text-sm font-medium text-gray-700 mb-1">
-                                    Approver Email ID <span x-show="submitAction === 'approval'" class="text-red-500">*</span>
+                                    Approver Email ID <span class="text-xs text-gray-500">(Optional override)</span>
                                     <button type="button" 
                                             @click="showTooltip('approver_email')"
                                             class="ml-1 text-gray-400 hover:text-gray-600"
@@ -609,10 +648,9 @@
                                        :class="{'border-red-500': errors.approver_email}"
                                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-900"
                                        placeholder="Start typing employee name or email..."
-                                       :required="submitAction === 'approval'"
                                        autocomplete="off"
                                        aria-label="Approver email address"
-                                       :aria-required="submitAction === 'approval'"
+                                       aria-required="false"
                                        aria-autocomplete="list"
                                        :aria-expanded="showEmployeeSuggestions"
                                        aria-controls="employee-suggestions">
@@ -636,7 +674,7 @@
                                 </div>
                                 
                                 <p x-show="errors.approver_email" x-text="errors.approver_email" class="mt-1 text-sm text-red-600"></p>
-                                <p class="mt-1 text-xs text-gray-500">A task will be created for the employee linked with this email address when you submit for approval.</p>
+                                <p class="mt-1 text-xs text-gray-500">Leave blank to use hierarchy approvers (L1 then L2). Fill this only to override the first approver.</p>
                             </div>
                         </div>
                     </x-card>
@@ -984,16 +1022,11 @@
                     this.errors.duration = 'Duration is required for this contract type';
                 }
                 
-                // Require approver email when submitting for approval
-                if (this.submitAction === 'approval') {
-                    if (!this.formData.approver_email || this.formData.approver_email.trim() === '') {
-                        this.errors.approver_email = 'Approver email is required when submitting for approval';
-                    } else {
-                        // Basic email format validation
-                        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                        if (!emailRegex.test(this.formData.approver_email.trim())) {
-                            this.errors.approver_email = 'Please enter a valid email address';
-                        }
+                // Approver email is optional. Validate only when provided.
+                if (this.formData.approver_email && this.formData.approver_email.trim() !== '') {
+                    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                    if (!emailRegex.test(this.formData.approver_email.trim())) {
+                        this.errors.approver_email = 'Please enter a valid email address';
                     }
                 }
                 

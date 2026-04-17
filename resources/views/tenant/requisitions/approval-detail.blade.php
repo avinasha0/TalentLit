@@ -151,7 +151,7 @@
                 </x-card>
 
                 <!-- Approval Actions -->
-                @if($requisition->approval_status === 'Pending' && $requisition->current_approver_id === auth()->id())
+                @if(($canTakeAction ?? false) && $requisition->approval_status === 'Pending')
                     <x-card>
                         <div class="px-6 py-4 border-b border-gray-200">
                             <h2 class="text-lg font-semibold text-black">Take Action</h2>
@@ -229,6 +229,12 @@
                                                         <path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 7a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1V7z"/>
                                                     </svg>
                                                 </div>
+                                            @elseif($approval->action === 'NotRequired')
+                                                <div class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
+                                                    <svg class="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                                    </svg>
+                                                </div>
                                             @else
                                                 <div class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
                                                     <svg class="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
@@ -245,7 +251,7 @@
                                                 @endif
                                             </p>
                                             <p class="text-sm text-gray-500">
-                                                {{ ucfirst(str_replace('RequestedChanges', 'Requested Changes', $approval->action)) }} 
+                                                {{ ucfirst(str_replace(['RequestedChanges', 'NotRequired'], ['Requested Changes', 'Not Required'], $approval->action)) }} 
                                                 (Level {{ $approval->approval_level }})
                                             </p>
                                             @if($approval->comments)
@@ -306,6 +312,7 @@
     <script>
         const requisitionId = {{ $requisition->id }};
         const tenantSlug = '{{ $tenantSlug }}';
+        const approvalApiBase = @json(request()->routeIs('subdomain.*') ? '/api/requisitions' : '/' . $tenantSlug . '/api/requisitions');
 
         function showApproveModal() {
             if (confirm('Are you sure you want to approve this requisition?')) {
@@ -342,7 +349,7 @@
         }
 
         function submitApproval(action, comments) {
-            fetch(`/${tenantSlug}/api/requisitions/${requisitionId}/${action}`, {
+            fetch(`${approvalApiBase}/${requisitionId}/${action}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -368,7 +375,7 @@
         }
 
         function submitDelegation(delegateId) {
-            fetch(`/${tenantSlug}/api/requisitions/${requisitionId}/delegate`, {
+            fetch(`${approvalApiBase}/${requisitionId}/delegate`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

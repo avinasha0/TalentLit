@@ -458,6 +458,7 @@ $tenantRoutes = function () {
 
     Route::middleware(['custom.permission:edit_jobs'])->group(function () {
         Route::get('/{tenant}/requisitions/{id}/edit', [RequisitionController::class, 'edit'])->name('tenant.requisitions.edit');
+        Route::match(['put', 'patch'], '/{tenant}/requisitions/{id}', [RequisitionController::class, 'update'])->name('tenant.requisitions.update');
     });
 
     Route::middleware(['custom.permission:view_jobs'])->group(function () {

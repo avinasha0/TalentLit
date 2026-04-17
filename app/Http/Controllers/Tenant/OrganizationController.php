@@ -37,7 +37,7 @@ class OrganizationController extends Controller
         // Get all users/team members for this tenant
         $users = User::whereHas('tenants', function ($query) use ($tenantModel) {
             $query->where('tenant_id', $tenantModel->id);
-        })->get();
+        })->get()->unique('id')->values();
         
         // Check if created_by column exists (once for both tables)
         $jobOpeningsColumns = collect(DB::select('SHOW COLUMNS FROM job_openings'))->pluck('Field');
@@ -86,12 +86,11 @@ class OrganizationController extends Controller
                 ->count(),
         ];
         
-        // Group users by role
+        // Group users by original tenant role
         $usersByRole = $users->groupBy(function ($user) {
             return $user->tenant_role ?? 'No Role';
         });
-        
-        // Build hierarchical tree structure
+
         // Hierarchy: CEO -> Line Manager -> HR Manager -> HR Recruiter
         $roleHierarchy = [
             'CEO' => 1,
@@ -99,104 +98,108 @@ class OrganizationController extends Controller
             'HR Manager' => 3,
             'HR Recruiter' => 4,
         ];
-        
-        // Map old roles to new roles for backward compatibility
+
+        // Map existing role names to hierarchy role names.
         $roleMapping = [
             'Owner' => 'CEO',
+            'Admin' => 'Line Manager',
             'DepartmentHead' => 'Line Manager',
+            'Hiring Manager' => 'HR Manager',
             'HRManager' => 'HR Manager',
             'Recruiter' => 'HR Recruiter',
+            'Interviewer' => 'HR Recruiter',
         ];
-        
-        // Normalize user roles to new structure
+
         $users->each(function ($user) use ($roleMapping) {
-            $currentRole = $user->tenant_role ?? '';
-            if (isset($roleMapping[$currentRole])) {
-                $user->display_role = $roleMapping[$currentRole];
-            } else {
-                $user->display_role = $currentRole;
-            }
+            $user->display_role = $roleMapping[$user->tenant_role ?? ''] ?? ($user->tenant_role ?? '');
         });
-        
-        // Helper function to build tree with parent info
-        $buildNode = function($user, $role, $level, $parent = null) use (&$buildNode, $users, $roleHierarchy, $roleMapping) {
-            $node = [
+
+        // Helper to create a node payload.
+        $makeNode = function ($user, string $role, int $level, ?array $parent = null): array {
+            return [
                 'user' => $user,
                 'role' => $role,
                 'level' => $level,
                 'parent' => $parent,
                 'parentName' => $parent ? $parent['user']->name : null,
                 'parentRole' => $parent ? $parent['role'] : null,
-                'children' => []
+                'children' => [],
             ];
-            
-            // Determine next level role
-            $nextRole = null;
-            if ($role === 'CEO' || $role === 'Owner') {
-                $nextRole = 'Line Manager';
-            } elseif ($role === 'Line Manager' || $role === 'DepartmentHead') {
-                $nextRole = 'HR Manager';
-            } elseif ($role === 'HR Manager' || $role === 'HRManager') {
-                $nextRole = 'HR Recruiter';
-            }
-            
-            // Get children for this node - check both new and old role names
-            if ($nextRole) {
-                $children = $users->filter(function ($u) use ($nextRole, $roleMapping) {
-                    $userRole = $u->tenant_role ?? '';
-                    $displayRole = $u->display_role ?? $userRole;
-                    
-                    // Check if user matches next role (either new name or mapped old name)
-                    return $displayRole === $nextRole || 
-                           (isset($roleMapping[$userRole]) && $roleMapping[$userRole] === $nextRole);
-                });
-                
-                foreach ($children as $child) {
-                    $childDisplayRole = $child->display_role ?? ($child->tenant_role ?? '');
-                    $node['children'][] = $buildNode($child, $childDisplayRole, $level + 1, $node);
-                }
-            }
-            
-            return $node;
         };
-        
-        // Build tree structure
-        $orgTree = [];
-        
-        // Get CEO/Owner users (top level)
-        $ceos = $users->filter(function ($user) {
-            $role = $user->tenant_role ?? '';
-            $displayRole = $user->display_role ?? $role;
-            return $displayRole === 'CEO' || $role === 'Owner';
+
+        // Build users by normalized hierarchy role.
+        $usersByDisplayRole = $users->groupBy(function ($user) {
+            return $user->display_role ?? '';
         });
-        
-        if ($ceos->count() > 0) {
-            foreach ($ceos as $ceo) {
-                $ceoDisplayRole = $ceo->display_role ?? ($ceo->tenant_role ?? '');
-                $orgTree[] = $buildNode($ceo, $ceoDisplayRole === 'Owner' ? 'CEO' : $ceoDisplayRole, 1, null);
+
+        $ceos = $usersByDisplayRole->get('CEO', collect())->unique('id')->values();
+        $lineManagers = $usersByDisplayRole->get('Line Manager', collect())->unique('id')->values();
+        $hrManagers = $usersByDisplayRole->get('HR Manager', collect())->unique('id')->values();
+        $hrRecruiters = $usersByDisplayRole->get('HR Recruiter', collect())->unique('id')->values();
+
+        // If no CEO exists, use the highest available role as roots and avoid re-attaching that role as children.
+        $rootRole = 'CEO';
+        $rootUsers = $ceos;
+        if ($rootUsers->isEmpty()) {
+            if ($lineManagers->isNotEmpty()) {
+                $rootRole = 'Line Manager';
+                $rootUsers = $lineManagers;
+            } elseif ($hrManagers->isNotEmpty()) {
+                $rootRole = 'HR Manager';
+                $rootUsers = $hrManagers;
+            } else {
+                $rootRole = 'HR Recruiter';
+                $rootUsers = $hrRecruiters;
             }
         }
-        
-        // If no CEO/Owner found, show other roles at top level
-        if (empty($orgTree)) {
-            // Try to show any available roles in hierarchy order
-            foreach ($roleHierarchy as $roleName => $level) {
-                $roleUsers = $users->filter(function ($user) use ($roleName, $roleMapping) {
-                    $userRole = $user->tenant_role ?? '';
-                    $displayRole = $user->display_role ?? $userRole;
-                    return $displayRole === $roleName || 
-                           (isset($roleMapping[$userRole]) && $roleMapping[$userRole] === $roleName);
-                });
-                
-                if ($roleUsers->count() > 0) {
-                    foreach ($roleUsers as $user) {
-                        $userDisplayRole = $user->display_role ?? ($user->tenant_role ?? '');
-                        $orgTree[] = $buildNode($user, $userDisplayRole, $level, null);
-                    }
-                    break; // Show only the highest level role found
+
+        $orgTree = [];
+        $assignedUserIds = [];
+        foreach ($rootUsers as $rootUser) {
+            if (in_array($rootUser->id, $assignedUserIds, true)) {
+                continue;
+            }
+            $orgTree[] = $makeNode($rootUser, $rootRole, 1, null);
+            $assignedUserIds[] = $rootUser->id;
+        }
+
+        // Distribute children so each person appears only once in the tree.
+        $attachChildrenRoundRobin = function (array $parentNodes, $childrenUsers, string $childRole, int $level) use ($makeNode, &$assignedUserIds): array {
+            if (empty($parentNodes) || $childrenUsers->isEmpty()) {
+                return [$parentNodes, []];
+            }
+
+            $parentCount = count($parentNodes);
+            $index = 0;
+
+            foreach ($childrenUsers as $childUser) {
+                if (in_array($childUser->id, $assignedUserIds, true)) {
+                    continue;
+                }
+                $parentIndex = $index % $parentCount;
+                $childNode = $makeNode($childUser, $childRole, $level, $parentNodes[$parentIndex]);
+                $parentNodes[$parentIndex]['children'][] = $childNode;
+                $assignedUserIds[] = $childUser->id;
+                $index++;
+            }
+
+            $allChildNodes = [];
+            foreach ($parentNodes as $parentNode) {
+                foreach ($parentNode['children'] as $childNode) {
+                    $allChildNodes[] = $childNode;
                 }
             }
-        }
+
+            return [$parentNodes, $allChildNodes];
+        };
+
+        $level2Users = $rootRole === 'Line Manager' ? collect() : $lineManagers;
+        $level3Users = $rootRole === 'HR Manager' ? collect() : $hrManagers;
+        $level4Users = $rootRole === 'HR Recruiter' ? collect() : $hrRecruiters;
+
+        [$orgTree, $level2Nodes] = $attachChildrenRoundRobin($orgTree, $level2Users, 'Line Manager', 2);
+        [$level2Nodes, $level3Nodes] = $attachChildrenRoundRobin($level2Nodes, $level3Users, 'HR Manager', 3);
+        [$level3Nodes, $_] = $attachChildrenRoundRobin($level3Nodes, $level4Users, 'HR Recruiter', 4);
         
         return view('tenant.organization.index', compact(
             'tenantModel',
@@ -205,8 +208,7 @@ class OrganizationController extends Controller
             'users',
             'usersByRole',
             'stats',
-            'orgTree',
-            'tenant'
+            'orgTree'
         ));
     }
 }

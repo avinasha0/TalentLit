@@ -83,7 +83,7 @@ class Requisition extends Model
      */
     public function scopePending($query)
     {
-        return $query->where('status', 'Pending');
+        return $query->whereIn('status', ['Pending', 'Moved To Finance']);
     }
 
     /**

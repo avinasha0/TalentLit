@@ -20,44 +20,34 @@
 
         <!-- Organizational Tree Structure -->
         @if(!empty($orgTree))
-        <x-card>
+        <x-card class="border border-gray-200/80 shadow-sm">
             <x-slot name="header">
-                <h3 class="text-lg font-medium text-black">Organizational Hierarchy</h3>
-                <p class="mt-1 text-sm text-gray-600">Tree structure showing reporting hierarchy: CEO → Line Manager → HR Manager → HR Recruiter</p>
+                <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900">Organizational Hierarchy</h3>
+                        <p class="mt-1 text-sm text-gray-600">Reporting structure: CEO → Line Manager → HR Manager → HR Recruiter</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2 text-xs">
+                        <span class="inline-flex items-center rounded-full bg-violet-50 px-2.5 py-1 font-medium text-violet-700 ring-1 ring-inset ring-violet-200">CEO</span>
+                        <span class="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-1 font-medium text-blue-700 ring-1 ring-inset ring-blue-200">Line Manager</span>
+                        <span class="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 font-medium text-emerald-700 ring-1 ring-inset ring-emerald-200">HR Manager</span>
+                        <span class="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 font-medium text-amber-700 ring-1 ring-inset ring-amber-200">HR Recruiter</span>
+                    </div>
+                </div>
             </x-slot>
 
-            <div class="py-4 overflow-x-auto max-h-[calc(100vh-300px)]">
+            <div class="org-surface overflow-x-auto rounded-xl border border-gray-100 bg-gradient-to-b from-gray-50 to-white p-5 sm:p-6 max-h-[calc(100vh-280px)]">
                 <style>
                     .org-tree-container {
                         display: flex;
                         flex-direction: column;
                         align-items: center;
-                        min-width: max-content;
+                        min-width: fit-content;
                     }
-                    .org-tree-node {
-                        position: relative;
-                    }
-                    .org-tree-connector {
-                        position: absolute;
-                        background-color: #6b7280;
-                    }
-                    .org-tree-connector-vertical {
-                        width: 2px;
-                        height: 16px;
-                    }
-                    .org-tree-connector-horizontal {
-                        height: 2px;
-                        width: 100%;
-                    }
-                    /* Level indicators for better visibility */
-                    .org-level-1 { border-width: 3px; }
-                    .org-level-2 { border-width: 2px; }
-                    .org-level-3 { border-width: 2px; }
-                    .org-level-4 { border-width: 2px; }
                 </style>
                 <div class="org-tree-container">
                     @foreach($orgTree as $rootNode)
-                        <div class="w-full flex justify-center">
+                        <div class="w-full flex justify-center px-2 py-3">
                             @include('tenant.organization.partials.tree-node', ['node' => $rootNode, 'isRoot' => true])
                         </div>
                     @endforeach

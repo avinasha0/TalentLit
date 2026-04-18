@@ -7,6 +7,7 @@ use App\Models\Requisition;
 use App\Models\RequisitionApproval;
 use App\Models\RequisitionAuditLog;
 use App\Models\Task;
+use App\Models\User;
 use App\Models\InAppNotification;
 use App\Services\ApprovalWorkflowService;
 use App\Mail\RequisitionApprovalRequest;
@@ -20,6 +21,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Validation\Rule;
 
 class ApprovalController extends Controller
 {
@@ -37,10 +39,11 @@ class ApprovalController extends Controller
     public function submit(Request $request, $id, string $tenant = null)
     {
         try {
+            $requisitionId = $this->resolveRequisitionId($id, $tenant);
             // Get requisition with tenant scope
             $tenantModel = tenant();
             $requisition = Requisition::where('tenant_id', $tenantModel->id)
-                ->findOrFail($id);
+                ->findOrFail($requisitionId);
             
             // Verify user is the creator or has permission
             if ($requisition->created_by !== Auth::id() && !$this->hasHRAdminPermission()) {
@@ -67,15 +70,45 @@ class ApprovalController extends Controller
                     'requisition_id' => $requisition->id,
                     'workflow' => $workflow,
                 ]);
+
+                // Guard: If Finance stage exists, a Finance approver must be configured.
+                $financeStep = collect($workflow)->first(function ($step) {
+                    return ($step['role'] ?? null) === 'Finance';
+                });
+                if ($financeStep && empty($this->workflowService->getApproversForLevel($tenantModel, $financeStep))) {
+                    DB::rollBack();
+                    Log::error('Finance approver missing for requisition workflow', [
+                        'requisition_id' => $requisition->id,
+                        'tenant_id' => tenant_id(),
+                        'workflow' => $workflow,
+                    ]);
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Finance approval stage is configured, but no Finance approver is assigned for this tenant. Please assign a user with Finance role and try again.',
+                    ], 400);
+                }
                 
-                // Get first approver
-                $firstApproverId = $this->workflowService->getFirstApprover($requisition);
-                
-                Log::info('First approver lookup', [
+                $firstLevel = collect($workflow)->min('level');
+                $firstLevelApproverIds = [];
+                foreach ($workflow as $step) {
+                    if (($step['level'] ?? null) !== $firstLevel) {
+                        continue;
+                    }
+                    $firstLevelApproverIds = array_merge(
+                        $firstLevelApproverIds,
+                        $this->workflowService->getApproversForLevel($tenantModel, $step)
+                    );
+                }
+                $firstLevelApproverIds = array_values(array_unique($firstLevelApproverIds));
+                $firstApproverId = $firstLevelApproverIds[0] ?? null;
+
+                Log::info('Approver lookup for requisition submit', [
                     'requisition_id' => $requisition->id,
                     'first_approver_id' => $firstApproverId,
+                    'first_level_approver_ids' => $firstLevelApproverIds,
+                    'workflow_steps' => count($workflow),
                 ]);
-                
+
                 if (!$firstApproverId) {
                     DB::rollBack();
                     Log::error('No approver found for requisition', [
@@ -96,14 +129,27 @@ class ApprovalController extends Controller
                 $requisition->status = 'Pending'; // Keep legacy status for backward compatibility
                 $requisition->save();
 
-                // Create audit log entry
+                // Create pending approval for first level only.
                 RequisitionApproval::create([
                     'requisition_id' => $requisition->id,
                     'approver_id' => $firstApproverId,
                     'action' => 'Pending',
-                    'approval_level' => 1,
+                    'approval_level' => $firstLevel,
                     'comments' => 'Requisition submitted for approval',
                 ]);
+
+                foreach ($firstLevelApproverIds as $firstLevelApproverId) {
+                    if ((int) $firstLevelApproverId === (int) $firstApproverId) {
+                        continue;
+                    }
+                    RequisitionApproval::create([
+                        'requisition_id' => $requisition->id,
+                        'approver_id' => $firstLevelApproverId,
+                        'action' => 'Pending',
+                        'approval_level' => $firstLevel,
+                        'comments' => 'Requisition submitted for approval',
+                    ]);
+                }
 
                 // Create audit log entry
                 RequisitionAuditLog::create([
@@ -115,7 +161,7 @@ class ApprovalController extends Controller
                     'new_value' => 'Pending',
                     'changes' => [
                         'approval_status' => 'Pending',
-                        'approval_level' => 1,
+                        'approval_level' => $firstLevel,
                         'current_approver_id' => $firstApproverId,
                     ],
                     'ip_address' => $request->ip(),
@@ -126,21 +172,19 @@ class ApprovalController extends Controller
                 $tenantModel = tenant();
                 $tenantSlug = $tenantModel ? $tenantModel->slug : ($tenant ?? 'tenant');
                 
-                // Create task for approver
-                $this->createApprovalTask($requisition, $firstApproverId);
-
-                // Create in-app notification
-                $this->createInAppNotification(
-                    $firstApproverId,
-                    'requisition_approval_request',
-                    "New Requisition Requires Approval",
-                    "Requisition '{$requisition->job_title}' requires your approval.",
-                    "/{$tenantSlug}/requisitions/{$requisition->id}/approval",
-                    ['requisition_id' => $requisition->id]
-                );
-
-                // Send notification email
-                $this->sendApprovalRequestNotification($requisition, $firstApproverId);
+                // Notify first approver only; next levels are notified when routed.
+                foreach ($firstLevelApproverIds as $firstLevelApproverId) {
+                    $this->createApprovalTask($requisition, $firstLevelApproverId);
+                    $this->createInAppNotification(
+                        $firstLevelApproverId,
+                        'requisition_approval_request',
+                        "New Requisition Requires Approval",
+                        "Requisition '{$requisition->job_title}' requires your approval.",
+                        "/{$tenantSlug}/requisitions/{$requisition->id}/approval",
+                        ['requisition_id' => $requisition->id]
+                    );
+                    $this->sendApprovalRequestNotification($requisition, $firstLevelApproverId, false);
+                }
 
                 DB::commit();
 
@@ -193,7 +237,11 @@ class ApprovalController extends Controller
                 ->where('approval_status', 'Pending');
 
             if (!$this->hasHRAdminPermission()) {
-                $query->where('current_approver_id', $user->id);
+                $query->whereHas('approvals', function ($q) use ($user) {
+                    $q->where('approver_id', $user->id)
+                        ->where('action', 'Pending')
+                        ->whereColumn('requisition_approvals.approval_level', 'requisitions.approval_level');
+                });
             }
 
             $requisitions = $query->orderBy('created_at', 'desc')
@@ -226,7 +274,8 @@ class ApprovalController extends Controller
     public function approve(Request $request, $id, string $tenant = null)
     {
         try {
-            $requisition = Requisition::findOrFail($id);
+            $requisitionId = $this->resolveRequisitionId($id, $tenant);
+            $requisition = Requisition::findOrFail($requisitionId);
             $user = Auth::user();
 
             // Verify permissions
@@ -243,7 +292,7 @@ class ApprovalController extends Controller
                 // Reload to check current state
                 $requisition->refresh();
                 
-                if ($requisition->approval_status !== 'Pending' || $requisition->current_approver_id !== $user->id) {
+                if ($requisition->approval_status !== 'Pending') {
                     DB::rollBack();
                     return response()->json([
                         'success' => false,
@@ -253,14 +302,22 @@ class ApprovalController extends Controller
 
                 $comments = $request->input('comments', '');
 
-                // Create approval record
-                RequisitionApproval::create([
-                    'requisition_id' => $requisition->id,
-                    'approver_id' => $user->id,
-                    'action' => 'Approved',
-                    'approval_level' => $requisition->approval_level,
-                    'comments' => $comments,
-                ]);
+                $pendingApproval = RequisitionApproval::where('requisition_id', $requisition->id)
+                    ->where('approver_id', $user->id)
+                    ->where('action', 'Pending')
+                    ->where('approval_level', $requisition->approval_level)
+                    ->first();
+                if (!$pendingApproval) {
+                    DB::rollBack();
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'You have already taken action on this request or are not an approver.',
+                    ], 409);
+                }
+                $pendingApproval->action = 'Approved';
+                $pendingApproval->comments = $comments;
+                $pendingApproval->approval_level = $pendingApproval->approval_level ?: $requisition->approval_level;
+                $pendingApproval->save();
 
                 // Create audit log entry
                 RequisitionAuditLog::create([
@@ -282,62 +339,126 @@ class ApprovalController extends Controller
                 $tenant = tenant();
                 $tenantSlug = $tenant ? $tenant->slug : 'tenant';
                 
-                // Check if there are more approval levels
-                if ($this->workflowService->hasMoreLevels($requisition)) {
-                    // Move to next level
-                    $nextApprover = $this->workflowService->getNextApprover($requisition);
-                    
-                    if ($nextApprover) {
-                        $requisition->approval_level = $nextApprover['level'];
-                        $requisition->current_approver_id = $nextApprover['user_id'];
-                        $requisition->approval_status = 'Pending';
-                        
-                        // Create task for next approver
-                        $this->createApprovalTask($requisition, $nextApprover['user_id']);
-                        
-                        // Create in-app notification for next approver
+                // Complete task for the approver who took action.
+                $this->completeApprovalTask($requisition, $user->id);
+
+                // Same-level rule: one approval is enough, so close remaining pending approvals in this level.
+                $sameLevelPendingApproverIds = RequisitionApproval::where('requisition_id', $requisition->id)
+                    ->where('action', 'Pending')
+                    ->where('approval_level', $requisition->approval_level)
+                    ->pluck('approver_id')
+                    ->all();
+
+                // Use only values allowed by requisition_approvals.action enum (MySQL reports invalid
+                // enum values as "Data truncated", not the literal value, so never write NotRequired here).
+                RequisitionApproval::where('requisition_id', $requisition->id)
+                    ->where('action', 'Pending')
+                    ->where('approval_level', $requisition->approval_level)
+                    ->update([
+                        'action' => 'Approved',
+                        'comments' => 'Waived: same-level approval already completed by another approver.',
+                        'updated_at' => now(),
+                    ]);
+
+                foreach ($sameLevelPendingApproverIds as $sameLevelPendingApproverId) {
+                    $this->completeApprovalTask($requisition, (int) $sameLevelPendingApproverId);
+                }
+
+                // Legacy submit-on-create used sequential levels (1,2,3…) per approver; void orphan Pending rows
+                // above the current workflow level so Finance is not duplicated when routing to the real stage.
+                RequisitionApproval::where('requisition_id', $requisition->id)
+                    ->where('action', 'Pending')
+                    ->where('approval_level', '>', $requisition->approval_level)
+                    ->update([
+                        'action' => 'Approved',
+                        'comments' => 'Voided: incorrect stage queue (legacy).',
+                        'updated_at' => now(),
+                    ]);
+
+                // Route to next approval level if present; otherwise finalize approval.
+                $nextStage = $this->workflowService->getNextApproverStage($requisition);
+                if ($nextStage) {
+                    $nextApproverIds = array_values(array_unique($nextStage['approver_ids']));
+                    $nextCurrentApproverId = $nextApproverIds[0] ?? null;
+                    if (!$nextCurrentApproverId) {
+                        DB::rollBack();
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'No approver found for the next approval stage.',
+                        ], 400);
+                    }
+
+                    $isMovedToFinance = collect($requisition->approval_workflow ?? [])
+                        ->contains(function ($step) use ($nextStage) {
+                            return ($step['level'] ?? null) === $nextStage['level']
+                                && ($step['role'] ?? null) === 'Finance';
+                        });
+
+                    $requisition->approval_level = $nextStage['level'];
+                    $requisition->current_approver_id = $nextCurrentApproverId;
+                    $requisition->approval_status = 'Pending';
+                    // After L1/L2 (same-level) approval, route to Finance: surface in legacy status for lists/filters.
+                    $requisition->status = $isMovedToFinance ? 'Moved To Finance' : 'Pending';
+                    $requisition->save();
+
+                    foreach ($nextApproverIds as $nextApproverId) {
+                        $nextComment = $isMovedToFinance
+                            ? 'Moved to Finance for approval'
+                            : 'Routed to next approval level';
+
+                        // Reuse an existing Pending row for this approver (e.g. wrong level from legacy create)
+                        // instead of inserting a second Finance / next-stage approval.
+                        $existingPending = RequisitionApproval::where('requisition_id', $requisition->id)
+                            ->where('approver_id', $nextApproverId)
+                            ->where('action', 'Pending')
+                            ->orderBy('id')
+                            ->first();
+
+                        if ($existingPending) {
+                            $existingPending->approval_level = $nextStage['level'];
+                            $existingPending->comments = $nextComment;
+                            $existingPending->save();
+
+                            RequisitionApproval::where('requisition_id', $requisition->id)
+                                ->where('approver_id', $nextApproverId)
+                                ->where('action', 'Pending')
+                                ->where('id', '!=', $existingPending->id)
+                                ->delete();
+                        } else {
+                            RequisitionApproval::create([
+                                'requisition_id' => $requisition->id,
+                                'approver_id' => $nextApproverId,
+                                'action' => 'Pending',
+                                'approval_level' => $nextStage['level'],
+                                'comments' => $nextComment,
+                            ]);
+                        }
+
+                        $this->createApprovalTask(
+                            $requisition,
+                            $nextApproverId,
+                            $isMovedToFinance ? 'Finance Approval' : null
+                        );
                         $this->createInAppNotification(
-                            $nextApprover['user_id'],
+                            $nextApproverId,
                             'requisition_approval_request',
-                            "Requisition Requires Your Approval",
-                            "Requisition '{$requisition->job_title}' has been approved at level " . ($requisition->approval_level - 1) . " and now requires your approval.",
+                            $isMovedToFinance ? "Finance Approval Required" : "New Requisition Requires Approval",
+                            $isMovedToFinance
+                                ? "Requisition '{$requisition->job_title}' has been moved to Finance and requires your approval."
+                                : "Requisition '{$requisition->job_title}' requires your approval.",
                             "/{$tenantSlug}/requisitions/{$requisition->id}/approval",
-                            ['requisition_id' => $requisition->id, 'approval_level' => $nextApprover['level']]
+                            ['requisition_id' => $requisition->id, 'approval_level' => $nextStage['level']]
                         );
-                        
-                        // Send notification to next approver
-                        $this->sendApprovalRequestNotification($requisition, $nextApprover['user_id']);
-                    } else {
-                        // No approver found for next level, mark as approved
-                        $requisition->approval_status = 'Approved';
-                        $requisition->status = 'Approved';
-                        $requisition->current_approver_id = null;
-                        $requisition->approved_at = now();
-                        
-                        // Notify requester
-                        $this->sendFinalApprovalNotification($requisition);
-                        
-                        // Create in-app notification for requester
-                        $this->createInAppNotification(
-                            $requisition->created_by,
-                            'requisition_approved',
-                            "Requisition Approved",
-                            "Your requisition '{$requisition->job_title}' has been approved.",
-                            "/{$tenantSlug}/requisitions/{$requisition->id}",
-                            ['requisition_id' => $requisition->id]
-                        );
+                        $this->sendApprovalRequestNotification($requisition, $nextApproverId, $isMovedToFinance);
                     }
                 } else {
-                    // Final approval
                     $requisition->approval_status = 'Approved';
                     $requisition->status = 'Approved';
                     $requisition->current_approver_id = null;
                     $requisition->approved_at = now();
-                    
-                    // Notify requester
+                    $requisition->save();
+
                     $this->sendFinalApprovalNotification($requisition);
-                    
-                    // Create in-app notification for requester
                     $this->createInAppNotification(
                         $requisition->created_by,
                         'requisition_approved',
@@ -347,11 +468,6 @@ class ApprovalController extends Controller
                         ['requisition_id' => $requisition->id]
                     );
                 }
-
-                // Complete task
-                $this->completeApprovalTask($requisition, $user->id);
-
-                $requisition->save();
 
                 DB::commit();
 
@@ -377,13 +493,28 @@ class ApprovalController extends Controller
         } catch (\Exception $e) {
             Log::error('Failed to approve requisition', [
                 'requisition_id' => $id,
+                'exception' => get_class($e),
                 'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
             ]);
 
-            return response()->json([
+            $payload = [
                 'success' => false,
                 'message' => 'Failed to approve requisition.',
-            ], 500);
+            ];
+
+            if (config('app.debug')) {
+                $payload['debug'] = [
+                    'exception' => get_class($e),
+                    'message' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                ];
+            }
+
+            return response()->json($payload, 500);
         }
     }
 
@@ -394,7 +525,8 @@ class ApprovalController extends Controller
     public function reject(Request $request, $id, string $tenant = null)
     {
         try {
-            $requisition = Requisition::findOrFail($id);
+            $requisitionId = $this->resolveRequisitionId($id, $tenant);
+            $requisition = Requisition::findOrFail($requisitionId);
             $user = Auth::user();
 
             // Verify permissions
@@ -418,7 +550,7 @@ class ApprovalController extends Controller
                 // Reload to check current state
                 $requisition->refresh();
                 
-                if ($requisition->approval_status !== 'Pending' || $requisition->current_approver_id !== $user->id) {
+                if ($requisition->approval_status !== 'Pending') {
                     DB::rollBack();
                     return response()->json([
                         'success' => false,
@@ -428,14 +560,21 @@ class ApprovalController extends Controller
 
                 $comments = $request->input('comments');
 
-                // Create approval record
-                RequisitionApproval::create([
-                    'requisition_id' => $requisition->id,
-                    'approver_id' => $user->id,
-                    'action' => 'Rejected',
-                    'approval_level' => $requisition->approval_level,
-                    'comments' => $comments,
-                ]);
+                $pendingApproval = RequisitionApproval::where('requisition_id', $requisition->id)
+                    ->where('approver_id', $user->id)
+                    ->where('action', 'Pending')
+                    ->where('approval_level', $requisition->approval_level)
+                    ->first();
+                if (!$pendingApproval) {
+                    DB::rollBack();
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'You have already taken action on this request or are not an approver.',
+                    ], 409);
+                }
+                $pendingApproval->action = 'Rejected';
+                $pendingApproval->comments = $comments;
+                $pendingApproval->save();
 
                 // Create audit log entry
                 RequisitionAuditLog::create([
@@ -459,8 +598,9 @@ class ApprovalController extends Controller
                 $requisition->current_approver_id = null;
                 $requisition->save();
 
-                // Complete task
+                // Complete tasks (current + all other pending approval tasks)
                 $this->completeApprovalTask($requisition, $user->id);
+                $this->completeAllPendingApprovalTasks($requisition);
 
                 // Notify requester
                 $this->sendRejectionNotification($requisition, $comments);
@@ -518,7 +658,8 @@ class ApprovalController extends Controller
     public function requestChanges(Request $request, $id, string $tenant = null)
     {
         try {
-            $requisition = Requisition::findOrFail($id);
+            $requisitionId = $this->resolveRequisitionId($id, $tenant);
+            $requisition = Requisition::findOrFail($requisitionId);
             $user = Auth::user();
 
             // Verify permissions
@@ -542,7 +683,7 @@ class ApprovalController extends Controller
                 // Reload to check current state
                 $requisition->refresh();
                 
-                if ($requisition->approval_status !== 'Pending' || $requisition->current_approver_id !== $user->id) {
+                if ($requisition->approval_status !== 'Pending') {
                     DB::rollBack();
                     return response()->json([
                         'success' => false,
@@ -552,14 +693,21 @@ class ApprovalController extends Controller
 
                 $comments = $request->input('comments');
 
-                // Create approval record
-                RequisitionApproval::create([
-                    'requisition_id' => $requisition->id,
-                    'approver_id' => $user->id,
-                    'action' => 'RequestedChanges',
-                    'approval_level' => $requisition->approval_level,
-                    'comments' => $comments,
-                ]);
+                $pendingApproval = RequisitionApproval::where('requisition_id', $requisition->id)
+                    ->where('approver_id', $user->id)
+                    ->where('action', 'Pending')
+                    ->where('approval_level', $requisition->approval_level)
+                    ->first();
+                if (!$pendingApproval) {
+                    DB::rollBack();
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'You have already taken action on this request or are not an approver.',
+                    ], 409);
+                }
+                $pendingApproval->action = 'RequestedChanges';
+                $pendingApproval->comments = $comments;
+                $pendingApproval->save();
 
                 // Create audit log entry
                 RequisitionAuditLog::create([
@@ -582,8 +730,9 @@ class ApprovalController extends Controller
                 $requisition->current_approver_id = null;
                 $requisition->save();
 
-                // Complete current task
+                // Complete tasks (current + all other pending approval tasks)
                 $this->completeApprovalTask($requisition, $user->id);
+                $this->completeAllPendingApprovalTasks($requisition);
 
                 // Create task for requester to edit
                 $this->createEditTask($requisition);
@@ -644,7 +793,8 @@ class ApprovalController extends Controller
     public function delegate(Request $request, $id, string $tenant = null)
     {
         try {
-            $requisition = Requisition::findOrFail($id);
+            $requisitionId = $this->resolveRequisitionId($id, $tenant);
+            $requisition = Requisition::findOrFail($requisitionId);
             $user = Auth::user();
 
             // Verify permissions
@@ -657,7 +807,12 @@ class ApprovalController extends Controller
 
             // Validate delegate user
             $request->validate([
-                'delegate_to_user_id' => 'required|exists:users,id',
+                'delegate_to_user_id' => [
+                    'required',
+                    'integer',
+                    'exists:users,id',
+                    Rule::notIn([(int) $user->id]),
+                ],
                 'comments' => 'nullable|string',
             ]);
 
@@ -666,11 +821,24 @@ class ApprovalController extends Controller
                 // Reload to check current state
                 $requisition->refresh();
                 
-                if ($requisition->approval_status !== 'Pending' || $requisition->current_approver_id !== $user->id) {
+                if ($requisition->approval_status !== 'Pending') {
                     DB::rollBack();
                     return response()->json([
                         'success' => false,
                         'message' => 'Requisition status has changed. Please refresh and try again.',
+                    ], 409);
+                }
+
+                $pendingApproval = RequisitionApproval::where('requisition_id', $requisition->id)
+                    ->where('approver_id', $user->id)
+                    ->where('action', 'Pending')
+                    ->where('approval_level', $requisition->approval_level)
+                    ->first();
+                if (!$pendingApproval) {
+                    DB::rollBack();
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'You have already taken action on this request or are not an approver.',
                     ], 409);
                 }
 
@@ -685,6 +853,19 @@ class ApprovalController extends Controller
                         'success' => false,
                         'message' => 'Delegate user must belong to the same tenant.',
                     ], 400);
+                }
+
+                $delegateAlreadyPending = RequisitionApproval::where('requisition_id', $requisition->id)
+                    ->where('approver_id', $delegateToId)
+                    ->where('action', 'Pending')
+                    ->where('approval_level', $requisition->approval_level)
+                    ->exists();
+                if ($delegateAlreadyPending) {
+                    $pendingApproval->delete();
+                } else {
+                    $pendingApproval->approver_id = $delegateToId;
+                    $pendingApproval->comments = $comments;
+                    $pendingApproval->save();
                 }
 
                 // Create approval record
@@ -721,8 +902,10 @@ class ApprovalController extends Controller
                 // Complete current task
                 $this->completeApprovalTask($requisition, $user->id);
 
-                // Create task for delegate
-                $this->createApprovalTask($requisition, $delegateToId);
+                // Delegate already had a pending row at this level — keep their existing approval task.
+                if (!$delegateAlreadyPending) {
+                    $this->createApprovalTask($requisition, $delegateToId);
+                }
 
                 // Notify delegate
                 $this->sendDelegationNotification($requisition, $delegateToId, $user->id);
@@ -789,7 +972,11 @@ class ApprovalController extends Controller
                 ->where('approval_status', 'Pending');
 
             if (!$this->hasHRAdminPermission()) {
-                $query->where('current_approver_id', $user->id);
+                $query->whereHas('approvals', function ($q) use ($user) {
+                    $q->where('approver_id', $user->id)
+                        ->where('action', 'Pending')
+                        ->whereColumn('requisition_approvals.approval_level', 'requisitions.approval_level');
+                });
             }
 
             // Apply filters
@@ -824,26 +1011,72 @@ class ApprovalController extends Controller
     public function approvalDetail($id, string $tenant = null)
     {
         try {
-            $requisition = Requisition::with(['creator', 'currentApprover', 'attachments'])
-                ->findOrFail($id);
+            // Resolve requisition ID safely for both path-based and subdomain routes.
+            $routeParams = request()->route()?->parameters() ?? [];
+            $requisitionId = null;
+
+            if (isset($routeParams['id']) && is_numeric($routeParams['id'])) {
+                $requisitionId = (int) $routeParams['id'];
+            } elseif (is_numeric(request()->route('id'))) {
+                $requisitionId = (int) request()->route('id');
+            } elseif (is_numeric($id)) {
+                $requisitionId = (int) $id;
+            } elseif (is_numeric($tenant)) {
+                // Subdomain parameter binding fallback.
+                $requisitionId = (int) $tenant;
+            }
+
+            if (!$requisitionId) {
+                throw new \Exception('Invalid requisition ID');
+            }
+
+            $requisition = Requisition::with(['creator', 'currentApprover', 'attachments', 'tenant'])
+                ->findOrFail($requisitionId);
             
             $user = Auth::user();
 
-            // Verify user can view this approval
-            if ($requisition->current_approver_id !== $user->id && !$this->hasHRAdminPermission()) {
+            // Verify user can view this approval (pending row must match current workflow level)
+            $hasPendingApproval = RequisitionApproval::where('requisition_id', $requisition->id)
+                ->where('approver_id', $user->id)
+                ->where('action', 'Pending')
+                ->where('approval_level', $requisition->approval_level)
+                ->exists();
+            if (!$hasPendingApproval && !$this->hasHRAdminPermission()) {
                 abort(403, 'You are not authorized to view this approval.');
             }
 
             // Get approval history
-            $approvals = RequisitionApproval::where('requisition_id', $id)
+            $approvals = RequisitionApproval::where('requisition_id', $requisitionId)
                 ->with(['approver', 'delegate'])
                 ->orderBy('created_at', 'asc')
                 ->get();
 
-            return view('tenant.requisitions.approval-detail', compact('requisition', 'approvals'));
+            $canTakeAction = $hasPendingApproval && $requisition->approval_status === 'Pending';
+            $requiredApproverChain = $this->workflowService->buildRequiredApproverChain($requisition);
+
+            $delegateUserOptions = collect();
+            if ($canTakeAction) {
+                $tid = tenant_id();
+                if ($tid) {
+                    $delegateUserOptions = User::query()
+                        ->whereHas('tenants', fn ($q) => $q->where('tenants.id', $tid))
+                        ->where('id', '!=', $user->id)
+                        ->orderBy('name')
+                        ->get(['id', 'name', 'email']);
+                }
+            }
+
+            return view('tenant.requisitions.approval-detail', compact(
+                'requisition',
+                'approvals',
+                'canTakeAction',
+                'requiredApproverChain',
+                'delegateUserOptions'
+            ));
         } catch (\Exception $e) {
             Log::error('Failed to load approval detail', [
                 'requisition_id' => $id,
+                'route_params' => request()->route()?->parameters() ?? [],
                 'error' => $e->getMessage(),
             ]);
 
@@ -862,9 +1095,10 @@ class ApprovalController extends Controller
     public function history($id, string $tenant = null)
     {
         try {
-            $requisition = Requisition::findOrFail($id);
+            $requisitionId = $this->resolveRequisitionId($id, $tenant);
+            $requisition = Requisition::findOrFail($requisitionId);
             
-            $approvals = RequisitionApproval::where('requisition_id', $id)
+            $approvals = RequisitionApproval::where('requisition_id', $requisitionId)
                 ->with(['approver', 'delegate'])
                 ->orderBy('created_at', 'asc')
                 ->get();
@@ -903,8 +1137,12 @@ class ApprovalController extends Controller
      */
     private function canApprove(Requisition $requisition, $user): bool
     {
-        // Current approver can approve
-        if ($requisition->current_approver_id === $user->id) {
+        $hasPendingApproval = RequisitionApproval::where('requisition_id', $requisition->id)
+            ->where('approver_id', $user->id)
+            ->where('action', 'Pending')
+            ->where('approval_level', $requisition->approval_level)
+            ->exists();
+        if ($hasPendingApproval) {
             return true;
         }
 
@@ -932,19 +1170,21 @@ class ApprovalController extends Controller
     /**
      * Create approval task for approver
      */
-    private function createApprovalTask(Requisition $requisition, int $approverId): void
+    private function createApprovalTask(Requisition $requisition, int $approverId, ?string $stageLabel = null): void
     {
         try {
             $tenant = tenant();
             $tenantSlug = $tenant ? $tenant->slug : 'tenant';
+            $taskTitlePrefix = $stageLabel ?: 'Approve Requisition';
+            $taskType = $stageLabel ? "Requisition {$stageLabel}" : 'Requisition Approval';
             
             // Check if due_at column exists (it may not exist in some databases)
             $hasDueAtColumn = Schema::hasColumn('tasks', 'due_at');
             
             $taskData = [
                 'user_id' => $approverId,
-                'task_type' => 'Requisition Approval',
-                'title' => "Approve Requisition – {$requisition->job_title}",
+                'task_type' => $taskType,
+                'title' => "{$taskTitlePrefix} - {$requisition->job_title}",
                 'requisition_id' => $requisition->id,
                 'status' => 'Pending',
                 'link' => "/{$tenantSlug}/requisitions/{$requisition->id}/approval",
@@ -1059,9 +1299,30 @@ class ApprovalController extends Controller
     }
 
     /**
+     * Complete all remaining pending approval tasks for a requisition.
+     */
+    private function completeAllPendingApprovalTasks(Requisition $requisition): void
+    {
+        try {
+            Task::where('requisition_id', $requisition->id)
+                ->where(function ($query) {
+                    $query->where('task_type', 'Requisition Approval')
+                        ->orWhere('task_type', 'Requisition Finance Approval');
+                })
+                ->where('status', 'Pending')
+                ->update(['status' => 'Completed']);
+        } catch (\Exception $e) {
+            Log::error('Failed to complete all approval tasks', [
+                'requisition_id' => $requisition->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
      * Send approval request notification
      */
-    private function sendApprovalRequestNotification(Requisition $requisition, int $approverId): void
+    private function sendApprovalRequestNotification(Requisition $requisition, int $approverId, bool $isFinanceStage = false): void
     {
         try {
             $approver = \App\Models\User::find($approverId);
@@ -1069,7 +1330,7 @@ class ApprovalController extends Controller
                 return;
             }
 
-            Mail::to($approver->email)->send(new RequisitionApprovalRequest($requisition));
+            Mail::to($approver->email)->send(new RequisitionApprovalRequest($requisition, $isFinanceStage));
             
             Log::info('Approval request notification sent', [
                 'requisition_id' => $requisition->id,
@@ -1240,5 +1501,32 @@ class ApprovalController extends Controller
                 'trace' => $e->getTraceAsString(),
             ]);
         }
+    }
+
+    /**
+     * Resolve requisition ID safely for both path-based and subdomain routes.
+     */
+    private function resolveRequisitionId($id, ?string $tenant = null): int
+    {
+        $routeParams = request()->route()?->parameters() ?? [];
+
+        if (isset($routeParams['id']) && is_numeric($routeParams['id'])) {
+            return (int) $routeParams['id'];
+        }
+
+        $routeId = request()->route('id');
+        if (is_numeric($routeId)) {
+            return (int) $routeId;
+        }
+
+        if (is_numeric($id)) {
+            return (int) $id;
+        }
+
+        if (is_numeric($tenant)) {
+            return (int) $tenant;
+        }
+
+        throw new \InvalidArgumentException('Invalid requisition ID');
     }
 }

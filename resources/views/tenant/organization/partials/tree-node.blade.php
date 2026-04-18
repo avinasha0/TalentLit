@@ -3,135 +3,103 @@
     $role = $node['role'];
     $level = $node['level'];
     $children = $node['children'] ?? [];
-    
+
     // Role colors - new hierarchy
     $roleColors = [
-        'CEO' => 'bg-purple-100 text-purple-800 border-purple-300',
-        'Owner' => 'bg-purple-100 text-purple-800 border-purple-300', // Backward compatibility
-        'Line Manager' => 'bg-blue-100 text-blue-800 border-blue-300',
-        'DepartmentHead' => 'bg-blue-100 text-blue-800 border-blue-300', // Backward compatibility
-        'HR Manager' => 'bg-green-100 text-green-800 border-green-300',
-        'HRManager' => 'bg-green-100 text-green-800 border-green-300', // Backward compatibility
-        'HR Recruiter' => 'bg-orange-100 text-orange-800 border-orange-300',
-        'Recruiter' => 'bg-orange-100 text-orange-800 border-orange-300', // Backward compatibility
+        'CEO' => 'border-violet-200 bg-violet-50 text-violet-700',
+        'Owner' => 'border-violet-200 bg-violet-50 text-violet-700',
+        'Line Manager' => 'border-blue-200 bg-blue-50 text-blue-700',
+        'DepartmentHead' => 'border-blue-200 bg-blue-50 text-blue-700',
+        'HR Manager' => 'border-emerald-200 bg-emerald-50 text-emerald-700',
+        'HRManager' => 'border-emerald-200 bg-emerald-50 text-emerald-700',
+        'HR Recruiter' => 'border-amber-200 bg-amber-50 text-amber-700',
+        'Recruiter' => 'border-amber-200 bg-amber-50 text-amber-700',
     ];
-    $roleColor = $roleColors[$role] ?? 'bg-gray-100 text-gray-800 border-gray-300';
-    
+    $roleColor = $roleColors[$role] ?? 'border-gray-200 bg-gray-50 text-gray-700';
+
+    $cardRingByLevel = [
+        1 => 'ring-violet-100',
+        2 => 'ring-blue-100',
+        3 => 'ring-emerald-100',
+        4 => 'ring-amber-100',
+    ];
+    $cardRing = $cardRingByLevel[$level] ?? 'ring-gray-100';
+
     $hasChildren = !empty($children);
     $childrenCount = count($children);
 @endphp
 
-<div class="flex flex-col items-center {{ $isRoot ? '' : 'mt-3' }}">
-    <!-- User Card (Leaf) -->
+<div class="flex flex-col items-center {{ $isRoot ? '' : 'mt-4' }}">
     <div class="relative flex flex-col items-center">
-        <!-- Vertical line from parent (if not root) -->
         @if(!$isRoot)
-        <div class="absolute -top-4 left-1/2 transform -translate-x-1/2 w-1 h-4 bg-gray-500"></div>
+        <div class="absolute -top-4 left-1/2 h-4 w-px -translate-x-1/2 bg-gray-300"></div>
         @endif
-        
-        <!-- User Card -->
-        <div class="group relative flex flex-col items-center p-2.5 bg-white border-2 {{ $roleColor }} rounded-lg shadow-md hover:shadow-lg transition-all min-w-[140px] max-w-[160px] cursor-pointer org-level-{{ $level }}">
-            <!-- Avatar -->
-            <div class="mb-2">
-                <div class="h-10 w-10 rounded-full bg-gradient-to-br from-purple-400 to-blue-500 flex items-center justify-center shadow-sm">
-                    <span class="text-sm font-bold text-white">
+
+        <div class="group relative w-[188px] rounded-xl border border-gray-200 bg-white p-3 shadow-sm ring-1 {{ $cardRing }} transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg">
+            <div class="mb-2 flex items-center justify-between">
+                <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold {{ $roleColor }}">
+                    {{ $role }}
+                </span>
+                <span class="text-[10px] font-medium uppercase tracking-wide text-gray-400">L{{ $level }}</span>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <div class="h-10 w-10 shrink-0 rounded-full bg-gradient-to-br from-violet-500 to-blue-500 flex items-center justify-center shadow-sm">
+                    <span class="text-xs font-bold text-white">
                         {{ strtoupper(substr($user->name, 0, 2)) }}
                     </span>
                 </div>
+                <div class="min-w-0">
+                    <p class="truncate text-sm font-semibold text-gray-900" title="{{ $user->name }}">{{ $user->name }}</p>
+                    <p class="truncate text-xs text-gray-500" title="{{ $user->email }}">{{ $user->email }}</p>
+                </div>
             </div>
-            
-            <!-- User Info -->
-            <div class="text-center w-full">
-                <p class="text-xs font-semibold text-gray-900 mb-0.5 leading-tight">{{ $user->name }}</p>
-                <p class="text-[10px] text-gray-600 mb-1 truncate w-full" title="{{ $user->email }}">{{ $user->email }}</p>
-                <span class="inline-block px-2 py-0.5 text-[10px] font-semibold rounded-full border {{ $roleColor }}">
-                    {{ $role }}
-                </span>
+
+            <div class="mt-3 border-t border-gray-100 pt-2 text-[11px] text-gray-500">
+                @php
+                    $reportingTo = 'Top Level';
+                    if (isset($node['parentName']) && $node['parentName']) {
+                        $reportingTo = $node['parentName'];
+                    }
+                @endphp
+                <div class="flex items-center justify-between">
+                    <span>Reports To</span>
+                    <span class="max-w-[95px] truncate font-medium text-gray-700" title="{{ $reportingTo }}">{{ $reportingTo }}</span>
+                </div>
+                <div class="mt-1 flex items-center justify-between">
+                    <span>Openings</span>
+                    <span class="font-medium text-gray-700">{{ $user->job_openings_count ?? 0 }}</span>
+                </div>
             </div>
-            
-            <!-- Hover Tooltip -->
-            <div class="absolute left-1/2 transform -translate-x-1/2 bottom-full mb-3 hidden group-hover:block z-50 w-64 pointer-events-none">
-                <div class="bg-gray-900 text-white text-xs rounded-lg shadow-2xl p-4 border border-gray-700">
-                    <div class="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
-                    
-                    <div class="space-y-2">
-                        <div>
-                            <span class="text-gray-400 font-semibold">Employee Name:</span>
-                            <p class="text-white font-medium">{{ $user->name }}</p>
-                        </div>
-                        <div>
-                            <span class="text-gray-400 font-semibold">Email:</span>
-                            <p class="text-white">{{ $user->email }}</p>
-                        </div>
-                        @if(isset($user->phone) && $user->phone)
-                        <div>
-                            <span class="text-gray-400 font-semibold">Phone:</span>
-                            <p class="text-white">{{ $user->phone }}</p>
-                        </div>
-                        @elseif(isset($user->phone_number) && $user->phone_number)
-                        <div>
-                            <span class="text-gray-400 font-semibold">Phone:</span>
-                            <p class="text-white">{{ $user->phone_number }}</p>
-                        </div>
-                        @else
-                        <div>
-                            <span class="text-gray-400 font-semibold">Phone:</span>
-                            <p class="text-gray-500">N/A</p>
-                        </div>
-                        @endif
-                        <div>
-                            <span class="text-gray-400 font-semibold">Reporting To:</span>
-                            @php
-                                $reportingTo = 'N/A';
-                                if (isset($node['parentName']) && $node['parentName']) {
-                                    $reportingTo = $node['parentName'] . ' (' . ($node['parentRole'] ?? '') . ')';
-                                } elseif ($level > 1) {
-                                    // Fallback to role-based reporting - new hierarchy
-                                    if ($role === 'Line Manager' || $role === 'DepartmentHead') {
-                                        $reportingTo = 'CEO';
-                                    } elseif ($role === 'HR Manager' || $role === 'HRManager') {
-                                        $reportingTo = 'Line Manager';
-                                    } elseif ($role === 'HR Recruiter' || $role === 'Recruiter') {
-                                        $reportingTo = 'HR Manager';
-                                    }
-                                }
-                            @endphp
-                            <p class="text-white">{{ $reportingTo }}</p>
-                        </div>
-                        @if(isset($user->job_openings_count) || isset($user->requisitions_count))
-                        <div class="pt-2 border-t border-gray-700 flex items-center justify-between text-[10px]">
-                            @if(isset($user->job_openings_count))
-                            <span class="text-gray-400">Jobs: <span class="text-white">{{ $user->job_openings_count }}</span></span>
-                            @endif
-                            @if(isset($user->requisitions_count))
-                            <span class="text-gray-400">Requisitions: <span class="text-white">{{ $user->requisitions_count }}</span></span>
-                            @endif
-                        </div>
+
+            <div class="pointer-events-none absolute left-1/2 top-0 z-50 hidden w-72 -translate-x-1/2 -translate-y-[105%] group-hover:block">
+                <div class="rounded-lg border border-gray-700 bg-gray-900 p-3 text-xs text-white shadow-2xl">
+                    <div class="space-y-1.5">
+                        <p><span class="font-semibold text-gray-300">Employee:</span> {{ $user->name }}</p>
+                        <p><span class="font-semibold text-gray-300">Role:</span> {{ $role }}</p>
+                        <p><span class="font-semibold text-gray-300">Email:</span> {{ $user->email }}</p>
+                        @if(isset($user->requisitions_count))
+                            <p><span class="font-semibold text-gray-300">Requisitions:</span> {{ $user->requisitions_count }}</p>
                         @endif
                     </div>
                 </div>
             </div>
         </div>
-        
-        <!-- Vertical line to children (if has children) -->
+
         @if($hasChildren)
-        <div class="w-1 h-4 bg-gray-500 mt-1.5"></div>
+        <div class="mt-2 h-5 w-px bg-gray-300"></div>
         @endif
     </div>
-    
-    <!-- Children (Branches) -->
+
     @if($hasChildren)
-        <div class="relative mt-1.5 flex items-start justify-center" style="gap: 1.5rem;">
-            <!-- Horizontal connector line (branch) -->
+        <div class="relative mt-1.5 flex items-start justify-center gap-5">
             @if($childrenCount > 1)
-            <div class="absolute top-0 left-0 right-0 h-1 bg-gray-500" style="left: 50%; transform: translateX(-50%); width: calc(100% - 3rem);"></div>
+            <div class="absolute top-0 left-1/2 h-px -translate-x-1/2 bg-gray-300" style="width: calc(100% - 2.8rem);"></div>
             @endif
-            
-            @foreach($children as $index => $childNode)
+
+            @foreach($children as $childNode)
                 <div class="relative flex flex-col items-center">
-                    <!-- Vertical line from horizontal branch to child -->
-                    <div class="absolute -top-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-gray-500"></div>
-                    
+                    <div class="absolute -top-1 left-1/2 h-1 w-px -translate-x-1/2 bg-gray-300"></div>
                     @include('tenant.organization.partials.tree-node', ['node' => $childNode, 'isRoot' => false])
                 </div>
             @endforeach

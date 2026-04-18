@@ -17,7 +17,7 @@
         <div>
             <h1 class="text-2xl font-bold text-white">Offers</h1>
             <p class="mt-1 text-sm text-white">
-                View and manage shortlisted candidates ready for job offers.
+                View and manage hired candidates ready for pre-boarding.
             </p>
         </div>
 
@@ -79,7 +79,7 @@
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
-                                            Shortlisted
+                                            Hired
                                         </span>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -105,9 +105,9 @@
                     <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                     </svg>
-                    <h3 class="mt-2 text-sm font-medium text-gray-900">No Shortlisted Candidates</h3>
+                    <h3 class="mt-2 text-sm font-medium text-gray-900">No Hired Candidates</h3>
                     <p class="mt-1 text-sm text-gray-500">
-                        Candidates with "Shortlisted" status will appear here automatically.
+                        Candidates with "Hired" status will appear here automatically.
                     </p>
                     <div class="mt-6">
                         <a href="{{ route('tenant.candidates.index', $tenantSlug) }}" 

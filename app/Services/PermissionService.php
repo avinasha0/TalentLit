@@ -92,11 +92,20 @@ class PermissionService
             'view_dashboard', // Needed for accessing recruiting module
         ],
         'Hiring Manager' => [
+            'view_dashboard',
+            'create_jobs',
             'view_jobs',
+            'edit_jobs',
             'view_stages',
             'view_candidates',
             'move_candidates',
             'view_interviews',
+        ],
+        // Requisition approval workflow uses custom_user_roles.role_name = Finance; routes use
+        // view_dashboard (dashboard / recruiting entry) and view_jobs (requisition list & approvals).
+        'Finance' => [
+            'view_dashboard',
+            'view_jobs',
         ],
     ];
 

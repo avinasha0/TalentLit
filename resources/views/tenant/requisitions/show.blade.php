@@ -6,6 +6,15 @@
         ['label' => 'Requisitions', 'url' => tenantRoute('tenant.requisitions.index', $tenantSlug)],
         ['label' => 'Requisition Details', 'url' => null]
     ];
+    // Same as approval workflow: parallel approvers are not always current_approver_id (that field is only "primary").
+    $hasPendingApprovalForUser = \App\Models\RequisitionApproval::where('requisition_id', $requisition->id)
+        ->where('approver_id', auth()->id())
+        ->where('action', 'Pending')
+        ->where('approval_level', $requisition->approval_level)
+        ->exists();
+    $isPrimaryCurrentApprover = (int) ($requisition->current_approver_id ?? 0) === (int) auth()->id();
+    $canOpenApprovalActions = $requisition->approval_status === 'Pending'
+        && ($hasPendingApprovalForUser || $isPrimaryCurrentApprover);
 @endphp
 
 <x-app-layout :tenant="$tenant">
@@ -47,6 +56,8 @@
                                     bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200
                                 @elseif($requisition->status === 'Pending') 
                                     bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200
+                                @elseif($requisition->status === 'Moved To Finance') 
+                                    bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200
                                 @elseif($requisition->status === 'Rejected') 
                                     bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200
                                 @elseif($requisition->status === 'Draft') 
@@ -54,7 +65,7 @@
                                 @else 
                                     bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200
                                 @endif">
-                                {{ $requisition->status }}
+                                {{ $requisition->status_display }}
                             </span>
                         </div>
                     </div>
@@ -157,6 +168,8 @@
                                         bg-green-100 text-green-800
                                     @elseif($requisition->status === 'Pending') 
                                         bg-yellow-100 text-yellow-800
+                                    @elseif($requisition->status === 'Moved To Finance') 
+                                        bg-teal-100 text-teal-800
                                     @elseif($requisition->status === 'Rejected') 
                                         bg-red-100 text-red-800
                                     @elseif($requisition->status === 'Draft') 
@@ -164,7 +177,7 @@
                                     @else 
                                         bg-gray-100 text-gray-800
                                     @endif">
-                                    {{ $requisition->status }}
+                                    {{ $requisition->status_display }}
                                 </span>
                             </dd>
                         </div>
@@ -187,6 +200,8 @@
                     </div>
                 </x-card>
 
+                @include('tenant.requisitions.partials.required-approvers', ['requiredApproverChain' => $requiredApproverChain ?? []])
+
                 <!-- Actions -->
                 @if($requisition->approval_status === 'Draft' || $requisition->approval_status === 'ChangesRequested')
                     @if($requisition->created_by === auth()->id() || auth()->user()->hasAnyRole(['Owner', 'Admin'], tenant_id()))
@@ -207,7 +222,7 @@
                             </div>
                         </x-card>
                     @endif
-                @elseif($requisition->approval_status === 'Pending' && $requisition->current_approver_id === auth()->id())
+                @elseif($canOpenApprovalActions)
                     <x-card>
                         <div class="px-6 py-4 border-b border-gray-200">
                             <h3 class="text-lg font-semibold text-black">Actions</h3>

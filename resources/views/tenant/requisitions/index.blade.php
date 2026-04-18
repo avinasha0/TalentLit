@@ -53,7 +53,7 @@
                             <option value="">All Statuses</option>
                             @foreach($statuses as $status)
                                 <option value="{{ $status }}" {{ request('status') == $status ? 'selected' : '' }}>
-                                    {{ $status }}
+                                    {{ $status === 'Moved To Finance' ? 'Pending with Finance' : $status }}
                                 </option>
                             @endforeach
                         </select>
@@ -313,7 +313,7 @@
                     <!-- Cards will be rendered here by JavaScript -->
                 </div>
 
-                <div class="overflow-x-auto" id="table-container">
+                <div class="overflow-x-auto overflow-y-visible relative" id="table-container">
                     <table class="min-w-full divide-y divide-gray-200" id="requisitions-table">
                         <thead class="bg-gray-50 sticky top-0 z-10">
                             <tr>
@@ -462,6 +462,8 @@
                                                 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200
                                             @elseif($requisition->status === 'Pending') 
                                                 bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200
+                                            @elseif($requisition->status === 'Moved To Finance') 
+                                                bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200
                                             @elseif($requisition->status === 'Rejected') 
                                                 bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200
                                             @elseif($requisition->status === 'Draft') 
@@ -470,7 +472,7 @@
                                                 bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200
                                             @endif"
                                             title="{{ $requisition->status }}">
-                                            {{ $requisition->status }}
+                                            {{ $requisition->status_display }}
                                         </span>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 column-cell" data-column="created-date">
@@ -479,8 +481,8 @@
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 column-cell" data-column="updated-date">
                                         {{ optional($requisition->updated_at)->format('d M Y') ?? 'N/A' }}
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium column-cell" data-column="actions">
-                                        <div class="relative">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium column-cell overflow-visible relative z-20" data-column="actions">
+                                        <div class="relative overflow-visible">
                                             <button type="button" 
                                                     class="row-actions-btn inline-flex items-center text-gray-600 hover:text-gray-900 focus:outline-none"
                                                     data-requisition-id="{{ $requisition->id }}">
@@ -489,23 +491,23 @@
                                                 </svg>
                                             </button>
                                             <div id="actions-dropdown-{{ $requisition->id }}" class="hidden absolute right-0 mt-2 w-48 bg-white border border-gray-300 rounded-md shadow-lg z-50">
-                                                <div class="py-1">
+                                                <div class="py-1 flex flex-col">
                                                     <a href="{{ tenantRoute('tenant.requisitions.show', [$tenantSlug, $requisition->id]) }}" 
                                                        class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">View</a>
                                                     <a href="{{ tenantRoute('tenant.requisitions.edit', [$tenantSlug, $requisition->id]) }}" 
                                                        class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Edit</a>
                                                     <button type="button" 
-                                                            class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 duplicate-requisition-btn"
+                                                            class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 duplicate-requisition-btn"
                                                             data-requisition-id="{{ $requisition->id }}">
                                                         Duplicate
                                                     </button>
                                                     <button type="button" 
-                                                            class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 view-audit-log-btn"
+                                                            class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 view-audit-log-btn"
                                                             data-requisition-id="{{ $requisition->id }}">
                                                         Audit Log
                                                     </button>
                                                     @if($requisition->status === 'Pending')
-                                                        <form method="POST" action="{{ tenantRoute('tenant.requisitions.approve', [$tenantSlug, $requisition->id]) }}" class="inline-block w-full">
+                                                        <form method="POST" action="{{ tenantRoute('tenant.requisitions.approve', [$tenantSlug, $requisition->id]) }}" class="block w-full">
                                                             @csrf
                                                             <button type="submit" 
                                                                     class="w-full text-left px-4 py-2 text-sm text-green-600 hover:bg-gray-100"
@@ -513,7 +515,7 @@
                                                                 Approve
                                                             </button>
                                                         </form>
-                                                        <form method="POST" action="{{ tenantRoute('tenant.requisitions.reject', [$tenantSlug, $requisition->id]) }}" class="inline-block w-full">
+                                                        <form method="POST" action="{{ tenantRoute('tenant.requisitions.reject', [$tenantSlug, $requisition->id]) }}" class="block w-full">
                                                             @csrf
                                                             <button type="submit" 
                                                                     class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
@@ -1281,28 +1283,52 @@
         }
 
         // ========== ROW ACTIONS DROPDOWN ==========
-        document.querySelectorAll('.row-actions-btn').forEach(btn => {
+        function closeAllActionDropdowns() {
+            document.querySelectorAll('[id^="actions-dropdown-"]').forEach((dropdown) => {
+                dropdown.classList.add('hidden');
+            });
+        }
+
+        function positionActionDropdown(dropdown, triggerBtn) {
+            const triggerRect = triggerBtn.getBoundingClientRect();
+            const dropdownWidth = 192; // matches w-48
+            const viewportPadding = 8;
+
+            let left = triggerRect.right - dropdownWidth;
+            if (left < viewportPadding) {
+                left = viewportPadding;
+            }
+
+            const top = triggerRect.bottom + 6;
+
+            dropdown.style.position = 'fixed';
+            dropdown.style.top = `${top}px`;
+            dropdown.style.left = `${left}px`;
+            dropdown.style.right = 'auto';
+            dropdown.style.marginTop = '0';
+            dropdown.style.zIndex = '9999';
+        }
+
+        document.querySelectorAll('.row-actions-btn').forEach((btn) => {
             btn.addEventListener('click', function(e) {
                 e.stopPropagation();
                 const requisitionId = this.dataset.requisitionId;
                 const dropdown = document.getElementById(`actions-dropdown-${requisitionId}`);
-                
-                // Close all other dropdowns
-                document.querySelectorAll('[id^="actions-dropdown-"]').forEach(d => {
-                    if (d !== dropdown) {
-                        d.classList.add('hidden');
-                    }
-                });
-                
-                dropdown.classList.toggle('hidden');
+                if (!dropdown) return;
+
+                const isOpening = dropdown.classList.contains('hidden');
+                closeAllActionDropdowns();
+
+                if (isOpening) {
+                    positionActionDropdown(dropdown, this);
+                    dropdown.classList.remove('hidden');
+                }
             });
         });
 
         document.addEventListener('click', function(e) {
             if (!e.target.closest('.row-actions-btn') && !e.target.closest('[id^="actions-dropdown-"]')) {
-                document.querySelectorAll('[id^="actions-dropdown-"]').forEach(d => {
-                    d.classList.add('hidden');
-                });
+                closeAllActionDropdowns();
             }
         });
 
@@ -1450,16 +1476,16 @@
 
         // ========== LOADING SPINNER ==========
         const tableLoadingSpinner = document.getElementById('table-loading-spinner');
-        const tableContainer = document.getElementById('table-container');
+        const tableContainerElement = document.getElementById('table-container');
 
         function showLoading() {
             if (tableLoadingSpinner) tableLoadingSpinner.classList.remove('hidden');
-            if (tableContainer) tableContainer.style.opacity = '0.5';
+            if (tableContainerElement) tableContainerElement.style.opacity = '0.5';
         }
 
         function hideLoading() {
             if (tableLoadingSpinner) tableLoadingSpinner.classList.add('hidden');
-            if (tableContainer) tableContainer.style.opacity = '1';
+            if (tableContainerElement) tableContainerElement.style.opacity = '1';
         }
 
         // ========== OFFLINE DETECTION ==========

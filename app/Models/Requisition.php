@@ -55,6 +55,17 @@ class Requisition extends Model
     ];
 
     /**
+     * Human-readable status for UI (legacy DB value may differ from product wording).
+     */
+    public function getStatusDisplayAttribute(): string
+    {
+        return match ($this->status) {
+            'Moved To Finance' => 'Pending with Finance',
+            default => (string) ($this->status ?? ''),
+        };
+    }
+
+    /**
      * Get the user who created this requisition
      */
     public function creator(): BelongsTo
@@ -83,7 +94,7 @@ class Requisition extends Model
      */
     public function scopePending($query)
     {
-        return $query->where('status', 'Pending');
+        return $query->whereIn('status', ['Pending', 'Moved To Finance']);
     }
 
     /**

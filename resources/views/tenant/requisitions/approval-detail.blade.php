@@ -8,6 +8,13 @@
         ['label' => 'Pending Approvals', 'url' => tenantRoute('tenant.requisitions.pending-approvals', $tenantSlug)],
         ['label' => 'Approval Detail', 'url' => null]
     ];
+    // For timeline label only: after managers approve, requisition status becomes Moved To Finance — show that instead of "Pending" on Finance approver rows.
+    $financeApproverUserIds = \Illuminate\Support\Facades\DB::table('custom_user_roles')
+        ->where('tenant_id', $tenant->id)
+        ->where('role_name', 'Finance')
+        ->pluck('user_id')
+        ->map(fn ($id) => (int) $id)
+        ->all();
 @endphp
 
 <x-app-layout :tenant="$tenant">
@@ -150,8 +157,10 @@
                     </div>
                 </x-card>
 
+                @include('tenant.requisitions.partials.required-approvers', ['requiredApproverChain' => $requiredApproverChain ?? []])
+
                 <!-- Approval Actions -->
-                @if($requisition->approval_status === 'Pending' && $requisition->current_approver_id === auth()->id())
+                @if(($canTakeAction ?? false) && $requisition->approval_status === 'Pending')
                     <x-card>
                         <div class="px-6 py-4 border-b border-gray-200">
                             <h2 class="text-lg font-semibold text-black">Take Action</h2>
@@ -174,6 +183,14 @@
                                 </button>
                             </div>
 
+                            <div>
+                                <label for="approval_comments" class="block text-sm font-medium text-gray-700">Comments</label>
+                                <textarea id="approval_comments" rows="4"
+                                    class="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                    placeholder="Optional when approving. Required (10+ characters) for Request Changes or Reject."></textarea>
+                                <p class="mt-1 text-xs text-gray-500">Request Changes and Reject require comments of at least 10 characters.</p>
+                            </div>
+
                             <!-- Reject Button -->
                             <div>
                                 <button onclick="showRejectModal()" 
@@ -182,12 +199,38 @@
                                 </button>
                             </div>
 
-                            <!-- Delegate Button -->
-                            <div>
-                                <button onclick="showDelegateModal()" 
+                            <!-- Delegate -->
+                            <div class="border-t border-gray-200 pt-4 space-y-3">
+                                <button type="button" onclick="toggleDelegatePanel()"
                                         class="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
                                     Delegate
                                 </button>
+                                <div id="delegate_panel" class="hidden space-y-3">
+                                    <div>
+                                        <label for="delegate_user_select" class="block text-sm font-medium text-gray-700">Delegate to</label>
+                                        <select id="delegate_user_select"
+                                            class="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                                            <option value="">Select a colleague…</option>
+                                            @foreach($delegateUserOptions ?? [] as $delegateUser)
+                                                <option value="{{ $delegateUser->id }}">{{ $delegateUser->name }} — {{ $delegateUser->email }}</option>
+                                            @endforeach
+                                        </select>
+                                        @if(($delegateUserOptions ?? collect())->isEmpty())
+                                            <p class="mt-1 text-xs text-amber-700">No other users are available in this workspace to delegate to.</p>
+                                        @endif
+                                    </div>
+                                    <div class="flex gap-2">
+                                        <button type="button" onclick="submitDelegateFromSelect()"
+                                            class="flex-1 bg-blue-600 text-white px-4 py-2 rounded-md text-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                                            @if(($delegateUserOptions ?? collect())->isEmpty()) disabled @endif>
+                                            Confirm delegation
+                                        </button>
+                                        <button type="button" onclick="toggleDelegatePanel(true)"
+                                            class="px-4 py-2 rounded-md text-sm border border-gray-300 text-gray-700 hover:bg-gray-50">
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </x-card>
@@ -203,9 +246,24 @@
                         @if($approvals && $approvals->count() > 0)
                             <div class="space-y-4">
                                 @foreach($approvals as $approval)
+                                    @php
+                                        $showMovedToFinanceLabel = $approval->action === 'Pending'
+                                            && $requisition->status === 'Moved To Finance'
+                                            && in_array((int) $approval->approver_id, $financeApproverUserIds, true);
+                                        // Same-level parallel: DB stores Approved + waiver comment; this person did not actively approve.
+                                        $isParallelWaived = $approval->action === 'Approved'
+                                            && str_contains(
+                                                (string) ($approval->comments ?? ''),
+                                                'Waived: same-level approval already completed by another approver.'
+                                            );
+                                    @endphp
                                     <div class="flex items-start space-x-4 pb-4 border-b border-gray-200 last:border-0">
                                         <div class="flex-shrink-0">
-                                            @if($approval->action === 'Approved')
+                                            @if($isParallelWaived)
+                                                <div class="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center ring-1 ring-slate-200" title="Not applicable — parallel level already satisfied">
+                                                    <span class="text-[9px] font-semibold text-slate-500 leading-none tracking-tight">N/A</span>
+                                                </div>
+                                            @elseif($approval->action === 'Approved')
                                                 <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
                                                     <svg class="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
                                                         <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
@@ -229,6 +287,18 @@
                                                         <path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 7a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1V7z"/>
                                                     </svg>
                                                 </div>
+                                            @elseif($approval->action === 'NotRequired')
+                                                <div class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
+                                                    <svg class="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                                    </svg>
+                                                </div>
+                                            @elseif($showMovedToFinanceLabel)
+                                                <div class="w-8 h-8 bg-teal-100 rounded-full flex items-center justify-center">
+                                                    <svg class="w-5 h-5 text-teal-600" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/>
+                                                    </svg>
+                                                </div>
                                             @else
                                                 <div class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
                                                     <svg class="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
@@ -245,11 +315,21 @@
                                                 @endif
                                             </p>
                                             <p class="text-sm text-gray-500">
-                                                {{ ucfirst(str_replace('RequestedChanges', 'Requested Changes', $approval->action)) }} 
-                                                (Level {{ $approval->approval_level }})
+                                                @if($isParallelWaived)
+                                                    Not applicable (Level {{ $approval->approval_level }})
+                                                @elseif($showMovedToFinanceLabel)
+                                                    Moved to Finance
+                                                @else
+                                                    {{ ucfirst(str_replace(['RequestedChanges', 'NotRequired'], ['Requested Changes', 'Not Required'], $approval->action)) }}
+                                                @endif
+                                                @if(!$isParallelWaived)
+                                                    (Level {{ $approval->approval_level }})
+                                                @endif
                                             </p>
-                                            @if($approval->comments)
+                                            @if($approval->comments && !$isParallelWaived)
                                                 <p class="text-sm text-gray-700 mt-1">{{ $approval->comments }}</p>
+                                            @elseif($isParallelWaived)
+                                                <p class="text-sm text-gray-600 mt-1">Parallel approver at this level — one approval was enough; this step did not require a separate approval.</p>
                                             @endif
                                             <p class="text-xs text-gray-400 mt-1">
                                                 {{ $approval->created_at->format('M j, Y g:i A') }}
@@ -306,43 +386,68 @@
     <script>
         const requisitionId = {{ $requisition->id }};
         const tenantSlug = '{{ $tenantSlug }}';
+        const approvalApiBase = @json(request()->routeIs('subdomain.*') ? '/api/requisitions' : '/' . $tenantSlug . '/api/requisitions');
+
+        function getApprovalComments() {
+            const el = document.getElementById('approval_comments');
+            return el ? el.value : '';
+        }
 
         function showApproveModal() {
             if (confirm('Are you sure you want to approve this requisition?')) {
-                submitApproval('approve', '');
+                submitApproval('approve', getApprovalComments().trim());
             }
         }
 
         function showRequestChangesModal() {
-            const comments = prompt('Please provide comments on what changes are needed:');
-            if (comments && comments.trim().length >= 10) {
-                submitApproval('request-changes', comments.trim());
-            } else if (comments !== null) {
-                alert('Comments must be at least 10 characters long.');
+            const comments = getApprovalComments().trim();
+            if (comments.length >= 10) {
+                submitApproval('request-changes', comments);
+            } else {
+                alert('Please enter comments in the box below (at least 10 characters) describing what changes are needed.');
+                document.getElementById('approval_comments')?.focus();
             }
         }
 
         function showRejectModal() {
-            const comments = prompt('Please provide a reason for rejection (required):');
-            if (comments && comments.trim().length >= 10) {
+            const comments = getApprovalComments().trim();
+            if (comments.length >= 10) {
                 if (confirm('Are you sure you want to reject this requisition?')) {
-                    submitApproval('reject', comments.trim());
+                    submitApproval('reject', comments);
                 }
-            } else if (comments !== null) {
-                alert('Comments must be at least 10 characters long.');
+            } else {
+                alert('Please enter a reason for rejection in the comments box (at least 10 characters).');
+                document.getElementById('approval_comments')?.focus();
             }
         }
 
-        function showDelegateModal() {
-            // In a real implementation, this would show a user selection modal
-            const delegateId = prompt('Enter the user ID to delegate to:');
-            if (delegateId) {
-                submitDelegation(delegateId);
+        function toggleDelegatePanel(forceClose) {
+            const panel = document.getElementById('delegate_panel');
+            if (!panel) return;
+            if (forceClose) {
+                panel.classList.add('hidden');
+                return;
             }
+            panel.classList.toggle('hidden');
+        }
+
+        function submitDelegateFromSelect() {
+            const sel = document.getElementById('delegate_user_select');
+            const raw = sel ? sel.value : '';
+            const delegateId = parseInt(raw, 10);
+            if (!delegateId) {
+                alert('Please choose who should receive this approval.');
+                sel?.focus();
+                return;
+            }
+            if (!confirm('Delegate this approval to the selected person? You will no longer be the active approver for this step.')) {
+                return;
+            }
+            submitDelegation(delegateId);
         }
 
         function submitApproval(action, comments) {
-            fetch(`/${tenantSlug}/api/requisitions/${requisitionId}/${action}`, {
+            fetch(`${approvalApiBase}/${requisitionId}/${action}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -358,7 +463,14 @@
                     alert(data.message || 'Action completed successfully.');
                     window.location.reload();
                 } else {
-                    alert(data.message || 'Failed to complete action.');
+                    let msg = data.message || 'Failed to complete action.';
+                    if (data.debug && data.debug.message) {
+                        msg += '\n\nTechnical details:\n' + data.debug.message;
+                        if (data.debug.file) {
+                            msg += '\n(' + data.debug.file + ':' + data.debug.line + ')';
+                        }
+                    }
+                    alert(msg);
                 }
             })
             .catch(error => {
@@ -368,7 +480,7 @@
         }
 
         function submitDelegation(delegateId) {
-            fetch(`/${tenantSlug}/api/requisitions/${requisitionId}/delegate`, {
+            fetch(`${approvalApiBase}/${requisitionId}/delegate`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -378,14 +490,19 @@
                     delegate_to_user_id: delegateId
                 })
             })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
+            .then(async (response) => {
+                const data = await response.json().catch(() => ({}));
+                if (response.ok && data.success) {
                     alert(data.message || 'Delegation completed successfully.');
                     window.location.reload();
-                } else {
-                    alert(data.message || 'Failed to delegate.');
+                    return;
                 }
+                let msg = data.message || 'Failed to delegate.';
+                if (data.errors && typeof data.errors === 'object') {
+                    const first = Object.values(data.errors).flat()[0];
+                    if (first) msg = first;
+                }
+                alert(msg);
             })
             .catch(error => {
                 console.error('Error:', error);

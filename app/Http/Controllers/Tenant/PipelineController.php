@@ -8,6 +8,7 @@ use App\Models\Application;
 use App\Models\ApplicationEvent;
 use App\Models\JobOpening;
 use App\Models\JobStage;
+use App\Services\PreboardingAutomationService;
 use App\Services\NotificationService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
@@ -194,6 +195,11 @@ class PipelineController extends Controller
         // Send stage change notification if moving to different stage
         if ($request->from_stage_id !== $request->to_stage_id) {
             $this->sendStageChangeNotification($tenantModel, $job, $application, $request->to_stage_id, $request->note);
+        }
+
+        $toStage = JobStage::find($toStageId);
+        if ($toStage && str_contains(strtolower($toStage->name), 'hired')) {
+            app(PreboardingAutomationService::class)->initializeFromHire($application);
         }
 
         // Get updated counts

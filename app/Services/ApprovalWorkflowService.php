@@ -52,35 +52,31 @@ class ApprovalWorkflowService
     {
         $workflow = [];
         
-        // Level 1: Department Head (always required)
+        // Level 1: L1 Manager (Admin) - parallel with L2
         $workflow[] = [
             'level' => 1,
-            'role' => 'DepartmentHead',
+            'role' => 'Admin',
             'condition' => null,
         ];
         
-        // Level 2: HR Manager (always required)
+        // Level 1: L2 Manager (Owner) - parallel with L1
+        $workflow[] = [
+            'level' => 1,
+            'role' => 'Owner',
+            'condition' => null,
+        ];
+        
+        // Level 2: Finance (always required after manager approvals)
         $workflow[] = [
             'level' => 2,
-            'role' => 'HRManager',
+            'role' => 'Finance',
             'condition' => null,
         ];
         
-        // Level 3: Finance (if budget > 500000)
-        if ($requisition->budget_max > 500000) {
-            $workflow[] = [
-                'level' => 3,
-                'role' => 'Finance',
-                'condition' => [
-                    'budget_min_gt' => 500000,
-                ],
-            ];
-        }
-        
-        // Level 4: CEO (if senior role or high priority)
+        // Level 3: CEO (if senior role or high priority)
         if ($requisition->priority === 'High' || $this->isSeniorRole($requisition)) {
             $workflow[] = [
-                'level' => 4,
+                'level' => 3,
                 'role' => 'CEO',
                 'condition' => [
                     'senior_role' => true,
@@ -126,10 +122,15 @@ class ApprovalWorkflowService
             
             // Map role names to actual role names in the system
             $roleMapping = [
-                'DepartmentHead' => 'DepartmentHead',
-                'HRManager' => 'HRManager',
+                // Legacy workflow role aliases
+                'DepartmentHead' => 'Admin',
+                'HRManager' => 'Owner',
+                // Current workflow roles
+                'Admin' => 'Admin',
+                'Owner' => 'Owner',
+                // Optional roles used in extended flows
                 'Finance' => 'Finance',
-                'CEO' => 'CEO',
+                'CEO' => 'Owner',
             ];
             
             $actualRoleName = $roleMapping[$roleName] ?? $roleName;
@@ -203,6 +204,59 @@ class ApprovalWorkflowService
     }
 
     /**
+     * Get all approver user IDs for a specific workflow level.
+     * For Finance level, return all Finance users in the tenant.
+     *
+     * @param Tenant $tenant
+     * @param array $workflowStep
+     * @return array<int>
+     */
+    public function getApproversForLevel(Tenant $tenant, array $workflowStep): array
+    {
+        try {
+            $roleName = $workflowStep['role'] ?? null;
+            if (!$roleName) {
+                return [];
+            }
+
+            $roleMapping = [
+                'DepartmentHead' => 'Admin',
+                'HRManager' => 'Owner',
+                'Admin' => 'Admin',
+                'Owner' => 'Owner',
+                'Finance' => 'Finance',
+                'CEO' => 'Owner',
+            ];
+            $actualRoleName = $roleMapping[$roleName] ?? $roleName;
+
+            // Finance stage can have multiple members.
+            if ($actualRoleName === 'Finance') {
+                return DB::table('custom_user_roles')
+                    ->join('tenant_user', function ($join) use ($tenant) {
+                        $join->on('custom_user_roles.user_id', '=', 'tenant_user.user_id')
+                            ->where('tenant_user.tenant_id', '=', $tenant->id);
+                    })
+                    ->where('custom_user_roles.tenant_id', $tenant->id)
+                    ->where('custom_user_roles.role_name', 'Finance')
+                    ->pluck('custom_user_roles.user_id')
+                    ->unique()
+                    ->values()
+                    ->all();
+            }
+
+            $singleApproverId = $this->getApproverForLevel($tenant, $workflowStep);
+            return $singleApproverId ? [$singleApproverId] : [];
+        } catch (\Exception $e) {
+            Log::error('Failed to get approvers for level', [
+                'tenant_id' => $tenant->id,
+                'workflow_step' => $workflowStep,
+                'error' => $e->getMessage(),
+            ]);
+            return [];
+        }
+    }
+
+    /**
      * Get the first approver for a requisition
      * 
      * @param Requisition $requisition
@@ -262,6 +316,47 @@ class ApprovalWorkflowService
     }
 
     /**
+     * Get next approval stage with all approvers for that level.
+     *
+     * @param Requisition $requisition
+     * @return array|null ['level' => int, 'approver_ids' => array<int>] or null
+     */
+    public function getNextApproverStage(Requisition $requisition): ?array
+    {
+        $workflow = $requisition->approval_workflow ?? [];
+        $currentLevel = $requisition->approval_level ?? 0;
+        $nextLevel = null;
+        foreach ($workflow as $step) {
+            $stepLevel = $step['level'] ?? 0;
+            if ($stepLevel > $currentLevel && ($nextLevel === null || $stepLevel < $nextLevel)) {
+                $nextLevel = $stepLevel;
+            }
+        }
+
+        if ($nextLevel === null) {
+            return null;
+        }
+
+        $approverIds = [];
+        foreach ($workflow as $step) {
+            if (($step['level'] ?? 0) !== $nextLevel) {
+                continue;
+            }
+            $approverIds = array_merge($approverIds, $this->getApproversForLevel($requisition->tenant, $step));
+        }
+        $approverIds = array_values(array_unique($approverIds));
+
+        if (empty($approverIds)) {
+            return null;
+        }
+
+        return [
+            'level' => $nextLevel,
+            'approver_ids' => $approverIds,
+        ];
+    }
+
+    /**
      * Check if requisition has more approval levels
      * 
      * @param Requisition $requisition
@@ -279,6 +374,125 @@ class ApprovalWorkflowService
         }
         
         return false;
+    }
+
+    /**
+     * Stored workflow on the requisition, or a non-persisted default preview when not stored yet.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function resolveWorkflowSteps(Requisition $requisition): array
+    {
+        if (!empty($requisition->approval_workflow)) {
+            return $requisition->approval_workflow;
+        }
+
+        $tenant = $requisition->tenant;
+        if (!$tenant) {
+            return [];
+        }
+
+        return $this->getDefaultWorkflow($tenant, $requisition);
+    }
+
+    /**
+     * Full list of approver groups by workflow level (for UI: "who must act before completion").
+     *
+     * @return array<int, array{level: int, groups: array<int, array{role: string, label: string, users: array<int, array{id: int, name: string, email: ?string}>}>}>
+     */
+    public function buildRequiredApproverChain(Requisition $requisition): array
+    {
+        $tenant = $requisition->tenant;
+        if (!$tenant) {
+            return [];
+        }
+
+        $workflow = $this->resolveWorkflowSteps($requisition);
+        if (empty($workflow)) {
+            return [];
+        }
+
+        $sortedLevels = collect($workflow)
+            ->pluck('level')
+            ->map(fn ($l) => (int) $l)
+            ->filter()
+            ->unique()
+            ->sort()
+            ->values();
+
+        $chainDraft = [];
+        foreach ($sortedLevels as $level) {
+            $groups = [];
+            foreach ($workflow as $step) {
+                if ((int) ($step['level'] ?? 0) !== (int) $level) {
+                    continue;
+                }
+                $role = (string) ($step['role'] ?? 'Approver');
+                $ids = array_values(array_unique(array_map('intval', $this->getApproversForLevel($tenant, $step))));
+                $groups[] = [
+                    'role' => $role,
+                    'label' => $this->approverGroupLabel($role),
+                    'user_ids' => $ids,
+                ];
+            }
+            $chainDraft[] = [
+                'level' => (int) $level,
+                'groups' => $groups,
+            ];
+        }
+
+        $allIds = collect($chainDraft)
+            ->pluck('groups')
+            ->flatten(1)
+            ->pluck('user_ids')
+            ->flatten()
+            ->unique()
+            ->values()
+            ->all();
+
+        $usersById = $allIds === []
+            ? collect()
+            : User::whereIn('id', $allIds)->get()->keyBy('id');
+
+        $chain = [];
+        foreach ($chainDraft as $stage) {
+            $groups = [];
+            foreach ($stage['groups'] as $group) {
+                $users = [];
+                foreach ($group['user_ids'] as $userId) {
+                    $user = $usersById->get($userId);
+                    if ($user) {
+                        $users[] = [
+                            'id' => (int) $user->id,
+                            'name' => $user->name,
+                            'email' => $user->email,
+                        ];
+                    }
+                }
+                $groups[] = [
+                    'role' => $group['role'],
+                    'label' => $group['label'],
+                    'users' => $users,
+                ];
+            }
+            $chain[] = [
+                'level' => $stage['level'],
+                'groups' => $groups,
+            ];
+        }
+
+        return $chain;
+    }
+
+    private function approverGroupLabel(string $role): string
+    {
+        return match ($role) {
+            'Admin' => 'L1 Manager',
+            'Owner' => 'L2 Manager',
+            'Finance' => 'Finance Approver',
+            'CEO' => 'CEO',
+            default => $role,
+        };
     }
 }
 

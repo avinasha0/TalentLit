@@ -14,13 +14,16 @@ class RequisitionApprovalRequest extends Mailable
     use Queueable, SerializesModels;
 
     public function __construct(
-        public Requisition $requisition
+        public Requisition $requisition,
+        public bool $isFinanceStage = false,
     ) {}
 
     public function envelope(): Envelope
     {
+        $prefix = $this->isFinanceStage ? 'Finance approval required' : 'Approval request';
+
         return new Envelope(
-            subject: "Approval request: [{$this->requisition->id}] - {$this->requisition->job_title}",
+            subject: "{$prefix}: [{$this->requisition->id}] - {$this->requisition->job_title}",
             from: $this->getFromAddress(),
         );
     }
@@ -36,6 +39,7 @@ class RequisitionApprovalRequest extends Mailable
                 'requisition' => $this->requisition,
                 'tenant' => $tenant,
                 'approvalLink' => $approvalLink,
+                'isFinanceStage' => $this->isFinanceStage,
             ]
         );
     }

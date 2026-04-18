@@ -458,6 +458,7 @@ $tenantRoutes = function () {
 
     Route::middleware(['custom.permission:edit_jobs'])->group(function () {
         Route::get('/{tenant}/requisitions/{id}/edit', [RequisitionController::class, 'edit'])->name('tenant.requisitions.edit');
+        Route::match(['put', 'patch'], '/{tenant}/requisitions/{id}', [RequisitionController::class, 'update'])->name('tenant.requisitions.update');
     });
 
     Route::middleware(['custom.permission:view_jobs'])->group(function () {
@@ -483,12 +484,10 @@ $tenantRoutes = function () {
         Route::post('/{tenant}/api/requisitions/{id}/submit', [\App\Http\Controllers\Tenant\ApprovalController::class, 'submit'])->name('tenant.api.requisitions.submit');
     });
 
+    // Approval actions: view_jobs (Finance approvers lack edit_jobs; Authorization is enforced in ApprovalController::canApprove).
     Route::middleware(['custom.permission:view_jobs'])->group(function () {
         Route::get('/{tenant}/api/approvals/pending', [\App\Http\Controllers\Tenant\ApprovalController::class, 'pending'])->name('tenant.api.approvals.pending');
         Route::get('/{tenant}/api/requisitions/{id}/approvals', [\App\Http\Controllers\Tenant\ApprovalController::class, 'history'])->name('tenant.api.requisitions.approvals');
-    });
-
-    Route::middleware(['custom.permission:edit_jobs'])->group(function () {
         Route::post('/{tenant}/api/requisitions/{id}/approve', [\App\Http\Controllers\Tenant\ApprovalController::class, 'approve'])->name('tenant.api.requisitions.approve');
         Route::post('/{tenant}/api/requisitions/{id}/reject', [\App\Http\Controllers\Tenant\ApprovalController::class, 'reject'])->name('tenant.api.requisitions.reject');
         Route::post('/{tenant}/api/requisitions/{id}/request-changes', [\App\Http\Controllers\Tenant\ApprovalController::class, 'requestChanges'])->name('tenant.api.requisitions.request-changes');
@@ -990,9 +989,6 @@ Route::domain('{subdomain}.' . $appDomain)->middleware(['subdomain.redirect', 's
     Route::middleware(['custom.permission:view_jobs'])->group(function () {
         Route::get('/api/approvals/pending', [\App\Http\Controllers\Tenant\ApprovalController::class, 'pending'])->name('subdomain.api.approvals.pending');
         Route::get('/api/requisitions/{id}/approvals', [\App\Http\Controllers\Tenant\ApprovalController::class, 'history'])->name('subdomain.api.requisitions.approvals');
-    });
-
-    Route::middleware(['custom.permission:edit_jobs'])->group(function () {
         Route::post('/api/requisitions/{id}/approve', [\App\Http\Controllers\Tenant\ApprovalController::class, 'approve'])->name('subdomain.api.requisitions.approve');
         Route::post('/api/requisitions/{id}/reject', [\App\Http\Controllers\Tenant\ApprovalController::class, 'reject'])->name('subdomain.api.requisitions.reject');
         Route::post('/api/requisitions/{id}/request-changes', [\App\Http\Controllers\Tenant\ApprovalController::class, 'requestChanges'])->name('subdomain.api.requisitions.request-changes');

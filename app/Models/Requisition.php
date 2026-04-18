@@ -6,6 +6,7 @@ use App\Models\Concerns\TenantScoped;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -159,6 +160,14 @@ class Requisition extends Model
     public function tasks()
     {
         return $this->hasMany(Task::class);
+    }
+
+    /**
+     * Draft (or other) job opening auto-created from this requisition, if any.
+     */
+    public function draftJobOpening(): HasOne
+    {
+        return $this->hasOne(JobOpening::class, 'staffing_requisition_id');
     }
 
     /**

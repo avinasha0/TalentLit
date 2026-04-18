@@ -15,6 +15,7 @@ class Task extends Model
         'task_type',
         'title',
         'requisition_id',
+        'job_opening_id',
         'status',
         'due_at',
         'link',
@@ -48,6 +49,11 @@ class Task extends Model
     public function requisition(): BelongsTo
     {
         return $this->belongsTo(Requisition::class, 'requisition_id');
+    }
+
+    public function jobOpening(): BelongsTo
+    {
+        return $this->belongsTo(JobOpening::class, 'job_opening_id');
     }
 
     /**

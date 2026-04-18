@@ -11,6 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::getConnection()->getDriverName() === 'sqlite') {
+            return;
+        }
+
         // Change status from enum to string for flexibility
         \DB::statement("ALTER TABLE applications MODIFY COLUMN status VARCHAR(255) NOT NULL DEFAULT 'active'");
     }
@@ -20,6 +24,10 @@ return new class extends Migration
      */
     public function down(): void
     {
+        if (Schema::getConnection()->getDriverName() === 'sqlite') {
+            return;
+        }
+
         // Revert back to enum (keeping original values)
         \DB::statement("ALTER TABLE applications MODIFY COLUMN status ENUM('active', 'withdrawn', 'hired', 'rejected') NOT NULL DEFAULT 'active'");
     }

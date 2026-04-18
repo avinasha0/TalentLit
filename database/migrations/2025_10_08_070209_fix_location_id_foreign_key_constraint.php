@@ -12,6 +12,16 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::getConnection()->getDriverName() === 'sqlite') {
+            if (Schema::hasColumn('job_openings', 'location_id')) {
+                Schema::table('job_openings', function (Blueprint $table) {
+                    $table->dropColumn('location_id');
+                });
+            }
+
+            return;
+        }
+
         // First, check if the foreign key constraint exists and drop it
         $constraintName = 'job_openings_location_id_foreign';
         

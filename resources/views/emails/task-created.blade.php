@@ -25,6 +25,8 @@
             @endif
             @if($task->requisition)
             <p style="margin: 10px 0;"><strong>Related Requisition:</strong> {{ $task->requisition->job_title }}</p>
+            @elseif($task->jobOpening)
+            <p style="margin: 10px 0;"><strong>Related Job:</strong> {{ $task->jobOpening->title }}</p>
             @endif
         </div>
         

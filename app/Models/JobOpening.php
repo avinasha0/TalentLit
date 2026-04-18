@@ -16,7 +16,10 @@ class JobOpening extends Model
     use HasFactory, HasUuids, SoftDeletes, TenantScoped;
 
     protected $fillable = [
+        'tenant_id',
+        'assigned_hr_user_id',
         'requisition_id',
+        'staffing_requisition_id',
         'title',
         'slug',
         'department_id',
@@ -72,6 +75,14 @@ class JobOpening extends Model
         return $this->belongsTo(JobRequisition::class);
     }
 
+    /**
+     * HR / staffing requisition this job was auto-created from (distinct from {@see $requisition} / job_requisitions).
+     */
+    public function staffingRequisition(): BelongsTo
+    {
+        return $this->belongsTo(Requisition::class, 'staffing_requisition_id');
+    }
+
     public function department(): BelongsTo
     {
         return $this->belongsTo(Department::class);
@@ -97,6 +108,11 @@ class JobOpening extends Model
         return $this->belongsTo(City::class);
     }
 
+    public function assignedHr(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'assigned_hr_user_id');
+    }
+
     public function jobStages(): HasMany
     {
         return $this->hasMany(JobStage::class)->orderBy('sort_order');
@@ -110,6 +126,11 @@ class JobOpening extends Model
     public function interviews(): HasMany
     {
         return $this->hasMany(Interview::class, 'job_id');
+    }
+
+    public function tasks(): HasMany
+    {
+        return $this->hasMany(Task::class, 'job_opening_id');
     }
 
     public function applicationQuestions(): BelongsToMany
@@ -142,7 +163,7 @@ class JobOpening extends Model
 
     public function scopeOpen($query)
     {
-        return $query->whereIn('status', ['draft', 'published']);
+        return $query->whereIn('status', ['draft', 'assigned', 'published']);
     }
 
     /**

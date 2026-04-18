@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Models\Requisition;
+use App\Observers\RequisitionObserver;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\DB;
@@ -26,6 +28,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Requisition::observe(RequisitionObserver::class);
+
         // Custom permission directive for our custom role system
         Blade::directive('customCan', function ($expression) {
             return "<?php if (app('App\\Support\\CustomPermissionChecker')->check($expression)): ?>";

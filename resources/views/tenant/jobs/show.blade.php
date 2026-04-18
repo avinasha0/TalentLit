@@ -57,6 +57,7 @@
                                 </div>
                                 <span class="inline-flex px-3 py-1 text-sm font-semibold rounded-full
                                     @if($job->status === 'published') bg-green-100 text-green-800
+                                    @elseif($job->status === 'assigned') bg-indigo-100 text-indigo-800
                                     @elseif($job->status === 'draft') bg-yellow-100 text-yellow-800
                                     @else bg-red-100 text-red-800
                                     @endif">
@@ -130,8 +131,23 @@
                         <dl class="space-y-3">
                             <div>
                                 <dt class="text-sm font-medium text-gray-600">Status</dt>
-                                <dd class="text-sm text-gray-900">{{ ucfirst($job->status) }}</dd>
+                                <dd class="text-sm text-gray-900">
+                                    <span class="inline-flex px-2 py-0.5 text-xs font-semibold rounded-full
+                                        @if($job->status === 'published') bg-green-100 text-green-800
+                                        @elseif($job->status === 'assigned') bg-indigo-100 text-indigo-800
+                                        @elseif($job->status === 'draft') bg-yellow-100 text-yellow-800
+                                        @else bg-red-100 text-red-800
+                                        @endif">
+                                        {{ ucfirst($job->status) }}
+                                    </span>
+                                </dd>
                             </div>
+                            @if($job->assignedHr)
+                                <div>
+                                    <dt class="text-sm font-medium text-gray-600">Assigned HR</dt>
+                                    <dd class="text-sm text-gray-900">{{ $job->assignedHr->name }}</dd>
+                                </div>
+                            @endif
                             <div>
                                 <dt class="text-sm font-medium text-gray-600">Employment Type</dt>
                                 <dd class="text-sm text-gray-900">{{ ucfirst(str_replace('_', ' ', $job->employment_type)) }}</dd>
@@ -182,10 +198,42 @@
                 <x-card>
                     <h3 class="text-lg font-semibold text-black mb-4">Actions</h3>
                     <div class="space-y-3 w-full">
+                        @can('assignHr', $job)
+                            <div class="rounded-md border border-gray-200 bg-gray-50 p-4 mb-2">
+                                <h4 class="text-sm font-semibold text-gray-900 mb-1">Assign HR</h4>
+                                <p class="text-xs text-gray-600 mb-3">Choose who will review and publish this draft job.</p>
+                                @if($assignableHrUsers->isEmpty())
+                                    <p class="text-xs text-amber-800">No eligible team members found. Invite users with job editing access to the organization.</p>
+                                @else
+                                    <form method="POST" action="{{ route('tenant.jobs.assign-hr', ['tenant' => $tenant->slug, 'job' => $job->id]) }}" class="space-y-2">
+                                        @csrf
+                                        @method('PATCH')
+                                        <select name="assigned_hr_user_id"
+                                                class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                required>
+                                            <option value="">Select HR owner…</option>
+                                            @foreach($assignableHrUsers as $hrUser)
+                                                <option value="{{ $hrUser->id }}">{{ $hrUser->name }}</option>
+                                            @endforeach
+                                        </select>
+                                        @error('assigned_hr_user_id')
+                                            <p class="text-xs text-red-600">{{ $message }}</p>
+                                        @enderror
+                                        <button type="submit"
+                                                class="w-full bg-indigo-600 text-white text-center py-2 px-4 rounded-md text-sm font-medium hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                            Assign HR
+                                        </button>
+                                    </form>
+                                @endif
+                            </div>
+                        @endcan
+
+                        @can('update', $job)
                         <a href="{{ route('tenant.jobs.edit', ['tenant' => $tenant->slug, 'job' => $job->id]) }}" 
                            class="block w-full bg-blue-600 text-white text-center py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors hover:bg-blue-700">
                             Edit Job
                         </a>
+                        @endcan
                         <a href="{{ route('careers.show', ['tenant' => $tenant->slug, 'job' => $job->slug]) }}" 
                            target="_blank"
                            class="block w-full bg-blue-600 text-white text-center py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors hover:bg-blue-700">
@@ -200,17 +248,15 @@
                             View Applications
                         </a>
                         
-                        @customCan('publish_jobs', $tenant)
-                            @if($job->status === 'draft')
-                                <form method="POST" action="{{ route('tenant.jobs.publish', ['tenant' => $tenant->slug, 'job' => $job->id]) }}">
-                                    @csrf
-                                    @method('PATCH')
-                                    <button type="submit" class="block w-full bg-blue-600 text-white text-center py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors hover:bg-blue-700">
-                                        Publish Job
-                                    </button>
-                                </form>
-                            @endif
-                        @endcustomCan
+                        @can('publish', $job)
+                            <form method="POST" action="{{ route('tenant.jobs.publish', ['tenant' => $tenant->slug, 'job' => $job->id]) }}">
+                                @csrf
+                                @method('PATCH')
+                                <button type="submit" class="block w-full bg-green-600 text-white text-center py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors hover:bg-green-700">
+                                    Publish Job
+                                </button>
+                            </form>
+                        @endcan
                         
                         @customCan('close_jobs', $tenant)
                             @if($job->status === 'published')

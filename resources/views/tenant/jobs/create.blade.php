@@ -139,21 +139,7 @@
                     </div>
                 </div>
 
-                <!-- Status -->
-                <div>
-                    <label for="status" class="block text-sm font-medium text-black mb-1">Status *</label>
-                    <select name="status"
-                            id="status"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            required>
-                        <option value="draft" {{ old('status') == 'draft' ? 'selected' : '' }}>Draft</option>
-                        <option value="published" {{ old('status') == 'published' ? 'selected' : '' }}>Published</option>
-                        <option value="closed" {{ old('status') == 'closed' ? 'selected' : '' }}>Closed</option>
-                    </select>
-                    @error('status')
-                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                    @enderror
-                </div>
+                <p class="text-sm text-gray-600">New jobs are saved in <strong>Draft</strong>. An HR Admin assigns an HR owner, who can then publish after review.</p>
 
                 <!-- Description -->
                 <div>

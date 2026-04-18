@@ -61,7 +61,16 @@ class JobOpeningPolicy
 
     public function update(User $user, JobOpening $jobOpening): bool
     {
-        return $this->hasCustomPermission('edit_jobs');
+        if (!$this->hasCustomPermission('edit_jobs')) {
+            return false;
+        }
+
+        if ($jobOpening->status === 'assigned') {
+            return (int) $jobOpening->assigned_hr_user_id === (int) $user->id
+                || $user->isHrAdmin();
+        }
+
+        return true;
     }
 
     public function delete(User $user, JobOpening $jobOpening): bool
@@ -81,7 +90,31 @@ class JobOpeningPolicy
 
     public function publish(User $user, JobOpening $jobOpening): bool
     {
-        return $this->hasCustomPermission('publish_jobs');
+        if (!$this->hasCustomPermission('edit_jobs')) {
+            return false;
+        }
+
+        if ($jobOpening->status !== 'assigned') {
+            return false;
+        }
+
+        return (int) $jobOpening->assigned_hr_user_id === (int) $user->id;
+    }
+
+    /**
+     * HR Admin (Owner or Admin) may assign an HR owner to a draft job.
+     */
+    public function assignHr(User $user, JobOpening $jobOpening): bool
+    {
+        if (!$user->isHrAdmin()) {
+            return false;
+        }
+
+        if ($jobOpening->status !== 'draft') {
+            return false;
+        }
+
+        return $this->hasCustomPermission('edit_jobs');
     }
 
     public function close(User $user, JobOpening $jobOpening): bool

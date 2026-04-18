@@ -312,7 +312,7 @@ class AnalyticsController extends Controller
             ->join('departments', 'job_openings.department_id', '=', 'departments.id')
             ->select('departments.name as department', DB::raw('COUNT(*) as open_jobs'))
             ->where('job_openings.tenant_id', $tenantId)
-            ->whereIn('job_openings.status', ['draft', 'published'])
+            ->whereIn('job_openings.status', ['draft', 'assigned', 'published'])
             ->groupBy('departments.id', 'departments.name')
             ->orderBy('open_jobs', 'desc')
             ->get()

@@ -64,9 +64,14 @@ class TaskController extends Controller
                         // Requisition is tenant-scoped, so this will automatically filter by tenant
                         // If requisition doesn't exist or belongs to different tenant, it will be null
                     },
+                    'jobOpening:id,title,tenant_id',
                     'creator',
-                    'assignee'
+                    'assignee',
                 ]);
+
+            if ($tenantId = tenant_id()) {
+                $query->where('tenant_id', $tenantId);
+            }
 
             // Filter by status
             if ($request->filled('status')) {
@@ -87,9 +92,13 @@ class TaskController extends Controller
                 $query->where(function ($q) use ($search) {
                     $q->where('title', 'like', "%{$search}%")
                         ->orWhere('requisition_id', 'like', "%{$search}%")
+                        ->orWhere('job_opening_id', 'like', "%{$search}%")
                         ->orWhereHas('requisition', function ($rq) use ($search) {
                             // Requisition is tenant-scoped, so this will only search within current tenant
                             $rq->where('id', 'like', "%{$search}%");
+                        })
+                        ->orWhereHas('jobOpening', function ($jq) use ($search) {
+                            $jq->where('title', 'like', "%{$search}%");
                         });
                 });
             }
@@ -254,8 +263,9 @@ class TaskController extends Controller
                     // Requisition is tenant-scoped, so this will automatically filter by tenant
                     // If requisition doesn't exist or belongs to different tenant, it will be null
                 },
+                'jobOpening:id,title,tenant_id',
                 'creator:id,name,email',
-                'assignee:id,name,email'
+                'assignee:id,name,email',
             ]);
 
             // Permission check

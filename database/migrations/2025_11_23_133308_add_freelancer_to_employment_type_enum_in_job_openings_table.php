@@ -12,6 +12,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::getConnection()->getDriverName() === 'sqlite') {
+            return;
+        }
+
         // Alter the enum to include 'freelancer'
         DB::statement("ALTER TABLE job_openings MODIFY COLUMN employment_type ENUM('full_time', 'part_time', 'contract', 'intern', 'freelancer') DEFAULT 'full_time'");
     }
@@ -21,6 +25,10 @@ return new class extends Migration
      */
     public function down(): void
     {
+        if (Schema::getConnection()->getDriverName() === 'sqlite') {
+            return;
+        }
+
         // Revert back to original enum values
         DB::statement("ALTER TABLE job_openings MODIFY COLUMN employment_type ENUM('full_time', 'part_time', 'contract', 'intern') DEFAULT 'full_time'");
     }

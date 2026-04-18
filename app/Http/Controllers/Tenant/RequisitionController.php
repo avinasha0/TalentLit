@@ -15,6 +15,7 @@ use App\Models\Task;
 use App\Models\InAppNotification;
 use App\Models\User;
 use App\Services\ApprovalWorkflowService;
+use App\Services\CreateDraftJobFromApprovedRequisition;
 use App\Mail\RequisitionApprovalRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -326,6 +327,10 @@ class RequisitionController extends Controller
 
             $requisition = Requisition::with('tenant')->findOrFail($requisitionId);
             $requiredApproverChain = $this->workflowService->buildRequiredApproverChain($requisition);
+
+            if ($requisition->approval_status === 'Approved' && $requisition->status === 'Approved') {
+                app(CreateDraftJobFromApprovedRequisition::class)->handle($requisition);
+            }
 
             Log::info('RequisitionController@show', [
                 'requisition_id' => $requisitionId,
@@ -1984,6 +1989,9 @@ class RequisitionController extends Controller
             $requisition = Requisition::findOrFail($id);
             $oldStatus = $requisition->status;
             $requisition->status = 'Approved';
+            $requisition->approval_status = 'Approved';
+            $requisition->current_approver_id = null;
+            $requisition->approved_at = now();
             $requisition->save();
 
             // Log the status change

@@ -16,7 +16,9 @@ class JobOpening extends Model
     use HasFactory, HasUuids, SoftDeletes, TenantScoped;
 
     protected $fillable = [
+        'tenant_id',
         'requisition_id',
+        'staffing_requisition_id',
         'title',
         'slug',
         'department_id',
@@ -70,6 +72,14 @@ class JobOpening extends Model
     public function requisition(): BelongsTo
     {
         return $this->belongsTo(JobRequisition::class);
+    }
+
+    /**
+     * HR / staffing requisition this job was auto-created from (distinct from {@see $requisition} / job_requisitions).
+     */
+    public function staffingRequisition(): BelongsTo
+    {
+        return $this->belongsTo(Requisition::class, 'staffing_requisition_id');
     }
 
     public function department(): BelongsTo

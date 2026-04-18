@@ -183,6 +183,14 @@
                                 </button>
                             </div>
 
+                            <div>
+                                <label for="approval_comments" class="block text-sm font-medium text-gray-700">Comments</label>
+                                <textarea id="approval_comments" rows="4"
+                                    class="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                    placeholder="Optional when approving. Required (10+ characters) for Request Changes or Reject."></textarea>
+                                <p class="mt-1 text-xs text-gray-500">Request Changes and Reject require comments of at least 10 characters.</p>
+                            </div>
+
                             <!-- Reject Button -->
                             <div>
                                 <button onclick="showRejectModal()" 
@@ -191,12 +199,38 @@
                                 </button>
                             </div>
 
-                            <!-- Delegate Button -->
-                            <div>
-                                <button onclick="showDelegateModal()" 
+                            <!-- Delegate -->
+                            <div class="border-t border-gray-200 pt-4 space-y-3">
+                                <button type="button" onclick="toggleDelegatePanel()"
                                         class="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
                                     Delegate
                                 </button>
+                                <div id="delegate_panel" class="hidden space-y-3">
+                                    <div>
+                                        <label for="delegate_user_select" class="block text-sm font-medium text-gray-700">Delegate to</label>
+                                        <select id="delegate_user_select"
+                                            class="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                                            <option value="">Select a colleague…</option>
+                                            @foreach($delegateUserOptions ?? [] as $delegateUser)
+                                                <option value="{{ $delegateUser->id }}">{{ $delegateUser->name }} — {{ $delegateUser->email }}</option>
+                                            @endforeach
+                                        </select>
+                                        @if(($delegateUserOptions ?? collect())->isEmpty())
+                                            <p class="mt-1 text-xs text-amber-700">No other users are available in this workspace to delegate to.</p>
+                                        @endif
+                                    </div>
+                                    <div class="flex gap-2">
+                                        <button type="button" onclick="submitDelegateFromSelect()"
+                                            class="flex-1 bg-blue-600 text-white px-4 py-2 rounded-md text-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                                            @if(($delegateUserOptions ?? collect())->isEmpty()) disabled @endif>
+                                            Confirm delegation
+                                        </button>
+                                        <button type="button" onclick="toggleDelegatePanel(true)"
+                                            class="px-4 py-2 rounded-md text-sm border border-gray-300 text-gray-700 hover:bg-gray-50">
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </x-card>
@@ -354,38 +388,62 @@
         const tenantSlug = '{{ $tenantSlug }}';
         const approvalApiBase = @json(request()->routeIs('subdomain.*') ? '/api/requisitions' : '/' . $tenantSlug . '/api/requisitions');
 
+        function getApprovalComments() {
+            const el = document.getElementById('approval_comments');
+            return el ? el.value : '';
+        }
+
         function showApproveModal() {
             if (confirm('Are you sure you want to approve this requisition?')) {
-                submitApproval('approve', '');
+                submitApproval('approve', getApprovalComments().trim());
             }
         }
 
         function showRequestChangesModal() {
-            const comments = prompt('Please provide comments on what changes are needed:');
-            if (comments && comments.trim().length >= 10) {
-                submitApproval('request-changes', comments.trim());
-            } else if (comments !== null) {
-                alert('Comments must be at least 10 characters long.');
+            const comments = getApprovalComments().trim();
+            if (comments.length >= 10) {
+                submitApproval('request-changes', comments);
+            } else {
+                alert('Please enter comments in the box below (at least 10 characters) describing what changes are needed.');
+                document.getElementById('approval_comments')?.focus();
             }
         }
 
         function showRejectModal() {
-            const comments = prompt('Please provide a reason for rejection (required):');
-            if (comments && comments.trim().length >= 10) {
+            const comments = getApprovalComments().trim();
+            if (comments.length >= 10) {
                 if (confirm('Are you sure you want to reject this requisition?')) {
-                    submitApproval('reject', comments.trim());
+                    submitApproval('reject', comments);
                 }
-            } else if (comments !== null) {
-                alert('Comments must be at least 10 characters long.');
+            } else {
+                alert('Please enter a reason for rejection in the comments box (at least 10 characters).');
+                document.getElementById('approval_comments')?.focus();
             }
         }
 
-        function showDelegateModal() {
-            // In a real implementation, this would show a user selection modal
-            const delegateId = prompt('Enter the user ID to delegate to:');
-            if (delegateId) {
-                submitDelegation(delegateId);
+        function toggleDelegatePanel(forceClose) {
+            const panel = document.getElementById('delegate_panel');
+            if (!panel) return;
+            if (forceClose) {
+                panel.classList.add('hidden');
+                return;
             }
+            panel.classList.toggle('hidden');
+        }
+
+        function submitDelegateFromSelect() {
+            const sel = document.getElementById('delegate_user_select');
+            const raw = sel ? sel.value : '';
+            const delegateId = parseInt(raw, 10);
+            if (!delegateId) {
+                alert('Please choose who should receive this approval.');
+                sel?.focus();
+                return;
+            }
+            if (!confirm('Delegate this approval to the selected person? You will no longer be the active approver for this step.')) {
+                return;
+            }
+            submitDelegation(delegateId);
         }
 
         function submitApproval(action, comments) {
@@ -432,14 +490,19 @@
                     delegate_to_user_id: delegateId
                 })
             })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
+            .then(async (response) => {
+                const data = await response.json().catch(() => ({}));
+                if (response.ok && data.success) {
                     alert(data.message || 'Delegation completed successfully.');
                     window.location.reload();
-                } else {
-                    alert(data.message || 'Failed to delegate.');
+                    return;
                 }
+                let msg = data.message || 'Failed to delegate.';
+                if (data.errors && typeof data.errors === 'object') {
+                    const first = Object.values(data.errors).flat()[0];
+                    if (first) msg = first;
+                }
+                alert(msg);
             })
             .catch(error => {
                 console.error('Error:', error);

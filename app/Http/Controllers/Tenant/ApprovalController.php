@@ -7,6 +7,7 @@ use App\Models\Requisition;
 use App\Models\RequisitionApproval;
 use App\Models\RequisitionAuditLog;
 use App\Models\Task;
+use App\Models\User;
 use App\Models\InAppNotification;
 use App\Services\ApprovalWorkflowService;
 use App\Mail\RequisitionApprovalRequest;
@@ -20,6 +21,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Validation\Rule;
 
 class ApprovalController extends Controller
 {
@@ -805,7 +807,12 @@ class ApprovalController extends Controller
 
             // Validate delegate user
             $request->validate([
-                'delegate_to_user_id' => 'required|exists:users,id',
+                'delegate_to_user_id' => [
+                    'required',
+                    'integer',
+                    'exists:users,id',
+                    Rule::notIn([(int) $user->id]),
+                ],
                 'comments' => 'nullable|string',
             ]);
 
@@ -851,6 +858,7 @@ class ApprovalController extends Controller
                 $delegateAlreadyPending = RequisitionApproval::where('requisition_id', $requisition->id)
                     ->where('approver_id', $delegateToId)
                     ->where('action', 'Pending')
+                    ->where('approval_level', $requisition->approval_level)
                     ->exists();
                 if ($delegateAlreadyPending) {
                     $pendingApproval->delete();
@@ -894,8 +902,10 @@ class ApprovalController extends Controller
                 // Complete current task
                 $this->completeApprovalTask($requisition, $user->id);
 
-                // Create task for delegate
-                $this->createApprovalTask($requisition, $delegateToId);
+                // Delegate already had a pending row at this level — keep their existing approval task.
+                if (!$delegateAlreadyPending) {
+                    $this->createApprovalTask($requisition, $delegateToId);
+                }
 
                 // Notify delegate
                 $this->sendDelegationNotification($requisition, $delegateToId, $user->id);
@@ -1044,11 +1054,24 @@ class ApprovalController extends Controller
             $canTakeAction = $hasPendingApproval && $requisition->approval_status === 'Pending';
             $requiredApproverChain = $this->workflowService->buildRequiredApproverChain($requisition);
 
+            $delegateUserOptions = collect();
+            if ($canTakeAction) {
+                $tid = tenant_id();
+                if ($tid) {
+                    $delegateUserOptions = User::query()
+                        ->whereHas('tenants', fn ($q) => $q->where('tenants.id', $tid))
+                        ->where('id', '!=', $user->id)
+                        ->orderBy('name')
+                        ->get(['id', 'name', 'email']);
+                }
+            }
+
             return view('tenant.requisitions.approval-detail', compact(
                 'requisition',
                 'approvals',
                 'canTakeAction',
-                'requiredApproverChain'
+                'requiredApproverChain',
+                'delegateUserOptions'
             ));
         } catch (\Exception $e) {
             Log::error('Failed to load approval detail', [

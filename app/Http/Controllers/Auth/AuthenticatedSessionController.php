@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Models\Tenant;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -32,10 +33,12 @@ class AuthenticatedSessionController extends Controller
 
         $user = auth()->user();
 
-        // Get the last visited tenant from session
+        return redirect()->intended($this->defaultLoginRedirectUrl($user, $request));
+    }
+
+    private function defaultLoginRedirectUrl(User $user, Request $request): string
+    {
         $lastTenantSlug = session('last_tenant_slug');
-        
-        // If we have a last tenant, check if user has access to it
         if ($lastTenantSlug) {
             $tenant = Tenant::where('slug', $lastTenantSlug)->first();
             \Log::info('Auth.Login.LastTenantCheck', [
@@ -48,26 +51,23 @@ class AuthenticatedSessionController extends Controller
                 'tenant_plan_slug' => $tenant?->activeSubscription?->plan?->slug,
             ]);
             if ($tenant && $user->tenants->contains($tenant)) {
-                $targetUrl = $tenant->getDashboardUrl();
+                $targetUrl = $this->resolvePostLoginUrlForTenant($user, $tenant);
                 \Log::info('Auth.Login.Redirecting.LastTenant', [
                     'user_id' => $user?->id,
                     'tenant_id' => $tenant->id,
                     'tenant_slug' => $tenant->slug,
                     'target_url' => $targetUrl,
                 ]);
-                return redirect($targetUrl);
-            } else {
-                // User doesn't belong to the last tenant, clear it from session
-                $request->session()->forget('last_tenant_slug');
+
+                return $targetUrl;
             }
+            $request->session()->forget('last_tenant_slug');
         }
-        
-        // Try to find a tenant that the user has access to
+
         $userTenant = $user->tenants->first();
         if ($userTenant) {
-            // Set the correct tenant in session for future use
             $request->session()->put('last_tenant_slug', $userTenant->slug);
-            $targetUrl = $userTenant->getDashboardUrl();
+            $targetUrl = $this->resolvePostLoginUrlForTenant($user, $userTenant);
             \Log::info('Auth.Login.Redirecting.FirstTenant', [
                 'user_id' => $user?->id,
                 'tenant_id' => $userTenant->id,
@@ -77,16 +77,20 @@ class AuthenticatedSessionController extends Controller
                 'tenant_plan_slug' => $userTenant->activeSubscription?->plan?->slug,
                 'target_url' => $targetUrl,
             ]);
-            return redirect($targetUrl);
-        }
-        
-        // In tests, Breeze expects redirect to global dashboard
-        if (app()->environment('testing')) {
-            return redirect()->route('dashboard');
+
+            return $targetUrl;
         }
 
-        // If user has no tenants, redirect to onboarding
-        return redirect()->route('onboarding.organization');
+        if (app()->environment('testing')) {
+            return route('dashboard');
+        }
+
+        return route('onboarding.organization');
+    }
+
+    private function resolvePostLoginUrlForTenant(User $user, Tenant $tenant): string
+    {
+        return $tenant->getDashboardUrl();
     }
 
     /**

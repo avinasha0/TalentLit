@@ -2,8 +2,12 @@
 
 namespace App\Http\Requests;
 
+use App\Models\CareerApplyEmailOtp;
+use App\Models\JobOpening;
+use App\Models\Tenant;
 use App\Rules\RecaptchaRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Validator;
 
 class ApplyRequest extends FormRequest
 {
@@ -64,6 +68,39 @@ class ApplyRequest extends FormRequest
             'consent.accepted' => 'You must agree to the terms and conditions.',
             'g-recaptcha-response.required' => 'Please complete the reCAPTCHA verification.',
         ];
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator): void {
+            if ($validator->errors()->isNotEmpty()) {
+                return;
+            }
+
+            $tenantModel = tenant() ?? Tenant::where('slug', $this->route('tenant'))->first();
+            $jobSlug = $this->route('job');
+            if (! $tenantModel || ! $jobSlug) {
+                return;
+            }
+
+            $job = JobOpening::query()
+                ->where('slug', $jobSlug)
+                ->where('tenant_id', $tenantModel->id)
+                ->where('status', 'published')
+                ->first();
+
+            if (! $job) {
+                return;
+            }
+
+            $email = (string) $this->input('email', '');
+            if (! CareerApplyEmailOtp::sessionMatches($tenantModel, $job, $email)) {
+                $validator->errors()->add(
+                    'email',
+                    'Please verify your email with the 6-digit code we send you before submitting your application.'
+                );
+            }
+        });
     }
 
     protected function prepareForValidation(): void

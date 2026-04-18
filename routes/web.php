@@ -24,6 +24,9 @@ use App\Http\Controllers\Tenant\JobQuestionsController;
 use App\Http\Controllers\Tenant\JobStageController;
 use App\Http\Controllers\Tenant\PipelineController;
 use App\Http\Controllers\Tenant\EmployeeOnboardingController;
+use App\Http\Controllers\Applicant\ApplicantPortalController;
+use App\Http\Controllers\Applicant\ApplicantProfileController;
+use App\Http\Controllers\Candidate\AuthenticatedSessionController as CandidateSessionController;
 use App\Http\Controllers\Tenant\OrganizationController;
 use App\Models\Application;
 use App\Models\Candidate;
@@ -357,20 +360,22 @@ $breezeRoutes = function () {
         // Redirect authenticated users to their tenant dashboard (only on main domain)
         if (auth()->check()) {
             $user = auth()->user();
-            
-            // Check if user was trying to access a specific tenant
+
             $lastTenantSlug = session('last_tenant_slug');
             if ($lastTenantSlug) {
                 $tenant = \App\Models\Tenant::where('slug', $lastTenantSlug)->first();
                 if ($tenant && $user->tenants->contains($tenant)) {
-                    return redirect($tenant->getDashboardUrl());
+                    $target = $tenant->getDashboardUrl();
+
+                    return redirect($target);
                 }
             }
-            
-            // Fallback to first available tenant
+
             if ($user->tenants->count() > 0) {
                 $tenant = $user->tenants->first();
-                return redirect($tenant->getDashboardUrl());
+                $target = $tenant->getDashboardUrl();
+
+                return redirect($target);
             }
         }
         return view('simple-dashboard');
@@ -395,8 +400,11 @@ if (app()->environment('local')) {
 // Public Career Site Routes
 Route::prefix('{tenant}/careers')->middleware(['capture.tenant', 'tenant'])->group(function () {
     Route::get('/', [CareerJobController::class, 'index'])->name('careers.index');
+    Route::get('/applicant-login', [ApplyController::class, 'applicantLoginRedirect'])->name('careers.applicant.login');
     Route::get('/{job}', [CareerJobController::class, 'show'])->name('careers.show');
     Route::get('/{job}/apply', [ApplyController::class, 'create'])->name('careers.apply.create');
+    Route::post('/{job}/apply/email-otp/send', [ApplyController::class, 'sendApplyEmailOtp'])->middleware('throttle:6,1')->name('careers.apply.email-otp.send');
+    Route::post('/{job}/apply/email-otp/verify', [ApplyController::class, 'verifyApplyEmailOtp'])->middleware('throttle:20,1')->name('careers.apply.email-otp.verify');
     Route::post('/{job}/apply', [ApplyController::class, 'store'])->middleware('subscription.limit:max_applications_per_month')->name('careers.apply.store');
     Route::get('/{job}/success', [ApplyController::class, 'success'])->name('careers.success');
 });
@@ -748,6 +756,28 @@ if (app()->environment('local')) {
     Route::domain('127.0.0.1')->middleware(['capture.tenant', 'tenant', 'auth'])->group($tenantRoutes);
 } else {
     Route::domain($appDomain)->middleware(['capture.tenant', 'tenant', 'auth'])->group($tenantRoutes);
+}
+
+$candidatePortalRoutes = function () {
+    Route::middleware('guest:candidate')->group(function () {
+        Route::get('/{tenant}/candidate/login', [CandidateSessionController::class, 'create'])->name('candidate.login');
+        Route::post('/{tenant}/candidate/login', [CandidateSessionController::class, 'store'])->name('candidate.login.store');
+    });
+
+    Route::middleware(['auth:candidate', 'candidate.tenant'])->group(function () {
+        Route::post('/{tenant}/candidate/logout', [CandidateSessionController::class, 'destroy'])->name('candidate.logout');
+        Route::get('/{tenant}/my-applications', [ApplicantPortalController::class, 'index'])->name('tenant.applicant.dashboard');
+        Route::get('/{tenant}/my-profile', [ApplicantProfileController::class, 'edit'])->name('tenant.applicant.profile');
+        Route::put('/{tenant}/my-profile/email', [ApplicantProfileController::class, 'updateEmail'])->name('tenant.applicant.profile.email');
+        Route::put('/{tenant}/my-profile/password', [ApplicantProfileController::class, 'updatePassword'])->name('tenant.applicant.profile.password');
+    });
+};
+
+if (app()->environment('local')) {
+    Route::domain('localhost')->middleware(['capture.tenant', 'tenant'])->group($candidatePortalRoutes);
+    Route::domain('127.0.0.1')->middleware(['capture.tenant', 'tenant'])->group($candidatePortalRoutes);
+} else {
+    Route::domain($appDomain)->middleware(['capture.tenant', 'tenant'])->group($candidatePortalRoutes);
 }
 
 // Register API routes for requisitions without domain constraints to support path-based tenant routing
@@ -1276,9 +1306,25 @@ Route::domain('{subdomain}.' . $appDomain)->middleware(['subdomain.redirect', 's
 
 // Public Career Site Routes for Subdomain
 Route::middleware(['subdomain.tenant'])->group(function () {
+    Route::middleware('guest:candidate')->group(function () {
+        Route::get('/candidate/login', [CandidateSessionController::class, 'create'])->name('subdomain.candidate.login');
+        Route::post('/candidate/login', [CandidateSessionController::class, 'store'])->name('subdomain.candidate.login.store');
+    });
+
+    Route::middleware(['auth:candidate', 'candidate.tenant'])->group(function () {
+        Route::post('/candidate/logout', [CandidateSessionController::class, 'destroy'])->name('subdomain.candidate.logout');
+        Route::get('/my-applications', [ApplicantPortalController::class, 'index'])->name('subdomain.applicant.dashboard');
+        Route::get('/my-profile', [ApplicantProfileController::class, 'edit'])->name('subdomain.applicant.profile');
+        Route::put('/my-profile/email', [ApplicantProfileController::class, 'updateEmail'])->name('subdomain.applicant.profile.email');
+        Route::put('/my-profile/password', [ApplicantProfileController::class, 'updatePassword'])->name('subdomain.applicant.profile.password');
+    });
+
     Route::get('/careers', [CareerJobController::class, 'index'])->name('subdomain.careers.index');
+    Route::get('/careers/applicant-login', [ApplyController::class, 'applicantLoginRedirect'])->name('subdomain.careers.applicant.login');
     Route::get('/careers/{job}', [CareerJobController::class, 'show'])->name('subdomain.careers.show');
     Route::get('/careers/{job}/apply', [ApplyController::class, 'create'])->name('subdomain.careers.apply.create');
+    Route::post('/careers/{job}/apply/email-otp/send', [ApplyController::class, 'sendApplyEmailOtp'])->middleware('throttle:6,1')->name('subdomain.careers.apply.email-otp.send');
+    Route::post('/careers/{job}/apply/email-otp/verify', [ApplyController::class, 'verifyApplyEmailOtp'])->middleware('throttle:20,1')->name('subdomain.careers.apply.email-otp.verify');
     Route::post('/careers/{job}/apply', [ApplyController::class, 'store'])->middleware('subscription.limit:max_applications_per_month')->name('subdomain.careers.apply.store');
     Route::get('/careers/{job}/success', [ApplyController::class, 'success'])->name('subdomain.careers.success');
 });

@@ -10,6 +10,7 @@ use App\Models\Candidate;
 use App\Models\JobOpening;
 use App\Models\Resume;
 use App\Models\Tenant;
+use App\Services\ApplicantPortalProvisioner\ApplicantPortalProvisioner;
 use App\Services\NotificationService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -19,6 +20,10 @@ use Illuminate\Support\Str;
 
 class UpsertCandidateAndApply
 {
+    public function __construct(
+        private ApplicantPortalProvisioner $applicantPortalProvisioner,
+    ) {}
+
     public function execute(
         Tenant $tenant,
         JobOpening $job,
@@ -31,7 +36,7 @@ class UpsertCandidateAndApply
         ?UploadedFile $resume,
         bool $consent,
         array $customAnswers = []
-    ): Application {
+    ): ApplySubmissionResult {
         return DB::transaction(function () use (
             $tenant,
             $job,
@@ -94,7 +99,7 @@ class UpsertCandidateAndApply
                     'tenant_id' => $tenant->id,
                     'job_opening_id' => $job->id,
                     'candidate_id' => $candidate->id,
-                    'status' => 'applied',
+                    'status' => 'active',
                     'applied_at' => now(),
                     'current_stage_id' => $firstStage?->id,
                     'stage_position' => $nextPosition,
@@ -125,7 +130,21 @@ class UpsertCandidateAndApply
             // Send notification to recruiters (queued)
             $this->sendNewApplicationNotification($tenant, $job, $candidate, $application);
 
-            return $application;
+            $candidate->refresh();
+
+            $portal = $this->applicantPortalProvisioner->provision(
+                tenant: $tenant,
+                job: $job,
+                candidate: $candidate,
+                firstName: $firstName,
+                lastName: $lastName,
+                email: $email,
+            );
+
+            return new ApplySubmissionResult(
+                application: $application,
+                applicantPortal: $portal,
+            );
         });
     }
 

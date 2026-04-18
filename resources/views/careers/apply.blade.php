@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Apply for {{ $job->title }} - {{ $tenantModel->name }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
@@ -131,10 +132,12 @@
                             </div>
                         @endif
 
-                        <form action="{{ route('careers.apply.store', ['tenant' => $tenantModel->slug, 'job' => $job->slug]) }}" 
-                              method="POST" 
+                        <form action="{{ request()->routeIs('subdomain.careers.apply.create') ? route('subdomain.careers.apply.store', ['job' => $job->slug]) : route('careers.apply.store', ['tenant' => $tenantModel->slug, 'job' => $job->slug]) }}"
+                              method="POST"
                               enctype="multipart/form-data"
-                              class="space-y-8">
+                              class="space-y-8"
+                              x-data="applyEmailOtp(@js($sendApplyEmailOtpUrl), @js($verifyApplyEmailOtpUrl), @js($applyEmailInitiallyVerified))"
+                              x-init="syncEmailFromDom()">
                             @csrf
 
                             <!-- Personal Information -->
@@ -181,11 +184,12 @@
                                         <label for="email" class="block text-sm font-medium text-gray-700 mb-2">
                                             Email Address <span class="text-red-500">*</span>
                                         </label>
-                                        <input type="email" 
-                                               name="email" 
+                                        <input type="email"
+                                               name="email"
                                                id="email"
                                                value="{{ old('email') }}"
                                                required
+                                               @input.debounce.400ms="onEmailInput()"
                                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors @error('email') border-red-500 @enderror">
                                         @error('email')
                                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
@@ -209,6 +213,48 @@
                                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                                         @enderror
                                     </div>
+                                </div>
+
+                                <div class="mt-6 rounded-xl border border-indigo-100 bg-indigo-50/60 p-5 space-y-4">
+                                    <h4 class="text-sm font-semibold text-gray-900">Verify your email</h4>
+                                    <p class="text-sm text-gray-600">Before you submit, confirm you can access the email address above. We will send a one-time 6-digit code.</p>
+                                    <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+                                        <button type="button"
+                                                @click="sendCode"
+                                                :disabled="sending || cooldownRemaining > 0"
+                                                class="inline-flex justify-center items-center px-4 py-2.5 rounded-lg text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                                            <span x-show="!sending">Send verification code</span>
+                                            <span x-show="sending" x-cloak>Sending…</span>
+                                        </button>
+                                        <span x-show="cooldownRemaining > 0" class="text-sm text-gray-600" x-text="'Resend in ' + cooldownRemaining + 's'"></span>
+                                    </div>
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end" x-show="sent || verified" x-cloak>
+                                        <div>
+                                            <label for="apply_email_otp" class="block text-sm font-medium text-gray-700 mb-2">6-digit code</label>
+                                            <input type="text"
+                                                   id="apply_email_otp"
+                                                   x-model="otp"
+                                                   inputmode="numeric"
+                                                   autocomplete="one-time-code"
+                                                   maxlength="6"
+                                                   pattern="[0-9]{6}"
+                                                   placeholder="000000"
+                                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 tracking-widest font-mono text-lg">
+                                        </div>
+                                        <button type="button"
+                                                @click="verifyCode"
+                                                :disabled="verifying || otp.replace(/\D/g,'').length !== 6"
+                                                class="inline-flex justify-center items-center px-4 py-3 rounded-lg text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed h-[50px]">
+                                            <span x-show="!verifying">Verify code</span>
+                                            <span x-show="verifying" x-cloak>Checking…</span>
+                                        </button>
+                                    </div>
+                                    <p x-show="statusOk" class="text-sm font-medium text-emerald-700" x-text="statusOk"></p>
+                                    <p x-show="statusErr" class="text-sm font-medium text-red-700" x-text="statusErr"></p>
+                                    <p x-show="verified" class="text-sm font-semibold text-emerald-700 flex items-center gap-2">
+                                        <svg class="w-5 h-5 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                                        Email verified — you can submit your application.
+                                    </p>
                                 </div>
                             </div>
 
@@ -429,8 +475,9 @@
                                    class="px-8 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors text-center">
                                     Cancel
                                 </a>
-                                <button type="submit" 
-                                        class="px-8 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-1">
+                                <button type="submit"
+                                        :disabled="!verified"
+                                        :class="verified ? 'px-8 py-3 rounded-lg font-semibold bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-1' : 'px-8 py-3 rounded-lg font-semibold bg-gray-300 text-gray-500 cursor-not-allowed'">
                                     Submit Application
                                 </button>
                             </div>
@@ -442,6 +489,118 @@
     </div>
 
     <script>
+        function applyEmailOtp(sendUrl, verifyUrl, initiallyVerified) {
+            return {
+                verified: !!initiallyVerified,
+                sent: !!initiallyVerified,
+                sending: false,
+                verifying: false,
+                otp: '',
+                statusOk: '',
+                statusErr: '',
+                cooldownRemaining: 0,
+                _cooldownTimer: null,
+                sendUrl,
+                verifyUrl,
+                syncEmailFromDom() {
+                    if (this.verified) {
+                        this.sent = true;
+                    }
+                },
+                onEmailInput() {
+                    this.verified = false;
+                    this.sent = false;
+                    this.otp = '';
+                    this.statusOk = '';
+                    this.statusErr = '';
+                },
+                startCooldown(seconds) {
+                    if (this._cooldownTimer) clearInterval(this._cooldownTimer);
+                    this.cooldownRemaining = Math.max(0, parseInt(seconds, 10) || 60);
+                    this._cooldownTimer = setInterval(() => {
+                        this.cooldownRemaining--;
+                        if (this.cooldownRemaining <= 0) {
+                            clearInterval(this._cooldownTimer);
+                            this._cooldownTimer = null;
+                            this.cooldownRemaining = 0;
+                        }
+                    }, 1000);
+                },
+                async sendCode() {
+                    const emailEl = document.getElementById('email');
+                    const email = (emailEl && emailEl.value) ? emailEl.value.trim() : '';
+                    this.statusOk = '';
+                    this.statusErr = '';
+                    if (!email) {
+                        this.statusErr = 'Enter your email address first.';
+                        return;
+                    }
+                    this.sending = true;
+                    try {
+                        const res = await fetch(this.sendUrl, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                                'X-Requested-With': 'XMLHttpRequest',
+                            },
+                            body: JSON.stringify({ email }),
+                        });
+                        const data = await res.json().catch(() => ({}));
+                        if (res.ok && data.ok) {
+                            this.sent = true;
+                            this.statusOk = data.message || 'Code sent.';
+                            this.otp = '';
+                        } else if (res.status === 429) {
+                            this.statusErr = data.message || 'Please wait before requesting another code.';
+                            if (data.retry_after_seconds) this.startCooldown(data.retry_after_seconds);
+                        } else {
+                            this.statusErr = data.message || 'Could not send code. Try again.';
+                        }
+                    } catch (e) {
+                        this.statusErr = 'Network error. Please try again.';
+                    } finally {
+                        this.sending = false;
+                    }
+                },
+                async verifyCode() {
+                    const emailEl = document.getElementById('email');
+                    const email = (emailEl && emailEl.value) ? emailEl.value.trim() : '';
+                    const code = (this.otp || '').replace(/\D/g, '').slice(0, 6);
+                    this.statusOk = '';
+                    this.statusErr = '';
+                    if (!email || code.length !== 6) return;
+                    this.verifying = true;
+                    try {
+                        const res = await fetch(this.verifyUrl, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                                'X-Requested-With': 'XMLHttpRequest',
+                            },
+                            body: JSON.stringify({ email, otp: code }),
+                        });
+                        const data = await res.json().catch(() => ({}));
+                        if (res.ok && data.ok) {
+                            this.verified = true;
+                            this.statusOk = data.message || 'Verified.';
+                            this.statusErr = '';
+                        } else {
+                            this.verified = false;
+                            this.statusErr = data.message || 'Invalid code.';
+                        }
+                    } catch (e) {
+                        this.statusErr = 'Network error. Please try again.';
+                    } finally {
+                        this.verifying = false;
+                    }
+                },
+            };
+        }
+
         // Phone number validation - only allow digits and limit to 10
         document.addEventListener('DOMContentLoaded', function() {
             const phoneInput = document.getElementById('phone');

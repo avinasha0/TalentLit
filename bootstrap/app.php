@@ -18,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'subdomain.redirect' => \App\Http\Middleware\RedirectSubdomainWithSlug::class,
             'capture.tenant' => \App\Http\Middleware\CaptureLastTenant::class,
             'custom.permission' => \App\Http\Middleware\CustomPermissionMiddleware::class,
+            'candidate.tenant' => \App\Http\Middleware\EnsureCandidateBelongsToTenant::class,
             'subscription.limit' => \App\Http\Middleware\CheckSubscriptionLimits::class,
             'log.route' => \App\Http\Middleware\LogRouteMatching::class,
         ]);

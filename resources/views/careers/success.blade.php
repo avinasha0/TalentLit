@@ -6,6 +6,7 @@
     <title>Application Submitted - {{ tenant()->name }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>[x-cloak]{display:none !important}</style>
 </head>
 <body class="bg-white">
     <div class="min-h-screen">
@@ -155,6 +156,41 @@
                         </div>
                     </div>
 
+                    @php
+                        $portalLoginRoute = request()->routeIs('subdomain.careers.success') ? 'subdomain.candidate.login' : 'candidate.login';
+                        $portalLoginParams = request()->routeIs('subdomain.careers.success') ? [] : ['tenant' => tenant()->slug];
+                        $portalNewAccount = session()->has('applicant_portal_new_account') && session('applicant_portal_new_account');
+                        $portalEligible = session()->has('applicant_portal_show_modal') && session('applicant_portal_show_modal');
+                        $justSubmitted = session()->has('application_id');
+                    @endphp
+
+                    {{-- Always visible: login path works even if flash modal flags are missing (refresh, shared link, or staff email on file) --}}
+                    <div class="rounded-2xl border-2 border-indigo-200 bg-indigo-50/80 p-6 lg:p-8 mb-8">
+                        <h3 class="text-xl font-bold text-gray-900 mb-2">Applicant account &amp; login</h3>
+                        @if ($portalNewAccount)
+                            <p class="text-gray-700 mb-4">
+                                An applicant portal account was created. We sent your <strong>login email</strong> and a <strong>temporary password</strong> to the address you used on the form. Please check your <strong>inbox and spam</strong> folder.
+                            </p>
+                        @elseif ($portalEligible)
+                            <p class="text-gray-700 mb-4">
+                                You can sign in to your applicant portal to track this application and any updates from the hiring team.
+                            </p>
+                        @else
+                            <p class="text-gray-700 mb-4">
+                                Sign in with the email you used to apply to view updates from the hiring team.
+                            </p>
+                        @endif
+                        <div class="flex flex-col sm:flex-row gap-3 sm:items-center">
+                            <a href="{{ route($portalLoginRoute, $portalLoginParams) }}"
+                               class="inline-flex justify-center items-center bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-indigo-700 hover:to-purple-700 shadow-md text-center">
+                                Log in to your account
+                            </a>
+                            @if ($justSubmitted && ! $portalNewAccount)
+                                <span class="text-sm text-gray-600 sm:self-center">Did not get an email? Wait a few minutes, check spam, or contact the hiring team.</span>
+                            @endif
+                        </div>
+                    </div>
+
                     <!-- Next Steps -->
                     <div class="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-8 text-white mb-8">
                         <h3 class="text-2xl font-bold mb-6">What's Next?</h3>
@@ -188,5 +224,61 @@
             </div>
         </section>
     </div>
+
+    @php
+        $applicantModal = session()->has('application_id')
+            || (session()->has('applicant_portal_show_modal') && session('applicant_portal_show_modal'))
+            || (session()->has('applicant_portal_new_account') && session('applicant_portal_new_account'));
+        $applicantNewAccount = session()->has('applicant_portal_new_account') && session('applicant_portal_new_account');
+        $applicantPortalEligible = session()->has('applicant_portal_show_modal') && session('applicant_portal_show_modal');
+        $portalLoginRoute = request()->routeIs('subdomain.careers.success') ? 'subdomain.candidate.login' : 'candidate.login';
+        $portalLoginParams = request()->routeIs('subdomain.careers.success') ? [] : ['tenant' => tenant()->slug];
+    @endphp
+
+    @if ($applicantModal)
+    <div
+        x-cloak
+        x-data="{ open: true }"
+        x-show="open"
+        x-transition.opacity
+        class="fixed inset-0 z-[100] flex items-center justify-center p-4"
+        aria-modal="true"
+        role="dialog"
+    >
+        <div class="absolute inset-0 bg-slate-900/60" @click="open = false"></div>
+        <div class="relative bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 border border-slate-100" @click.away="open = false">
+            <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 mb-4">
+                <svg class="h-6 w-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+            </div>
+            @if ($applicantNewAccount)
+                <h2 class="text-xl font-bold text-slate-900 text-center mb-2">Applicant account created</h2>
+                <p class="text-slate-600 text-center text-sm mb-6">
+                    We sent an email to your address with your <strong>login email</strong> and a <strong>temporary password</strong>. Use the button below to sign in and open your personal dashboard.
+                </p>
+            @elseif ($applicantPortalEligible)
+                <h2 class="text-xl font-bold text-slate-900 text-center mb-2">Track your application</h2>
+                <p class="text-slate-600 text-center text-sm mb-6">
+                    Sign in to your applicant dashboard to see updates, interviews, and pipeline activity for this organization.
+                </p>
+            @else
+                <h2 class="text-xl font-bold text-slate-900 text-center mb-2">Application received</h2>
+                <p class="text-slate-600 text-center text-sm mb-6">
+                    Sign in with the email you used to apply to track updates from {{ tenant()->name }}.
+                </p>
+            @endif
+            <div class="flex flex-col gap-3">
+                <a href="{{ route($portalLoginRoute, $portalLoginParams) }}"
+                   class="w-full text-center bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-indigo-700 hover:to-purple-700 transition shadow-lg">
+                    Log in
+                </a>
+                <button type="button" @click="open = false" class="w-full text-center text-slate-600 py-2 text-sm font-medium hover:text-slate-900">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+    @endif
 </body>
 </html>

@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Mail\ApplicantPortalCredentials;
+use App\Models\CareerApplyEmailOtp;
 use App\Mail\ApplicationReceived;
 use App\Mail\NewApplication;
 use App\Models\Application;
@@ -10,12 +12,14 @@ use App\Models\Department;
 use App\Models\JobOpening;
 use App\Models\Location;
 use App\Models\Resume;
+use App\Models\SubscriptionPlan;
 use App\Models\Tenant;
-use App\Models\TenantRole;
+use App\Models\TenantSubscription;
 use App\Models\User;
 use App\Support\Tenancy;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -38,6 +42,31 @@ class CareersFlowTest extends TestCase
         $this->tenant = Tenant::factory()->create(['slug' => 'acme']);
         $this->user = User::factory()->create();
 
+        $plan = SubscriptionPlan::create([
+            'name' => 'Free',
+            'slug' => 'free-test-careers',
+            'description' => 'Free',
+            'price' => 0,
+            'currency' => 'INR',
+            'billing_cycle' => 'monthly',
+            'is_active' => true,
+            'max_users' => 10,
+            'max_job_openings' => 10,
+            'max_candidates' => 100,
+            'max_applications_per_month' => 100,
+            'max_interviews_per_month' => 50,
+            'max_storage_gb' => 1,
+        ]);
+
+        TenantSubscription::create([
+            'tenant_id' => $this->tenant->id,
+            'subscription_plan_id' => $plan->id,
+            'status' => 'active',
+            'starts_at' => now()->subDay(),
+            'expires_at' => null,
+            'payment_method' => 'free',
+        ]);
+
         // Set tenant context
         Tenancy::set($this->tenant);
 
@@ -58,6 +87,52 @@ class CareersFlowTest extends TestCase
                 'openings_count' => 2,
                 'description' => 'We are looking for a Senior PHP Developer with Laravel experience.',
             ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function baseApplyPayload(UploadedFile $resume, array $overrides = []): array
+    {
+        return array_merge([
+            'first_name' => 'John',
+            'last_name' => 'Doe',
+            'email' => 'john.doe@example.com',
+            'phone' => '1234567890',
+            'current_ctc' => 100000,
+            'expected_ctc' => 120000,
+            'resume' => $resume,
+            'consent' => true,
+            'g-recaptcha-response' => 'test-token',
+        ], $overrides);
+    }
+
+    /**
+     * Careers apply requires a verified email OTP in session before the main form POST succeeds.
+     */
+    private function completeCareersApplyEmailOtp(string $email = 'john.doe@example.com'): void
+    {
+        $this->postJson(
+            route('careers.apply.email-otp.send', ['tenant' => $this->tenant->slug, 'job' => $this->job->slug]),
+            ['email' => $email],
+            ['Accept' => 'application/json']
+        )->assertOk()->assertJson(['ok' => true]);
+
+        $otp = CareerApplyEmailOtp::query()
+            ->where('tenant_id', $this->tenant->id)
+            ->where('job_opening_id', $this->job->id)
+            ->where('email', $email)
+            ->whereNotNull('otp')
+            ->orderByDesc('id')
+            ->value('otp');
+
+        $this->assertNotNull($otp);
+
+        $this->postJson(
+            route('careers.apply.email-otp.verify', ['tenant' => $this->tenant->slug, 'job' => $this->job->slug]),
+            ['email' => $email, 'otp' => $otp],
+            ['Accept' => 'application/json']
+        )->assertOk()->assertJson(['ok' => true]);
     }
 
     public function test_careers_listing_shows_only_published_jobs()
@@ -122,7 +197,7 @@ class CareersFlowTest extends TestCase
         $response->assertSee('Engineering');
         $response->assertSee('Chennai');
         $response->assertSee('Full time');
-        $response->assertSee('2 openings');
+        $response->assertSee('2 positions');
         $response->assertSee('Apply Now');
     }
 
@@ -152,25 +227,42 @@ class CareersFlowTest extends TestCase
         $response->assertSee('Phone Number');
         $response->assertSee('Resume');
         $response->assertSee('Submit Application');
+        $response->assertSee('Verify your email');
     }
 
-    public function test_application_submission_creates_candidate_and_application()
+    public function test_application_submission_fails_without_email_otp_verification()
     {
+        Mail::fake();
         Storage::fake('public');
 
         $resumeFile = UploadedFile::fake()->create('resume.pdf', 1000, 'application/pdf');
 
-        $response = $this->post("/{$this->tenant->slug}/careers/{$this->job->slug}/apply", [
-            'first_name' => 'John',
-            'last_name' => 'Doe',
-            'email' => 'john.doe@example.com',
-            'phone' => '+1234567890',
-            'resume' => $resumeFile,
-            'consent' => true,
-        ]);
+        $response = $this->post(
+            "/{$this->tenant->slug}/careers/{$this->job->slug}/apply",
+            $this->baseApplyPayload($resumeFile)
+        );
+
+        $response->assertSessionHasErrors(['email']);
+    }
+
+    public function test_application_submission_creates_candidate_and_application()
+    {
+        Mail::fake();
+        Storage::fake('public');
+
+        $resumeFile = UploadedFile::fake()->create('resume.pdf', 1000, 'application/pdf');
+
+        $this->completeCareersApplyEmailOtp();
+
+        $response = $this->post(
+            "/{$this->tenant->slug}/careers/{$this->job->slug}/apply",
+            $this->baseApplyPayload($resumeFile)
+        );
 
         $response->assertRedirect();
         $response->assertSessionHas('application_id');
+        $response->assertSessionHas('applicant_portal_show_modal', true);
+        $response->assertSessionHas('applicant_portal_new_account', true);
 
         // Assert candidate was created
         $this->assertDatabaseHas('candidates', [
@@ -178,18 +270,25 @@ class CareersFlowTest extends TestCase
             'first_name' => 'John',
             'last_name' => 'Doe',
             'primary_email' => 'john.doe@example.com',
-            'primary_phone' => '+1234567890',
+            'primary_phone' => '1234567890',
             'source' => 'Career Site',
         ]);
 
         // Assert application was created
         $candidate = Candidate::where('primary_email', 'john.doe@example.com')->first();
+        $this->assertNotNull($candidate->candidate_account_id);
+        $this->assertDatabaseHas('candidate_accounts', [
+            'tenant_id' => $this->tenant->id,
+            'email' => 'john.doe@example.com',
+        ]);
         $this->assertDatabaseHas('applications', [
             'tenant_id' => $this->tenant->id,
             'job_opening_id' => $this->job->id,
             'candidate_id' => $candidate->id,
             'status' => 'active',
         ]);
+
+        Mail::assertSent(ApplicantPortalCredentials::class);
 
         // Assert resume was stored
         $this->assertDatabaseHas('resumes', [
@@ -204,12 +303,16 @@ class CareersFlowTest extends TestCase
 
     public function test_application_submission_without_resume_fails_validation()
     {
-        $response = $this->post("/{$this->tenant->slug}/careers/{$this->job->slug}/apply", [
+        $resumeFile = UploadedFile::fake()->create('resume.pdf', 1000, 'application/pdf');
+
+        $payload = $this->baseApplyPayload($resumeFile, [
             'first_name' => 'Jane',
             'last_name' => 'Smith',
             'email' => 'jane.smith@example.com',
-            'consent' => true,
         ]);
+        unset($payload['resume']);
+
+        $response = $this->post("/{$this->tenant->slug}/careers/{$this->job->slug}/apply", $payload);
 
         $response->assertSessionHasErrors(['resume']);
 
@@ -233,13 +336,12 @@ class CareersFlowTest extends TestCase
 
         $resumeFile = UploadedFile::fake()->create('resume.pdf', 1000, 'application/pdf');
 
-        $response = $this->post("/{$this->tenant->slug}/careers/{$this->job->slug}/apply", [
-            'first_name' => 'John',
-            'last_name' => 'Doe',
-            'email' => 'john.doe@example.com',
-            'resume' => $resumeFile,
-            'consent' => true,
-        ]);
+        $this->completeCareersApplyEmailOtp();
+
+        $response = $this->post(
+            "/{$this->tenant->slug}/careers/{$this->job->slug}/apply",
+            $this->baseApplyPayload($resumeFile)
+        );
 
         $response->assertRedirect();
 
@@ -263,7 +365,11 @@ class CareersFlowTest extends TestCase
             'first_name' => '',
             'last_name' => '',
             'email' => 'invalid-email',
+            'phone' => '1234567890',
+            'current_ctc' => 1,
+            'expected_ctc' => 2,
             'consent' => false,
+            'g-recaptcha-response' => 'test-token',
         ]);
 
         $response->assertSessionHasErrors(['first_name', 'last_name', 'email', 'resume', 'consent']);
@@ -277,13 +383,10 @@ class CareersFlowTest extends TestCase
     {
         $invalidFile = UploadedFile::fake()->create('resume.txt', 1000, 'text/plain');
 
-        $response = $this->post("/{$this->tenant->slug}/careers/{$this->job->slug}/apply", [
-            'first_name' => 'John',
-            'last_name' => 'Doe',
-            'email' => 'john.doe@example.com',
-            'resume' => $invalidFile,
-            'consent' => true,
-        ]);
+        $response = $this->post(
+            "/{$this->tenant->slug}/careers/{$this->job->slug}/apply",
+            $this->baseApplyPayload($invalidFile)
+        );
 
         $response->assertSessionHasErrors(['resume']);
 
@@ -321,17 +424,23 @@ class CareersFlowTest extends TestCase
 
         // Create another tenant
         $otherTenant = Tenant::factory()->create(['slug' => 'beta']);
+        $plan = SubscriptionPlan::where('slug', 'free-test-careers')->first();
+        TenantSubscription::create([
+            'tenant_id' => $otherTenant->id,
+            'subscription_plan_id' => $plan->id,
+            'status' => 'active',
+            'starts_at' => now()->subDay(),
+            'expires_at' => null,
+            'payment_method' => 'free',
+        ]);
 
         $resumeFile = UploadedFile::fake()->create('resume.pdf', 1000, 'application/pdf');
 
         // Try to apply to a job from another tenant
-        $response = $this->post("/{$otherTenant->slug}/careers/{$this->job->slug}/apply", [
-            'first_name' => 'John',
-            'last_name' => 'Doe',
-            'email' => 'john.doe@example.com',
-            'resume' => $resumeFile,
-            'consent' => true,
-        ]);
+        $response = $this->post(
+            "/{$otherTenant->slug}/careers/{$this->job->slug}/apply",
+            $this->baseApplyPayload($resumeFile)
+        );
 
         // Should fail because job doesn't belong to the tenant
         $response->assertStatus(404);
@@ -356,24 +465,22 @@ class CareersFlowTest extends TestCase
         // Create a recruiter user
         $recruiter = User::factory()->create(['email' => 'recruiter@example.com']);
         $recruiter->tenants()->attach($this->tenant->id);
-        
-        // Create Recruiter role and assign to user
-        $recruiterRole = TenantRole::createForTenant([
-            'name' => 'Recruiter',
-            'guard_name' => 'web',
-        ], $this->tenant->id);
-        $recruiter->assignRole($recruiterRole);
+        DB::table('custom_user_roles')->insert([
+            'user_id' => $recruiter->id,
+            'tenant_id' => $this->tenant->id,
+            'role_name' => 'Recruiter',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
 
         $resumeFile = UploadedFile::fake()->create('resume.pdf', 1000, 'application/pdf');
 
-        $response = $this->post("/{$this->tenant->slug}/careers/{$this->job->slug}/apply", [
-            'first_name' => 'John',
-            'last_name' => 'Doe',
-            'email' => 'john.doe@example.com',
-            'phone' => '+1234567890',
-            'resume' => $resumeFile,
-            'consent' => true,
-        ]);
+        $this->completeCareersApplyEmailOtp();
+
+        $response = $this->post(
+            "/{$this->tenant->slug}/careers/{$this->job->slug}/apply",
+            $this->baseApplyPayload($resumeFile)
+        );
 
         $response->assertRedirect();
 
@@ -389,5 +496,7 @@ class CareersFlowTest extends TestCase
                    $mail->job->title === 'Senior PHP Developer' &&
                    $mail->tenant->id === $this->tenant->id;
         });
+
+        Mail::assertSent(ApplicantPortalCredentials::class);
     }
 }

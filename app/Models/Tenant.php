@@ -178,7 +178,7 @@ class Tenant extends Model
     public function getDashboardUrl(): string
     {
         $planSlug = $this->activeSubscription?->plan?->slug;
-        $shouldUseSubdomain = $this->subdomain_enabled && $this->subdomain && $planSlug === 'enterprise';
+        $shouldUseSubdomain = $this->usesEnterpriseSubdomain();
 
         \Log::info('Tenant.GetDashboardUrl.Decision', [
             'tenant_id' => $this->id,
@@ -220,5 +220,61 @@ class Tenant extends Model
             'url' => $finalUrl,
         ]);
         return $finalUrl;
+    }
+
+    /**
+     * Enterprise tenants that serve the app from a dedicated hiring subdomain.
+     */
+    public function usesEnterpriseSubdomain(): bool
+    {
+        $planSlug = $this->activeSubscription?->plan?->slug;
+
+        return (bool) ($this->subdomain_enabled && $this->subdomain && $planSlug === 'enterprise');
+    }
+
+    /**
+     * Applicant (candidate) sign-in URL (separate from staff web login).
+     */
+    public function getCandidateLoginUrl(): string
+    {
+        if ($this->usesEnterpriseSubdomain()) {
+            $appUrl = config('app.url');
+            $appDomain = parse_url($appUrl, PHP_URL_HOST) ?? 'localhost';
+            $scheme = parse_url($appUrl, PHP_URL_SCHEME) ?? 'http';
+            $port = parse_url($appUrl, PHP_URL_PORT);
+
+            $subdomainUrl = $scheme.'://'.$this->subdomain.'.'.$appDomain;
+            if ($port) {
+                $subdomainUrl .= ':'.$port;
+            }
+
+            return $subdomainUrl.'/candidate/login';
+        }
+
+        return url(route('candidate.login', ['tenant' => $this->slug], false));
+    }
+
+    /**
+     * Applicant (candidate) self-service area for this organization.
+     */
+    public function getApplicantPortalUrl(): string
+    {
+        $shouldUseSubdomain = $this->usesEnterpriseSubdomain();
+
+        if ($shouldUseSubdomain) {
+            $appUrl = config('app.url');
+            $appDomain = parse_url($appUrl, PHP_URL_HOST) ?? 'localhost';
+            $scheme = parse_url($appUrl, PHP_URL_SCHEME) ?? 'http';
+            $port = parse_url($appUrl, PHP_URL_PORT);
+
+            $subdomainUrl = $scheme.'://'.$this->subdomain.'.'.$appDomain;
+            if ($port) {
+                $subdomainUrl .= ':'.$port;
+            }
+
+            return $subdomainUrl.'/my-applications';
+        }
+
+        return route('tenant.applicant.dashboard', $this->slug);
     }
 }

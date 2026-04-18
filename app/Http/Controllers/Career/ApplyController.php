@@ -5,78 +5,132 @@ namespace App\Http\Controllers\Career;
 use App\Actions\Candidates\UpsertCandidateAndApply;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ApplyRequest;
+use App\Mail\CareerApplyOtpMail;
+use App\Models\CareerApplyEmailOtp;
 use App\Models\JobOpening;
-use Illuminate\Support\Facades\Storage;
+use App\Models\Tenant;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
 
 class ApplyController extends Controller
 {
-    public function create(string $tenant, string $jobSlug)
+    public function create(Request $request)
     {
-        $tenantModel = tenant();
-        
-        // Fallback: get tenant from route parameter if tenant() returns null
-        if (!$tenantModel) {
-            $tenantModel = \App\Models\Tenant::where('slug', $tenant)->first();
-        }
-        
-        if (!$tenantModel) {
-            abort(404, 'Tenant not found');
-        }
-        
-        // Check if careers page is enabled
-        if (!$tenantModel->careers_enabled) {
-            $branding = $tenantModel->branding;
-            return view('careers.disabled', ['tenant' => $tenantModel, 'branding' => $branding]);
-        }
-        
-        // Find job by slug within the current tenant
-        $job = \App\Models\JobOpening::where('slug', $jobSlug)
-            ->where('tenant_id', $tenantModel->id)
-            ->where('status', 'published')
-            ->first();
-            
-        if (!$job) {
-            abort(404, 'Job not found');
-        }
+        [$tenantModel, $job] = $this->resolvePublishedCareersJob($request);
 
-        // Ensure job is published
-        if ($job->status !== 'published') {
-            abort(404);
+        if (! $tenantModel->careers_enabled) {
+            $branding = $tenantModel->branding;
+
+            return view('careers.disabled', ['tenant' => $tenantModel, 'branding' => $branding]);
         }
 
         $branding = $tenantModel->branding;
         $job->load('applicationQuestions');
 
-        return view('careers.apply', compact('job', 'tenantModel', 'branding'));
+        $isSubdomain = $request->routeIs('subdomain.careers.apply.create');
+        $sendApplyEmailOtpUrl = $isSubdomain
+            ? route('subdomain.careers.apply.email-otp.send', ['job' => $job->slug])
+            : route('careers.apply.email-otp.send', ['tenant' => $tenantModel->slug, 'job' => $job->slug]);
+        $verifyApplyEmailOtpUrl = $isSubdomain
+            ? route('subdomain.careers.apply.email-otp.verify', ['job' => $job->slug])
+            : route('careers.apply.email-otp.verify', ['tenant' => $tenantModel->slug, 'job' => $job->slug]);
+
+        $applyEmailInitiallyVerified = CareerApplyEmailOtp::sessionMatches(
+            $tenantModel,
+            $job,
+            CareerApplyEmailOtp::normalizeEmail((string) old('email', ''))
+        );
+
+        return view('careers.apply', compact(
+            'job',
+            'tenantModel',
+            'branding',
+            'sendApplyEmailOtpUrl',
+            'verifyApplyEmailOtpUrl',
+            'applyEmailInitiallyVerified',
+        ));
     }
 
-    public function store(ApplyRequest $request, string $tenant, string $jobSlug, UpsertCandidateAndApply $upsertAction)
+    public function sendApplyEmailOtp(Request $request): JsonResponse
     {
-        $tenantModel = tenant();
-        
-        // Fallback: get tenant from route parameter if tenant() returns null
-        if (!$tenantModel) {
-            $tenantModel = \App\Models\Tenant::where('slug', $tenant)->first();
+        $validated = $request->validate([
+            'email' => ['required', 'email', 'max:255'],
+        ]);
+
+        [$tenantModel, $job] = $this->resolvePublishedCareersJob($request);
+
+        if (! $tenantModel->careers_enabled) {
+            return response()->json(['ok' => false, 'message' => 'Careers are not available.'], 404);
         }
-        
-        if (!$tenantModel) {
-            abort(404, 'Tenant not found');
+        $email = CareerApplyEmailOtp::normalizeEmail($validated['email']);
+
+        if (! CareerApplyEmailOtp::canResend($tenantModel, $job, $email)) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Please wait before requesting another code.',
+                'retry_after_seconds' => CareerApplyEmailOtp::remainingResendCooldownSeconds($tenantModel, $job, $email),
+            ], 429);
         }
-        
-        // Check if careers page is enabled
-        if (!$tenantModel->careers_enabled) {
+
+        try {
+            $record = CareerApplyEmailOtp::issue($tenantModel, $job, $email);
+            Mail::to($email)->send(new CareerApplyOtpMail($tenantModel, $job, $email, $record->otp));
+        } catch (\Throwable $e) {
+            report($e);
+
+            return response()->json([
+                'ok' => false,
+                'message' => 'Could not send email. Please try again later.',
+            ], 500);
+        }
+
+        CareerApplyEmailOtp::forgetSession();
+
+        return response()->json([
+            'ok' => true,
+            'message' => 'We sent a 6-digit code to your email.',
+        ]);
+    }
+
+    public function verifyApplyEmailOtp(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'email' => ['required', 'email', 'max:255'],
+            'otp' => ['required', 'string', 'size:6'],
+        ]);
+
+        [$tenantModel, $job] = $this->resolvePublishedCareersJob($request);
+
+        if (! $tenantModel->careers_enabled) {
+            return response()->json(['ok' => false, 'message' => 'Careers are not available.'], 404);
+        }
+        $email = CareerApplyEmailOtp::normalizeEmail($validated['email']);
+
+        if (! CareerApplyEmailOtp::verifyAndConsume($tenantModel, $job, $email, $validated['otp'])) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Invalid or expired code. Try again or request a new code.',
+            ], 422);
+        }
+
+        CareerApplyEmailOtp::putVerifiedSession($tenantModel, $job, $email);
+
+        return response()->json([
+            'ok' => true,
+            'message' => 'Email verified. You can submit your application.',
+        ]);
+    }
+
+    public function store(ApplyRequest $request, UpsertCandidateAndApply $upsertAction)
+    {
+        [$tenantModel, $job] = $this->resolvePublishedCareersJob($request);
+
+        if (! $tenantModel->careers_enabled) {
             $branding = $tenantModel->branding;
+
             return view('careers.disabled', ['tenant' => $tenantModel, 'branding' => $branding]);
-        }
-        
-        // Find job by slug within the current tenant
-        $job = \App\Models\JobOpening::where('slug', $jobSlug)
-            ->where('tenant_id', $tenantModel->id)
-            ->where('status', 'published')
-            ->first();
-            
-        if (!$job) {
-            abort(404, 'Job not found');
         }
 
         // Load job with questions for validation
@@ -99,10 +153,10 @@ class ApplyController extends Controller
             // Add type-specific validation
             switch ($question->type) {
                 case 'email':
-                    $validationRules[$fieldName] = ($validationRules[$fieldName] ?? '') . '|email';
+                    $validationRules[$fieldName] = ($validationRules[$fieldName] ?? '').'|email';
                     break;
                 case 'file':
-                    $validationRules[$fieldName] = ($validationRules[$fieldName] ?? '') . '|file|max:5120';
+                    $validationRules[$fieldName] = ($validationRules[$fieldName] ?? '').'|file|max:5120';
                     break;
             }
 
@@ -116,7 +170,7 @@ class ApplyController extends Controller
         $request->validate($validationRules, $validationMessages);
 
         try {
-            $application = $upsertAction->execute(
+            $submission = $upsertAction->execute(
                 tenant: $tenantModel,
                 job: $job,
                 firstName: $request->first_name,
@@ -130,47 +184,108 @@ class ApplyController extends Controller
                 customAnswers: $customAnswers
             );
 
+            CareerApplyEmailOtp::forgetSession();
+            CareerApplyEmailOtp::invalidateForApplication(
+                $tenantModel,
+                $job,
+                CareerApplyEmailOtp::normalizeEmail((string) $request->input('email', ''))
+            );
+
+            if ($request->routeIs('subdomain.careers.apply.store')) {
+                return redirect()->route('subdomain.careers.success', ['job' => $job->slug])
+                    ->with('application_id', $submission->application->id)
+                    ->with('applicant_portal_show_modal', $submission->applicantPortal->canAccessApplicantPortal)
+                    ->with('applicant_portal_new_account', $submission->applicantPortal->credentialsEmailQueued);
+            }
+
             return redirect()->route('careers.success', [
                 'tenant' => $tenantModel->slug,
                 'job' => $job->slug,
-            ])->with('application_id', $application->id);
+            ])
+                ->with('application_id', $submission->application->id)
+                ->with('applicant_portal_show_modal', $submission->applicantPortal->canAccessApplicantPortal)
+                ->with('applicant_portal_new_account', $submission->applicantPortal->credentialsEmailQueued);
 
         } catch (\Exception $e) {
+            report($e);
+
             return back()
                 ->withInput()
                 ->withErrors(['error' => 'There was an error processing your application. Please try again.']);
         }
     }
 
-    public function success(string $tenant, string $jobSlug)
+    public function success(Request $request)
     {
-        $tenantModel = tenant();
-        
-        // Fallback: get tenant from route parameter if tenant() returns null
-        if (!$tenantModel) {
-            $tenantModel = \App\Models\Tenant::where('slug', $tenant)->first();
-        }
-        
-        if (!$tenantModel) {
-            abort(404, 'Tenant not found');
-        }
-        
-        // Check if careers page is enabled
-        if (!$tenantModel->careers_enabled) {
+        [$tenantModel, $job] = $this->resolvePublishedCareersJob($request);
+
+        if (! $tenantModel->careers_enabled) {
             $branding = $tenantModel->branding;
+
             return view('careers.disabled', ['tenant' => $tenantModel, 'branding' => $branding]);
-        }
-        
-        // Find job by slug within the current tenant
-        $job = \App\Models\JobOpening::where('slug', $jobSlug)
-            ->where('tenant_id', $tenantModel->id)
-            ->where('status', 'published')
-            ->first();
-            
-        if (!$job) {
-            abort(404, 'Job not found');
         }
 
         return view('careers.success', compact('job'));
+    }
+
+    /**
+     * Store intended applicant portal URL then send the user to global login.
+     */
+    public function applicantLoginRedirect(?string $tenant = null)
+    {
+        $tenantModel = tenant();
+        if (! $tenantModel && $tenant) {
+            $tenantModel = Tenant::where('slug', $tenant)->first();
+        }
+        if (! $tenantModel) {
+            abort(404, 'Tenant not found');
+        }
+
+        if (Auth::guard('candidate')->check()) {
+            return redirect()->to($tenantModel->getApplicantPortalUrl());
+        }
+
+        if (Auth::check()) {
+            return redirect()->route('tenant.dashboard', $tenantModel->slug);
+        }
+
+        session(['url.intended' => $tenantModel->getApplicantPortalUrl()]);
+
+        if ($tenantModel->usesEnterpriseSubdomain()) {
+            return redirect()->route('subdomain.candidate.login');
+        }
+
+        return redirect()->route('candidate.login', ['tenant' => $tenantModel->slug]);
+    }
+
+    /**
+     * @return array{0: Tenant, 1: JobOpening}
+     */
+    protected function resolvePublishedCareersJob(Request $request): array
+    {
+        $tenantModel = tenant();
+        if (! $tenantModel && $request->route('tenant')) {
+            $tenantModel = Tenant::where('slug', $request->route('tenant'))->first();
+        }
+
+        if (! $tenantModel) {
+            abort(404, 'Tenant not found');
+        }
+
+        $jobSlug = $request->route('job');
+        if (! $jobSlug) {
+            abort(404, 'Job not found');
+        }
+
+        $job = JobOpening::where('slug', $jobSlug)
+            ->where('tenant_id', $tenantModel->id)
+            ->where('status', 'published')
+            ->first();
+
+        if (! $job) {
+            abort(404, 'Job not found');
+        }
+
+        return [$tenantModel, $job];
     }
 }

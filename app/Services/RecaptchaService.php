@@ -12,8 +12,8 @@ class RecaptchaService
 
     public function __construct()
     {
-        $this->secretKey = config('recaptcha.secret_key');
-        $this->siteKey = config('recaptcha.site_key');
+        $this->secretKey = (string) (config('recaptcha.secret_key') ?? '');
+        $this->siteKey = (string) (config('recaptcha.site_key') ?? '');
     }
 
     /**

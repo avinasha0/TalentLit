@@ -6,6 +6,7 @@ use App\Models\Concerns\TenantScoped;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -16,6 +17,7 @@ class Candidate extends Model
 
     protected $fillable = [
         'tenant_id',
+        'candidate_account_id',
         'first_name',
         'last_name',
         'primary_email',
@@ -43,6 +45,11 @@ class Candidate extends Model
         'joining_date' => 'date',
         'preboarding_started_at' => 'datetime',
     ];
+
+    public function candidateAccount(): BelongsTo
+    {
+        return $this->belongsTo(CandidateAccount::class, 'candidate_account_id');
+    }
 
     public function contacts(): HasMany
     {

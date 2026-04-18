@@ -28,7 +28,9 @@ class CareerJobController extends Controller
         // Apply filters
         if ($request->filled('location')) {
             $query->where(function ($q) use ($request) {
-                $q->whereHas('globalLocation', function ($subQ) use ($request) {
+                $q->whereHas('location', function ($subQ) use ($request) {
+                    $subQ->where('name', 'like', '%'.$request->location.'%');
+                })->orWhereHas('globalLocation', function ($subQ) use ($request) {
                     $subQ->where('name', 'like', '%'.$request->location.'%');
                 })->orWhereHas('city', function ($subQ) use ($request) {
                     $subQ->where('name', 'like', '%'.$request->location.'%');
@@ -79,6 +81,14 @@ class CareerJobController extends Controller
 
         $departments = $tenantDepartments->merge($globalDepartments)->unique()->sort()->values();
 
+        $tenantLocations = JobOpening::where('status', 'published')
+            ->with('location')
+            ->get()
+            ->pluck('location.name')
+            ->filter()
+            ->unique()
+            ->values();
+
         $globalLocations = JobOpening::where('status', 'published')
             ->with('globalLocation')
             ->get()
@@ -95,7 +105,7 @@ class CareerJobController extends Controller
             ->unique()
             ->values();
 
-        $locations = $globalLocations->merge($cities)->unique()->sort()->values();
+        $locations = $tenantLocations->merge($globalLocations)->merge($cities)->unique()->sort()->values();
 
         $employmentTypes = JobOpening::where('status', 'published')
             ->pluck('employment_type')

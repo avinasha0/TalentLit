@@ -1281,7 +1281,8 @@
             
             formatBudget() {
                 if (this.formData.budget_min && this.formData.budget_max) {
-                    return `$${this.formData.budget_min.toLocaleString()} - $${this.formData.budget_max.toLocaleString()}`;
+                    const sym = '₹';
+                    return `${sym}${Number(this.formData.budget_min).toLocaleString()} - ${sym}${Number(this.formData.budget_max).toLocaleString()}`;
                 }
                 return 'Not specified';
             },

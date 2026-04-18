@@ -10,6 +10,7 @@ use App\Models\JobOpening;
 use App\Models\JobStage;
 use App\Services\PreboardingAutomationService;
 use App\Services\NotificationService;
+use App\Support\ApplicationStatus;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -28,6 +29,8 @@ class PipelineController extends Controller
         }
 
         $this->authorize('view', $job);
+
+        $this->ensurePipelineStagesAndSyncApplications($job);
 
         // Get job stages ordered by sort_order
         $stages = $job->jobStages()
@@ -76,6 +79,8 @@ class PipelineController extends Controller
         }
 
         $this->authorize('view', $job);
+
+        $this->ensurePipelineStagesAndSyncApplications($job);
 
         // Get job stages ordered by sort_order
         $stages = $job->jobStages()
@@ -275,11 +280,19 @@ class PipelineController extends Controller
             ->where('stage_position', '>=', $newPosition)
             ->increment('stage_position');
 
+        $toStage = JobStage::find($toStageId);
+        $nextStatus = $toStage ? $this->statusFromStageName($toStage->name) : null;
+
         // Update the application
-        $application->update([
+        $updateData = [
             'current_stage_id' => $toStageId,
             'stage_position' => $newPosition,
-        ]);
+        ];
+        if ($nextStatus !== null) {
+            $updateData['status'] = $nextStatus;
+        }
+
+        $application->update($updateData);
     }
 
     private function updateInterviewStatusForStageChange(Application $application, $fromStageId, $toStageId)
@@ -399,5 +412,136 @@ class PipelineController extends Controller
                 'error' => $e->getMessage(),
             ]);
         }
+    }
+
+    private function ensurePipelineStagesAndSyncApplications(JobOpening $job): void
+    {
+        $canonicalStages = [
+            'applied' => 'Applied',
+            'screening' => 'Screening',
+            'shortlisted' => 'Shortlisted',
+            'interview' => 'Interview',
+            'selected' => 'Selected',
+            'offered' => 'Offered',
+            'pre_onboarding' => 'Pre-Onboarding',
+            'hired' => 'Hired',
+        ];
+
+        $jobStages = $job->jobStages()->orderBy('sort_order')->get();
+        $statusToStage = [];
+
+        foreach ($canonicalStages as $statusSlug => $canonicalName) {
+            $matchedStage = $jobStages->first(function (JobStage $stage) use ($statusSlug) {
+                return $this->stageMatchesStatus($stage->name, $statusSlug);
+            });
+
+            if (!$matchedStage) {
+                $matchedStage = JobStage::create([
+                    'tenant_id' => $job->tenant_id,
+                    'job_opening_id' => $job->id,
+                    'name' => $canonicalName,
+                    'sort_order' => $jobStages->count() + 1,
+                    'is_terminal' => $statusSlug === 'hired',
+                ]);
+                $jobStages->push($matchedStage);
+            }
+
+            $statusToStage[$statusSlug] = $matchedStage;
+        }
+
+        // Keep canonical stages at the front in expected order
+        $sortOrder = 1;
+        foreach ($canonicalStages as $statusSlug => $_) {
+            $stage = $statusToStage[$statusSlug];
+            if ($stage->sort_order !== $sortOrder) {
+                $stage->update(['sort_order' => $sortOrder]);
+            }
+            $sortOrder++;
+        }
+
+        // Move applications to stage that matches their status so Kanban columns stay in sync.
+        $applications = $job->applications()->get();
+        foreach ($applications as $application) {
+            $normalizedStatus = match (strtolower((string) $application->status)) {
+                'active' => 'applied',
+                'called' => 'screening',
+                'interviewed' => 'interview',
+                default => strtolower((string) $application->status),
+            };
+
+            if (!isset($statusToStage[$normalizedStatus])) {
+                continue;
+            }
+
+            $targetStage = $statusToStage[$normalizedStatus];
+            if ($application->current_stage_id === $targetStage->id) {
+                continue;
+            }
+
+            $nextPosition = Application::where('tenant_id', $job->tenant_id)
+                ->where('job_opening_id', $job->id)
+                ->where('current_stage_id', $targetStage->id)
+                ->max('stage_position');
+
+            $application->update([
+                'current_stage_id' => $targetStage->id,
+                'stage_position' => is_null($nextPosition) ? 0 : $nextPosition + 1,
+            ]);
+        }
+    }
+
+    private function stageMatchesStatus(string $stageName, string $statusSlug): bool
+    {
+        $name = strtolower($stageName);
+
+        return match ($statusSlug) {
+            'applied' => str_contains($name, 'applied') || str_contains($name, 'sourced'),
+            'screening' => str_contains($name, 'screen'),
+            'shortlisted' => str_contains($name, 'shortlist'),
+            'interview' => str_contains($name, 'interview'),
+            'selected' => str_contains($name, 'selected') || str_contains($name, 'final review'),
+            'offered' => str_contains($name, 'offer'),
+            'pre_onboarding' => str_contains($name, 'pre-onboarding') || str_contains($name, 'pre onboarding') || str_contains($name, 'preboarding'),
+            'hired' => str_contains($name, 'hired') || str_contains($name, 'joined'),
+            default => false,
+        };
+    }
+
+    private function statusFromStageName(string $stageName): ?string
+    {
+        $name = strtolower($stageName);
+
+        if (str_contains($name, 'pre-onboarding') || str_contains($name, 'pre onboarding') || str_contains($name, 'preboarding')) {
+            return 'pre_onboarding';
+        }
+        if (str_contains($name, 'shortlist')) {
+            return 'shortlisted';
+        }
+        if (str_contains($name, 'interview')) {
+            return 'interview';
+        }
+        if (str_contains($name, 'selected') || str_contains($name, 'final review')) {
+            return 'selected';
+        }
+        if (str_contains($name, 'offer')) {
+            return 'offered';
+        }
+        if (str_contains($name, 'hired') || str_contains($name, 'joined')) {
+            return 'hired';
+        }
+        if (str_contains($name, 'screen')) {
+            return 'screening';
+        }
+        if (str_contains($name, 'applied') || str_contains($name, 'sourced')) {
+            return 'applied';
+        }
+        if (str_contains($name, 'reject')) {
+            return 'rejected';
+        }
+        if (str_contains($name, 'withdraw')) {
+            return 'withdrawn';
+        }
+
+        return null;
     }
 }

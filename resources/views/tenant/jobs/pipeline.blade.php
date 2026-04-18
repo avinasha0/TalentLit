@@ -181,6 +181,14 @@
                                                     $statusColors = [
                                                         'active' => 'bg-green-600 text-white',
                                                         'applied' => 'bg-green-600 text-white',
+                                                        'screening' => 'bg-blue-100 text-blue-800',
+                                                        'called' => 'bg-blue-100 text-blue-800',
+                                                        'shortlisted' => 'bg-indigo-100 text-indigo-800',
+                                                        'interview' => 'bg-yellow-100 text-yellow-800',
+                                                        'interviewed' => 'bg-yellow-100 text-yellow-800',
+                                                        'selected' => 'bg-violet-100 text-violet-800',
+                                                        'offered' => 'bg-teal-100 text-teal-800',
+                                                        'pre_onboarding' => 'bg-amber-100 text-amber-900',
                                                         'hired' => 'bg-blue-100 text-blue-800',
                                                         'rejected' => 'bg-red-100 text-red-800',
                                                         'withdrawn' => 'bg-gray-100 text-gray-800',
@@ -188,7 +196,7 @@
                                                     $statusColor = $statusColors[$application->status] ?? 'bg-gray-100 text-gray-800';
                                                 @endphp
                                                 <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium {{ $statusColor }}">
-                                                    {{ ucfirst($application->status) }}
+                                                    {{ \App\Support\ApplicationStatus::label($application->status) }}
                                                 </span>
                                                 
                                                 <!-- Schedule Interview Button for Interview Stages -->
@@ -578,14 +586,22 @@ function drop(ev) {
         if (data.ok) {
             // Update stage counts
             updateStageCounts(data.counts);
+            updateApplicationCardStatus(applicationId, data.toStageId);
             
             // Hide loading indicator
             if (loadingIndicator) {
                 loadingIndicator.classList.add('hidden');
             }
             
-            // Show success message
-            showNotification('Application moved successfully', 'success');
+            // Show success message (stage + synced status)
+            const toStageEl = document.querySelector(`[data-stage-id="${data.toStageId}"]`);
+            const toStageTitle = toStageEl?.querySelector('h3')?.textContent?.trim() || 'new stage';
+            const newStatusSlug = statusFromStageName(toStageTitle);
+            const newStatusLabel = newStatusSlug ? statusLabel(newStatusSlug) : null;
+            const msg = newStatusLabel
+                ? `Moved to ${toStageTitle}. Application status updated to ${newStatusLabel}.`
+                : `Moved to ${toStageTitle}.`;
+            showNotification(msg, 'success');
             
             // Check if moved to interview stage and open modal
             checkForInterviewStage(data.toStageId, applicationId, data.candidateName);
@@ -619,6 +635,69 @@ function updateStageCounts(counts) {
             countElement.textContent = counts[stageId];
         }
     });
+}
+
+function statusFromStageName(stageName) {
+    const name = (stageName || '').toLowerCase();
+    if (name.includes('pre-onboarding') || name.includes('pre onboarding') || name.includes('preboarding')) return 'pre_onboarding';
+    if (name.includes('shortlist')) return 'shortlisted';
+    if (name.includes('interview')) return 'interview';
+    if (name.includes('selected') || name.includes('final review')) return 'selected';
+    if (name.includes('offer')) return 'offered';
+    if (name.includes('hired') || name.includes('joined')) return 'hired';
+    if (name.includes('screen')) return 'screening';
+    if (name.includes('applied') || name.includes('sourced')) return 'applied';
+    if (name.includes('reject')) return 'rejected';
+    if (name.includes('withdraw')) return 'withdrawn';
+    return null;
+}
+
+function statusLabel(status) {
+    const labels = {
+        applied: 'Applied',
+        screening: 'Screening',
+        shortlisted: 'Shortlisted',
+        interview: 'Interview',
+        selected: 'Selected',
+        offered: 'Offered',
+        pre_onboarding: 'Pre-Onboarding',
+        hired: 'Joined (Hired)',
+        rejected: 'Rejected',
+        withdrawn: 'Withdrawn',
+        hold: 'Hold',
+    };
+    return labels[status] || (status ? status.charAt(0).toUpperCase() + status.slice(1).replaceAll('_', ' ') : '');
+}
+
+function statusBadgeClass(status) {
+    const s = (status || '').toLowerCase();
+    if (s === 'applied') return 'bg-green-600 text-white';
+    if (s === 'screening') return 'bg-blue-100 text-blue-800';
+    if (s === 'shortlisted') return 'bg-indigo-100 text-indigo-800';
+    if (s === 'interview') return 'bg-yellow-100 text-yellow-800';
+    if (s === 'selected') return 'bg-violet-100 text-violet-800';
+    if (s === 'offered') return 'bg-teal-100 text-teal-800';
+    if (s === 'pre_onboarding') return 'bg-amber-100 text-amber-900';
+    if (s === 'hired') return 'bg-blue-100 text-blue-800';
+    if (s === 'rejected') return 'bg-red-100 text-red-800';
+    if (s === 'withdrawn') return 'bg-gray-100 text-gray-800';
+    return 'bg-gray-100 text-gray-800';
+}
+
+function updateApplicationCardStatus(applicationId, stageId) {
+    const card = document.querySelector(`[data-application-id="${applicationId}"]`);
+    const stageElement = document.querySelector(`[data-stage-id="${stageId}"]`);
+    if (!card || !stageElement) return;
+
+    const stageName = stageElement.querySelector('h3')?.textContent || '';
+    const status = statusFromStageName(stageName);
+    if (!status) return;
+
+    const badge = card.querySelector('span.inline-flex.items-center.px-2.py-1.rounded-full.text-xs.font-medium');
+    if (!badge) return;
+
+    badge.className = `inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${statusBadgeClass(status)}`;
+    badge.textContent = statusLabel(status);
 }
 
 function showNotification(message, type) {

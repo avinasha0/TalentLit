@@ -125,7 +125,7 @@
                         <option value="">All Statuses</option>
                         @foreach($statuses as $status)
                             <option value="{{ $status }}" {{ request('status') == $status ? 'selected' : '' }}>
-                                {{ ucfirst($status === 'active' ? 'Applied' : $status) }}
+                                {{ \App\Support\ApplicationStatus::label($status) }}
                             </option>
                         @endforeach
                     </select>
@@ -201,15 +201,21 @@
                                             $statusConfig = [
                                                 'applied' => ['bg' => 'bg-green-600', 'text' => 'text-white'],
                                                 'active' => ['bg' => 'bg-green-600', 'text' => 'text-white'],
+                                                'screening' => ['bg' => 'bg-blue-100', 'text' => 'text-blue-800'],
                                                 'called' => ['bg' => 'bg-blue-100', 'text' => 'text-blue-800'],
+                                                'shortlisted' => ['bg' => 'bg-indigo-100', 'text' => 'text-indigo-800'],
+                                                'interview' => ['bg' => 'bg-yellow-100', 'text' => 'text-yellow-800'],
                                                 'interviewed' => ['bg' => 'bg-yellow-100', 'text' => 'text-yellow-800'],
+                                                'selected' => ['bg' => 'bg-violet-100', 'text' => 'text-violet-800'],
+                                                'offered' => ['bg' => 'bg-teal-100', 'text' => 'text-teal-800'],
+                                                'pre_onboarding' => ['bg' => 'bg-amber-100', 'text' => 'text-amber-900'],
                                                 'hold' => ['bg' => 'bg-gray-100', 'text' => 'text-gray-800'],
                                                 'rejected' => ['bg' => 'bg-red-100', 'text' => 'text-red-800'],
                                                 'hired' => ['bg' => 'bg-emerald-100', 'text' => 'text-emerald-800'],
-                                                'withdrawn' => ['bg' => 'bg-gray-100', 'text' => 'text-gray-800'],
+                                                'withdrawn' => ['bg' => 'bg-slate-100', 'text' => 'text-slate-700'],
                                             ];
                                             $config = $status ? ($statusConfig[$status] ?? $statusConfig['applied']) : null;
-                                            $displayStatus = $latestApplication ? ($latestApplication->status === 'active' ? 'Applied' : ($latestApplication->status === 'hired' ? 'Hired' : ucfirst($latestApplication->status))) : 'No Application';
+                                            $displayStatus = $latestApplication ? \App\Support\ApplicationStatus::label($latestApplication->status) : 'No Application';
                                         @endphp
                                         @if($latestApplication && $config)
                                             <div class="flex items-center">
@@ -291,15 +297,21 @@
                                         $statusConfig = [
                                             'applied' => ['bg' => 'bg-green-600', 'text' => 'text-white'],
                                             'active' => ['bg' => 'bg-green-600', 'text' => 'text-white'],
+                                            'screening' => ['bg' => 'bg-blue-100', 'text' => 'text-blue-800'],
                                             'called' => ['bg' => 'bg-blue-100', 'text' => 'text-blue-800'],
+                                            'shortlisted' => ['bg' => 'bg-indigo-100', 'text' => 'text-indigo-800'],
+                                            'interview' => ['bg' => 'bg-yellow-100', 'text' => 'text-yellow-800'],
                                             'interviewed' => ['bg' => 'bg-yellow-100', 'text' => 'text-yellow-800'],
+                                            'selected' => ['bg' => 'bg-violet-100', 'text' => 'text-violet-800'],
+                                            'offered' => ['bg' => 'bg-teal-100', 'text' => 'text-teal-800'],
+                                            'pre_onboarding' => ['bg' => 'bg-amber-100', 'text' => 'text-amber-900'],
                                             'hold' => ['bg' => 'bg-gray-100', 'text' => 'text-gray-800'],
                                             'rejected' => ['bg' => 'bg-red-100', 'text' => 'text-red-800'],
                                             'hired' => ['bg' => 'bg-emerald-100', 'text' => 'text-emerald-800'],
-                                            'withdrawn' => ['bg' => 'bg-gray-100', 'text' => 'text-gray-800'],
+                                            'withdrawn' => ['bg' => 'bg-slate-100', 'text' => 'text-slate-700'],
                                         ];
                                         $config = $status ? ($statusConfig[$status] ?? $statusConfig['applied']) : null;
-                                        $displayStatus = $latestApplication ? ($latestApplication->status === 'active' ? 'Applied' : ($latestApplication->status === 'hired' ? 'Hired' : ucfirst($latestApplication->status))) : 'No Application';
+                                        $displayStatus = $latestApplication ? \App\Support\ApplicationStatus::label($latestApplication->status) : 'No Application';
                                     @endphp
                                     @if($latestApplication && $config)
                                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $config['bg'] }} {{ $config['text'] }}">

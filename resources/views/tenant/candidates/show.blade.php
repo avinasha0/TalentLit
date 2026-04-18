@@ -11,13 +11,20 @@
     $statusConfig = [
         'applied' => ['bg' => 'bg-green-600', 'text' => 'text-white', 'dark_bg' => 'dark:bg-green-600', 'dark_text' => 'dark:text-white'],
         'active' => ['bg' => 'bg-green-600', 'text' => 'text-white', 'dark_bg' => 'dark:bg-green-600', 'dark_text' => 'dark:text-white'],
+        'screening' => ['bg' => 'bg-blue-100', 'text' => 'text-blue-800', 'dark_bg' => 'dark:bg-blue-900/20', 'dark_text' => 'dark:text-blue-300'],
         'called' => ['bg' => 'bg-blue-100', 'text' => 'text-blue-800', 'dark_bg' => 'dark:bg-blue-900/20', 'dark_text' => 'dark:text-blue-300'],
-        'interviewed' => ['bg' => 'bg-yellow-100', 'text' => 'text-yellow-800', 'dark_bg' => 'dark:bg-yellow-900/20', 'dark_text' => 'dark:text-yellow-300'],
+        'shortlisted' => ['bg' => 'bg-indigo-100', 'text' => 'text-indigo-800', 'dark_bg' => 'dark:bg-indigo-900/20', 'dark_text' => 'dark:text-indigo-300'],
         'interview' => ['bg' => 'bg-yellow-100', 'text' => 'text-yellow-800', 'dark_bg' => 'dark:bg-yellow-900/20', 'dark_text' => 'dark:text-yellow-300'],
+        'interviewed' => ['bg' => 'bg-yellow-100', 'text' => 'text-yellow-800', 'dark_bg' => 'dark:bg-yellow-900/20', 'dark_text' => 'dark:text-yellow-300'],
+        'selected' => ['bg' => 'bg-violet-100', 'text' => 'text-violet-800', 'dark_bg' => 'dark:bg-violet-900/20', 'dark_text' => 'dark:text-violet-300'],
+        'offered' => ['bg' => 'bg-teal-100', 'text' => 'text-teal-800', 'dark_bg' => 'dark:bg-teal-900/20', 'dark_text' => 'dark:text-teal-300'],
+        'pre_onboarding' => ['bg' => 'bg-amber-100', 'text' => 'text-amber-900', 'dark_bg' => 'dark:bg-amber-900/20', 'dark_text' => 'dark:text-amber-200'],
         'hold' => ['bg' => 'bg-gray-100', 'text' => 'text-gray-800', 'dark_bg' => 'dark:bg-gray-900/20', 'dark_text' => 'dark:text-gray-300'],
         'hired' => ['bg' => 'bg-emerald-100', 'text' => 'text-emerald-800', 'dark_bg' => 'dark:bg-emerald-900/20', 'dark_text' => 'dark:text-emerald-300'],
         'rejected' => ['bg' => 'bg-red-100', 'text' => 'text-red-800', 'dark_bg' => 'dark:bg-red-900/20', 'dark_text' => 'dark:text-red-300'],
+        'withdrawn' => ['bg' => 'bg-slate-100', 'text' => 'text-slate-700', 'dark_bg' => 'dark:bg-slate-800/40', 'dark_text' => 'dark:text-slate-300'],
     ];
+    $applicationStatusLabels = \App\Support\ApplicationStatus::labels();
 @endphp
 
 <x-app-layout :tenant="$tenant">
@@ -171,7 +178,7 @@
                                                 $config = $statusConfig[$status] ?? $statusConfig['applied'];
                                             @endphp
                                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $config['bg'] }} {{ $config['text'] }} {{ $config['dark_bg'] }} {{ $config['dark_text'] }}">
-                                                {{ $application->status === 'hired' ? 'Hired' : ucfirst($application->status) }}
+                                                {{ \App\Support\ApplicationStatus::label($application->status) }}
                                             </span>
                                         </div>
                                     </div>
@@ -530,7 +537,7 @@
                                                         @php
                                                             $status = strtolower($application->status);
                                                             $config = $statusConfig[$status] ?? $statusConfig['applied'];
-                                                            $displayStatus = $application->status === 'active' ? 'Applied' : ($application->status === 'hired' ? 'Hired' : ucfirst($application->status));
+                                                            $displayStatus = \App\Support\ApplicationStatus::label($application->status);
                                                         @endphp
                                                         <span id="status-badge-{{ $application->id }}" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $config['bg'] }} {{ $config['text'] }} {{ $config['dark_bg'] }} {{ $config['dark_text'] }}">
                                                             {{ $displayStatus }}
@@ -542,14 +549,22 @@
                                                         </button>
                                                     </span>
                                                     <div id="status-edit-{{ $application->id }}" class="hidden mt-2">
+                                                        @php $appSt = strtolower($application->status); @endphp
                                                         <select id="status-select-{{ $application->id }}" 
                                                                 class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
-                                                            <option value="applied" {{ strtolower($application->status) === 'applied' || strtolower($application->status) === 'active' ? 'selected' : '' }}>Applied</option>
-                                                            <option value="called" {{ strtolower($application->status) === 'called' ? 'selected' : '' }}>Called</option>
-                                                            <option value="interviewed" {{ strtolower($application->status) === 'interviewed' ? 'selected' : '' }}>Interviewed</option>
-                                                            <option value="hold" {{ strtolower($application->status) === 'hold' ? 'selected' : '' }}>Hold</option>
-                                                            <option value="rejected" {{ strtolower($application->status) === 'rejected' ? 'selected' : '' }}>Rejected</option>
-                                                            <option value="hired" {{ strtolower($application->status) === 'hired' ? 'selected' : '' }}>Hired</option>
+                                                            @foreach(\App\Support\ApplicationStatus::PIPELINE as $slug)
+                                                                <option value="{{ $slug }}" @selected(
+                                                                    $slug === 'applied' ? in_array($appSt, ['applied', 'active'], true)
+                                                                    : ($slug === 'screening' ? in_array($appSt, ['screening', 'called'], true)
+                                                                    : ($slug === 'interview' ? in_array($appSt, ['interview', 'interviewed'], true)
+                                                                    : ($appSt === $slug)))
+                                                                )>{{ \App\Support\ApplicationStatus::label($slug) }}</option>
+                                                            @endforeach
+                                                            <optgroup label="Other">
+                                                                <option value="hold" @selected($appSt === 'hold')>{{ \App\Support\ApplicationStatus::label('hold') }}</option>
+                                                                <option value="rejected" @selected($appSt === 'rejected')>{{ \App\Support\ApplicationStatus::label('rejected') }}</option>
+                                                                <option value="withdrawn" @selected($appSt === 'withdrawn')>{{ \App\Support\ApplicationStatus::label('withdrawn') }}</option>
+                                                            </optgroup>
                                                         </select>
                                                         <div class="mt-2 flex space-x-2">
                                                             <button type="button" 
@@ -725,6 +740,51 @@
     <script>
         const candidateId = '{{ $candidate->id }}';
         const tenantSlug = '{{ $tenantSlug }}';
+        const APPLICATION_STATUS_LABELS = @json($applicationStatusLabels);
+
+        function applicationStatusLabel(slug) {
+            const s = (slug || '').toLowerCase();
+            return APPLICATION_STATUS_LABELS[s] || (s ? s.charAt(0).toUpperCase() + s.slice(1).replace(/_/g, ' ') : '');
+        }
+
+        function applicationStatusBadgeClasses(slug) {
+            const s = (slug || '').toLowerCase();
+            const base = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ';
+            if (['applied', 'active'].includes(s)) {
+                return base + 'bg-green-600 text-white dark:bg-green-600 dark:text-white';
+            }
+            if (['screening', 'called'].includes(s)) {
+                return base + 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300';
+            }
+            if (s === 'shortlisted') {
+                return base + 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/20 dark:text-indigo-300';
+            }
+            if (['interview', 'interviewed'].includes(s)) {
+                return base + 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300';
+            }
+            if (s === 'selected') {
+                return base + 'bg-violet-100 text-violet-800 dark:bg-violet-900/20 dark:text-violet-300';
+            }
+            if (s === 'offered') {
+                return base + 'bg-teal-100 text-teal-800 dark:bg-teal-900/20 dark:text-teal-300';
+            }
+            if (s === 'pre_onboarding') {
+                return base + 'bg-amber-100 text-amber-900 dark:bg-amber-900/20 dark:text-amber-200';
+            }
+            if (s === 'hold') {
+                return base + 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300';
+            }
+            if (s === 'rejected') {
+                return base + 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300';
+            }
+            if (s === 'withdrawn') {
+                return base + 'bg-slate-100 text-slate-700 dark:bg-slate-800/40 dark:text-slate-300';
+            }
+            if (s === 'hired') {
+                return base + 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-300';
+            }
+            return base + 'bg-green-600 text-white dark:bg-green-600 dark:text-white';
+        }
         
         // Function to get fresh CSRF token
         function getCsrfToken() {
@@ -1199,24 +1259,8 @@
                 if (data.success) {
                     // Update status badge
                     const statusBadge = document.getElementById('status-badge-' + applicationId);
-                    const statusText = newStatus === 'hired' ? 'Hired' : (newStatus.charAt(0).toUpperCase() + newStatus.slice(1));
-                    statusBadge.textContent = statusText;
-                    
-                    // Update status badge colors based on status
-                    statusBadge.className = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium';
-                    if (newStatus === 'applied' || newStatus === 'active') {
-                        statusBadge.className += ' bg-green-600 text-white dark:bg-green-600 dark:text-white';
-                    } else if (newStatus === 'called') {
-                        statusBadge.className += ' bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300';
-                    } else if (newStatus === 'interviewed') {
-                        statusBadge.className += ' bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300';
-                    } else if (newStatus === 'hold') {
-                        statusBadge.className += ' bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300';
-                    } else if (newStatus === 'rejected') {
-                        statusBadge.className += ' bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300';
-                    } else if (newStatus === 'hired') {
-                        statusBadge.className += ' bg-emerald-100 text-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-300';
-                    }
+                    statusBadge.textContent = applicationStatusLabel(newStatus);
+                    statusBadge.className = applicationStatusBadgeClasses(newStatus);
 
                     // Update current stage display if provided
                     if (data.current_stage) {

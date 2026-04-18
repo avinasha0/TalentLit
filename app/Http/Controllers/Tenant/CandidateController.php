@@ -8,9 +8,12 @@ use App\Models\Resume;
 use App\Models\Application;
 use App\Http\Requests\StoreCandidateRequest;
 use App\Services\PreboardingAutomationService;
+use App\Support\ApplicationStatus;
+use App\Models\JobStage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class CandidateController extends Controller
 {
@@ -86,8 +89,8 @@ class CandidateController extends Controller
             ->sort()
             ->values();
 
-        // Get available statuses
-        $statuses = ['applied', 'active', 'called', 'interviewed', 'hold', 'rejected', 'hired', 'withdrawn'];
+        // Get available statuses (filters + legacy slugs)
+        $statuses = ApplicationStatus::filterSlugs();
 
         if ($request->expectsJson()) {
             return response()->json([
@@ -268,34 +271,94 @@ class CandidateController extends Controller
         }
 
         $request->validate([
-            'status' => 'required|in:applied,called,interviewed,hold,rejected,hired,active,withdrawn',
+            'status' => ['required', Rule::in(ApplicationStatus::allowed())],
         ]);
-
-        // Map status to stage name
-        $statusToStageMap = [
-            'applied' => 'Applied',
-            'active' => 'Applied',
-            'called' => 'Screen',
-            'interviewed' => 'Interview',
-            'hired' => 'Hired',
-        ];
 
         $updateData = [
             'status' => $request->status,
         ];
 
-        // Update current_stage_id if there's a mapping for this status
-        if (isset($statusToStageMap[$request->status])) {
-            $stageName = $statusToStageMap[$request->status];
-            
-            // Find the stage for this job with the matching name
-            $stage = \App\Models\JobStage::where('tenant_id', $tenantModel->id)
+        $normalizedStatus = match (strtolower($request->status)) {
+            'active' => 'applied',
+            'called' => 'screening',
+            'interviewed' => 'interview',
+            default => strtolower($request->status),
+        };
+
+        $canonicalStageNames = [
+            'applied' => 'Applied',
+            'screening' => 'Screening',
+            'shortlisted' => 'Shortlisted',
+            'interview' => 'Interview',
+            'selected' => 'Selected',
+            'offered' => 'Offered',
+            'pre_onboarding' => 'Pre-Onboarding',
+            'hired' => 'Hired',
+        ];
+
+        $stageNames = ApplicationStatus::stageNameCandidates($request->status);
+        if ($stageNames !== []) {
+            $jobStages = JobStage::where('tenant_id', $tenantModel->id)
                 ->where('job_opening_id', $application->job_opening_id)
-                ->where('name', $stageName)
-                ->first();
+                ->orderBy('sort_order')
+                ->get();
+
+            $stage = null;
+
+            // 1) Exact / case-insensitive stage name match
+            foreach ($stageNames as $stageName) {
+                $needle = strtolower($stageName);
+                $stage = $jobStages->first(function (JobStage $jobStage) use ($needle) {
+                    return strtolower($jobStage->name) === $needle;
+                });
+                if ($stage) {
+                    break;
+                }
+            }
+
+            // 2) Partial match for naming variants (e.g. "Screen" vs "Phone Screen")
+            if (!$stage) {
+                foreach ($stageNames as $stageName) {
+                    $needle = strtolower($stageName);
+                    $stage = $jobStages->first(function (JobStage $jobStage) use ($needle) {
+                        return str_contains(strtolower($jobStage->name), $needle)
+                            || str_contains($needle, strtolower($jobStage->name));
+                    });
+                    if ($stage) {
+                        break;
+                    }
+                }
+            }
+
+            // 3) Final fallback: map pipeline status by sort order
+            if (!$stage) {
+                $pipelineIndex = array_search($normalizedStatus, ApplicationStatus::PIPELINE, true);
+                if ($pipelineIndex !== false && $jobStages->isNotEmpty()) {
+                    $stage = $jobStages->values()->get(min($pipelineIndex, $jobStages->count() - 1));
+                }
+            }
+
+            // 4) Ensure canonical stage exists for this status and use it.
+            if (!$stage && isset($canonicalStageNames[$normalizedStatus])) {
+                $desiredSortOrder = array_search($normalizedStatus, ApplicationStatus::PIPELINE, true);
+                $stage = JobStage::create([
+                    'tenant_id' => $tenantModel->id,
+                    'job_opening_id' => $application->job_opening_id,
+                    'name' => $canonicalStageNames[$normalizedStatus],
+                    'sort_order' => $desiredSortOrder === false ? ($jobStages->count() + 1) : ($desiredSortOrder + 1),
+                    'is_terminal' => $normalizedStatus === 'hired',
+                ]);
+            }
 
             if ($stage) {
                 $updateData['current_stage_id'] = $stage->id;
+                if ($application->current_stage_id !== $stage->id) {
+                    $nextStagePosition = Application::where('tenant_id', $tenantModel->id)
+                        ->where('job_opening_id', $application->job_opening_id)
+                        ->where('current_stage_id', $stage->id)
+                        ->max('stage_position');
+                    $updateData['stage_position'] = is_null($nextStagePosition) ? 0 : $nextStagePosition + 1;
+                }
             }
         }
 

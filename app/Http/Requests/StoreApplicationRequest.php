@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Support\ApplicationStatus;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -39,7 +40,7 @@ class StoreApplicationRequest extends FormRequest
                     return $query->where('tenant_id', $tenantId);
                 }),
             ],
-            'status' => 'nullable|string|in:active,withdrawn,hired,rejected',
+            'status' => ['nullable', 'string', Rule::in(ApplicationStatus::allowed())],
             'current_stage_id' => [
                 'nullable',
                 'uuid',

@@ -94,7 +94,7 @@ class UpsertCandidateAndApply
                     'tenant_id' => $tenant->id,
                     'job_opening_id' => $job->id,
                     'candidate_id' => $candidate->id,
-                    'status' => 'active',
+                    'status' => 'applied',
                     'applied_at' => now(),
                     'current_stage_id' => $firstStage?->id,
                     'stage_position' => $nextPosition,

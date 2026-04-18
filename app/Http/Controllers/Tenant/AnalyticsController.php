@@ -8,6 +8,7 @@ use App\Models\Candidate;
 use App\Models\Department;
 use App\Models\JobOpening;
 use App\Models\JobStage;
+use App\Support\ApplicationStatus;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -331,7 +332,7 @@ class AnalyticsController extends Controller
             ->join('job_stages', 'applications.current_stage_id', '=', 'job_stages.id')
             ->select('job_stages.name as stage', DB::raw('COUNT(*) as in_stage_count'))
             ->where('applications.tenant_id', $tenantId)
-            ->whereIn('applications.status', ['applied', 'screening', 'interviewing', 'offered', 'active'])
+            ->whereIn('applications.status', ApplicationStatus::openPipelineStatuses())
             ->groupBy('job_stages.id', 'job_stages.name', 'job_stages.sort_order')
             ->orderBy('job_stages.sort_order')
             ->get()

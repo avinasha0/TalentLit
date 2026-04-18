@@ -184,11 +184,14 @@ class JobOpening extends Model
     public function createDefaultStages(): void
     {
         $defaultStages = [
-            ['name' => 'Applied', 'sort_order' => 1],
-            ['name' => 'Screen', 'sort_order' => 2],
-            ['name' => 'Interview', 'sort_order' => 3],
-            ['name' => 'Offer', 'sort_order' => 4],
-            ['name' => 'Hired', 'sort_order' => 5],
+            ['name' => 'Applied', 'sort_order' => 1, 'is_terminal' => false],
+            ['name' => 'Screening', 'sort_order' => 2, 'is_terminal' => false],
+            ['name' => 'Shortlisted', 'sort_order' => 3, 'is_terminal' => false],
+            ['name' => 'Interview', 'sort_order' => 4, 'is_terminal' => false],
+            ['name' => 'Selected', 'sort_order' => 5, 'is_terminal' => false],
+            ['name' => 'Offered', 'sort_order' => 6, 'is_terminal' => false],
+            ['name' => 'Pre-Onboarding', 'sort_order' => 7, 'is_terminal' => false],
+            ['name' => 'Hired', 'sort_order' => 8, 'is_terminal' => true],
         ];
 
         foreach ($defaultStages as $stage) {
@@ -197,6 +200,7 @@ class JobOpening extends Model
                 'job_opening_id' => $this->id,
                 'name' => $stage['name'],
                 'sort_order' => $stage['sort_order'],
+                'is_terminal' => $stage['is_terminal'],
             ]);
         }
     }

@@ -3,41 +3,40 @@
 namespace App\Http\Controllers\Tenant;
 
 use App\Http\Controllers\Controller;
-use App\Models\Candidate;
 use App\Models\AssetRequest;
+use App\Models\Candidate;
 use App\Models\PreboardingItem;
-use App\Services\PreboardingAutomationService;
 use App\Services\OnboardingViewLogService;
+use App\Services\PreboardingAutomationService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
-use Maatwebsite\Excel\Facades\Excel;
+use Illuminate\Support\Facades\Log;
+use Maatwebsite\Excel\Concerns\Importable;
+use Maatwebsite\Excel\Concerns\SkipsErrors;
+use Maatwebsite\Excel\Concerns\SkipsFailures;
+use Maatwebsite\Excel\Concerns\SkipsOnError;
+use Maatwebsite\Excel\Concerns\SkipsOnFailure;
 use Maatwebsite\Excel\Concerns\ToModel;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
-use Maatwebsite\Excel\Concerns\WithValidation;
-use Maatwebsite\Excel\Concerns\Importable;
-use Maatwebsite\Excel\Concerns\SkipsOnError;
-use Maatwebsite\Excel\Concerns\SkipsErrors;
-use Maatwebsite\Excel\Concerns\SkipsOnFailure;
-use Maatwebsite\Excel\Concerns\SkipsFailures;
+use Maatwebsite\Excel\Facades\Excel;
 
 class EmployeeOnboardingController extends Controller
 {
-    public function index(Request $request, string $tenant = null)
+    public function index(Request $request, ?string $tenant = null)
     {
         // Get the tenant model from the middleware
         $tenantModel = tenant();
-        
+
         // If tenant is null, it means we're using subdomain routing
         // The tenant is already set by the middleware
-        if (!$tenantModel) {
+        if (! $tenantModel) {
             abort(500, 'Tenant not resolved. Please check your subdomain configuration.');
         }
-        
+
         // Check if using subdomain routing
         $currentRoute = request()->route()->getName();
         $isSubdomain = str_starts_with($currentRoute, 'subdomain.');
-        
+
         // Redirect to All Onboardings by default
         if ($isSubdomain) {
             return redirect()->route('subdomain.employee-onboarding.all');
@@ -46,15 +45,15 @@ class EmployeeOnboardingController extends Controller
         }
     }
 
-    public function all(Request $request, string $tenant = null)
+    public function all(Request $request, ?string $tenant = null)
     {
         // Get tenant from middleware (tenant is resolved from route parameter)
         $tenantModel = tenant();
-        
-        if (!$tenantModel) {
+
+        if (! $tenantModel) {
             abort(500, 'Tenant not resolved. Please check your subdomain configuration.');
         }
-        
+
         // Log Page.View event
         try {
             $queryParams = $request->only(['search', 'department', 'manager', 'status', 'joiningMonth']);
@@ -69,71 +68,26 @@ class EmployeeOnboardingController extends Controller
             // Logging failure should not break the page
             Log::warning('Failed to log Page.View event', ['error' => $e->getMessage()]);
         }
-        
+
         // Fetch onboarding candidates from candidates table (same approach as API)
-        $query = Candidate::where(function($q) use ($tenantModel) {
-            if ($tenantModel) {
-                $q->where('tenant_id', $tenantModel->id);
-            }
-        })
-        ->where(function($q) {
-            $q->where('source', 'Onboarding')
-              ->orWhere('source', 'Onboarding Import')
-              ->orWhereNotNull('preboarding_started_at');
-        });
-        
-        $candidates = $query->orderBy('created_at', 'desc')->get();
-        
-        // Transform candidates to match view expectations
-        $onboardings = $candidates->map(function($candidate) {
-            // Get actual values from database, with fallback defaults
-            $designation = $candidate->designation ?? 'Not Assigned';
-            $department = $candidate->department ?? 'Not Assigned';
-            $joiningDate = $candidate->joining_date ?? $candidate->created_at;
-            
-            // Calculate progress from completed_steps and total_steps
-            $completed = intval($candidate->completed_steps ?? 0);
-            $total = intval($candidate->total_steps ?? 5);
-            $progressPercent = $total > 0 ? intval(($completed / $total) * 100) : 0;
-            
-            // Status mapping - use database status or calculate from progress
-            $status = $candidate->status;
-            if (!$status) {
-                if ($progressPercent >= 100) {
-                    $status = 'Completed';
-                } elseif ($progressPercent >= 80) {
-                    $status = 'Joining Soon';
-                } elseif ($progressPercent >= 50) {
-                    $status = 'IT Pending';
-                } elseif ($progressPercent >= 20) {
-                    $status = 'Pending Docs';
-                } else {
-                    $status = 'Pre-boarding';
-                }
-            }
-            
-            // Create a simple object that matches view expectations
-            return (object) [
-                'id' => $candidate->id,
-                'first_name' => $candidate->first_name ?? '',
-                'last_name' => $candidate->last_name ?? '',
-                'email' => $candidate->primary_email ?? '',
-                'role' => $designation,
-                'department' => $department,
-                'joining_date' => $joiningDate,
-                'progress' => $progressPercent . '%',
-                'status' => $status,
-            ];
-        });
-        
-        return view('tenant.employee-onboarding.all', compact('onboardings', 'tenantModel'));
+        $candidates = $this->onboardingCandidatesBaseQuery()
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        $onboardings = $this->mapCandidatesToOnboardingRows($candidates);
+
+        return view('tenant.employee-onboarding.all', [
+            'onboardings' => $onboardings,
+            'tenantModel' => $tenantModel,
+            'preOnboardingOnly' => false,
+        ]);
     }
 
-    public function dashboard(Request $request, string $tenant = null)
+    public function dashboard(Request $request, ?string $tenant = null)
     {
         $tenantModel = tenant();
-        
-        if (!$tenantModel) {
+
+        if (! $tenantModel) {
             abort(500, 'Tenant not resolved. Please check your subdomain configuration.');
         }
 
@@ -141,9 +95,9 @@ class EmployeeOnboardingController extends Controller
         $user = auth()->user();
         $permissionService = app(\App\Services\PermissionService::class);
         $userRole = $permissionService->getUserRole($user->id, $tenantModel->id);
-        
+
         $allowedRoles = ['Owner', 'Admin', 'Recruiter', 'Hiring Manager'];
-        if (!$userRole || !in_array($userRole, $allowedRoles)) {
+        if (! $userRole || ! in_array($userRole, $allowedRoles)) {
             abort(403, 'You do not have permission to access this page.');
         }
 
@@ -171,66 +125,163 @@ class EmployeeOnboardingController extends Controller
         ]);
     }
 
-    public function new(Request $request, string $tenant = null)
+    public function preOnboarding(Request $request, ?string $tenant = null)
     {
         $tenantModel = tenant();
-        
-        if (!$tenantModel) {
+
+        if (! $tenantModel) {
             abort(500, 'Tenant not resolved. Please check your subdomain configuration.');
         }
-        
+
+        try {
+            $queryParams = $request->only(['search', 'department', 'manager', 'status', 'joiningMonth']);
+            OnboardingViewLogService::log(
+                'Page.View',
+                $request,
+                array_merge(array_filter($queryParams), ['page' => 'pre-onboarding']),
+                null,
+                'page'
+            );
+        } catch (\Exception $e) {
+            Log::warning('Failed to log Page.View event', ['error' => $e->getMessage()]);
+        }
+
+        $candidates = $this->onboardingCandidatesBaseQuery()
+            ->whereHas('applications', function ($q) {
+                $q->where('status', 'pre_onboarding');
+            })
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        $onboardings = $this->mapCandidatesToOnboardingRows($candidates);
+
+        return view('tenant.employee-onboarding.all', [
+            'onboardings' => $onboardings,
+            'tenantModel' => $tenantModel,
+            'preOnboardingOnly' => true,
+        ]);
+    }
+
+    private function onboardingCandidatesBaseQuery(): \Illuminate\Database\Eloquent\Builder
+    {
+        $tenantModel = tenant();
+        if (! $tenantModel) {
+            return Candidate::query()->whereRaw('1 = 0');
+        }
+
+        return Candidate::query()
+            ->where('tenant_id', $tenantModel->id)
+            ->where(function ($q) {
+                $q->where('source', 'Onboarding')
+                    ->orWhere('source', 'Onboarding Import')
+                    ->orWhereNotNull('preboarding_started_at');
+            });
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, Candidate>  $candidates
+     * @return \Illuminate\Support\Collection<int, object>
+     */
+    private function mapCandidatesToOnboardingRows($candidates)
+    {
+        return $candidates->map(function (Candidate $candidate) {
+            $designation = $candidate->designation ?? 'Not Assigned';
+            $department = $candidate->department ?? 'Not Assigned';
+            $joiningDate = $candidate->joining_date ?? $candidate->created_at;
+
+            $completed = intval($candidate->completed_steps ?? 0);
+            $total = intval($candidate->total_steps ?? 5);
+            $progressPercent = $total > 0 ? intval(($completed / $total) * 100) : 0;
+
+            $status = $candidate->status;
+            if (! $status) {
+                if ($progressPercent >= 100) {
+                    $status = 'Completed';
+                } elseif ($progressPercent >= 80) {
+                    $status = 'Joining Soon';
+                } elseif ($progressPercent >= 50) {
+                    $status = 'IT Pending';
+                } elseif ($progressPercent >= 20) {
+                    $status = 'Pending Docs';
+                } else {
+                    $status = 'Pre-boarding';
+                }
+            }
+
+            return (object) [
+                'id' => $candidate->id,
+                'first_name' => $candidate->first_name ?? '',
+                'last_name' => $candidate->last_name ?? '',
+                'email' => $candidate->primary_email ?? '',
+                'role' => $designation,
+                'department' => $department,
+                'joining_date' => $joiningDate,
+                'progress' => $progressPercent.'%',
+                'status' => $status,
+            ];
+        });
+    }
+
+    public function new(Request $request, ?string $tenant = null)
+    {
+        $tenantModel = tenant();
+
+        if (! $tenantModel) {
+            abort(500, 'Tenant not resolved. Please check your subdomain configuration.');
+        }
+
         return view('tenant.employee-onboarding.new', [
             'tenant' => $tenantModel,
         ]);
     }
 
-    public function tasks(Request $request, string $tenant = null)
+    public function tasks(Request $request, ?string $tenant = null)
     {
         $tenantModel = tenant();
-        
-        if (!$tenantModel) {
+
+        if (! $tenantModel) {
             abort(500, 'Tenant not resolved. Please check your subdomain configuration.');
         }
-        
+
         return view('tenant.employee-onboarding.tasks', [
             'tenant' => $tenantModel,
         ]);
     }
 
-    public function documents(Request $request, string $tenant = null)
+    public function documents(Request $request, ?string $tenant = null)
     {
         $tenantModel = tenant();
-        
-        if (!$tenantModel) {
+
+        if (! $tenantModel) {
             abort(500, 'Tenant not resolved. Please check your subdomain configuration.');
         }
-        
+
         return view('tenant.employee-onboarding.documents', [
             'tenant' => $tenantModel,
         ]);
     }
 
-    public function itAssets(Request $request, string $tenant = null)
+    public function itAssets(Request $request, ?string $tenant = null)
     {
         $tenantModel = tenant();
-        
-        if (!$tenantModel) {
+
+        if (! $tenantModel) {
             abort(500, 'Tenant not resolved. Please check your subdomain configuration.');
         }
-        
+
         return view('tenant.employee-onboarding.it-assets', [
             'tenant' => $tenantModel,
         ]);
     }
 
-    public function approvals(Request $request, string $tenant = null)
+    public function approvals(Request $request, ?string $tenant = null)
     {
         $tenantModel = tenant();
-        
-        if (!$tenantModel) {
+
+        if (! $tenantModel) {
             abort(500, 'Tenant not resolved. Please check your subdomain configuration.');
         }
-        
+
         return view('tenant.employee-onboarding.approvals', [
             'tenant' => $tenantModel,
         ]);
@@ -242,45 +293,45 @@ class EmployeeOnboardingController extends Controller
     public function apiIndex(Request $request)
     {
         $tenantModel = tenant();
-        
-        if (!$tenantModel) {
+
+        if (! $tenantModel) {
             return response()->json(['error' => 'Tenant not resolved'], 500);
         }
 
         // Check if using mock data (set USE_MOCK_ONBOARDING_DATA=true in .env)
         $useMock = env('USE_MOCK_ONBOARDING_DATA', false);
-        
+
         if ($useMock) {
             return $this->getMockOnboardings($request);
         }
 
         // Use Candidate model since Onboarding uses candidates table
         $query = \App\Models\Candidate::where('tenant_id', $tenantModel->id)
-            ->where(function($q) {
+            ->where(function ($q) {
                 $q->where('source', 'Onboarding')
-                  ->orWhere('source', 'Onboarding Import')
-                  ->orWhereNotNull('preboarding_started_at');
+                    ->orWhere('source', 'Onboarding Import')
+                    ->orWhereNotNull('preboarding_started_at');
             });
-        
+
         // Log for debugging
         $countBeforeFilters = $query->count();
-        
+
         // Also log all candidates with their sources for debugging
         $allCandidates = \App\Models\Candidate::where('tenant_id', $tenantModel->id)
             ->select('id', 'first_name', 'last_name', 'primary_email', 'source', 'created_at', 'updated_at')
             ->orderBy('updated_at', 'desc')
             ->limit(10)
             ->get();
-        
+
         \Log::info('Employee Onboarding API Query', [
             'tenant_id' => $tenantModel->id,
             'tenant_slug' => $tenantModel->slug,
             'count_before_filters' => $countBeforeFilters,
             'request_params' => $request->all(),
-            'recent_candidates' => $allCandidates->map(function($c) {
+            'recent_candidates' => $allCandidates->map(function ($c) {
                 return [
                     'id' => $c->id,
-                    'name' => $c->first_name . ' ' . $c->last_name,
+                    'name' => $c->first_name.' '.$c->last_name,
                     'email' => $c->primary_email,
                     'source' => $c->source,
                     'created_at' => $c->created_at,
@@ -291,10 +342,10 @@ class EmployeeOnboardingController extends Controller
 
         // SEARCH (name, email)
         if ($search = $request->input('search')) {
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('first_name', 'like', "%{$search}%")
-                  ->orWhere('last_name', 'like', "%{$search}%")
-                  ->orWhere('primary_email', 'like', "%{$search}%");
+                    ->orWhere('last_name', 'like', "%{$search}%")
+                    ->orWhere('primary_email', 'like', "%{$search}%");
             });
         }
 
@@ -311,13 +362,13 @@ class EmployeeOnboardingController extends Controller
         $allOnboardings = $query->get();
 
         // Transform candidates to onboarding format
-        $allOnboardings->transform(function($item) {
+        $allOnboardings->transform(function ($item) {
             // Set default values for non-existent columns
             $item->designation = $item->designation ?? 'Not Assigned';
             $item->department = $item->department ?? 'Not Assigned';
             $item->manager = $item->manager ?? 'Not Assigned';
             $item->joining_date = $item->created_at; // Use created_at as joining_date
-            
+
             // Calculate progress
             $completed = intval($item->completed_steps ?? 0);
             $total = intval($item->total_steps ?? 5); // default 5 steps
@@ -335,42 +386,44 @@ class EmployeeOnboardingController extends Controller
 
         // Apply in-memory filters
         $filteredCollection = $allOnboardings;
-        
+
         if ($department = $request->input('department')) {
             if ($department !== 'all' && $department !== '') {
-                $filteredCollection = $filteredCollection->filter(function($item) use ($department) {
+                $filteredCollection = $filteredCollection->filter(function ($item) use ($department) {
                     return ($item->department ?? 'Not Assigned') === $department;
                 });
             }
         }
-        
+
         if ($manager = $request->input('manager')) {
             if ($manager !== 'all' && $manager !== '') {
-                $filteredCollection = $filteredCollection->filter(function($item) use ($manager) {
+                $filteredCollection = $filteredCollection->filter(function ($item) use ($manager) {
                     return ($item->manager ?? 'Not Assigned') === $manager;
                 });
             }
         }
-        
+
         if ($status = $request->input('status')) {
             if ($status !== 'All' && $status !== '') {
-                $filteredCollection = $filteredCollection->filter(function($item) use ($status) {
+                $filteredCollection = $filteredCollection->filter(function ($item) use ($status) {
                     return ($item->status ?? 'Pre-boarding') === $status;
                 });
             }
         }
-        
+
         if ($joiningMonth = $request->input('joiningMonth')) {
             try {
                 [$year, $month] = explode('-', $joiningMonth);
-                $filteredCollection = $filteredCollection->filter(function($item) use ($year, $month) {
+                $filteredCollection = $filteredCollection->filter(function ($item) use ($year, $month) {
                     $date = $item->joining_date ?? $item->created_at;
                     if ($date instanceof \Carbon\Carbon) {
                         return $date->year == $year && $date->month == $month;
                     }
+
                     return false;
                 });
-            } catch (\Exception $e) {}
+            } catch (\Exception $e) {
+            }
         }
 
         // Pagination
@@ -380,12 +433,12 @@ class EmployeeOnboardingController extends Controller
         $items = $filteredCollection->forPage($page, $pageSize)->values();
 
         // Format data for JavaScript
-        $formattedData = $items->map(function($item) {
+        $formattedData = $items->map(function ($item) {
             return [
                 'id' => $item->id,
                 'firstName' => $item->first_name,
                 'lastName' => $item->last_name,
-                'fullName' => $item->full_name ?? trim($item->first_name . ' ' . $item->last_name),
+                'fullName' => $item->full_name ?? trim($item->first_name.' '.$item->last_name),
                 'email' => $item->primary_email,
                 'avatarUrl' => null,
                 'designation' => $item->designation ?? 'Not Assigned',
@@ -395,7 +448,7 @@ class EmployeeOnboardingController extends Controller
                 'progressPercent' => $item->progress_percent ?? 0,
                 'pendingItems' => max(0, 5 - intval($item->completed_steps ?? 0)),
                 'status' => $item->status ?? 'Pre-boarding',
-                'lastUpdated' => $item->updated_at ? $item->updated_at->toIso8601String() : ($item->created_at ? $item->created_at->toIso8601String() : '')
+                'lastUpdated' => $item->updated_at ? $item->updated_at->toIso8601String() : ($item->created_at ? $item->created_at->toIso8601String() : ''),
             ];
         });
 
@@ -417,7 +470,7 @@ class EmployeeOnboardingController extends Controller
         // Get ID from route parameter first (method injection is getting wrong value)
         // Route parameter is the most reliable source
         $candidateId = $request->route('id') ?? $request->input('id') ?? $id;
-        
+
         \Log::info('apiShow called', [
             'method_param_id' => $id,
             'route_id' => $request->route('id'),
@@ -427,16 +480,17 @@ class EmployeeOnboardingController extends Controller
             'request_path' => $request->path(),
             'route_params' => $request->route()->parameters(),
             'tenant_id' => tenant()?->id,
-            'tenant_slug' => tenant()?->slug
+            'tenant_slug' => tenant()?->slug,
         ]);
-        
+
         $tenantModel = tenant();
-        
-        if (!$tenantModel) {
+
+        if (! $tenantModel) {
             \Log::error('Tenant not resolved in apiShow');
+
             return response()->json(['error' => 'Tenant not resolved'], 500);
         }
-        
+
         // Log Onboarding.SlideOver.Open event
         try {
             OnboardingViewLogService::log(
@@ -453,49 +507,50 @@ class EmployeeOnboardingController extends Controller
 
         // First, try to find the candidate without source filter (in case source wasn't set)
         $candidate = \App\Models\Candidate::where('tenant_id', $tenantModel->id)->find($candidateId);
-        
+
         // If found but doesn't have onboarding source, still allow it (might be a data issue)
-        if ($candidate && !in_array($candidate->source, ['Onboarding', 'Onboarding Import'])) {
+        if ($candidate && ! in_array($candidate->source, ['Onboarding', 'Onboarding Import'])) {
             \Log::info('Candidate found but source is not Onboarding', [
                 'id' => $candidateId,
                 'source' => $candidate->source,
-                'allowing anyway'
+                'allowing anyway',
             ]);
         }
-        
+
         // If not found, try with source filter
-        if (!$candidate) {
+        if (! $candidate) {
             $candidate = \App\Models\Candidate::where('tenant_id', $tenantModel->id)
-                ->where(function($q) {
+                ->where(function ($q) {
                     $q->where('source', 'Onboarding')
-                      ->orWhere('source', 'Onboarding Import');
+                        ->orWhere('source', 'Onboarding Import');
                 })
                 ->find($candidateId);
         }
-        
+
         \Log::info('Candidate lookup result', [
             'id' => $candidateId,
-            'found' => !!$candidate,
+            'found' => (bool) $candidate,
             'candidate_id' => $candidate?->id,
             'candidate_source' => $candidate?->source,
-            'candidate_name' => $candidate ? ($candidate->first_name . ' ' . $candidate->last_name) : null,
+            'candidate_name' => $candidate ? ($candidate->first_name.' '.$candidate->last_name) : null,
             'tenant_id' => $tenantModel->id,
             'total_candidates' => \App\Models\Candidate::where('tenant_id', $tenantModel->id)->count(),
             'total_onboarding_candidates' => \App\Models\Candidate::where('tenant_id', $tenantModel->id)
-                ->where(function($q) {
+                ->where(function ($q) {
                     $q->where('source', 'Onboarding')
-                      ->orWhere('source', 'Onboarding Import');
-                })->count()
+                        ->orWhere('source', 'Onboarding Import');
+                })->count(),
         ]);
-        
-        if (!$candidate) {
+
+        if (! $candidate) {
             \Log::warning('Candidate not found', [
                 'id' => $candidateId,
                 'tenant_id' => $tenantModel->id,
                 'tenant_slug' => $tenantModel->slug,
                 'sample_candidate_ids' => \App\Models\Candidate::where('tenant_id', $tenantModel->id)
-                    ->limit(5)->pluck('id')->toArray()
+                    ->limit(5)->pluck('id')->toArray(),
             ]);
+
             return response()->json(['error' => 'Onboarding not found', 'id' => $candidateId], 404);
         }
 
@@ -542,8 +597,8 @@ class EmployeeOnboardingController extends Controller
     public function apiBulkRemind(Request $request)
     {
         $tenantModel = tenant();
-        
-        if (!$tenantModel) {
+
+        if (! $tenantModel) {
             return response()->json(['error' => 'Tenant not resolved'], 500);
         }
 
@@ -563,27 +618,27 @@ class EmployeeOnboardingController extends Controller
     public function apiSendReminder(Request $request, $id = null)
     {
         $tenantModel = tenant();
-        
-        if (!$tenantModel) {
+
+        if (! $tenantModel) {
             return response()->json(['error' => 'Tenant not resolved'], 500);
         }
 
         // Get ID from route parameter
         $candidateId = $request->route('id') ?? $request->input('id') ?? $id;
-        
-        if (!$candidateId) {
+
+        if (! $candidateId) {
             return response()->json(['error' => 'Candidate ID is required'], 400);
         }
 
         // Find the candidate
         $candidate = \App\Models\Candidate::where('tenant_id', $tenantModel->id)
-            ->where(function($q) {
+            ->where(function ($q) {
                 $q->where('source', 'Onboarding')
-                  ->orWhere('source', 'Onboarding Import');
+                    ->orWhere('source', 'Onboarding Import');
             })
             ->find($candidateId);
 
-        if (!$candidate) {
+        if (! $candidate) {
             return response()->json(['error' => 'Candidate not found'], 404);
         }
 
@@ -591,29 +646,29 @@ class EmployeeOnboardingController extends Controller
             // TODO: Implement actual reminder sending logic
             // For now, this is a placeholder that returns success
             // The reminder message should be: "Please complete your pending onboarding steps."
-            
+
             // Example implementation (commented out until email service is configured):
             // Mail::to($candidate->primary_email)->send(new OnboardingReminderMail($candidate));
-            
+
             Log::info('Onboarding reminder sent', [
                 'candidate_id' => $candidateId,
                 'tenant_id' => $tenantModel->id,
-                'email' => $candidate->primary_email
+                'email' => $candidate->primary_email,
             ]);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Reminder sent successfully'
+                'message' => 'Reminder sent successfully',
             ]);
         } catch (\Exception $e) {
             Log::error('Failed to send onboarding reminder', [
                 'candidate_id' => $candidateId,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return response()->json([
                 'success' => false,
-                'error' => 'Failed to send reminder'
+                'error' => 'Failed to send reminder',
             ], 500);
         }
     }
@@ -624,30 +679,30 @@ class EmployeeOnboardingController extends Controller
     public function apiGetDocuments(Request $request, $id = null)
     {
         $tenantModel = tenant();
-        
-        if (!$tenantModel) {
+
+        if (! $tenantModel) {
             return response()->json(['error' => 'Tenant not resolved'], 500);
         }
 
         // Get ID from route parameter
         $candidateId = $request->route('id') ?? $request->input('id') ?? $id;
-        
-        if (!$candidateId) {
+
+        if (! $candidateId) {
             return response()->json(['error' => 'Candidate ID is required'], 400);
         }
 
         // Find the candidate
         $candidate = \App\Models\Candidate::where('tenant_id', $tenantModel->id)
-            ->where(function($q) {
+            ->where(function ($q) {
                 $q->where('source', 'Onboarding')
-                  ->orWhere('source', 'Onboarding Import');
+                    ->orWhere('source', 'Onboarding Import');
             })
             ->find($candidateId);
 
-        if (!$candidate) {
+        if (! $candidate) {
             return response()->json(['error' => 'Candidate not found'], 404);
         }
-        
+
         // Log Onboarding.Tab.View event
         try {
             OnboardingViewLogService::log(
@@ -682,7 +737,7 @@ class EmployeeOnboardingController extends Controller
             ->values();
 
         return response()->json([
-            'documents' => $documents
+            'documents' => $documents,
         ]);
     }
 
@@ -692,27 +747,27 @@ class EmployeeOnboardingController extends Controller
     public function apiGetTasks(Request $request, $id = null)
     {
         $tenantModel = tenant();
-        
-        if (!$tenantModel) {
+
+        if (! $tenantModel) {
             return response()->json(['error' => 'Tenant not resolved'], 500);
         }
 
         // Get ID from route parameter
         $candidateId = $request->route('id') ?? $request->input('id') ?? $id;
-        
-        if (!$candidateId) {
+
+        if (! $candidateId) {
             return response()->json(['error' => 'Candidate ID is required'], 400);
         }
 
         // Find the candidate
         $candidate = \App\Models\Candidate::where('tenant_id', $tenantModel->id)
-            ->where(function($q) {
+            ->where(function ($q) {
                 $q->where('source', 'Onboarding')
-                  ->orWhere('source', 'Onboarding Import');
+                    ->orWhere('source', 'Onboarding Import');
             })
             ->find($candidateId);
 
-        if (!$candidate) {
+        if (! $candidate) {
             return response()->json(['error' => 'Candidate not found'], 404);
         }
 
@@ -749,7 +804,7 @@ class EmployeeOnboardingController extends Controller
             ->values();
 
         return response()->json([
-            'tasks' => $tasks
+            'tasks' => $tasks,
         ]);
     }
 
@@ -759,44 +814,44 @@ class EmployeeOnboardingController extends Controller
     public function apiMarkTaskComplete(Request $request, $id = null, $taskId = null)
     {
         $tenantModel = tenant();
-        
-        if (!$tenantModel) {
+
+        if (! $tenantModel) {
             return response()->json(['error' => 'Tenant not resolved'], 500);
         }
 
         // Get IDs from route parameters
         $candidateId = $request->route('id') ?? $request->input('id') ?? $id;
         $taskIdParam = $request->route('taskId') ?? $request->input('taskId') ?? $taskId;
-        
-        if (!$candidateId || !$taskIdParam) {
+
+        if (! $candidateId || ! $taskIdParam) {
             return response()->json(['error' => 'Candidate ID and Task ID are required'], 400);
         }
 
         // Find the candidate
         $candidate = \App\Models\Candidate::where('tenant_id', $tenantModel->id)
-            ->where(function($q) {
+            ->where(function ($q) {
                 $q->where('source', 'Onboarding')
-                  ->orWhere('source', 'Onboarding Import');
+                    ->orWhere('source', 'Onboarding Import');
             })
             ->find($candidateId);
 
-        if (!$candidate) {
+        if (! $candidate) {
             return response()->json(['error' => 'Candidate not found'], 404);
         }
 
         // Detect tenant format for logging
         $isSubdomain = str_starts_with(request()->route()->getName() ?? '', 'subdomain.');
         $tenantFormat = $isSubdomain ? 'subdomain' : 'slug';
-        
+
         try {
             $item = PreboardingItem::where('tenant_id', $tenantModel->id)
                 ->where('candidate_id', $candidateId)
                 ->find($taskIdParam);
 
-            if (!$item) {
+            if (! $item) {
                 return response()->json([
                     'success' => false,
-                    'error' => 'Task not found'
+                    'error' => 'Task not found',
                 ], 404);
             }
 
@@ -808,7 +863,7 @@ class EmployeeOnboardingController extends Controller
             $item->save();
 
             app(PreboardingAutomationService::class)->syncProgress($candidate);
-            
+
             // Log task completion
             Log::info('Onboarding task marked complete', [
                 'candidate_id' => $candidateId,
@@ -817,12 +872,12 @@ class EmployeeOnboardingController extends Controller
                 'tenant_slug' => $tenantModel->slug,
                 'tenant_format' => $tenantFormat,
                 'operation' => 'mark_task_complete',
-                'status' => 'success'
+                'status' => 'success',
             ]);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Task marked as completed'
+                'message' => 'Task marked as completed',
             ]);
         } catch (\Exception $e) {
             // Log error
@@ -834,12 +889,12 @@ class EmployeeOnboardingController extends Controller
                 'tenant_format' => $tenantFormat,
                 'operation' => 'mark_task_complete',
                 'status' => 'failed',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return response()->json([
                 'success' => false,
-                'error' => 'Failed to mark task as completed'
+                'error' => 'Failed to mark task as completed',
             ], 500);
         }
     }
@@ -850,8 +905,8 @@ class EmployeeOnboardingController extends Controller
     public function apiSendDocumentReminder(Request $request, $id = null, $documentId = null)
     {
         $tenantModel = tenant();
-        
-        if (!$tenantModel) {
+
+        if (! $tenantModel) {
             return response()->json(['error' => 'Tenant not resolved'], 500);
         }
 
@@ -859,53 +914,53 @@ class EmployeeOnboardingController extends Controller
         $candidateId = $request->route('id') ?? $request->input('id') ?? $id;
         $docId = $request->route('documentId') ?? $request->input('documentId') ?? $documentId;
         $documentName = $request->input('document_name', 'document');
-        
-        if (!$candidateId || !$docId) {
+
+        if (! $candidateId || ! $docId) {
             return response()->json(['error' => 'Candidate ID and Document ID are required'], 400);
         }
 
         // Find the candidate
         $candidate = \App\Models\Candidate::where('tenant_id', $tenantModel->id)
-            ->where(function($q) {
+            ->where(function ($q) {
                 $q->where('source', 'Onboarding')
-                  ->orWhere('source', 'Onboarding Import');
+                    ->orWhere('source', 'Onboarding Import');
             })
             ->find($candidateId);
 
-        if (!$candidate) {
+        if (! $candidate) {
             return response()->json(['error' => 'Candidate not found'], 404);
         }
 
         try {
             // TODO: Implement actual reminder sending logic
             // The reminder message should be: "Please upload your pending document: {document_name}."
-            
+
             // Example implementation (commented out until email service is configured):
             // $message = "Please upload your pending document: {$documentName}.";
             // Mail::to($candidate->primary_email)->send(new DocumentReminderMail($candidate, $documentName, $message));
-            
+
             Log::info('Document reminder sent', [
                 'candidate_id' => $candidateId,
                 'document_id' => $docId,
                 'document_name' => $documentName,
                 'tenant_id' => $tenantModel->id,
-                'email' => $candidate->primary_email
+                'email' => $candidate->primary_email,
             ]);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Reminder sent successfully'
+                'message' => 'Reminder sent successfully',
             ]);
         } catch (\Exception $e) {
             Log::error('Failed to send document reminder', [
                 'candidate_id' => $candidateId,
                 'document_id' => $docId,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return response()->json([
                 'success' => false,
-                'error' => 'Failed to send reminder'
+                'error' => 'Failed to send reminder',
             ], 500);
         }
     }
@@ -916,27 +971,27 @@ class EmployeeOnboardingController extends Controller
     public function apiCheckConvert(Request $request, $id = null)
     {
         $tenantModel = tenant();
-        
-        if (!$tenantModel) {
+
+        if (! $tenantModel) {
             return response()->json(['error' => 'Tenant not resolved'], 500);
         }
 
         // Get ID from route parameter
         $candidateId = $request->route('id') ?? $request->input('id') ?? $id;
-        
-        if (!$candidateId) {
+
+        if (! $candidateId) {
             return response()->json(['error' => 'Candidate ID is required'], 400);
         }
 
         // Find the candidate
         $candidate = \App\Models\Candidate::where('tenant_id', $tenantModel->id)
-            ->where(function($q) {
+            ->where(function ($q) {
                 $q->where('source', 'Onboarding')
-                  ->orWhere('source', 'Onboarding Import');
+                    ->orWhere('source', 'Onboarding Import');
             })
             ->find($candidateId);
 
-        if (!$candidate) {
+        if (! $candidate) {
             return response()->json(['error' => 'Candidate not found'], 404);
         }
 
@@ -952,75 +1007,87 @@ class EmployeeOnboardingController extends Controller
     public function apiConvert(Request $request, $id = null)
     {
         $tenantModel = tenant();
-        
-        if (!$tenantModel) {
+
+        if (! $tenantModel) {
             Log::error('Convert.Error', [
                 'candidateID' => $id,
                 'tenant' => 'unknown',
-                'error' => 'Tenant not resolved'
+                'error' => 'Tenant not resolved',
             ]);
+
             return response()->json(['error' => 'Tenant not resolved'], 500);
         }
 
         // Get ID from route parameter
         $candidateId = $request->route('id') ?? $request->input('id') ?? $id;
-        
-        if (!$candidateId) {
+
+        if (! $candidateId) {
             Log::error('Convert.Error', [
                 'candidateID' => 'missing',
                 'tenant' => $tenantModel->slug,
-                'error' => 'Candidate ID is required'
+                'error' => 'Candidate ID is required',
             ]);
+
             return response()->json(['error' => 'Candidate ID is required'], 400);
         }
 
         // Find the candidate
         $candidate = \App\Models\Candidate::where('tenant_id', $tenantModel->id)
-            ->where(function($q) {
+            ->where(function ($q) {
                 $q->where('source', 'Onboarding')
-                  ->orWhere('source', 'Onboarding Import');
+                    ->orWhere('source', 'Onboarding Import');
             })
             ->find($candidateId);
 
-        if (!$candidate) {
+        if (! $candidate) {
             Log::error('Convert.Error', [
                 'candidateID' => $candidateId,
                 'tenant' => $tenantModel->slug,
-                'error' => 'Candidate not found'
+                'error' => 'Candidate not found',
             ]);
+
             return response()->json(['error' => 'Candidate not found'], 404);
         }
 
         // Check permissions
         $user = auth()->user();
-        if (!$this->hasConvertPermission($user, $tenantModel)) {
+        if (! $this->hasConvertPermission($user, $tenantModel)) {
             Log::warning('Convert.Unauthorized', [
                 'user' => $user->id,
                 'candidateID' => $candidateId,
-                'tenant' => $tenantModel->slug
+                'tenant' => $tenantModel->slug,
             ]);
+
             return response()->json(['error' => 'Unauthorized. You do not have permission to convert onboardings.'], 403);
         }
 
         // Check preconditions
         $preconditionsData = $this->checkPreconditions($candidate);
-        
-        if (!$preconditionsData['canConvert']) {
+
+        if (! $preconditionsData['canConvert']) {
             $missing = [];
-            if ($preconditionsData['missingProgress']) $missing[] = 'progress incomplete';
-            if ($preconditionsData['missingApprovals'] > 0) $missing[] = "{$preconditionsData['missingApprovals']} approval(s) pending";
-            if ($preconditionsData['missingDocuments'] > 0) $missing[] = "{$preconditionsData['missingDocuments']} document(s) pending";
-            if ($preconditionsData['missingAssets'] > 0) $missing[] = "{$preconditionsData['missingAssets']} asset(s) pending";
-            
+            if ($preconditionsData['missingProgress']) {
+                $missing[] = 'progress incomplete';
+            }
+            if ($preconditionsData['missingApprovals'] > 0) {
+                $missing[] = "{$preconditionsData['missingApprovals']} approval(s) pending";
+            }
+            if ($preconditionsData['missingDocuments'] > 0) {
+                $missing[] = "{$preconditionsData['missingDocuments']} document(s) pending";
+            }
+            if ($preconditionsData['missingAssets'] > 0) {
+                $missing[] = "{$preconditionsData['missingAssets']} asset(s) pending";
+            }
+
             Log::info('Convert.Blocked', [
                 'candidateID' => $candidateId,
                 'tenant' => $tenantModel->slug,
-                'missing' => implode(', ', $missing)
+                'missing' => implode(', ', $missing),
             ]);
-            
+
             return response()->json([
                 'error' => 'Preconditions not met. Cannot convert.',
-                'missing' => $missing
+                'missing' => $missing,
             ], 400);
         }
 
@@ -1029,13 +1096,13 @@ class EmployeeOnboardingController extends Controller
             'candidateID' => $candidateId,
             'tenant' => $tenantModel->slug,
             'user' => $user->id,
-            'preconditions' => 'passed'
+            'preconditions' => 'passed',
         ]);
 
         try {
             // Create employee (User) from candidate
             $employee = \App\Models\User::create([
-                'name' => trim(($candidate->first_name ?? '') . ' ' . ($candidate->last_name ?? '')),
+                'name' => trim(($candidate->first_name ?? '').' '.($candidate->last_name ?? '')),
                 'email' => $candidate->primary_email,
                 'password' => \Illuminate\Support\Facades\Hash::make(\Illuminate\Support\Str::random(12)), // Temporary password
                 'email_verified_at' => null, // Will need email verification
@@ -1048,7 +1115,7 @@ class EmployeeOnboardingController extends Controller
             // For now, we'll just mark the candidate as converted
             $candidate->update([
                 'status' => 'Converted',
-                'source' => 'Onboarding Converted' // Mark as converted
+                'source' => 'Onboarding Converted', // Mark as converted
             ]);
 
             // Log success
@@ -1056,13 +1123,13 @@ class EmployeeOnboardingController extends Controller
                 'candidateID' => $candidateId,
                 'employeeID' => $employee->id,
                 'tenant' => $tenantModel->slug,
-                'user' => $user->id
+                'user' => $user->id,
             ]);
 
             return response()->json([
                 'success' => true,
                 'employeeId' => $employee->id,
-                'message' => 'Onboarding converted to employee successfully'
+                'message' => 'Onboarding converted to employee successfully',
             ]);
 
         } catch (\Exception $e) {
@@ -1070,11 +1137,11 @@ class EmployeeOnboardingController extends Controller
                 'candidateID' => $candidateId,
                 'tenant' => $tenantModel->slug,
                 'user' => $user->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return response()->json([
-                'error' => 'Conversion failed: ' . $e->getMessage()
+                'error' => 'Conversion failed: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -1101,24 +1168,24 @@ class EmployeeOnboardingController extends Controller
 
         // Check documents
         $documents = $this->getDocumentsForCandidate($candidate->id);
-        $mandatoryDocs = array_filter($documents, function($doc) {
+        $mandatoryDocs = array_filter($documents, function ($doc) {
             return in_array($doc['name'], ['ID Proof', 'Address Proof', 'Educational Certificates', 'Employment Contract']);
         });
         $missingDocuments = 0;
         foreach ($mandatoryDocs as $doc) {
-            if (!in_array($doc['status'], ['Uploaded', 'Verified'])) {
+            if (! in_array($doc['status'], ['Uploaded', 'Verified'])) {
                 $missingDocuments++;
             }
         }
 
         // Check IT assets
         $assets = $this->getAssetRequestsForCandidate($candidate->id);
-        $criticalAssets = array_filter($assets, function($asset) {
+        $criticalAssets = array_filter($assets, function ($asset) {
             return in_array($asset['asset_type'], ['Laptop', 'Access Card']); // Critical assets
         });
         $missingAssets = 0;
         foreach ($criticalAssets as $asset) {
-            if (!in_array($asset['status'], ['Approved', 'Assigned'])) {
+            if (! in_array($asset['status'], ['Approved', 'Assigned'])) {
                 $missingAssets++;
             }
         }
@@ -1127,7 +1194,7 @@ class EmployeeOnboardingController extends Controller
 
         return [
             'canConvert' => $canConvert,
-            'missingProgress' => !$isProgressComplete,
+            'missingProgress' => ! $isProgressComplete,
             'missingApprovals' => $missingApprovals,
             'missingDocuments' => $missingDocuments,
             'missingAssets' => $missingAssets,
@@ -1145,7 +1212,7 @@ class EmployeeOnboardingController extends Controller
             ->where('tenant_id', $tenant->id)
             ->value('role_name');
 
-        if (!$userRole) {
+        if (! $userRole) {
             return false;
         }
 
@@ -1154,15 +1221,15 @@ class EmployeeOnboardingController extends Controller
             ->where('name', $userRole)
             ->value('permissions');
 
-        if (!$rolePermissions) {
+        if (! $rolePermissions) {
             return false;
         }
 
         $permissions = json_decode($rolePermissions, true);
-        
+
         // Check for explicit permission or HR/Admin roles
-        return in_array('can_convert_onboarding', $permissions) 
-            || in_array($userRole, ['Owner', 'Admin']) 
+        return in_array('can_convert_onboarding', $permissions)
+            || in_array($userRole, ['Owner', 'Admin'])
             || in_array('manage_users', $permissions);
     }
 
@@ -1180,7 +1247,7 @@ class EmployeeOnboardingController extends Controller
                 'approver_name' => 'Sarah Johnson',
                 'status' => 'Approved',
                 'timestamp' => now()->subDays(2)->toIso8601String(),
-                'comments' => 'All documents verified. Approved for onboarding.'
+                'comments' => 'All documents verified. Approved for onboarding.',
             ],
             [
                 'id' => 'approval-2',
@@ -1188,7 +1255,7 @@ class EmployeeOnboardingController extends Controller
                 'approver_name' => 'Michael Chen',
                 'status' => 'Approved',
                 'timestamp' => now()->subDays(1)->toIso8601String(),
-                'comments' => 'Role requirements confirmed.'
+                'comments' => 'Role requirements confirmed.',
             ],
             [
                 'id' => 'approval-3',
@@ -1196,14 +1263,14 @@ class EmployeeOnboardingController extends Controller
                 'approver_name' => 'Emily Davis',
                 'status' => 'Pending',
                 'timestamp' => null,
-                'comments' => ''
+                'comments' => '',
             ],
         ];
-        
+
         // TODO: Replace with actual database query when approvals table exists
         // $approvals = Approval::where('candidate_id', $candidateId)->get();
         // return $approvals->toArray();
-        
+
         return $mockApprovals;
     }
 
@@ -1220,35 +1287,35 @@ class EmployeeOnboardingController extends Controller
                 'name' => 'ID Proof',
                 'status' => 'Uploaded',
                 'uploaded_at' => now()->subDays(2)->toIso8601String(),
-                'file_url' => '#'
+                'file_url' => '#',
             ],
             [
                 'id' => 'doc-2',
                 'name' => 'Address Proof',
                 'status' => 'Pending',
                 'uploaded_at' => null,
-                'file_url' => null
+                'file_url' => null,
             ],
             [
                 'id' => 'doc-3',
                 'name' => 'Educational Certificates',
                 'status' => 'Missing',
                 'uploaded_at' => null,
-                'file_url' => null
+                'file_url' => null,
             ],
             [
                 'id' => 'doc-4',
                 'name' => 'Employment Contract',
                 'status' => 'Uploaded',
                 'uploaded_at' => now()->subDays(1)->toIso8601String(),
-                'file_url' => '#'
+                'file_url' => '#',
             ],
         ];
-        
+
         // TODO: Replace with actual database query when documents table exists
         // $documents = Document::where('candidate_id', $candidateId)->get();
         // return $documents->toArray();
-        
+
         return $mockDocuments;
     }
 
@@ -1258,7 +1325,7 @@ class EmployeeOnboardingController extends Controller
     private function getAssetRequestsForCandidate($candidateId)
     {
         $tenantModel = tenant();
-        if (!$tenantModel) {
+        if (! $tenantModel) {
             return [];
         }
 
@@ -1266,7 +1333,7 @@ class EmployeeOnboardingController extends Controller
             ->where('candidate_id', $candidateId)
             ->get();
 
-        return $assetRequests->map(function($asset) {
+        return $assetRequests->map(function ($asset) {
             return [
                 'id' => $asset->id,
                 'asset_type' => $asset->asset_type,
@@ -1282,34 +1349,35 @@ class EmployeeOnboardingController extends Controller
     {
         \Log::info('CSV Export: Method called', [
             'request_params' => $request->all(),
-            'url' => $request->fullUrl()
+            'url' => $request->fullUrl(),
         ]);
-        
+
         $tenantModel = tenant();
-        
-        if (!$tenantModel) {
+
+        if (! $tenantModel) {
             \Log::error('CSV Export: Tenant not resolved');
+
             return response()->json(['error' => 'Tenant not resolved'], 500);
         }
-        
+
         \Log::info('CSV Export: Tenant resolved', [
             'tenant_id' => $tenantModel->id,
-            'tenant_slug' => $tenantModel->slug
+            'tenant_slug' => $tenantModel->slug,
         ]);
 
         // Use Candidate model since Onboarding uses candidates table
         $query = \App\Models\Candidate::where('tenant_id', $tenantModel->id)
-            ->where(function($q) {
+            ->where(function ($q) {
                 $q->where('source', 'Onboarding')
-                  ->orWhere('source', 'Onboarding Import');
+                    ->orWhere('source', 'Onboarding Import');
             });
-        
+
         // SEARCH (name, email)
         if ($search = $request->input('search')) {
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('first_name', 'like', "%{$search}%")
-                  ->orWhere('last_name', 'like', "%{$search}%")
-                  ->orWhere('primary_email', 'like', "%{$search}%");
+                    ->orWhere('last_name', 'like', "%{$search}%")
+                    ->orWhere('primary_email', 'like', "%{$search}%");
             });
         }
 
@@ -1326,13 +1394,13 @@ class EmployeeOnboardingController extends Controller
         $allOnboardings = $query->get();
 
         // Transform candidates to onboarding format
-        $allOnboardings->transform(function($item) {
+        $allOnboardings->transform(function ($item) {
             // Set default values for non-existent columns
             $item->designation = $item->designation ?? 'Not Assigned';
             $item->department = $item->department ?? 'Not Assigned';
             $item->manager = $item->manager ?? 'Not Assigned';
             $item->joining_date = $item->joining_date ?? $item->created_at;
-            
+
             // Calculate progress
             $completed = intval($item->completed_steps ?? 0);
             $total = intval($item->total_steps ?? 5); // default 5 steps
@@ -1350,48 +1418,50 @@ class EmployeeOnboardingController extends Controller
 
         // Apply in-memory filters
         $filteredCollection = $allOnboardings;
-        
+
         if ($department = $request->input('department')) {
             if ($department !== 'all' && $department !== '') {
-                $filteredCollection = $filteredCollection->filter(function($item) use ($department) {
+                $filteredCollection = $filteredCollection->filter(function ($item) use ($department) {
                     return ($item->department ?? 'Not Assigned') === $department;
                 });
             }
         }
-        
+
         if ($manager = $request->input('manager')) {
             if ($manager !== 'all' && $manager !== '') {
-                $filteredCollection = $filteredCollection->filter(function($item) use ($manager) {
+                $filteredCollection = $filteredCollection->filter(function ($item) use ($manager) {
                     return ($item->manager ?? 'Not Assigned') === $manager;
                 });
             }
         }
-        
+
         if ($status = $request->input('status')) {
             if ($status !== 'All' && $status !== '') {
-                $filteredCollection = $filteredCollection->filter(function($item) use ($status) {
+                $filteredCollection = $filteredCollection->filter(function ($item) use ($status) {
                     return ($item->status ?? 'Pre-boarding') === $status;
                 });
             }
         }
-        
+
         if ($joiningMonth = $request->input('joiningMonth')) {
             try {
                 [$year, $month] = explode('-', $joiningMonth);
-                $filteredCollection = $filteredCollection->filter(function($item) use ($year, $month) {
+                $filteredCollection = $filteredCollection->filter(function ($item) use ($year, $month) {
                     $date = $item->joining_date ?? $item->created_at;
                     if ($date instanceof \Carbon\Carbon) {
                         return $date->year == $year && $date->month == $month;
                     }
+
                     return false;
                 });
-            } catch (\Exception $e) {}
+            } catch (\Exception $e) {
+            }
         }
 
         // Format data for CSV export
-        $formattedData = $filteredCollection->map(function($item) {
+        $formattedData = $filteredCollection->map(function ($item) {
             return [
-                'fullName' => trim($item->first_name . ' ' . $item->last_name),
+                'fullName' => trim($item->first_name.' '.$item->last_name),
                 'email' => $item->primary_email ?? '',
                 'designation' => $item->designation ?? 'Not Assigned',
                 'department' => $item->department ?? 'Not Assigned',
@@ -1399,21 +1469,21 @@ class EmployeeOnboardingController extends Controller
                 'joiningDate' => $item->joining_date ? $item->joining_date->format('Y-m-d') : ($item->created_at ? $item->created_at->format('Y-m-d') : ''),
                 'progressPercent' => $item->progress_percent ?? 0,
                 'status' => $item->status ?? 'Pre-boarding',
-                'lastUpdated' => $item->updated_at ? $item->updated_at->format('Y-m-d H:i:s') : ($item->created_at ? $item->created_at->format('Y-m-d H:i:s') : '')
+                'lastUpdated' => $item->updated_at ? $item->updated_at->format('Y-m-d H:i:s') : ($item->created_at ? $item->created_at->format('Y-m-d H:i:s') : ''),
             ];
         })->values();
 
         $headers = [
             'Content-Type' => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="onboardings-' . date('Y-m-d') . '.csv"',
+            'Content-Disposition' => 'attachment; filename="onboardings-'.date('Y-m-d').'.csv"',
         ];
 
-        $callback = function() use ($formattedData) {
+        $callback = function () use ($formattedData) {
             $file = fopen('php://output', 'w');
-            
+
             // Add BOM for UTF-8 (helps Excel recognize UTF-8 encoding)
             fwrite($file, "\xEF\xBB\xBF");
-            
+
             // Headers
             fputcsv($file, [
                 'Candidate Name',
@@ -1424,9 +1494,9 @@ class EmployeeOnboardingController extends Controller
                 'Joining Date',
                 'Progress (%)',
                 'Status',
-                'Last Updated'
+                'Last Updated',
             ]);
-            
+
             // Data rows
             foreach ($formattedData as $onboarding) {
                 fputcsv($file, [
@@ -1438,16 +1508,16 @@ class EmployeeOnboardingController extends Controller
                     $onboarding['joiningDate'],
                     $onboarding['progressPercent'],
                     $onboarding['status'],
-                    $onboarding['lastUpdated']
+                    $onboarding['lastUpdated'],
                 ]);
             }
-            
+
             fclose($file);
         };
 
         \Log::info('CSV Export: Generating CSV file', [
             'record_count' => $formattedData->count(),
-            'filename' => 'onboardings-' . date('Y-m-d') . '.csv'
+            'filename' => 'onboardings-'.date('Y-m-d').'.csv',
         ]);
 
         return response()->stream($callback, 200, $headers);
@@ -1456,11 +1526,11 @@ class EmployeeOnboardingController extends Controller
     /**
      * Import candidates for onboarding
      */
-    public function importCandidates(Request $request, string $tenant = null)
+    public function importCandidates(Request $request, ?string $tenant = null)
     {
         $tenantModel = tenant();
-        
-        if (!$tenantModel) {
+
+        if (! $tenantModel) {
             return response()->json(['error' => 'Tenant not resolved. Please ensure you have access to a tenant.'], 500);
         }
 
@@ -1477,52 +1547,52 @@ class EmployeeOnboardingController extends Controller
         try {
             // Get count before import to verify new records
             $countBefore = \App\Models\Candidate::where('tenant_id', tenant_id())
-                ->where(function($q) {
+                ->where(function ($q) {
                     $q->where('source', 'Onboarding')
-                      ->orWhere('source', 'Onboarding Import');
+                        ->orWhere('source', 'Onboarding Import');
                 })
                 ->count();
-            
+
             // Use database transaction to ensure all data is saved atomically
             $import = null;
             \Illuminate\Support\Facades\DB::transaction(function () use ($request, &$import) {
                 // Create a simple import class for onboarding
                 $import = new OnboardingCandidateImport(tenant_id(), 'Onboarding Import');
-                
+
                 // Import the file - this will save to database
                 Excel::import($import, $request->file('file'));
             });
-            
+
             // Get counts from import class after transaction
             $importedCount = $import->getRowCount();
             $createdCount = $import->getCreatedCount();
             $updatedCount = $import->getUpdatedCount();
             $skippedRows = $import->getSkippedRows();
-            
+
             // After transaction commits, verify data was actually saved to database
             // Small delay to ensure database is updated
             usleep(100000); // 0.1 second
-            
+
             $countAfter = \App\Models\Candidate::where('tenant_id', tenant_id())
-                ->where(function($q) {
+                ->where(function ($q) {
                     $q->where('source', 'Onboarding')
-                      ->orWhere('source', 'Onboarding Import');
+                        ->orWhere('source', 'Onboarding Import');
                 })
                 ->count();
-            
+
             // Get the actual number of new records
             $actualNewCount = $countAfter - $countBefore;
             $totalSaved = $createdCount + $updatedCount;
-            
+
             // Also check for recently updated records (in case all were updates)
             $recentlyUpdated = \App\Models\Candidate::where('tenant_id', tenant_id())
-                ->where(function($q) {
+                ->where(function ($q) {
                     $q->where('source', 'Onboarding')
-                      ->orWhere('source', 'Onboarding Import');
+                        ->orWhere('source', 'Onboarding Import');
                 })
                 ->where('updated_at', '>=', now()->subMinutes(2))
                 ->count();
-            
+
             \Log::info('Onboarding Import Completed', [
                 'tenant_id' => tenant_id(),
                 'rows_processed' => $importedCount,
@@ -1539,19 +1609,19 @@ class EmployeeOnboardingController extends Controller
             // Accept success if: rows were processed AND (records were created/updated OR database count increased OR records were recently updated)
             // This handles cases where all rows were updates (no new records, but data was saved)
             $hasDataSaved = ($totalSaved > 0 || $actualNewCount > 0 || $countAfter > $countBefore || $recentlyUpdated > 0);
-            
+
             if ($importedCount > 0 && $hasDataSaved) {
-                $message = "Successfully imported {$importedCount} candidate" . ($importedCount !== 1 ? 's' : '') . " for onboarding.";
+                $message = "Successfully imported {$importedCount} candidate".($importedCount !== 1 ? 's' : '').' for onboarding.';
                 if ($createdCount > 0) {
-                    $message .= " {$createdCount} new candidate" . ($createdCount !== 1 ? 's' : '') . " created.";
+                    $message .= " {$createdCount} new candidate".($createdCount !== 1 ? 's' : '').' created.';
                 }
                 if ($updatedCount > 0) {
-                    $message .= " {$updatedCount} candidate" . ($updatedCount !== 1 ? 's' : '') . " updated.";
+                    $message .= " {$updatedCount} candidate".($updatedCount !== 1 ? 's' : '').' updated.';
                 }
                 if (count($skippedRows) > 0) {
-                    $message .= " " . count($skippedRows) . " row" . (count($skippedRows) !== 1 ? 's' : '') . " skipped (missing or invalid email).";
+                    $message .= ' '.count($skippedRows).' row'.(count($skippedRows) !== 1 ? 's' : '').' skipped (missing or invalid email).';
                 }
-                
+
                 $responseData = [
                     'success' => true,
                     'data_saved' => true,
@@ -1560,20 +1630,20 @@ class EmployeeOnboardingController extends Controller
                     'created_count' => $createdCount,
                     'updated_count' => $updatedCount,
                     'total_saved' => $totalSaved,
-                    'verified' => true
+                    'verified' => true,
                 ];
-                
+
                 \Log::info('Onboarding Import: Sending success response', [
                     'response_data' => $responseData,
                     'success_type' => gettype($responseData['success']),
-                    'success_value' => $responseData['success']
+                    'success_value' => $responseData['success'],
                 ]);
-                
+
                 return response()->json($responseData);
             } else {
                 // Build helpful error message
                 $errorMessage = 'No candidates were saved to the database. ';
-                
+
                 if ($importedCount === 0 && count($skippedRows) > 0) {
                     $errorMessage .= 'All rows were skipped because they are missing a valid email address. ';
                     $errorMessage .= 'Please ensure your Excel file has a column with email addresses (e.g., "email", "primary_email", "e-mail"). ';
@@ -1586,9 +1656,9 @@ class EmployeeOnboardingController extends Controller
                 } else {
                     $errorMessage .= 'Rows were processed but could not be saved. ';
                 }
-                
+
                 $errorMessage .= 'Please download the template and ensure your file format matches it.';
-                
+
                 // Log detailed error for debugging
                 \Log::error('Onboarding Import Failed', [
                     'tenant_id' => tenant_id(),
@@ -1602,7 +1672,7 @@ class EmployeeOnboardingController extends Controller
                     'skipped_rows_count' => count($skippedRows),
                     'skipped_rows_sample' => array_slice($skippedRows, 0, 3),
                 ]);
-                
+
                 $errorResponse = [
                     'success' => false,
                     'data_saved' => false,
@@ -1617,33 +1687,35 @@ class EmployeeOnboardingController extends Controller
                         'count_before' => $countBefore,
                         'count_after' => $countAfter,
                         'skipped_rows' => count($skippedRows) > 0 ? array_slice($skippedRows, 0, 5) : [],
-                    ]
+                    ],
                 ];
-                
+
                 \Log::info('Onboarding Import: Sending error response', [
                     'response_data' => $errorResponse,
                     'success_type' => gettype($errorResponse['success']),
-                    'success_value' => $errorResponse['success']
+                    'success_value' => $errorResponse['success'],
                 ]);
-                
+
                 return response()->json($errorResponse, 400);
             }
         } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
             $failures = $e->failures();
             $errors = [];
             foreach ($failures as $failure) {
-                $errors[] = "Row {$failure->row()}: " . implode(', ', $failure->errors());
+                $errors[] = "Row {$failure->row()}: ".implode(', ', $failure->errors());
             }
+
             return response()->json([
                 'success' => false,
                 'message' => 'Import validation failed',
-                'errors' => $errors
+                'errors' => $errors,
             ], 400);
         } catch (\Throwable $e) {
             Log::error('Onboarding import error', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+
             return response()->json([
                 'success' => false,
-                'message' => 'Import failed: ' . ($e->getMessage() ?? 'Unknown error')
+                'message' => 'Import failed: '.($e->getMessage() ?? 'Unknown error'),
             ], 400);
         }
     }
@@ -1651,11 +1723,11 @@ class EmployeeOnboardingController extends Controller
     /**
      * Download import template
      */
-    public function downloadImportTemplate(Request $request, string $tenant = null)
+    public function downloadImportTemplate(Request $request, ?string $tenant = null)
     {
         $tenantModel = tenant();
-        
-        if (!$tenantModel) {
+
+        if (! $tenantModel) {
             abort(500, 'Tenant not resolved. Please check your subdomain configuration.');
         }
         $headers = [
@@ -1663,16 +1735,16 @@ class EmployeeOnboardingController extends Controller
             'Content-Disposition' => 'attachment; filename="onboarding_candidates_import_template.csv"',
         ];
 
-        $callback = function() {
+        $callback = function () {
             $file = fopen('php://output', 'w');
-            
+
             // Add BOM for UTF-8
             fwrite($file, "\xEF\xBB\xBF");
-            
+
             // Headers
             fputcsv($file, [
                 'first_name',
-                'last_name', 
+                'last_name',
                 'primary_email',
                 'primary_phone',
                 'designation',
@@ -1680,9 +1752,9 @@ class EmployeeOnboardingController extends Controller
                 'manager',
                 'joining_date',
                 'source',
-                'tags'
+                'tags',
             ]);
-            
+
             // Sample data
             fputcsv($file, [
                 'John',
@@ -1694,9 +1766,9 @@ class EmployeeOnboardingController extends Controller
                 'Jane Manager',
                 '2025-12-01',
                 'Onboarding',
-                'New Hire,Full-time'
+                'New Hire,Full-time',
             ]);
-            
+
             fclose($file);
         };
 
@@ -1709,27 +1781,27 @@ class EmployeeOnboardingController extends Controller
     public function apiGetAssetRequests(Request $request, $id = null)
     {
         $tenantModel = tenant();
-        
-        if (!$tenantModel) {
+
+        if (! $tenantModel) {
             return response()->json(['error' => 'Tenant not resolved'], 500);
         }
 
         // Get ID from route parameter
         $candidateId = $request->route('id') ?? $request->input('id') ?? $id;
-        
-        if (!$candidateId) {
+
+        if (! $candidateId) {
             return response()->json(['error' => 'Candidate ID is required'], 400);
         }
 
         // Find the candidate
         $candidate = Candidate::where('tenant_id', $tenantModel->id)
-            ->where(function($q) {
+            ->where(function ($q) {
                 $q->where('source', 'Onboarding')
-                  ->orWhere('source', 'Onboarding Import');
+                    ->orWhere('source', 'Onboarding Import');
             })
             ->find($candidateId);
 
-        if (!$candidate) {
+        if (! $candidate) {
             return response()->json(['error' => 'Candidate not found'], 404);
         }
 
@@ -1755,7 +1827,7 @@ class EmployeeOnboardingController extends Controller
                 ->get();
 
             // Format response
-            $formattedAssets = $assetRequests->map(function($asset) {
+            $formattedAssets = $assetRequests->map(function ($asset) {
                 return [
                     'id' => $asset->id,
                     'asset_type' => $asset->asset_type,
@@ -1776,7 +1848,7 @@ class EmployeeOnboardingController extends Controller
             ]);
 
             return response()->json([
-                'assets' => $formattedAssets
+                'assets' => $formattedAssets,
             ]);
         } catch (\Exception $e) {
             // Log fetch error
@@ -1789,7 +1861,7 @@ class EmployeeOnboardingController extends Controller
 
             return response()->json([
                 'error' => 'Failed to load asset requests',
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
             ], 500);
         }
     }
@@ -1800,14 +1872,14 @@ class EmployeeOnboardingController extends Controller
     public function apiLogSlideOverClose(Request $request, $id = null)
     {
         $tenantModel = tenant();
-        
-        if (!$tenantModel) {
+
+        if (! $tenantModel) {
             return response()->json(['error' => 'Tenant not resolved'], 500);
         }
 
         // Get ID from route parameter
         $candidateId = $request->route('id') ?? $request->input('id') ?? $id;
-        
+
         // Log Onboarding.SlideOver.Close event
         try {
             OnboardingViewLogService::log(
@@ -1821,7 +1893,7 @@ class EmployeeOnboardingController extends Controller
             // Logging failure should not break the API
             Log::warning('Failed to log SlideOver.Close event', ['error' => $e->getMessage()]);
         }
-        
+
         // Return success (fire-and-forget endpoint)
         return response()->json(['success' => true], 200);
     }
@@ -1832,15 +1904,15 @@ class EmployeeOnboardingController extends Controller
     public function apiLogTabView(Request $request, $id = null)
     {
         $tenantModel = tenant();
-        
-        if (!$tenantModel) {
+
+        if (! $tenantModel) {
             return response()->json(['error' => 'Tenant not resolved'], 500);
         }
 
         // Get ID from route parameter
         $candidateId = $request->route('id') ?? $request->input('id') ?? $id;
         $tabName = $request->input('tab', 'Overview');
-        
+
         // Log Onboarding.Tab.View event
         try {
             OnboardingViewLogService::log(
@@ -1854,7 +1926,7 @@ class EmployeeOnboardingController extends Controller
             // Logging failure should not break the API
             Log::warning('Failed to log Tab.View event', ['error' => $e->getMessage()]);
         }
-        
+
         // Return success (fire-and-forget endpoint)
         return response()->json(['success' => true], 200);
     }
@@ -1865,27 +1937,27 @@ class EmployeeOnboardingController extends Controller
     public function apiGetApprovals(Request $request, $id = null)
     {
         $tenantModel = tenant();
-        
-        if (!$tenantModel) {
+
+        if (! $tenantModel) {
             return response()->json(['error' => 'Tenant not resolved'], 500);
         }
 
         // Get ID from route parameter
         $candidateId = $request->route('id') ?? $request->input('id') ?? $id;
-        
-        if (!$candidateId) {
+
+        if (! $candidateId) {
             return response()->json(['error' => 'Candidate ID is required'], 400);
         }
 
         // Find the candidate
         $candidate = Candidate::where('tenant_id', $tenantModel->id)
-            ->where(function($q) {
+            ->where(function ($q) {
                 $q->where('source', 'Onboarding')
-                  ->orWhere('source', 'Onboarding Import');
+                    ->orWhere('source', 'Onboarding Import');
             })
             ->find($candidateId);
 
-        if (!$candidate) {
+        if (! $candidate) {
             return response()->json(['error' => 'Candidate not found'], 404);
         }
 
@@ -1912,6 +1984,7 @@ class EmployeeOnboardingController extends Controller
                 ->get()
                 ->map(function (PreboardingItem $item) use ($candidate) {
                     $approvalStatus = in_array($item->status, ['completed', 'waived'], true) ? 'Approved' : 'Pending';
+
                     return [
                         'id' => $item->id,
                         'step_name' => $item->title,
@@ -1933,7 +2006,7 @@ class EmployeeOnboardingController extends Controller
             ]);
 
             return response()->json([
-                'approvals' => $approvals
+                'approvals' => $approvals,
             ]);
         } catch (\Exception $e) {
             // Log fetch error
@@ -1945,7 +2018,7 @@ class EmployeeOnboardingController extends Controller
 
             return response()->json([
                 'error' => 'Failed to load approvals',
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
             ], 500);
         }
     }
@@ -1956,15 +2029,15 @@ class EmployeeOnboardingController extends Controller
     public function apiCreateAssetRequest(Request $request, $id = null)
     {
         $tenantModel = tenant();
-        
-        if (!$tenantModel) {
+
+        if (! $tenantModel) {
             return response()->json(['error' => 'Tenant not resolved'], 500);
         }
 
         // Get ID from route parameter
         $candidateId = $request->route('id') ?? $request->input('id') ?? $id;
-        
-        if (!$candidateId) {
+
+        if (! $candidateId) {
             return response()->json(['error' => 'Candidate ID is required'], 400);
         }
 
@@ -1976,13 +2049,13 @@ class EmployeeOnboardingController extends Controller
 
         // Find the candidate
         $candidate = Candidate::where('tenant_id', $tenantModel->id)
-            ->where(function($q) {
+            ->where(function ($q) {
                 $q->where('source', 'Onboarding')
-                  ->orWhere('source', 'Onboarding Import');
+                    ->orWhere('source', 'Onboarding Import');
             })
             ->find($candidateId);
 
-        if (!$candidate) {
+        if (! $candidate) {
             return response()->json(['error' => 'Candidate not found'], 404);
         }
 
@@ -2020,7 +2093,7 @@ class EmployeeOnboardingController extends Controller
                     'serial_tag' => $assetRequest->serial_tag,
                     'status' => $assetRequest->status,
                     'notes' => $assetRequest->notes,
-                ]
+                ],
             ]);
         } catch (\Exception $e) {
             // Log submit error
@@ -2036,7 +2109,7 @@ class EmployeeOnboardingController extends Controller
             return response()->json([
                 'success' => false,
                 'error' => 'Failed to submit asset request',
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
             ], 500);
         }
     }
@@ -2158,7 +2231,7 @@ class EmployeeOnboardingController extends Controller
 
         // Apply filters
         $filtered = collect($sampleData);
-        
+
         if ($search) {
             $searchLower = strtolower($search);
             $filtered = $filtered->filter(function ($item) use ($searchLower) {
@@ -2168,19 +2241,19 @@ class EmployeeOnboardingController extends Controller
                        str_contains(strtolower($item['designation']), $searchLower);
             });
         }
-        
+
         if ($status && $status !== 'All') {
             $filtered = $filtered->where('status', $status);
         }
-        
+
         if ($department) {
             $filtered = $filtered->where('department', $department);
         }
-        
+
         if ($manager) {
             $filtered = $filtered->where('manager', $manager);
         }
-        
+
         if ($joiningMonth) {
             $filtered = $filtered->filter(function ($item) use ($joiningMonth) {
                 return date('Y-m', strtotime($item['joiningDate'])) === $joiningMonth;
@@ -2196,7 +2269,7 @@ class EmployeeOnboardingController extends Controller
 
         $total = $filtered->count();
         $filtered = $filtered->values();
-        
+
         // Apply pagination
         $offset = ($page - 1) * $pageSize;
         $paginated = $filtered->slice($offset, $pageSize)->values();
@@ -2324,7 +2397,7 @@ class EmployeeOnboardingController extends Controller
 
         // Apply filters (same logic as getMockOnboardings)
         $filtered = collect($sampleData);
-        
+
         if ($search) {
             $searchLower = strtolower($search);
             $filtered = $filtered->filter(function ($item) use ($searchLower) {
@@ -2334,19 +2407,19 @@ class EmployeeOnboardingController extends Controller
                        str_contains(strtolower($item['designation']), $searchLower);
             });
         }
-        
+
         if ($status && $status !== 'All') {
             $filtered = $filtered->where('status', $status);
         }
-        
+
         if ($department) {
             $filtered = $filtered->where('department', $department);
         }
-        
+
         if ($manager) {
             $filtered = $filtered->where('manager', $manager);
         }
-        
+
         if ($joiningMonth) {
             $filtered = $filtered->filter(function ($item) use ($joiningMonth) {
                 return date('Y-m', strtotime($item['joiningDate'])) === $joiningMonth;
@@ -2366,24 +2439,25 @@ class EmployeeOnboardingController extends Controller
             'url' => $request->url(),
             'route' => $request->route() ? $request->route()->getName() : 'none',
         ]);
-        
+
         $startTime = microtime(true);
         $tenantModel = tenant();
-        
-        if (!$tenantModel) {
+
+        if (! $tenantModel) {
             \Log::error('apiDashboardKPIs: Tenant not resolved');
+
             return response()->json(['error' => 'Tenant not resolved'], 500);
         }
 
         try {
             // Get filters
             $filters = $this->getDashboardFilters($request);
-            
+
             // Base query for onboarding candidates
             $baseQuery = Candidate::where('tenant_id', $tenantModel->id)
-                ->where(function($q) {
+                ->where(function ($q) {
                     $q->where('source', 'Onboarding')
-                      ->orWhere('source', 'Onboarding Import');
+                        ->orWhere('source', 'Onboarding Import');
                 });
 
             // Apply filters
@@ -2397,11 +2471,11 @@ class EmployeeOnboardingController extends Controller
             // Pending Documents - count candidates with missing required documents
             // For now, we'll use a simple heuristic: candidates with low progress or specific status
             $pendingDocuments = (clone $baseQuery)
-                ->where(function($q) {
+                ->where(function ($q) {
                     $q->where('status', 'Pending Docs')
-                      ->orWhere(function($q2) {
-                          $q2->whereRaw('(COALESCE(completed_steps, 0) / NULLIF(COALESCE(total_steps, 5), 0)) < 0.5');
-                      });
+                        ->orWhere(function ($q2) {
+                            $q2->whereRaw('(COALESCE(completed_steps, 0) / NULLIF(COALESCE(total_steps, 5), 0)) < 0.5');
+                        });
                 })
                 ->count();
 
@@ -2412,7 +2486,7 @@ class EmployeeOnboardingController extends Controller
                 ->whereNotNull('due_at')
                 ->where('due_at', '<', now())
                 ->whereNull('completed_at')
-                ->whereHas('candidate', function($q) use ($baseQuery) {
+                ->whereHas('candidate', function ($q) use ($baseQuery) {
                     $candidateIds = (clone $baseQuery)->pluck('id');
                     $q->whereIn('id', $candidateIds);
                 })
@@ -2427,20 +2501,20 @@ class EmployeeOnboardingController extends Controller
             // Calculate trends (7 days ago)
             $sevenDaysAgo = now()->subDays(7);
             $previousActive = Candidate::where('tenant_id', $tenantModel->id)
-                ->where(function($q) {
+                ->where(function ($q) {
                     $q->where('source', 'Onboarding')
-                      ->orWhere('source', 'Onboarding Import');
+                        ->orWhere('source', 'Onboarding Import');
                 })
                 ->whereNotIn('status', ['Converted', 'Completed'])
                 ->where('created_at', '<', $sevenDaysAgo)
                 ->count();
 
-            $activeTrend = $previousActive > 0 
+            $activeTrend = $previousActive > 0
                 ? round((($activeOnboardings - $previousActive) / $previousActive) * 100, 1)
                 : 0;
 
             $responseTime = round((microtime(true) - $startTime) * 1000, 2);
-            
+
             if ($responseTime > 500) {
                 \Log::warning('Onboarding.Dashboard.SlowQuery', [
                     'tenant' => $tenantModel->id,
@@ -2464,7 +2538,7 @@ class EmployeeOnboardingController extends Controller
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
-            
+
             return response()->json(['error' => 'Failed to fetch KPIs'], 500);
         }
     }
@@ -2479,12 +2553,13 @@ class EmployeeOnboardingController extends Controller
             'url' => $request->url(),
             'route' => $request->route() ? $request->route()->getName() : 'none',
         ]);
-        
+
         $startTime = microtime(true);
         $tenantModel = tenant();
-        
-        if (!$tenantModel) {
+
+        if (! $tenantModel) {
             \Log::error('apiDashboardBottlenecks: Tenant not resolved');
+
             return response()->json(['error' => 'Tenant not resolved'], 500);
         }
 
@@ -2496,33 +2571,33 @@ class EmployeeOnboardingController extends Controller
 
             $filters = $this->getDashboardFilters($request);
             $baseQuery = Candidate::where('tenant_id', $tenantModel->id)
-                ->where(function($q) {
+                ->where(function ($q) {
                     $q->where('source', 'Onboarding')
-                      ->orWhere('source', 'Onboarding Import');
+                        ->orWhere('source', 'Onboarding Import');
                 });
 
             $this->applyDashboardFilters($baseQuery, $filters);
 
             // A. Candidates missing documents
             $missingDocsQuery = (clone $baseQuery)
-                ->where(function($q) {
+                ->where(function ($q) {
                     $q->where('status', 'Pending Docs')
-                      ->orWhere(function($q2) {
-                          $q2->whereRaw('(COALESCE(total_steps, 5) - COALESCE(completed_steps, 0)) > 0')
-                             ->whereRaw('(COALESCE(completed_steps, 0) / NULLIF(COALESCE(total_steps, 5), 0)) < 0.5');
-                      });
+                        ->orWhere(function ($q2) {
+                            $q2->whereRaw('(COALESCE(total_steps, 5) - COALESCE(completed_steps, 0)) > 0')
+                                ->whereRaw('(COALESCE(completed_steps, 0) / NULLIF(COALESCE(total_steps, 5), 0)) < 0.5');
+                        });
                 });
-            
+
             // Use orderBy with DB::raw for better compatibility
             $missingDocs = $missingDocsQuery
                 ->orderBy(DB::raw('(COALESCE(total_steps, 5) - COALESCE(completed_steps, 0))'), 'desc')
                 ->limit(10)
                 ->get()
-                ->map(function($candidate) use ($isHiringManager) {
+                ->map(function ($candidate) use ($isHiringManager) {
                     $total = $candidate->total_steps ?? 5;
                     $completed = $candidate->completed_steps ?? 0;
                     $missingCount = max(0, $total - $completed);
-                    $name = trim(($candidate->first_name ?? '') . ' ' . ($candidate->last_name ?? ''));
+                    $name = trim(($candidate->first_name ?? '').' '.($candidate->last_name ?? ''));
                     if (empty($name)) {
                         $name = 'Unknown';
                     }
@@ -2533,6 +2608,7 @@ class EmployeeOnboardingController extends Controller
                     } elseif ($candidate->created_at) {
                         $joiningDate = $candidate->created_at->format('Y-m-d');
                     }
+
                     return [
                         'id' => $candidate->id,
                         'name' => $name,
@@ -2544,33 +2620,34 @@ class EmployeeOnboardingController extends Controller
 
             // B. Candidates with overdue tasks
             $overdueTasksQuery = (clone $baseQuery);
-            
+
             // Check if activities relationship exists
             if (method_exists(Candidate::class, 'activities')) {
                 $overdueTasks = $overdueTasksQuery
-                    ->whereHas('activities', function($q) {
+                    ->whereHas('activities', function ($q) {
                         $q->where('type', 'task')
-                          ->whereNotNull('due_at')
-                          ->where('due_at', '<', now())
-                          ->whereNull('completed_at');
+                            ->whereNotNull('due_at')
+                            ->where('due_at', '<', now())
+                            ->whereNull('completed_at');
                     })
-                    ->with(['activities' => function($q) {
+                    ->with(['activities' => function ($q) {
                         $q->where('type', 'task')
-                          ->whereNotNull('due_at')
-                          ->where('due_at', '<', now())
-                          ->whereNull('completed_at')
-                          ->orderBy('due_at', 'asc');
+                            ->whereNotNull('due_at')
+                            ->where('due_at', '<', now())
+                            ->whereNull('completed_at')
+                            ->orderBy('due_at', 'asc');
                     }])
                     ->get()
-                    ->map(function($candidate) use ($isHiringManager) {
+                    ->map(function ($candidate) use ($isHiringManager) {
                         $overdueCount = $candidate->activities ? $candidate->activities->count() : 0;
-                        $oldestDue = $candidate->activities && $candidate->activities->count() > 0 
-                            ? $candidate->activities->first()->due_at 
+                        $oldestDue = $candidate->activities && $candidate->activities->count() > 0
+                            ? $candidate->activities->first()->due_at
                             : null;
-                        $name = trim(($candidate->first_name ?? '') . ' ' . ($candidate->last_name ?? ''));
+                        $name = trim(($candidate->first_name ?? '').' '.($candidate->last_name ?? ''));
                         if (empty($name)) {
                             $name = 'Unknown';
                         }
+
                         return [
                             'id' => $candidate->id,
                             'name' => $name,
@@ -2593,11 +2670,12 @@ class EmployeeOnboardingController extends Controller
                 ->orderBy('created_at', 'asc')
                 ->limit(10)
                 ->get()
-                ->map(function($candidate) use ($isHiringManager) {
-                    $name = trim(($candidate->first_name ?? '') . ' ' . ($candidate->last_name ?? ''));
+                ->map(function ($candidate) use ($isHiringManager) {
+                    $name = trim(($candidate->first_name ?? '').' '.($candidate->last_name ?? ''));
                     if (empty($name)) {
                         $name = 'Unknown';
                     }
+
                     return [
                         'id' => $candidate->id,
                         'name' => $name,
@@ -2629,8 +2707,8 @@ class EmployeeOnboardingController extends Controller
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
-            
-            return response()->json(['error' => 'Failed to fetch bottlenecks: ' . $e->getMessage()], 500);
+
+            return response()->json(['error' => 'Failed to fetch bottlenecks: '.$e->getMessage()], 500);
         }
     }
 
@@ -2644,27 +2722,28 @@ class EmployeeOnboardingController extends Controller
             'url' => $request->url(),
             'route' => $request->route() ? $request->route()->getName() : 'none',
         ]);
-        
+
         $tenantModel = tenant();
-        
-        if (!$tenantModel) {
+
+        if (! $tenantModel) {
             \Log::error('apiDashboardCharts: Tenant not resolved');
+
             return response()->json(['error' => 'Tenant not resolved'], 500);
         }
 
         try {
             $filters = $this->getDashboardFilters($request);
             $baseQuery = Candidate::where('tenant_id', $tenantModel->id)
-                ->where(function($q) {
+                ->where(function ($q) {
                     $q->where('source', 'Onboarding')
-                      ->orWhere('source', 'Onboarding Import');
+                        ->orWhere('source', 'Onboarding Import');
                 });
 
             $this->applyDashboardFilters($baseQuery, $filters);
 
             // Last 30 days data
             $thirtyDaysAgo = now()->subDays(30);
-            
+
             // Onboardings created vs converted - daily counts
             $created = (clone $baseQuery)
                 ->where('created_at', '>=', $thirtyDaysAgo)
@@ -2672,10 +2751,11 @@ class EmployeeOnboardingController extends Controller
                 ->groupBy('date')
                 ->orderBy('date')
                 ->get()
-                ->mapWithKeys(function($item) {
+                ->mapWithKeys(function ($item) {
                     // Ensure date is formatted as string Y-m-d
                     $date = is_string($item->date) ? $item->date : $item->date->format('Y-m-d');
-                    return [$date => (int)$item->count];
+
+                    return [$date => (int) $item->count];
                 });
 
             $converted = (clone $baseQuery)
@@ -2685,10 +2765,11 @@ class EmployeeOnboardingController extends Controller
                 ->groupBy('date')
                 ->orderBy('date')
                 ->get()
-                ->mapWithKeys(function($item) {
+                ->mapWithKeys(function ($item) {
                     // Ensure date is formatted as string Y-m-d
                     $date = is_string($item->date) ? $item->date : $item->date->format('Y-m-d');
-                    return [$date => (int)$item->count];
+
+                    return [$date => (int) $item->count];
                 });
 
             // Avg days to convert - rolling 30-day average
@@ -2699,15 +2780,16 @@ class EmployeeOnboardingController extends Controller
 
             $avgDaysToConvert = 0;
             if ($convertedCandidates->count() > 0) {
-                $days = $convertedCandidates->map(function($c) {
+                $days = $convertedCandidates->map(function ($c) {
                     if ($c->created_at && $c->updated_at) {
                         return $c->created_at->diffInDays($c->updated_at);
                     }
+
                     return 0;
-                })->filter(function($days) {
+                })->filter(function ($days) {
                     return $days > 0;
                 });
-                
+
                 if ($days->count() > 0) {
                     $avgDaysToConvert = round($days->avg(), 1);
                 }
@@ -2728,8 +2810,8 @@ class EmployeeOnboardingController extends Controller
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
-            
-            return response()->json(['error' => 'Failed to fetch charts: ' . $e->getMessage()], 500);
+
+            return response()->json(['error' => 'Failed to fetch charts: '.$e->getMessage()], 500);
         }
     }
 
@@ -2739,15 +2821,15 @@ class EmployeeOnboardingController extends Controller
     public function apiDashboardExport(Request $request)
     {
         $tenantModel = tenant();
-        
-        if (!$tenantModel) {
+
+        if (! $tenantModel) {
             return response()->json(['error' => 'Tenant not resolved'], 500);
         }
 
         $user = auth()->user();
         $permissionService = app(\App\Services\PermissionService::class);
         $userRole = $permissionService->getUserRole($user->id, $tenantModel->id);
-        
+
         // Hiring Manager cannot export
         if ($userRole === 'Hiring Manager') {
             abort(403, 'You do not have permission to export data.');
@@ -2755,7 +2837,7 @@ class EmployeeOnboardingController extends Controller
 
         try {
             $filters = $this->getDashboardFilters($request);
-            
+
             // Log export
             \Log::info('Onboarding.Dashboard.Export', [
                 'user' => $user->id,
@@ -2767,24 +2849,24 @@ class EmployeeOnboardingController extends Controller
 
             // Get bottleneck data
             $baseQuery = Candidate::where('tenant_id', $tenantModel->id)
-                ->where(function($q) {
+                ->where(function ($q) {
                     $q->where('source', 'Onboarding')
-                      ->orWhere('source', 'Onboarding Import');
+                        ->orWhere('source', 'Onboarding Import');
                 });
 
             $this->applyDashboardFilters($baseQuery, $filters);
 
             $candidates = (clone $baseQuery)->limit(1000)->get();
 
-            $filename = 'onboarding_dashboard_' . date('Y-m-d_His') . '.csv';
+            $filename = 'onboarding_dashboard_'.date('Y-m-d_His').'.csv';
             $headers = [
                 'Content-Type' => 'text/csv',
                 'Content-Disposition' => "attachment; filename=\"{$filename}\"",
             ];
 
-            $callback = function() use ($candidates) {
+            $callback = function () use ($candidates) {
                 $file = fopen('php://output', 'w');
-                
+
                 fputcsv($file, [
                     'Candidate Name',
                     'Email',
@@ -2807,7 +2889,7 @@ class EmployeeOnboardingController extends Controller
                         ->count();
 
                     fputcsv($file, [
-                        $candidate->first_name . ' ' . $candidate->last_name,
+                        $candidate->first_name.' '.$candidate->last_name,
                         $candidate->primary_email,
                         $candidate->department ?? 'Not Assigned',
                         $candidate->manager ?? 'Not Assigned',
@@ -2828,7 +2910,7 @@ class EmployeeOnboardingController extends Controller
                 'tenant' => $tenantModel->id,
                 'error' => $e->getMessage(),
             ]);
-            
+
             return response()->json(['error' => 'Failed to export data'], 500);
         }
     }
@@ -2853,19 +2935,19 @@ class EmployeeOnboardingController extends Controller
      */
     private function applyDashboardFilters($query, array $filters): void
     {
-        if (!empty($filters['status']) && $filters['status'] !== 'All') {
+        if (! empty($filters['status']) && $filters['status'] !== 'All') {
             $query->where('status', $filters['status']);
         }
 
-        if (!empty($filters['department'])) {
+        if (! empty($filters['department'])) {
             $query->where('department', $filters['department']);
         }
 
-        if (!empty($filters['manager'])) {
+        if (! empty($filters['manager'])) {
             $query->where('manager', $filters['manager']);
         }
 
-        if (!empty($filters['dateRange'])) {
+        if (! empty($filters['dateRange'])) {
             switch ($filters['dateRange']) {
                 case '7':
                     $query->where('created_at', '>=', now()->subDays(7));
@@ -2879,11 +2961,11 @@ class EmployeeOnboardingController extends Controller
             }
         }
 
-        if (!empty($filters['startDate'])) {
+        if (! empty($filters['startDate'])) {
             $query->where('created_at', '>=', $filters['startDate']);
         }
 
-        if (!empty($filters['endDate'])) {
+        if (! empty($filters['endDate'])) {
             $query->where('created_at', '<=', $filters['endDate']);
         }
     }
@@ -2896,27 +2978,33 @@ class EmployeeOnboardingController extends Controller
         if (strpos($email, '@') === false) {
             return $email;
         }
-        
+
         [$local, $domain] = explode('@', $email, 2);
-        $maskedLocal = substr($local, 0, 1) . str_repeat('*', max(0, strlen($local) - 1));
-        
-        return $maskedLocal . '@' . $domain;
+        $maskedLocal = substr($local, 0, 1).str_repeat('*', max(0, strlen($local) - 1));
+
+        return $maskedLocal.'@'.$domain;
     }
 }
 
 /**
  * Onboarding Candidate Import Class
  */
-class OnboardingCandidateImport implements ToModel, WithHeadingRow, SkipsOnError, SkipsOnFailure
+class OnboardingCandidateImport implements SkipsOnError, SkipsOnFailure, ToModel, WithHeadingRow
 {
     use Importable, SkipsErrors, SkipsFailures;
 
     private $tenantId;
+
     private $source;
+
     private $rowCount = 0;
+
     private $createdCount = 0;
+
     private $updatedCount = 0;
+
     private $skippedRows = [];
+
     private $firstRowProcessed = false;
 
     public function __construct($tenantId, $source = 'Onboarding Import')
@@ -2928,13 +3016,13 @@ class OnboardingCandidateImport implements ToModel, WithHeadingRow, SkipsOnError
     public function model(array $row)
     {
         // Log first row to see what columns we're getting
-        if (!$this->firstRowProcessed) {
+        if (! $this->firstRowProcessed) {
             $this->firstRowProcessed = true;
             \Log::info('Onboarding Import: First row columns', [
                 'columns' => array_keys($row),
-                'sample_values' => array_map(function($v) {
+                'sample_values' => array_map(function ($v) {
                     return is_string($v) ? substr($v, 0, 50) : $v;
-                }, $row)
+                }, $row),
             ]);
         }
 
@@ -2944,41 +3032,41 @@ class OnboardingCandidateImport implements ToModel, WithHeadingRow, SkipsOnError
             if ($key === null || $key === '') {
                 continue; // Skip null or empty keys
             }
-            $normalizedKey = strtolower(trim(str_replace([' ', '_', '-'], '', (string)$key)));
+            $normalizedKey = strtolower(trim(str_replace([' ', '_', '-'], '', (string) $key)));
             $normalizedRow[$normalizedKey] = $value;
         }
-        
+
         // Try multiple possible column names for email (most common variations)
         $email = null;
         $emailKeys = ['primaryemail', 'email', 'e-mail', 'mail', 'emailaddress', 'email_address'];
         foreach ($emailKeys as $key) {
             if (isset($normalizedRow[$key])) {
                 $value = $normalizedRow[$key];
-                if (!empty($value) && is_string($value)) {
+                if (! empty($value) && is_string($value)) {
                     $email = trim($value);
-                    if (!empty($email)) {
+                    if (! empty($email)) {
                         break;
                     }
                 }
             }
         }
-        
+
         // Also try original keys (case-sensitive)
         if (empty($email)) {
             $originalKeys = ['primary_email', 'email', 'e-mail', 'mail', 'Email', 'EMAIL', 'Primary Email', 'Primary_Email'];
             foreach ($originalKeys as $key) {
                 if (isset($row[$key])) {
                     $value = $row[$key];
-                    if (!empty($value) && is_string($value)) {
+                    if (! empty($value) && is_string($value)) {
                         $email = trim($value);
-                        if (!empty($email)) {
+                        if (! empty($email)) {
                             break;
                         }
                     }
                 }
             }
         }
-        
+
         // Try to find email in any column if still not found (last resort)
         if (empty($email)) {
             foreach ($row as $key => $value) {
@@ -2986,39 +3074,41 @@ class OnboardingCandidateImport implements ToModel, WithHeadingRow, SkipsOnError
                     $email = trim($value);
                     \Log::info('Onboarding Import: Found email in unexpected column', [
                         'column' => $key,
-                        'email' => $email
+                        'email' => $email,
                     ]);
                     break;
                 }
             }
         }
-        
+
         // Skip if email is empty or invalid
         if (empty($email)) {
             $this->skippedRows[] = [
                 'reason' => 'Empty email',
                 'columns' => array_keys($row),
-                'row_data' => $row
+                'row_data' => $row,
             ];
             \Log::warning('Onboarding Import: Skipping row with empty email', [
                 'row_keys' => array_keys($row),
-                'row_sample' => array_slice($row, 0, 5)
+                'row_sample' => array_slice($row, 0, 5),
             ]);
+
             return null;
         }
-        
+
         // Validate email format
         $email = trim($email);
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $this->skippedRows[] = [
                 'reason' => 'Invalid email format',
                 'email' => $email,
-                'columns' => array_keys($row)
+                'columns' => array_keys($row),
             ];
             \Log::warning('Onboarding Import: Skipping row with invalid email format', [
                 'email' => $email,
-                'row_keys' => array_keys($row)
+                'row_keys' => array_keys($row),
             ]);
+
             return null;
         }
 
@@ -3042,11 +3132,11 @@ class OnboardingCandidateImport implements ToModel, WithHeadingRow, SkipsOnError
             $department = $this->getFieldValue($row, $normalizedRow, ['department', 'dept'], $existingCandidate->department);
             $manager = $this->getFieldValue($row, $normalizedRow, ['manager', 'reporting_manager', 'manager_name'], $existingCandidate->manager);
             $joiningDate = $this->getFieldValue($row, $normalizedRow, ['joining_date', 'joiningdate', 'join_date', 'joindate', 'start_date'], $existingCandidate->joining_date ? $existingCandidate->joining_date->format('Y-m-d') : null);
-            
+
             // Always set source to 'Onboarding Import' for onboarding imports (regardless of what's in the file)
             // This ensures the candidate will show up in the onboarding list
             $source = $this->source; // Always use 'Onboarding Import'
-            
+
             // Update existing candidate - always set source to 'Onboarding Import' for onboarding imports
             $updateData = [
                 'first_name' => $firstName ?? $existingCandidate->first_name,
@@ -3054,11 +3144,17 @@ class OnboardingCandidateImport implements ToModel, WithHeadingRow, SkipsOnError
                 'primary_phone' => $phone ?? $existingCandidate->primary_phone,
                 'source' => $source, // Always set to 'Onboarding Import'
             ];
-            
+
             // Add onboarding fields if provided
-            if ($designation) $updateData['designation'] = $designation;
-            if ($department) $updateData['department'] = $department;
-            if ($manager) $updateData['manager'] = $manager;
+            if ($designation) {
+                $updateData['designation'] = $designation;
+            }
+            if ($department) {
+                $updateData['department'] = $department;
+            }
+            if ($manager) {
+                $updateData['manager'] = $manager;
+            }
             if ($joiningDate) {
                 try {
                     $updateData['joining_date'] = \Carbon\Carbon::parse($joiningDate);
@@ -3066,19 +3162,19 @@ class OnboardingCandidateImport implements ToModel, WithHeadingRow, SkipsOnError
                     // Invalid date, skip
                 }
             }
-            
+
             $existingCandidate->update($updateData);
-            
+
             $this->updatedCount++;
-            
+
             \Log::debug('Onboarding Import: Updated existing candidate', [
                 'email' => $email,
                 'tenant_id' => $this->tenantId,
                 'old_source' => $existingCandidate->getOriginal('source'),
                 'new_source' => $source,
-                'candidate_id' => $existingCandidate->id
+                'candidate_id' => $existingCandidate->id,
             ]);
-            
+
             // Return the updated model so Excel knows something was processed
             return $existingCandidate;
         }
@@ -3092,7 +3188,7 @@ class OnboardingCandidateImport implements ToModel, WithHeadingRow, SkipsOnError
         $manager = $this->getFieldValue($row, $normalizedRow, ['manager', 'reporting_manager', 'manager_name']);
         $joiningDate = $this->getFieldValue($row, $normalizedRow, ['joining_date', 'joiningdate', 'join_date', 'joindate', 'start_date']);
         $source = $this->getFieldValue($row, $normalizedRow, ['source'], $this->source);
-        
+
         // Parse joining date if provided
         $parsedJoiningDate = null;
         if ($joiningDate) {
@@ -3102,7 +3198,7 @@ class OnboardingCandidateImport implements ToModel, WithHeadingRow, SkipsOnError
                 // Invalid date, will remain null
             }
         }
-        
+
         // Create new candidate and explicitly save to database
         $candidate = new Candidate([
             'tenant_id' => $this->tenantId,
@@ -3116,16 +3212,16 @@ class OnboardingCandidateImport implements ToModel, WithHeadingRow, SkipsOnError
             'manager' => $manager,
             'joining_date' => $parsedJoiningDate,
         ]);
-        
+
         // Explicitly save to ensure it's committed to database
         $candidate->save();
-        
+
         $this->createdCount++;
 
         \Log::debug('Onboarding Import: Created new candidate', [
             'email' => $email,
             'tenant_id' => $this->tenantId,
-            'candidate_id' => $candidate->id
+            'candidate_id' => $candidate->id,
         ]);
 
         return $candidate;
@@ -3135,22 +3231,22 @@ class OnboardingCandidateImport implements ToModel, WithHeadingRow, SkipsOnError
     {
         return $this->rowCount;
     }
-    
+
     public function getCreatedCount()
     {
         return $this->createdCount;
     }
-    
+
     public function getUpdatedCount()
     {
         return $this->updatedCount;
     }
-    
+
     public function getSkippedRows()
     {
         return $this->skippedRows;
     }
-    
+
     /**
      * Helper method to get field value with flexible column name matching
      */
@@ -3158,28 +3254,28 @@ class OnboardingCandidateImport implements ToModel, WithHeadingRow, SkipsOnError
     {
         // Try normalized keys first
         foreach ($possibleKeys as $key) {
-            $normalizedKey = strtolower(trim(str_replace([' ', '_', '-'], '', (string)$key)));
+            $normalizedKey = strtolower(trim(str_replace([' ', '_', '-'], '', (string) $key)));
             if (isset($normalizedRow[$normalizedKey])) {
                 $value = $normalizedRow[$normalizedKey];
-                if (!empty($value) && is_string($value) && trim($value) !== '') {
+                if (! empty($value) && is_string($value) && trim($value) !== '') {
                     return trim($value);
                 }
             }
         }
-        
+
         // Try original keys (case-sensitive)
         foreach ($possibleKeys as $key) {
             if (isset($row[$key])) {
                 $value = $row[$key];
-                if (!empty($value) && is_string($value) && trim($value) !== '') {
+                if (! empty($value) && is_string($value) && trim($value) !== '') {
                     return trim($value);
                 }
             }
         }
-        
+
         return $default;
     }
-    
+
     public function getImportedCount()
     {
         // Count actual candidates created/updated

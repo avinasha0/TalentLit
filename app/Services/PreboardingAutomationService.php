@@ -18,7 +18,7 @@ class PreboardingAutomationService
         $application->loadMissing(['candidate', 'jobOpening.department']);
 
         $candidate = $application->candidate;
-        if (!$candidate) {
+        if (! $candidate) {
             return;
         }
 
@@ -49,6 +49,49 @@ class PreboardingAutomationService
 
         $this->seedDefaultItems($candidate, $application, Carbon::parse($candidate->joining_date));
         $this->syncProgress($candidate);
+    }
+
+    /**
+     * When a candidate accepts a job offer: start pre-boarding checklist items (without full hire flow).
+     */
+    public function initializeFromAcceptedOffer(Application $application): void
+    {
+        $application->loadMissing(['candidate', 'jobOpening.department']);
+
+        $candidate = $application->candidate;
+        if (! $candidate) {
+            return;
+        }
+
+        $tenant = Tenant::find($application->tenant_id);
+        [$hrContact, $buddy] = $this->resolveContacts($tenant);
+
+        $job = $application->jobOpening;
+        $joiningDate = $candidate->joining_date ?? now()->addDays(14);
+
+        $candidate->fill([
+            'designation' => $candidate->designation ?: ($job?->title ?? $candidate->designation),
+            'department' => $candidate->department ?: ($job?->department?->name ?? $candidate->department),
+            'manager' => $candidate->manager ?: ($job?->hiring_manager_primary_name ?? $candidate->manager),
+            'joining_date' => $joiningDate,
+            'status' => $candidate->status ?: 'Pre-boarding',
+            'total_steps' => max(1, (int) ($candidate->total_steps ?: 10)),
+            'completed_steps' => max(0, (int) $candidate->completed_steps),
+            'hr_contact_name' => $candidate->hr_contact_name ?: ($hrContact['name'] ?? null),
+            'hr_contact_email' => $candidate->hr_contact_email ?: ($hrContact['email'] ?? null),
+            'buddy_name' => $candidate->buddy_name ?: ($buddy['name'] ?? null),
+            'buddy_email' => $candidate->buddy_email ?: ($buddy['email'] ?? null),
+            'preboarding_started_at' => $candidate->preboarding_started_at ?: now(),
+        ]);
+        $candidate->save();
+
+        if (! PreboardingItem::where('application_id', $application->id)->exists()) {
+            $this->seedDefaultItems($candidate, $application, Carbon::parse($joiningDate));
+        }
+
+        $this->syncProgress($candidate->fresh());
+
+        app(PreOnboardingDocumentChecklistService::class)->ensureChecklist($application->fresh());
     }
 
     public function syncProgress(Candidate $candidate): void
@@ -106,7 +149,7 @@ class PreboardingAutomationService
                     'assigned_to_email' => $this->resolveAssignedEmail($candidate, $track),
                     'due_date' => $joiningDate->copy()->addDays($daysBeforeJoin)->toDateString(),
                     'meta' => [
-                        'trigger' => 'candidate_marked_hired',
+                        'trigger' => $application->status === 'hired' ? 'candidate_marked_hired' : 'offer_accepted',
                         'parallel_track' => in_array($track, ['document', 'it', 'benefits'], true),
                     ],
                     'sort_order' => $sortOrder,
@@ -161,7 +204,7 @@ class PreboardingAutomationService
 
     private function resolveContacts(?Tenant $tenant): array
     {
-        if (!$tenant) {
+        if (! $tenant) {
             return [null, null];
         }
 
@@ -181,4 +224,3 @@ class PreboardingAutomationService
         ];
     }
 }
-

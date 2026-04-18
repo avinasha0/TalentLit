@@ -24,11 +24,15 @@ class Application extends Model
         'applied_at',
         'current_ctc',
         'expected_ctc',
+        'offer_response',
+        'offer_responded_at',
+        'offer_discussion_message',
     ];
 
     protected $casts = [
         'status' => 'string',
         'applied_at' => 'datetime',
+        'offer_responded_at' => 'datetime',
     ];
 
     public function jobOpening(): BelongsTo
@@ -71,25 +75,35 @@ class Application extends Model
         return $this->hasMany(ApplicationAnswer::class);
     }
 
+    public function preboardingItems(): HasMany
+    {
+        return $this->hasMany(PreboardingItem::class)->orderBy('sort_order');
+    }
+
+    public function preOnboardingDocuments(): HasMany
+    {
+        return $this->hasMany(PreOnboardingDocument::class);
+    }
+
     // Query scopes
     public function scopeThisMonthHired($query)
     {
         return $query->where('status', 'hired')
-                    ->whereMonth('applied_at', now()->month)
-                    ->whereYear('applied_at', now()->year);
+            ->whereMonth('applied_at', now()->month)
+            ->whereYear('applied_at', now()->year);
     }
 
     public function scopeRecent($query, $limit = 10)
     {
         return $query->with(['candidate', 'jobOpening'])
-                    ->orderBy('applied_at', 'desc')
-                    ->limit($limit);
+            ->orderBy('applied_at', 'desc')
+            ->limit($limit);
     }
 
     public function scopeOrderedByStagePosition($query)
     {
         return $query->orderBy('stage_position', 'asc')
-                    ->orderBy('created_at', 'asc');
+            ->orderBy('created_at', 'asc');
     }
 
     public function scopeForTenant($query, $tenantId)

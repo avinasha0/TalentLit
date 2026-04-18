@@ -316,6 +316,13 @@ class="fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 text-white lg:translate-x-0"
                         Dashboard
                     </a>
                     <?php endif; ?>
+                    <a href="<?php echo e(tenantRoute('tenant.employee-onboarding.pre-onboarding', $tenant->slug)); ?>"
+                       class="flex items-center px-3 py-2 text-sm text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors duration-200 <?php echo e((str_starts_with($currentRoute, 'tenant.employee-onboarding.pre-onboarding') || str_starts_with($currentRoute, 'subdomain.employee-onboarding.pre-onboarding')) ? 'bg-gray-700 text-white' : ''); ?>">
+                        <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                        </svg>
+                        Pre Onboarding
+                    </a>
                     <a href="<?php echo e(tenantRoute('tenant.employee-onboarding.all', $tenant->slug)); ?>"
                        class="flex items-center px-3 py-2 text-sm text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors duration-200 <?php echo e((str_starts_with($currentRoute, 'tenant.employee-onboarding.all') || str_starts_with($currentRoute, 'subdomain.employee-onboarding.all')) ? 'bg-gray-700 text-white' : ''); ?>">
                         <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -5,8 +5,9 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Facades\URL;
 
 class Tenant extends Model
 {
@@ -103,11 +104,11 @@ class Tenant extends Model
     public function activeSubscription(): HasOne
     {
         return $this->hasOne(TenantSubscription::class)->where('status', 'active')
-                    ->where('starts_at', '<=', now())
-                    ->where(function ($query) {
-                        $query->whereNull('expires_at')
-                              ->orWhere('expires_at', '>', now());
-                    });
+            ->where('starts_at', '<=', now())
+            ->where(function ($query) {
+                $query->whereNull('expires_at')
+                    ->orWhere('expires_at', '>', now());
+            });
     }
 
     /**
@@ -124,6 +125,7 @@ class Tenant extends Model
     public function hasFreePlan(): bool
     {
         $subscription = $this->activeSubscription;
+
         return $subscription && $subscription->plan && $subscription->plan->slug === 'free';
     }
 
@@ -133,8 +135,8 @@ class Tenant extends Model
     public function hasFeature(string $feature): bool
     {
         $plan = $this->currentPlan();
-        
-        if (!$plan) {
+
+        if (! $plan) {
             return false;
         }
 
@@ -147,12 +149,13 @@ class Tenant extends Model
     public function withinLimit(string $limit, int $currentCount): bool
     {
         $plan = $this->currentPlan();
-        
-        if (!$plan) {
+
+        if (! $plan) {
             return false;
         }
 
         $maxLimit = $plan->$limit ?? 0;
+
         return $currentCount < $maxLimit;
     }
 
@@ -162,12 +165,13 @@ class Tenant extends Model
     public function getRemainingLimit(string $limit, int $currentCount): int
     {
         $plan = $this->currentPlan();
-        
-        if (!$plan) {
+
+        if (! $plan) {
             return 0;
         }
 
         $maxLimit = $plan->$limit ?? 0;
+
         return max(0, $maxLimit - $currentCount);
     }
 
@@ -196,22 +200,23 @@ class Tenant extends Model
             $appDomain = parse_url($appUrl, PHP_URL_HOST) ?? 'localhost';
             $scheme = parse_url($appUrl, PHP_URL_SCHEME) ?? 'http';
             $port = parse_url($appUrl, PHP_URL_PORT);
-            
+
             // Construct subdomain URL
-            $subdomainUrl = $scheme . '://' . $this->subdomain . '.' . $appDomain;
+            $subdomainUrl = $scheme.'://'.$this->subdomain.'.'.$appDomain;
             if ($port) {
-                $subdomainUrl .= ':' . $port;
+                $subdomainUrl .= ':'.$port;
             }
-            
-            $finalUrl = $subdomainUrl . '/dashboard';
+
+            $finalUrl = $subdomainUrl.'/dashboard';
             \Log::info('Tenant.GetDashboardUrl.Result', [
                 'tenant_id' => $this->id,
                 'url_type' => 'subdomain',
                 'url' => $finalUrl,
             ]);
+
             return $finalUrl;
         }
-        
+
         // Use path-based routing for non-subdomain tenants
         $finalUrl = route('tenant.dashboard', $this->slug);
         \Log::info('Tenant.GetDashboardUrl.Result', [
@@ -219,6 +224,7 @@ class Tenant extends Model
             'url_type' => 'path',
             'url' => $finalUrl,
         ]);
+
         return $finalUrl;
     }
 
@@ -276,5 +282,50 @@ class Tenant extends Model
         }
 
         return route('tenant.applicant.dashboard', $this->slug);
+    }
+
+    /**
+     * Base URL for enterprise hiring subdomains (scheme + host + optional port), or null when not applicable.
+     */
+    public function getSubdomainRootUrl(): ?string
+    {
+        if (! $this->usesEnterpriseSubdomain() || ! $this->subdomain) {
+            return null;
+        }
+
+        $appUrl = config('app.url');
+        $appDomain = parse_url($appUrl, PHP_URL_HOST) ?? 'localhost';
+        $scheme = parse_url($appUrl, PHP_URL_SCHEME) ?? 'http';
+        $port = parse_url($appUrl, PHP_URL_PORT);
+
+        $subdomainUrl = $scheme.'://'.$this->subdomain.'.'.$appDomain;
+        if ($port) {
+            $subdomainUrl .= ':'.$port;
+        }
+
+        return $subdomainUrl;
+    }
+
+    /**
+     * Run a callback while signed offer URLs use the tenant subdomain as the app root (enterprise only).
+     *
+     * @template T
+     *
+     * @param  callable(): T  $callback
+     * @return T
+     */
+    public function withOfferSigningRoot(callable $callback): mixed
+    {
+        $root = $this->getSubdomainRootUrl();
+        if ($root === null) {
+            return $callback();
+        }
+
+        URL::forceRootUrl($root);
+        try {
+            return $callback();
+        } finally {
+            URL::forceRootUrl(null);
+        }
     }
 }

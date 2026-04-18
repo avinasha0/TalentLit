@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Applicant;
 use App\Http\Controllers\Controller;
 use App\Models\Application;
 use App\Models\Candidate;
+use App\Services\PreOnboardingDocumentChecklistService;
+use App\Support\PreOnboardingDocumentCatalog;
 use Illuminate\View\View;
 
 class ApplicantPortalController extends Controller
@@ -12,7 +14,7 @@ class ApplicantPortalController extends Controller
     public function index(): View
     {
         $tenant = tenant();
-        if (!$tenant) {
+        if (! $tenant) {
             abort(404);
         }
 
@@ -36,10 +38,19 @@ class ApplicantPortalController extends Controller
                 'stageEvents.toStage',
                 'stageEvents.fromStage',
                 'interviews',
+                'preOnboardingDocuments',
             ])
             ->orderByDesc('applied_at')
             ->orderByDesc('created_at')
             ->get();
+
+        $checklistSvc = app(PreOnboardingDocumentChecklistService::class);
+        foreach ($applications as $application) {
+            if (PreOnboardingDocumentCatalog::eligibleForChecklistSeed($application)) {
+                $checklistSvc->ensureChecklist($application);
+            }
+        }
+        $applications->loadMissing('preOnboardingDocuments');
 
         return view('applicant.dashboard', [
             'tenant' => $tenant,

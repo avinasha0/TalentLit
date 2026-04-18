@@ -8,19 +8,19 @@ use App\Models\Application;
 use App\Models\ApplicationEvent;
 use App\Models\JobOpening;
 use App\Models\JobStage;
+use App\Services\JobOfferNotificationService;
 use App\Services\PreboardingAutomationService;
-use App\Services\NotificationService;
-use App\Support\ApplicationStatus;
+use App\Services\PreOnboardingDocumentChecklistService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Validation\ValidationException;
 
 class PipelineController extends Controller
 {
     use AuthorizesRequests;
+
     public function index(Request $request, $tenant, JobOpening $job)
     {
         // Ensure the job belongs to the current tenant
@@ -39,7 +39,7 @@ class PipelineController extends Controller
 
         // Get applications grouped by stage
         $applicationsByStage = $job->applications()
-            ->with(['candidate', 'currentStage', 'interviews' => function($query) {
+            ->with(['candidate', 'currentStage', 'interviews' => function ($query) {
                 $query->orderBy('scheduled_at', 'desc');
             }])
             ->orderedByStagePosition()
@@ -52,20 +52,20 @@ class PipelineController extends Controller
             ->orderBy('created_at', 'desc')
             ->limit(10)
             ->get();
-            
+
         \Log::info('Pipeline data loaded', [
             'job_id' => $job->id,
             'stages_count' => $stages->count(),
             'applications_count' => $job->applications()->count(),
-            'applications_by_stage' => $applicationsByStage->map(function($apps) {
-                return $apps->map(function($app) {
+            'applications_by_stage' => $applicationsByStage->map(function ($apps) {
+                return $apps->map(function ($app) {
                     return [
                         'id' => $app->id,
                         'candidate_name' => $app->candidate ? $app->candidate->full_name : 'No candidate',
-                        'stage_id' => $app->current_stage_id
+                        'stage_id' => $app->current_stage_id,
                     ];
                 });
-            })
+            }),
         ]);
 
         return view('tenant.jobs.pipeline', compact('job', 'stages', 'applicationsByStage', 'recentEvents'));
@@ -89,7 +89,7 @@ class PipelineController extends Controller
 
         // Get applications grouped by stage
         $applicationsByStage = $job->applications()
-            ->with(['candidate', 'currentStage', 'interviews' => function($query) {
+            ->with(['candidate', 'currentStage', 'interviews' => function ($query) {
                 $query->orderBy('scheduled_at', 'desc');
             }])
             ->orderedByStagePosition()
@@ -124,7 +124,7 @@ class PipelineController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'ok' => false,
-                'message' => 'Unauthorized: ' . $e->getMessage()
+                'message' => 'Unauthorized: '.$e->getMessage(),
             ], 403);
         }
 
@@ -138,7 +138,7 @@ class PipelineController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'ok' => false,
-                'message' => 'Validation failed: ' . $e->getMessage()
+                'message' => 'Validation failed: '.$e->getMessage(),
             ], 422);
         }
 
@@ -149,15 +149,17 @@ class PipelineController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'ok' => false,
-                'message' => 'Application not found: ' . $e->getMessage()
+                'message' => 'Application not found: '.$e->getMessage(),
             ], 404);
         }
+
+        $previousStatus = strtolower((string) $application->status);
 
         // Verify the application belongs to the current stage
         if ($application->current_stage_id !== $request->from_stage_id) {
             return response()->json([
                 'ok' => false,
-                'message' => 'Application is not in the expected stage.'
+                'message' => 'Application is not in the expected stage.',
             ], 400);
         }
 
@@ -174,7 +176,7 @@ class PipelineController extends Controller
                     $this->reorderWithinStage($application, $toPosition);
                 } else {
                     $this->moveToDifferentStage($application, $fromStageId, $toStageId, $toPosition);
-                    
+
                     // Update interview status based on stage movement
                     $this->updateInterviewStatusForStageChange($application, $fromStageId, $toStageId);
                 }
@@ -193,18 +195,34 @@ class PipelineController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'ok' => false,
-                'message' => 'Failed to move application: ' . $e->getMessage()
+                'message' => 'Failed to move application: '.$e->getMessage(),
             ], 500);
         }
 
-        // Send stage change notification if moving to different stage
-        if ($request->from_stage_id !== $request->to_stage_id) {
-            $this->sendStageChangeNotification($tenantModel, $job, $application, $request->to_stage_id, $request->note);
-        }
+        $application->refresh();
+
+        $newStatus = strtolower((string) $application->status);
+        $isNewlyOffered = $newStatus === 'offered' && $previousStatus !== 'offered';
 
         $toStage = JobStage::find($toStageId);
+        $isOfferStage = $toStage && $this->statusFromStageName($toStage->name) === 'offered';
+
+        if ($request->from_stage_id !== $request->to_stage_id) {
+            if (! $isOfferStage) {
+                $this->sendStageChangeNotification($tenantModel, $job, $application, $request->to_stage_id, $request->note);
+            }
+        }
+
+        if ($isNewlyOffered) {
+            app(JobOfferNotificationService::class)->sendOfferEmail($application);
+        }
+
         if ($toStage && str_contains(strtolower($toStage->name), 'hired')) {
             app(PreboardingAutomationService::class)->initializeFromHire($application);
+        }
+
+        if ($newStatus === 'pre_onboarding' && $previousStatus !== 'pre_onboarding') {
+            app(PreOnboardingDocumentChecklistService::class)->ensureChecklist($application->fresh());
         }
 
         // Get updated counts
@@ -214,7 +232,7 @@ class PipelineController extends Controller
             'ok' => true,
             'counts' => $stageCounts,
             'toStageId' => $toStageId,
-            'candidateName' => $application->candidate->full_name
+            'candidateName' => $application->candidate->full_name,
         ]);
     }
 
@@ -235,7 +253,7 @@ class PipelineController extends Controller
 
         \Log::info('Found applications in stage', [
             'count' => $applications->count(),
-            'application_ids' => $applications->pluck('id')->toArray()
+            'application_ids' => $applications->pluck('id')->toArray(),
         ]);
 
         // Reorder positions
@@ -247,7 +265,7 @@ class PipelineController extends Controller
             $app->update(['stage_position' => $position]);
             \Log::info('Updated position', [
                 'application_id' => $app->id,
-                'new_position' => $position
+                'new_position' => $position,
             ]);
             $position++;
         }
@@ -256,7 +274,7 @@ class PipelineController extends Controller
         $application->update(['stage_position' => $newPosition]);
         \Log::info('Updated moved application position', [
             'application_id' => $application->id,
-            'new_position' => $newPosition
+            'new_position' => $newPosition,
         ]);
     }
 
@@ -300,25 +318,25 @@ class PipelineController extends Controller
         // Get stage names to determine if we're moving to/from interview stages
         $fromStage = \App\Models\JobStage::find($fromStageId);
         $toStage = \App\Models\JobStage::find($toStageId);
-        
-        if (!$fromStage || !$toStage) {
+
+        if (! $fromStage || ! $toStage) {
             return;
         }
-        
+
         $fromStageName = strtolower($fromStage->name);
         $toStageName = strtolower($toStage->name);
-        
+
         // Check if moving from interview stage to non-interview stage
-        if (str_contains($fromStageName, 'interview') && !str_contains($toStageName, 'interview')) {
+        if (str_contains($fromStageName, 'interview') && ! str_contains($toStageName, 'interview')) {
             // Get all interviews for this application
             $interviews = \App\Models\Interview::where('application_id', $application->id)
                 ->where('status', 'scheduled')
                 ->get();
-            
+
             foreach ($interviews as $interview) {
                 $oldStatus = $interview->status;
                 $newStatus = 'canceled'; // Default
-                
+
                 // Update interview status based on the new stage
                 if (str_contains($toStageName, 'hired')) {
                     $newStatus = 'completed';
@@ -330,17 +348,17 @@ class PipelineController extends Controller
                     // For other stages like 'screen', 'sourced', etc.
                     $newStatus = 'canceled';
                 }
-                
+
                 if ($oldStatus !== $newStatus) {
                     $updateData = ['status' => $newStatus];
-                    
+
                     // Set cancellation reason if cancelling due to stage change
                     if ($newStatus === 'canceled') {
                         $updateData['cancellation_reason'] = 'stage_change';
                     }
-                    
+
                     $interview->update($updateData);
-                    
+
                     // Log the interview status change
                     \Log::info('Interview status updated due to stage change', [
                         'interview_id' => $interview->id,
@@ -349,33 +367,33 @@ class PipelineController extends Controller
                         'to_stage' => $toStageName,
                         'old_status' => $oldStatus,
                         'new_status' => $newStatus,
-                        'cancellation_reason' => $newStatus === 'canceled' ? 'stage_change' : null
+                        'cancellation_reason' => $newStatus === 'canceled' ? 'stage_change' : null,
                     ]);
                 }
             }
         }
-        
+
         // Check if moving from non-interview stage to interview stage
-        if (!str_contains($fromStageName, 'interview') && str_contains($toStageName, 'interview')) {
+        if (! str_contains($fromStageName, 'interview') && str_contains($toStageName, 'interview')) {
             // Get all interviews for this application that are cancelled
             $interviews = \App\Models\Interview::where('application_id', $application->id)
                 ->where('status', 'canceled')
                 ->get();
-            
+
             foreach ($interviews as $interview) {
                 // Reschedule cancelled interviews if they're in the future
                 if ($interview->scheduled_at > now()) {
                     $oldStatus = $interview->status;
                     $interview->update(['status' => 'scheduled']);
-                    
+
                     // Log the interview status change
                     \Log::info('Interview status updated due to stage change', [
                         'interview_id' => $interview->id,
-            'application_id' => $application->id,
+                        'application_id' => $application->id,
                         'from_stage' => $fromStageName,
                         'to_stage' => $toStageName,
                         'old_status' => $oldStatus,
-                        'new_status' => 'scheduled'
+                        'new_status' => 'scheduled',
                     ]);
                 }
             }
@@ -396,7 +414,7 @@ class PipelineController extends Controller
         try {
             if (config('mail.default') !== null && $application->candidate && $application->candidate->primary_email) {
                 $stage = JobStage::find($toStageId);
-                
+
                 if ($stage) {
                     Mail::to($application->candidate->primary_email)
                         ->queue(new StageChanged($tenant, $job, $application->candidate, $application, $stage, $note));
@@ -435,7 +453,7 @@ class PipelineController extends Controller
                 return $this->stageMatchesStatus($stage->name, $statusSlug);
             });
 
-            if (!$matchedStage) {
+            if (! $matchedStage) {
                 $matchedStage = JobStage::create([
                     'tenant_id' => $job->tenant_id,
                     'job_opening_id' => $job->id,
@@ -469,7 +487,7 @@ class PipelineController extends Controller
                 default => strtolower((string) $application->status),
             };
 
-            if (!isset($statusToStage[$normalizedStatus])) {
+            if (! isset($statusToStage[$normalizedStatus])) {
                 continue;
             }
 

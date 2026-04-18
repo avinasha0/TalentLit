@@ -1,11 +1,12 @@
 @php
     $tenant = $tenantModel ?? $tenant ?? tenant();
     $tenantSlug = $tenant->slug;
-    
+    $preOnboardingOnly = $preOnboardingOnly ?? false;
+
     $breadcrumbs = [
         ['label' => 'Dashboard', 'url' => tenantRoute('tenant.dashboard', $tenantSlug)],
         ['label' => 'Employee Onboarding', 'url' => tenantRoute('tenant.employee-onboarding.index', $tenantSlug)],
-        ['label' => 'All Onboardings', 'url' => null]
+        ['label' => $preOnboardingOnly ? 'Pre Onboarding' : 'All Onboardings', 'url' => null],
     ];
 @endphp
 
@@ -78,11 +79,22 @@
         <!-- Page Header -->
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
             <div>
-                <h1 class="text-2xl font-bold text-white">Employee Onboarding — All Onboardings</h1>
+                <h1 class="text-2xl font-bold text-white">
+                    @if($preOnboardingOnly)
+                        Employee Onboarding — Pre Onboarding
+                    @else
+                        Employee Onboarding — All Onboardings
+                    @endif
+                </h1>
                 <p class="mt-1 text-sm text-white">
-                    View and manage every active onboarding. Search, filter, and take quick actions.
+                    @if($preOnboardingOnly)
+                        Same view as All Onboardings, filtered to candidates with at least one job application in <strong>Pre-Onboarding</strong>.
+                    @else
+                        View and manage every active onboarding. Search, filter, and take quick actions.
+                    @endif
                 </p>
             </div>
+            @if(! $preOnboardingOnly)
             <div class="mt-4 sm:mt-0 flex flex-col sm:flex-row gap-2">
                 <button type="button" 
                         id="import-candidates-btn"
@@ -106,9 +118,11 @@
                     Start Onboarding
                 </button>
             </div>
+            @endif
         </div>
 
         <!-- Search and Filters -->
+        @if(! $preOnboardingOnly)
         <x-card>
             <div class="p-4 space-y-4">
                 <!-- Search -->
@@ -185,8 +199,10 @@
                 </div>
             </div>
         </x-card>
+        @endif
 
         <!-- Bulk Actions Toolbar (hidden by default) -->
+        @if(! $preOnboardingOnly)
         <div id="bulk-actions-toolbar" class="hidden">
             <x-card>
                 <div class="p-4 flex items-center justify-between">
@@ -211,13 +227,14 @@
                 </div>
             </x-card>
         </div>
+        @endif
 
         <!-- Table Container -->
         @if($onboardings->isNotEmpty())
         <x-card>
             <!-- Desktop Table -->
             <div class="hidden lg:block overflow-hidden">
-                <table role="table" aria-label="All onboardings table" class="w-full divide-y divide-gray-200">
+                <table role="table" aria-label="{{ $preOnboardingOnly ? 'Pre onboarding candidates' : 'All onboardings table' }}" class="w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>
                                 <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">
@@ -480,16 +497,22 @@
                     <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
                     </svg>
-                    <h3 class="mt-2 text-sm font-medium text-gray-900">No onboardings found</h3>
+                    <h3 class="mt-2 text-sm font-medium text-gray-900">{{ $preOnboardingOnly ? 'No pre-onboarding candidates yet' : 'No onboardings found' }}</h3>
                     <p class="mt-1 text-sm text-gray-500">
-                        There are no active onboarding flows. Click "Start Onboarding" to create the first one.
+                        @if($preOnboardingOnly)
+                            No candidates currently have a job application in Pre-Onboarding. Accepted offers will appear here once applicants complete the offer step.
+                        @else
+                            There are no active onboarding flows. Click "Start Onboarding" to create the first one.
+                        @endif
                     </p>
+                    @if(! $preOnboardingOnly)
                     <div class="mt-6">
                         <a href="{{ route('tenant.employee-onboarding.new', $tenantSlug) }}" 
                            class="inline-flex items-center px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700">
                             Start Onboarding
                         </a>
                     </div>
+                    @endif
                 </div>
             </x-card>
         </div>

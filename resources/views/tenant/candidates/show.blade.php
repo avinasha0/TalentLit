@@ -33,6 +33,11 @@
     </x-slot>
 
     <div class="space-y-6">
+        @if(session('success'))
+            <div class="rounded-md bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-900" role="status">
+                {{ session('success') }}
+            </div>
+        @endif
         <!-- Candidate Header -->
         <div class="bg-white shadow rounded-lg">
             <div class="px-6 py-4">
@@ -581,6 +586,101 @@
                                                     </div>
                                                 </div>
                                             </div>
+
+                                            @if(strtolower($application->status) === 'offered' || $application->offer_response)
+                                                <div class="mt-4 rounded-lg border border-teal-100 bg-teal-50/60 px-4 py-3 text-sm text-teal-900">
+                                                    <span class="font-semibold">Offer response:</span>
+                                                    @if($application->offer_response)
+                                                        <span class="capitalize">{{ str_replace('_', ' ', $application->offer_response) }}</span>
+                                                        @if($application->offer_responded_at)
+                                                            <span class="text-teal-700">· {{ optional($application->offer_responded_at)->timezone(config('app.timezone'))->format('M j, Y g:i A') }}</span>
+                                                        @endif
+                                                        @if($application->offer_response === 'discussion' && $application->offer_discussion_message)
+                                                            <p class="mt-2 text-teal-800 whitespace-pre-wrap">{{ $application->offer_discussion_message }}</p>
+                                                        @endif
+                                                    @else
+                                                        <span class="text-teal-800">No response yet — candidate was emailed with Accept / Decline / Discussion links.</span>
+                                                    @endif
+                                                </div>
+                                            @endif
+
+                                            @if(\App\Support\PreOnboardingDocumentCatalog::eligibleForUi($application))
+                                                @php
+                                                    $isSubCandDocs = request()->routeIs('subdomain.*');
+                                                    $docRowsHr = ($application->preOnboardingDocuments ?? collect())->sortBy(function ($d) {
+                                                        $order = collect(\App\Support\PreOnboardingDocumentCatalog::definitions())->pluck('key')->flip();
+                                                        return $order[$d->document_key] ?? 999;
+                                                    })->values();
+                                                    $reqHr = $docRowsHr->where('is_required', true);
+                                                    $reqDoneHr = $reqHr->filter(fn ($d) => in_array(strtolower($d->status), ['uploaded', 'verified'], true))->count();
+                                                    $reqTotalHr = $reqHr->count();
+                                                    $canVerifyPreOnboardingDocs = auth()->user()->isHrAdmin((string) $tenantModel->id);
+                                                @endphp
+                                                <div class="mt-4 rounded-lg border border-amber-200 bg-amber-50/60 px-4 py-4">
+                                                    <h5 class="text-sm font-semibold text-gray-900 mb-1">Pre-onboarding documents</h5>
+                                                    <p class="text-xs text-gray-600 mb-3">Track uploads and verification. Required: {{ $reqDoneHr }} / {{ $reqTotalHr }} with a file.</p>
+                                                    @if($docRowsHr->isEmpty())
+                                                        <p class="text-sm text-gray-600">Checklist is being prepared.</p>
+                                                    @else
+                                                        <div class="overflow-x-auto">
+                                                            <table class="min-w-full text-sm">
+                                                                <thead>
+                                                                    <tr class="text-left text-xs font-semibold text-gray-500 uppercase border-b border-amber-200">
+                                                                        <th class="py-2 pr-4">Document</th>
+                                                                        <th class="py-2 pr-4">Status</th>
+                                                                        <th class="py-2 pr-4">File</th>
+                                                                        <th class="py-2 text-right">Actions</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody class="divide-y divide-amber-100">
+                                                                    @foreach($docRowsHr as $dhr)
+                                                                        @php $dhs = strtolower($dhr->status); @endphp
+                                                                        <tr>
+                                                                            <td class="py-2 pr-4 font-medium text-gray-900">
+                                                                                {{ $dhr->title }}
+                                                                                @if(!$dhr->is_required)
+                                                                                    <span class="text-xs text-gray-500 font-normal">(optional)</span>
+                                                                                @endif
+                                                                            </td>
+                                                                            <td class="py-2 pr-4">
+                                                                                @if($dhs === 'pending')
+                                                                                    <span class="text-xs font-semibold text-amber-800">Pending</span>
+                                                                                @elseif($dhs === 'uploaded')
+                                                                                    <span class="text-xs font-semibold text-sky-800">Uploaded</span>
+                                                                                @elseif($dhs === 'verified')
+                                                                                    <span class="text-xs font-semibold text-emerald-800">Verified</span>
+                                                                                @endif
+                                                                            </td>
+                                                                            <td class="py-2 pr-4 text-xs text-gray-600">
+                                                                                @if($dhr->file_path)
+                                                                                    <a href="{{ $isSubCandDocs ? route('subdomain.candidates.applications.pre-onboarding-documents.download', ['candidate' => $candidate->id, 'application' => $application->id, 'document' => $dhr->id]) : route('tenant.candidates.applications.pre-onboarding-documents.download', ['tenant' => $tenantSlug, 'candidate' => $candidate->id, 'application' => $application->id, 'document' => $dhr->id]) }}" class="text-blue-600 hover:underline">Download</a>
+                                                                                @else
+                                                                                    —
+                                                                                @endif
+                                                                            </td>
+                                                                            <td class="py-2 text-right space-y-1">
+                                                                                @if($dhs !== 'verified')
+                                                                                    <form method="post" enctype="multipart/form-data" action="{{ $isSubCandDocs ? route('subdomain.candidates.applications.pre-onboarding-documents.upload', ['candidate' => $candidate->id, 'application' => $application->id, 'document' => $dhr->id]) : route('tenant.candidates.applications.pre-onboarding-documents.upload', ['tenant' => $tenantSlug, 'candidate' => $candidate->id, 'application' => $application->id, 'document' => $dhr->id]) }}" class="inline-flex flex-col items-end gap-1">
+                                                                                        @csrf
+                                                                                        <input type="file" name="file" required class="max-w-[14rem] text-xs">
+                                                                                        <button type="submit" class="text-xs font-semibold text-blue-700 hover:text-blue-900">{{ $dhs === 'pending' ? 'Upload' : 'Replace' }}</button>
+                                                                                    </form>
+                                                                                @endif
+                                                                                @if($canVerifyPreOnboardingDocs && $dhs === 'uploaded' && $dhr->file_path)
+                                                                                    <form method="post" action="{{ $isSubCandDocs ? route('subdomain.candidates.applications.pre-onboarding-documents.verify', ['candidate' => $candidate->id, 'application' => $application->id, 'document' => $dhr->id]) : route('tenant.candidates.applications.pre-onboarding-documents.verify', ['tenant' => $tenantSlug, 'candidate' => $candidate->id, 'application' => $application->id, 'document' => $dhr->id]) }}" class="inline">
+                                                                                        @csrf
+                                                                                        <button type="submit" class="text-xs font-semibold text-emerald-700 hover:text-emerald-900">Mark verified</button>
+                                                                                    </form>
+                                                                                @endif
+                                                                            </td>
+                                                                        </tr>
+                                                                    @endforeach
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    @endif
+                                                </div>
+                                            @endif
                                             
                                             <!-- Hiring Manager Details -->
                                             <div class="mt-4 pt-4 border-t border-gray-200">

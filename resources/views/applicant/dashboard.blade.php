@@ -29,6 +29,8 @@
             'pending' => 'bg-amber-50 text-amber-900 ring-amber-700/15',
             'rejected' => 'bg-red-50 text-red-800 ring-red-700/15',
             'hired' => 'bg-blue-50 text-blue-800 ring-blue-700/15',
+            'offered' => 'bg-teal-50 text-teal-900 ring-teal-700/15',
+            'pre_onboarding' => 'bg-amber-50 text-amber-900 ring-amber-700/15',
             'closed' => 'bg-slate-100 text-slate-700 ring-slate-600/12',
             'withdrawn' => 'bg-slate-100 text-slate-600 ring-slate-600/12',
         ];
@@ -62,6 +64,12 @@
                 </a>
             </div>
 
+            @if(session('portal_flash'))
+                <div class="mb-6 rounded-xl bg-emerald-50 text-emerald-900 ring-1 ring-emerald-200 px-4 py-3 text-sm font-medium" role="status">
+                    {{ session('portal_flash') }}
+                </div>
+            @endif
+
             @php $appCount = $applications->count(); @endphp
 
             {{-- KPI strip --}}
@@ -87,7 +95,7 @@
                     $st = strtolower((string) $application->status);
                     $statusClass = $statusStyles[$st] ?? 'bg-slate-50 text-slate-700 ring-slate-600/12';
                 @endphp
-                <article class="mb-8 rounded-2xl bg-white ring-1 ring-slate-200/80 shadow-md shadow-slate-900/5 overflow-hidden">
+                <article id="application-{{ $application->id }}" class="mb-8 rounded-2xl bg-white ring-1 ring-slate-200/80 shadow-md shadow-slate-900/5 overflow-hidden scroll-mt-24">
                     <div class="px-5 sm:px-7 py-5 sm:py-6 border-b border-slate-100 bg-gradient-to-br from-white to-slate-50/80">
                         <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                             <div class="min-w-0">
@@ -129,6 +137,123 @@
                             </div>
                         </div>
                     </div>
+
+                    @if($st === 'offered')
+                        @php
+                            $exp = now()->addDays(60);
+                            $urls = $tenant->withOfferSigningRoot(function () use ($tenant, $application, $exp) {
+                                if ($tenant->usesEnterpriseSubdomain()) {
+                                    return [
+                                        'uAccept' => \Illuminate\Support\Facades\URL::temporarySignedRoute('subdomain.offers.accept', $exp, ['application' => $application->id]),
+                                        'uReject' => \Illuminate\Support\Facades\URL::temporarySignedRoute('subdomain.offers.reject', $exp, ['application' => $application->id]),
+                                        'uDiscuss' => \Illuminate\Support\Facades\URL::temporarySignedRoute('subdomain.offers.discussion.form', $exp, ['application' => $application->id]),
+                                    ];
+                                }
+                                return [
+                                    'uAccept' => \Illuminate\Support\Facades\URL::temporarySignedRoute('tenant.offers.accept', $exp, ['tenant' => $tenant->slug, 'application' => $application->id]),
+                                    'uReject' => \Illuminate\Support\Facades\URL::temporarySignedRoute('tenant.offers.reject', $exp, ['tenant' => $tenant->slug, 'application' => $application->id]),
+                                    'uDiscuss' => \Illuminate\Support\Facades\URL::temporarySignedRoute('tenant.offers.discussion.form', $exp, ['tenant' => $tenant->slug, 'application' => $application->id]),
+                                ];
+                            });
+                            $uAccept = $urls['uAccept'];
+                            $uReject = $urls['uReject'];
+                            $uDiscuss = $urls['uDiscuss'];
+                        @endphp
+                        <div class="px-5 sm:px-7 pt-2 pb-6 sm:pb-8 border-b border-slate-100 bg-teal-50/40">
+                            <h3 class="text-sm font-bold text-teal-900 uppercase tracking-wider mb-3">Your offer</h3>
+                            @if($application->offer_responded_at)
+                                <p class="text-sm text-teal-900">
+                                    <span class="font-semibold">Your response:</span>
+                                    <span class="capitalize">{{ str_replace('_', ' ', (string) $application->offer_response) }}</span>
+                                    <span class="text-teal-700">· {{ $application->offer_responded_at->timezone(config('app.timezone'))->format('M j, Y g:i A') }}</span>
+                                </p>
+                                @if($application->offer_response === 'discussion' && $application->offer_discussion_message)
+                                    <p class="mt-2 text-sm text-teal-800 whitespace-pre-wrap rounded-lg bg-white/80 ring-1 ring-teal-100 px-3 py-2">{{ $application->offer_discussion_message }}</p>
+                                @endif
+                            @else
+                                <p class="text-sm text-teal-900 mb-4">Please choose one option below. You can also use the links in your email.</p>
+                                <div class="flex flex-col sm:flex-row flex-wrap gap-3">
+                                    <a href="{{ $uAccept }}" class="inline-flex justify-center items-center rounded-xl px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:opacity-95" style="background: var(--applicant-brand);">Accept offer</a>
+                                    <a href="{{ $uReject }}" class="inline-flex justify-center items-center rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-700 bg-white ring-1 ring-slate-300 hover:bg-slate-50">Decline offer</a>
+                                    <a href="{{ $uDiscuss }}" class="inline-flex justify-center items-center rounded-xl px-4 py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 shadow-sm">Request discussion</a>
+                                </div>
+                            @endif
+                        </div>
+                    @endif
+
+                    @if(\App\Support\PreOnboardingDocumentCatalog::eligibleForUi($application))
+                        @php
+                            $isSubApplicantDocs = request()->routeIs('subdomain.applicant.*');
+                            $docRows = ($application->preOnboardingDocuments ?? collect())->sortBy(function ($d) {
+                                $order = collect(\App\Support\PreOnboardingDocumentCatalog::definitions())->pluck('key')->flip();
+                                return $order[$d->document_key] ?? 999;
+                            })->values();
+                            $reqDocs = $docRows->where('is_required', true);
+                            $reqDone = $reqDocs->filter(fn ($d) => in_array($d->status, ['uploaded', 'verified'], true))->count();
+                            $reqTotal = $reqDocs->count();
+                            $allDone = $docRows->filter(fn ($d) => in_array($d->status, ['uploaded', 'verified'], true))->count();
+                            $allTotal = $docRows->count();
+                        @endphp
+                        <div class="px-5 sm:px-7 pt-2 pb-6 sm:pb-8 border-b border-slate-100 bg-amber-50/50">
+                            <h3 class="text-sm font-bold text-amber-900 uppercase tracking-wider mb-2">Pre-onboarding documents</h3>
+                            <p class="text-sm text-amber-900/90 mb-4">Upload each item below. HR will verify files after review.</p>
+                            @if($docRows->isNotEmpty())
+                                <div class="mb-5 rounded-xl border border-amber-100 bg-white/80 px-4 py-3 sm:px-5">
+                                    <div class="flex flex-wrap items-end justify-between gap-2 mb-2">
+                                        <span class="text-xs font-semibold uppercase tracking-wide text-amber-900/80">Required progress</span>
+                                        <span class="text-sm font-bold text-amber-950 tabular-nums">{{ $reqDone }} / {{ $reqTotal }}</span>
+                                    </div>
+                                    <div class="h-2 rounded-full bg-amber-100 overflow-hidden">
+                                        <div class="h-full rounded-full transition-all duration-300" style="width: {{ $reqTotal > 0 ? round(100 * $reqDone / $reqTotal) : 0 }}%; background: var(--applicant-brand);"></div>
+                                    </div>
+                                    <p class="text-xs text-amber-900/70 mt-2">All items with a file: {{ $allDone }} / {{ $allTotal }}</p>
+                                </div>
+                                <div class="rounded-xl border border-amber-100 bg-white/90 overflow-hidden divide-y divide-amber-100/90">
+                                    @foreach($docRows as $doc)
+                                        @php
+                                            $ds = strtolower($doc->status);
+                                        @endphp
+                                        <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 sm:gap-4 px-4 py-3.5 sm:px-5 sm:py-4 sm:items-center">
+                                            <div class="sm:col-span-5 min-w-0">
+                                                <p class="font-medium text-slate-900 leading-snug">{{ $doc->title }}@if(!$doc->is_required)<span class="text-slate-500 font-normal text-sm"> — optional</span>@endif</p>
+                                                @if($doc->original_filename)
+                                                    <p class="text-xs text-slate-500 mt-1 truncate" title="{{ $doc->original_filename }}">{{ $doc->original_filename }}</p>
+                                                @endif
+                                            </div>
+                                            <div class="sm:col-span-2 flex sm:justify-center">
+                                                @if($ds === 'pending')
+                                                    <span class="inline-flex w-fit rounded-full bg-amber-50 text-amber-900 px-2.5 py-0.5 text-xs font-semibold ring-1 ring-amber-200/80">Pending</span>
+                                                @elseif($ds === 'uploaded')
+                                                    <span class="inline-flex w-fit rounded-full bg-sky-50 text-sky-900 px-2.5 py-0.5 text-xs font-semibold ring-1 ring-sky-200/80">Uploaded</span>
+                                                @elseif($ds === 'verified')
+                                                    <span class="inline-flex w-fit items-center gap-1 rounded-full bg-emerald-50 text-emerald-900 px-2.5 py-0.5 text-xs font-semibold ring-1 ring-emerald-200/80">
+                                                        <svg class="w-3.5 h-3.5 shrink-0" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                                                        Verified
+                                                    </span>
+                                                @endif
+                                            </div>
+                                            <div class="sm:col-span-5 min-w-0 sm:justify-self-stretch">
+                                                @if($ds === 'verified')
+                                                    <p class="text-xs text-slate-500 sm:text-right sm:pt-0.5">Verified by HR — no further action.</p>
+                                                @else
+                                                    <form method="post" enctype="multipart/form-data" action="{{ $isSubApplicantDocs ? route('subdomain.applicant.pre-onboarding-documents.upload', ['application' => $application->id, 'document' => $doc->id]) : route('tenant.applicant.pre-onboarding-documents.upload', ['tenant' => $tenant->slug, 'application' => $application->id, 'document' => $doc->id]) }}" class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end sm:gap-3 w-full">
+                                                        @csrf
+                                                        <label class="sr-only" for="doc-file-{{ $doc->id }}">Choose file for {{ $doc->title }}</label>
+                                                        <input id="doc-file-{{ $doc->id }}" type="file" name="file" required class="min-w-0 w-full sm:flex-1 sm:max-w-[14rem] text-xs text-slate-600 file:mr-2 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-xs file:font-semibold file:text-slate-800 hover:file:bg-slate-200 file:cursor-pointer">
+                                                        <button type="submit" class="inline-flex shrink-0 justify-center rounded-lg px-4 py-2.5 text-xs font-semibold text-white shadow-sm hover:opacity-95 whitespace-nowrap sm:min-w-[5.5rem]" style="background: var(--applicant-brand);">
+                                                            {{ $ds === 'pending' ? 'Upload' : 'Replace' }}
+                                                        </button>
+                                                    </form>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @else
+                                <p class="text-sm text-amber-900/80">Your document checklist is being prepared. Please refresh in a moment.</p>
+                            @endif
+                        </div>
+                    @endif
 
                     <div class="px-5 sm:px-7 py-6 sm:py-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
                         {{-- Timeline --}}
@@ -239,5 +364,10 @@
             </div>
         </footer>
     </div>
+    @if(session('portal_application_id'))
+        <script>
+            document.getElementById('application-{{ session('portal_application_id') }}')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        </script>
+    @endif
 </body>
 </html>

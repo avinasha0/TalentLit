@@ -111,6 +111,7 @@
                     </svg>
                 </button>
                 <div data-mobile-onboarding-content class="ml-4 space-y-1 hidden">
+                    <a href="{{ tenantRoute('tenant.employee-onboarding.pre-onboarding', $tenant->slug ?? tenant()->slug) }}" class="block py-1 text-gray-700 hover:text-blue-600">Pre Onboarding</a>
                     <a href="{{ tenantRoute('tenant.employee-onboarding.all', $tenant->slug ?? tenant()->slug) }}" class="block py-1 text-gray-700 hover:text-blue-600">All Onboardings</a>
                     <a href="{{ tenantRoute('tenant.employee-onboarding.new', $tenant->slug ?? tenant()->slug) }}" class="block py-1 text-gray-700 hover:text-blue-600">New Onboarding</a>
                     <a href="{{ tenantRoute('tenant.employee-onboarding.tasks', $tenant->slug ?? tenant()->slug) }}" class="block py-1 text-gray-700 hover:text-blue-600">Tasks</a>

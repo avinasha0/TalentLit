@@ -41,5 +41,9 @@ class PreboardingItem extends Model
     {
         return $this->belongsTo(Candidate::class);
     }
-}
 
+    public function application(): BelongsTo
+    {
+        return $this->belongsTo(Application::class);
+    }
+}

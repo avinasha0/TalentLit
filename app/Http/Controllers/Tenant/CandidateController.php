@@ -3,13 +3,16 @@
 namespace App\Http\Controllers\Tenant;
 
 use App\Http\Controllers\Controller;
-use App\Models\Candidate;
-use App\Models\Resume;
-use App\Models\Application;
 use App\Http\Requests\StoreCandidateRequest;
-use App\Services\PreboardingAutomationService;
-use App\Support\ApplicationStatus;
+use App\Models\Application;
+use App\Models\Candidate;
 use App\Models\JobStage;
+use App\Models\Resume;
+use App\Services\JobOfferNotificationService;
+use App\Services\PreboardingAutomationService;
+use App\Services\PreOnboardingDocumentChecklistService;
+use App\Support\ApplicationStatus;
+use App\Support\PreOnboardingDocumentCatalog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -21,29 +24,29 @@ class CandidateController extends Controller
     {
         // Get tenant context
         $tenantModel = tenant();
-        if (!$tenantModel) {
+        if (! $tenantModel) {
             abort(404, 'Tenant not found');
         }
-        
+
         $query = Candidate::where('tenant_id', $tenantModel->id)
-            ->with(['tags', 'applications' => function($q) {
+            ->with(['tags', 'applications' => function ($q) {
                 $q->with('jobOpening')
-                  ->orderBy('applied_at', 'desc');
+                    ->orderBy('applied_at', 'desc');
             }]);
-        
+
         // Filter by job if job parameter is provided
         if ($job) {
             $jobId = (int) $job; // Ensure job parameter is cast to integer
-            
+
             // Verify the job exists and belongs to the tenant
             $jobExists = \App\Models\JobOpening::where('id', $jobId)
                 ->where('tenant_id', $tenantModel->id)
                 ->exists();
-                
-            if (!$jobExists) {
+
+            if (! $jobExists) {
                 abort(404, 'Job not found');
             }
-            
+
             $query->whereHas('applications', function ($q) use ($jobId) {
                 $q->where('job_opening_id', $jobId);
             });
@@ -133,10 +136,10 @@ class CandidateController extends Controller
     {
         // Get tenant context
         $tenantModel = tenant();
-        if (!$tenantModel) {
+        if (! $tenantModel) {
             abort(404, 'Tenant not found');
         }
-        
+
         // Ensure candidate belongs to current tenant
         if ($candidate->tenant_id !== $tenantModel->id) {
             abort(404, 'Candidate not found in this tenant');
@@ -150,17 +153,26 @@ class CandidateController extends Controller
             'interviews' => function ($query) {
                 $query->with([
                     'job:id,title',
-                    'panelists:id,name'
+                    'panelists:id,name',
                 ])->orderBy('scheduled_at', 'desc');
             },
             'applications' => function ($query) {
                 $query->with([
                     'jobOpening:id,title,department_id',
                     'jobOpening.department:id,name',
-                    'currentStage:id,name'
+                    'currentStage:id,name',
+                    'preOnboardingDocuments',
                 ]);
-            }
+            },
         ]);
+
+        $checklistSvc = app(PreOnboardingDocumentChecklistService::class);
+        foreach ($candidate->applications as $application) {
+            if (PreOnboardingDocumentCatalog::eligibleForChecklistSeed($application)) {
+                $checklistSvc->ensureChecklist($application);
+            }
+        }
+        $candidate->loadMissing(['applications.preOnboardingDocuments']);
 
         return view('tenant.candidates.show', compact('candidate', 'tenantModel'));
     }
@@ -173,6 +185,7 @@ class CandidateController extends Controller
         }
 
         $tenant = tenant();
+
         return view('tenant.candidates.edit', compact('candidate', 'tenant'));
     }
 
@@ -203,7 +216,7 @@ class CandidateController extends Controller
 
         $file = $request->file('resume_file');
         $extension = $file->getClientOriginalExtension();
-        $filename = Str::uuid() . '.' . $extension;
+        $filename = Str::uuid().'.'.$extension;
         $path = "resumes/{$candidate->tenant_id}/{$filename}";
 
         // Store file
@@ -223,7 +236,7 @@ class CandidateController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Resume uploaded successfully.',
-            'resume' => $resume
+            'resume' => $resume,
         ]);
     }
 
@@ -249,7 +262,7 @@ class CandidateController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Resume deleted successfully.'
+            'message' => 'Resume deleted successfully.',
         ]);
     }
 
@@ -257,7 +270,7 @@ class CandidateController extends Controller
     {
         // Ensure candidate and application belong to current tenant
         $tenantModel = tenant();
-        if (!$tenantModel) {
+        if (! $tenantModel) {
             abort(404, 'Tenant not found');
         }
 
@@ -273,6 +286,8 @@ class CandidateController extends Controller
         $request->validate([
             'status' => ['required', Rule::in(ApplicationStatus::allowed())],
         ]);
+
+        $previousStatus = strtolower((string) $application->status);
 
         $updateData = [
             'status' => $request->status,
@@ -317,7 +332,7 @@ class CandidateController extends Controller
             }
 
             // 2) Partial match for naming variants (e.g. "Screen" vs "Phone Screen")
-            if (!$stage) {
+            if (! $stage) {
                 foreach ($stageNames as $stageName) {
                     $needle = strtolower($stageName);
                     $stage = $jobStages->first(function (JobStage $jobStage) use ($needle) {
@@ -331,7 +346,7 @@ class CandidateController extends Controller
             }
 
             // 3) Final fallback: map pipeline status by sort order
-            if (!$stage) {
+            if (! $stage) {
                 $pipelineIndex = array_search($normalizedStatus, ApplicationStatus::PIPELINE, true);
                 if ($pipelineIndex !== false && $jobStages->isNotEmpty()) {
                     $stage = $jobStages->values()->get(min($pipelineIndex, $jobStages->count() - 1));
@@ -339,7 +354,7 @@ class CandidateController extends Controller
             }
 
             // 4) Ensure canonical stage exists for this status and use it.
-            if (!$stage && isset($canonicalStageNames[$normalizedStatus])) {
+            if (! $stage && isset($canonicalStageNames[$normalizedStatus])) {
                 $desiredSortOrder = array_search($normalizedStatus, ApplicationStatus::PIPELINE, true);
                 $stage = JobStage::create([
                     'tenant_id' => $tenantModel->id,
@@ -364,8 +379,17 @@ class CandidateController extends Controller
 
         $application->update($updateData);
 
+        $newStatus = strtolower((string) $application->status);
+        if ($newStatus === 'offered' && $previousStatus !== 'offered') {
+            app(JobOfferNotificationService::class)->sendOfferEmail($application->fresh());
+        }
+
         if ($request->status === 'hired') {
             app(PreboardingAutomationService::class)->initializeFromHire($application);
+        }
+
+        if ($newStatus === 'pre_onboarding' && $previousStatus !== 'pre_onboarding') {
+            app(PreOnboardingDocumentChecklistService::class)->ensureChecklist($application->fresh());
         }
 
         // Reload the relationship to get the updated stage name

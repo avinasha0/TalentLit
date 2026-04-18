@@ -1,38 +1,39 @@
 <?php
 
-use App\Http\Controllers\Auth\AuthenticatedSessionController;
-use App\Http\Controllers\InvitationController;
-use App\Http\Controllers\AuthController;
+use App\Http\Controllers\Applicant\ApplicantPortalController;
+use App\Http\Controllers\Applicant\ApplicantPreOnboardingDocumentController;
+use App\Http\Controllers\Applicant\ApplicantProfileController;
+use App\Http\Controllers\Applicant\PublicOfferResponseController;
+use App\Http\Controllers\Candidate\AuthenticatedSessionController as CandidateSessionController;
 use App\Http\Controllers\Career\ApplyController;
 use App\Http\Controllers\Career\CareerJobController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\HelpController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\InvitationController;
+use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\SubscriptionController;
-use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\Tenant\CandidateController;
 use App\Http\Controllers\Tenant\CandidateNoteController;
 use App\Http\Controllers\Tenant\CandidateTagController;
 use App\Http\Controllers\Tenant\CareersSettingsController;
 use App\Http\Controllers\Tenant\DashboardController;
+use App\Http\Controllers\Tenant\EmployeeOnboardingController;
 use App\Http\Controllers\Tenant\InterviewController;
 use App\Http\Controllers\Tenant\JobController;
-use App\Http\Controllers\Tenant\RecruitingController;
-use App\Http\Controllers\Tenant\RequisitionController;
 use App\Http\Controllers\Tenant\JobQuestionsController;
 use App\Http\Controllers\Tenant\JobStageController;
-use App\Http\Controllers\Tenant\PipelineController;
-use App\Http\Controllers\Tenant\EmployeeOnboardingController;
-use App\Http\Controllers\Applicant\ApplicantPortalController;
-use App\Http\Controllers\Applicant\ApplicantProfileController;
-use App\Http\Controllers\Candidate\AuthenticatedSessionController as CandidateSessionController;
 use App\Http\Controllers\Tenant\OrganizationController;
+use App\Http\Controllers\Tenant\PipelineController;
+use App\Http\Controllers\Tenant\PreOnboardingDocumentController;
+use App\Http\Controllers\Tenant\RecruitingController;
+use App\Http\Controllers\Tenant\RequisitionController;
 use App\Models\Application;
 use App\Models\Candidate;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\ProfileController;
 
 // Public route
 Route::get('/', [HomeController::class, 'index'])->name('home');
@@ -44,8 +45,9 @@ Route::get('/test-otp', function (Request $request) {
         'name' => 'Test User',
         'email' => 'test@example.com',
         'password' => bcrypt('password'),
-        'created_at' => now()
+        'created_at' => now(),
     ]);
+
     return redirect()->route('verification.show');
 });
 
@@ -91,21 +93,21 @@ Route::get('/test-contact-email', function () {
     try {
         \Log::info('Test contact email route accessed', [
             'timestamp' => now(),
-            'ip' => request()->ip()
+            'ip' => request()->ip(),
         ]);
-        
+
         $testData = [
             'name' => 'Debug Test User',
             'email' => 'debug@test.com',
             'company' => 'Debug Company',
             'phone' => '+1-555-999-0000',
             'subject' => 'Debug Test - Contact Form',
-            'message' => 'This is a debug test message to verify email functionality.'
+            'message' => 'This is a debug test message to verify email functionality.',
         ];
-        
+
         $adminEmail = env('MAIL_TO_EMAIL', config('mail.from.address'));
         \Mail::to($adminEmail)->send(new \App\Mail\ContactMail($testData));
-        
+
         return response()->json([
             'status' => 'success',
             'message' => 'Test email sent successfully',
@@ -114,25 +116,25 @@ Route::get('/test-contact-email', function () {
                 'mail_host' => config('mail.mailers.smtp.host'),
                 'mail_port' => config('mail.mailers.smtp.port'),
                 'mail_from_address' => config('mail.from.address'),
-                'mail_from_name' => config('mail.from.name')
-            ]
+                'mail_from_name' => config('mail.from.name'),
+            ],
         ]);
     } catch (\Exception $e) {
         \Log::error('Test contact email route failed', [
             'error' => $e->getMessage(),
-            'trace' => $e->getTraceAsString()
+            'trace' => $e->getTraceAsString(),
         ]);
-        
+
         return response()->json([
             'status' => 'error',
-            'message' => 'Test email failed: ' . $e->getMessage(),
+            'message' => 'Test email failed: '.$e->getMessage(),
             'config' => [
                 'mail_mailer' => config('mail.default'),
                 'mail_host' => config('mail.mailers.smtp.host'),
                 'mail_port' => config('mail.mailers.smtp.port'),
                 'mail_from_address' => config('mail.from.address'),
-                'mail_from_name' => config('mail.from.name')
-            ]
+                'mail_from_name' => config('mail.from.name'),
+            ],
         ], 500);
     }
 })->name('test.contact.email');
@@ -152,7 +154,6 @@ Route::get('/features.html', function () {
 Route::get('/pricing.html', function () {
     return view('pricing');
 })->name('pricing.html');
-
 
 Route::get('/documentation.html', function () {
     return view('documentation');
@@ -279,12 +280,14 @@ Route::get('/newsletter-simple', function () {
 // Newsletter Subscription Routes - Main routes (clean names)
 Route::get('/newsletter/subscribe', function () {
     $email = session('email');
+
     return view('newsletter.subscribe', ['old_email' => $email]);
 })->name('newsletter.subscribe');
 
 // Home page newsletter redirect (no OTP generation)
 Route::post('/newsletter/redirect', function (\Illuminate\Http\Request $request) {
     $email = $request->input('email');
+
     return redirect()->route('newsletter.subscribe')->with('email', $email);
 })->name('newsletter.redirect');
 
@@ -300,46 +303,45 @@ Route::post('/test-recaptcha', function (\Illuminate\Http\Request $request) {
     // Simple reCAPTCHA test handler
     $token = $request->input('g-recaptcha-response');
     $secret = config('recaptcha.secret_key');
-    
+
     // If reCAPTCHA is not configured, allow submission
     if (empty($secret)) {
         return response()->json([
             'success' => true,
             'message' => 'Form submitted successfully! (reCAPTCHA not configured)',
             'email' => $request->input('email'),
-            'note' => 'Add RECAPTCHA_SECRET_KEY to .env to enable reCAPTCHA verification'
+            'note' => 'Add RECAPTCHA_SECRET_KEY to .env to enable reCAPTCHA verification',
         ]);
     }
-    
+
     // If reCAPTCHA is configured but token is missing
     if (empty($token)) {
         return response()->json([
             'success' => false,
-            'message' => 'reCAPTCHA token is missing'
+            'message' => 'reCAPTCHA token is missing',
         ], 422);
     }
-    
+
     // Verify with Google using RecaptchaService
     $recaptchaService = app(\App\Services\RecaptchaService::class);
     $hostname = $request->getHost();
     $verified = $recaptchaService->verify($token, $request->ip(), $hostname);
-    
+
     if ($verified) {
         return response()->json([
             'success' => true,
             'message' => 'reCAPTCHA verification successful!',
             'email' => $request->input('email'),
-            'token_length' => strlen($token)
+            'token_length' => strlen($token),
         ]);
     } else {
         return response()->json([
             'success' => false,
             'message' => 'reCAPTCHA verification failed',
-            'hostname' => $hostname
+            'hostname' => $hostname,
         ], 422);
     }
 })->name('test.recaptcha.submit');
-
 
 // Simple dashboard route
 Route::get('/simple-dashboard', function () {
@@ -378,6 +380,7 @@ $breezeRoutes = function () {
                 return redirect($target);
             }
         }
+
         return view('simple-dashboard');
     })->name('dashboard');
 
@@ -409,6 +412,13 @@ Route::prefix('{tenant}/careers')->middleware(['capture.tenant', 'tenant'])->gro
     Route::get('/{job}/success', [ApplyController::class, 'success'])->name('careers.success');
 });
 
+Route::prefix('{tenant}/offers')->middleware(['capture.tenant', 'tenant', 'signed', 'throttle:30,1'])->group(function () {
+    Route::get('/{application}/accept', [PublicOfferResponseController::class, 'accept'])->whereUuid('application')->name('tenant.offers.accept');
+    Route::get('/{application}/reject', [PublicOfferResponseController::class, 'reject'])->whereUuid('application')->name('tenant.offers.reject');
+    Route::get('/{application}/discussion', [PublicOfferResponseController::class, 'showDiscussionForm'])->whereUuid('application')->name('tenant.offers.discussion.form');
+    Route::post('/{application}/discussion', [PublicOfferResponseController::class, 'submitDiscussion'])->whereUuid('application')->name('tenant.offers.discussion.submit');
+});
+
 // Internal Tenant Management Routes (require authentication)
 // Only match on main domain, not subdomains
 $tenantRoutes = function () {
@@ -417,6 +427,7 @@ $tenantRoutes = function () {
     Route::middleware('custom.permission:view_dashboard')->group(function () {
         Route::get('/{tenant}/employee-onboarding', [EmployeeOnboardingController::class, 'index'])->name('tenant.employee-onboarding.index');
         Route::get('/{tenant}/employee-onboarding/dashboard', [EmployeeOnboardingController::class, 'dashboard'])->name('tenant.employee-onboarding.dashboard');
+        Route::get('/{tenant}/employee-onboarding/pre-onboarding', [EmployeeOnboardingController::class, 'preOnboarding'])->name('tenant.employee-onboarding.pre-onboarding');
         Route::get('/{tenant}/employee-onboarding/all', [EmployeeOnboardingController::class, 'all'])->name('tenant.employee-onboarding.all');
         Route::get('/{tenant}/employee-onboarding/new', [EmployeeOnboardingController::class, 'new'])->name('tenant.employee-onboarding.new');
         Route::get('/{tenant}/employee-onboarding/tasks', [EmployeeOnboardingController::class, 'tasks'])->name('tenant.employee-onboarding.tasks');
@@ -448,7 +459,7 @@ $tenantRoutes = function () {
     Route::middleware(['custom.permission:create_jobs'])->group(function () {
         Route::get('/{tenant}/requisitions/create', [RequisitionController::class, 'create'])->name('tenant.requisitions.create');
         Route::post('/{tenant}/requisitions', [RequisitionController::class, 'store'])->name('tenant.requisitions.store');
-        
+
         // Note: API routes for requisition creation are registered separately without domain constraints
         // to support both path-based and subdomain-based tenant routing (see below after $tenantRoutes registration)
     });
@@ -482,7 +493,7 @@ $tenantRoutes = function () {
     Route::middleware(['custom.permission:view_jobs'])->group(function () {
         // Pending Approvals Page
         Route::get('/{tenant}/requisitions/pending-approvals', [\App\Http\Controllers\Tenant\ApprovalController::class, 'pendingApprovalsPage'])->name('tenant.requisitions.pending-approvals');
-        
+
         // Approval Detail Page
         Route::get('/{tenant}/requisitions/{id}/approval', [\App\Http\Controllers\Tenant\ApprovalController::class, 'approvalDetail'])->name('tenant.requisitions.approval');
     });
@@ -506,7 +517,7 @@ $tenantRoutes = function () {
     Route::middleware(['custom.permission:view_jobs'])->group(function () {
         // Web routes for Tasks UI
         Route::get('/{tenant}/tasks/my', [\App\Http\Controllers\Tenant\TaskController::class, 'index'])->name('tenant.tasks.my');
-        
+
         // API routes for Tasks
         Route::prefix('{tenant}/api/tasks')->group(function () {
             Route::get('/my', [\App\Http\Controllers\Api\TaskController::class, 'myTasks'])->name('tenant.api.tasks.my');
@@ -576,22 +587,26 @@ $tenantRoutes = function () {
         Route::get('/{tenant}/candidates/{candidate}', [CandidateController::class, 'show'])->whereUuid('candidate')->name('tenant.candidates.show');
         Route::get('/{tenant}/candidates/{candidate}/edit', [CandidateController::class, 'edit'])->whereUuid('candidate')->name('tenant.candidates.edit');
         Route::put('/{tenant}/candidates/{candidate}', [CandidateController::class, 'update'])->whereUuid('candidate')->name('tenant.candidates.update');
-        
+
         // Candidate Notes Routes
         Route::post('/{tenant}/candidates/{candidate}/notes', [CandidateNoteController::class, 'store'])->whereUuid('candidate')->name('tenant.candidates.notes.store');
         Route::delete('/{tenant}/candidates/{candidate}/notes/{note}', [CandidateNoteController::class, 'destroy'])->whereUuid('candidate')->name('tenant.candidates.notes.destroy');
-        
+
         // Candidate Tags Routes
         Route::get('/{tenant}/tags.json', [CandidateTagController::class, 'index'])->name('tenant.tags.index');
         Route::post('/{tenant}/candidates/{candidate}/tags', [CandidateTagController::class, 'store'])->whereUuid('candidate')->name('tenant.candidates.tags.store');
         Route::delete('/{tenant}/candidates/{candidate}/tags/{tag}', [CandidateTagController::class, 'destroy'])->whereUuid('candidate')->name('tenant.candidates.tags.destroy');
-        
+
         // Candidate Resume Routes
         Route::post('/{tenant}/candidates/{candidate}/resumes', [CandidateController::class, 'storeResume'])->whereUuid('candidate')->name('tenant.candidates.resumes.store');
         Route::delete('/{tenant}/candidates/{candidate}/resumes/{resume}', [CandidateController::class, 'destroyResume'])->whereUuid('candidate')->name('tenant.candidates.resumes.destroy');
-        
+
         // Application Status Update Route
         Route::patch('/{tenant}/candidates/{candidate}/applications/{application}/status', [CandidateController::class, 'updateApplicationStatus'])->whereUuid(['candidate', 'application'])->name('tenant.candidates.applications.status.update');
+
+        Route::get('/{tenant}/candidates/{candidate}/applications/{application}/pre-onboarding-documents/{document}/download', [PreOnboardingDocumentController::class, 'downloadPath'])->whereUuid(['candidate', 'application', 'document'])->name('tenant.candidates.applications.pre-onboarding-documents.download');
+        Route::post('/{tenant}/candidates/{candidate}/applications/{application}/pre-onboarding-documents/{document}/upload', [PreOnboardingDocumentController::class, 'staffUploadPath'])->whereUuid(['candidate', 'application', 'document'])->name('tenant.candidates.applications.pre-onboarding-documents.upload');
+        Route::post('/{tenant}/candidates/{candidate}/applications/{application}/pre-onboarding-documents/{document}/verify', [PreOnboardingDocumentController::class, 'verifyPath'])->whereUuid(['candidate', 'application', 'document'])->name('tenant.candidates.applications.pre-onboarding-documents.verify');
     });
 
     // Candidate Import Routes - Owner, Admin, Recruiter
@@ -660,15 +675,15 @@ $tenantRoutes = function () {
         // Careers Settings
         Route::get('/{tenant}/settings/careers', [CareersSettingsController::class, 'edit'])->name('tenant.settings.careers');
         Route::put('/{tenant}/settings/careers', [CareersSettingsController::class, 'update'])->name('tenant.settings.careers.update');
-        
+
         // Team Management
         Route::get('/{tenant}/settings/team', [App\Http\Controllers\Tenant\UserManagementController::class, 'index'])->name('tenant.settings.team');
-        
+
         // Roles & Permissions
-        Route::get('/{tenant}/settings/roles', function() {
+        Route::get('/{tenant}/settings/roles', function () {
             return view('tenant.settings.roles');
         })->name('tenant.settings.roles');
-        
+
         // General Settings
         Route::get('/{tenant}/settings/general', [App\Http\Controllers\Tenant\GeneralSettingsController::class, 'edit'])->name('tenant.settings.general');
         Route::put('/{tenant}/settings/general', [App\Http\Controllers\Tenant\GeneralSettingsController::class, 'update'])->name('tenant.settings.general.update');
@@ -739,7 +754,7 @@ $tenantRoutes = function () {
         Route::put('/profile/password', [App\Http\Controllers\Tenant\ProfileController::class, 'updatePassword'])->name('account.profile.password');
         Route::put('/profile/email', [App\Http\Controllers\Tenant\ProfileController::class, 'updateEmail'])->name('account.profile.email');
         Route::put('/profile/notifications', [App\Http\Controllers\Tenant\ProfileController::class, 'updateNotifications'])->name('account.profile.notifications');
-        
+
         // Settings routes (keeping for backward compatibility)
         Route::get('/settings', [App\Http\Controllers\Tenant\AccountSettingsController::class, 'index'])->name('account.settings');
         Route::put('/settings/notifications', [App\Http\Controllers\Tenant\AccountSettingsController::class, 'updateNotifications'])->name('account.settings.notifications');
@@ -767,6 +782,10 @@ $candidatePortalRoutes = function () {
     Route::middleware(['auth:candidate', 'candidate.tenant'])->group(function () {
         Route::post('/{tenant}/candidate/logout', [CandidateSessionController::class, 'destroy'])->name('candidate.logout');
         Route::get('/{tenant}/my-applications', [ApplicantPortalController::class, 'index'])->name('tenant.applicant.dashboard');
+        Route::post('/{tenant}/my-applications/{application}/pre-onboarding-documents/{document}/upload', [ApplicantPreOnboardingDocumentController::class, 'uploadPath'])
+            ->whereUuid(['application', 'document'])
+            ->middleware('throttle:20,1')
+            ->name('tenant.applicant.pre-onboarding-documents.upload');
         Route::get('/{tenant}/my-profile', [ApplicantProfileController::class, 'edit'])->name('tenant.applicant.profile');
         Route::put('/{tenant}/my-profile/email', [ApplicantProfileController::class, 'updateEmail'])->name('tenant.applicant.profile.email');
         Route::put('/{tenant}/my-profile/password', [ApplicantProfileController::class, 'updatePassword'])->name('tenant.applicant.profile.password');
@@ -786,9 +805,9 @@ if (app()->environment('local')) {
 // Having both ensures compatibility with both path-based and subdomain-based tenant routing
 Route::middleware(['capture.tenant', 'tenant', 'auth', 'custom.permission:create_jobs'])->group(function () {
     Route::prefix('{tenant}/api/requisitions')->group(function () {
-            Route::get('/job-titles', [RequisitionController::class, 'getJobTitleSuggestions'])->name('tenant.api.requisitions.job-titles');
-            Route::get('/skills', [RequisitionController::class, 'getSkillSuggestions'])->name('tenant.api.requisitions.skills');
-            Route::get('/employees', [RequisitionController::class, 'getEmployeeSuggestions'])->name('tenant.api.requisitions.employees');
+        Route::get('/job-titles', [RequisitionController::class, 'getJobTitleSuggestions'])->name('tenant.api.requisitions.job-titles');
+        Route::get('/skills', [RequisitionController::class, 'getSkillSuggestions'])->name('tenant.api.requisitions.skills');
+        Route::get('/employees', [RequisitionController::class, 'getEmployeeSuggestions'])->name('tenant.api.requisitions.employees');
         Route::post('/draft', [RequisitionController::class, 'saveDraft'])->name('tenant.api.requisitions.draft.save');
         Route::get('/draft', [RequisitionController::class, 'loadDraft'])->name('tenant.api.requisitions.draft.load');
         Route::delete('/draft', [RequisitionController::class, 'deleteDraft'])->name('tenant.api.requisitions.draft.delete');
@@ -815,21 +834,21 @@ Route::prefix('api')->group(function () {
 // Employee Onboarding API routes - Only match on main domain, not subdomains
 $onboardingApiRoutes = function () {
     Route::get('/{tenant}/api/onboardings', [EmployeeOnboardingController::class, 'apiIndex'])->name('api.onboardings.index');
-    
+
     // Dashboard API routes - MUST come before /{id} routes to avoid route conflicts
     Route::get('/{tenant}/api/onboardings/dashboard/kpis', [EmployeeOnboardingController::class, 'apiDashboardKPIs'])->name('api.onboardings.dashboard.kpis');
     Route::get('/{tenant}/api/onboardings/dashboard/bottlenecks', [EmployeeOnboardingController::class, 'apiDashboardBottlenecks'])->name('api.onboardings.dashboard.bottlenecks');
     Route::get('/{tenant}/api/onboardings/dashboard/charts', [EmployeeOnboardingController::class, 'apiDashboardCharts'])->name('api.onboardings.dashboard.charts');
     Route::get('/{tenant}/api/onboardings/dashboard/export', [EmployeeOnboardingController::class, 'apiDashboardExport'])->name('api.onboardings.dashboard.export');
-    
+
     // Export and import routes - also before /{id} routes
     Route::get('/{tenant}/api/onboardings/export/csv', [EmployeeOnboardingController::class, 'apiExportCSV'])->name('api.onboardings.export.csv');
     Route::post('/{tenant}/api/onboardings/import/candidates', [EmployeeOnboardingController::class, 'importCandidates'])->name('api.onboardings.import.candidates');
     Route::get('/{tenant}/api/onboardings/import/template', [EmployeeOnboardingController::class, 'downloadImportTemplate'])->name('api.onboardings.import.template');
-    
+
     // Bulk operations - before /{id} routes
     Route::post('/{tenant}/api/onboardings/bulk/remind', [EmployeeOnboardingController::class, 'apiBulkRemind'])->name('api.onboardings.bulk.remind');
-    
+
     // Individual onboarding routes with {id} - these must come LAST
     Route::get('/{tenant}/api/onboardings/{id}', [EmployeeOnboardingController::class, 'apiShow'])->whereUuid('id')->name('api.onboardings.show');
     Route::post('/{tenant}/api/onboardings/{id}/remind', [EmployeeOnboardingController::class, 'apiSendReminder'])->whereUuid('id')->name('api.onboardings.remind');
@@ -853,13 +872,14 @@ if (app()->environment('local')) {
 }
 
 // Add GET logout route for both testing and production
-Route::get('/logout', function() {
+Route::get('/logout', function () {
     auth()->logout();
     request()->session()->invalidate();
     request()->session()->regenerateToken();
     // Clear tenant-specific session data
     request()->session()->forget('last_tenant_slug');
     request()->session()->forget('current_tenant_id');
+
     return redirect('/');
 })->name('logout.get');
 
@@ -886,60 +906,69 @@ $appDomain = parse_url($appUrl, PHP_URL_HOST) ?? 'localhost';
 
 // Public marketing routes accessible from subdomains (no auth required)
 // These routes use the same route names as main domain so footer links work, but redirect to main domain
-Route::domain('{subdomain}.' . $appDomain)->middleware(['subdomain.redirect', 'subdomain.tenant'])->group(function () use ($appDomain) {
+Route::domain('{subdomain}.'.$appDomain)->middleware(['subdomain.redirect', 'subdomain.tenant'])->group(function () use ($appDomain) {
     // Company marketing pages - accessible via route names but redirect to main domain
     // Note: These are defined BEFORE tenant routes to be matched first
     Route::get('/about', function () use ($appDomain) {
         $scheme = request()->getScheme();
-        return redirect($scheme . '://' . $appDomain . '/about', 301);
+
+        return redirect($scheme.'://'.$appDomain.'/about', 301);
     })->name('about');
-    
+
     Route::get('/press', function () use ($appDomain) {
         $scheme = request()->getScheme();
-        return redirect($scheme . '://' . $appDomain . '/press', 301);
+
+        return redirect($scheme.'://'.$appDomain.'/press', 301);
     })->name('press');
-    
+
     Route::get('/blog', function () use ($appDomain) {
         $scheme = request()->getScheme();
-        return redirect($scheme . '://' . $appDomain . '/blog', 301);
+
+        return redirect($scheme.'://'.$appDomain.'/blog', 301);
     })->name('blog');
-    
+
     Route::get('/contact', function () use ($appDomain) {
         $scheme = request()->getScheme();
-        return redirect($scheme . '://' . $appDomain . '/contact', 301);
+
+        return redirect($scheme.'://'.$appDomain.'/contact', 301);
     })->name('contact');
-    
+
     // Features pages - redirect to main domain
     Route::get('/features', function () use ($appDomain) {
         $scheme = request()->getScheme();
-        return redirect($scheme . '://' . $appDomain . '/features', 301);
+
+        return redirect($scheme.'://'.$appDomain.'/features', 301);
     })->name('features');
-    
+
     Route::get('/features/candidate-sourcing.html', function () use ($appDomain) {
         $scheme = request()->getScheme();
-        return redirect($scheme . '://' . $appDomain . '/features/candidate-sourcing.html', 301);
+
+        return redirect($scheme.'://'.$appDomain.'/features/candidate-sourcing.html', 301);
     })->name('features.candidate-sourcing');
-    
+
     Route::get('/features/hiring-pipeline.html', function () use ($appDomain) {
         $scheme = request()->getScheme();
-        return redirect($scheme . '://' . $appDomain . '/features/hiring-pipeline.html', 301);
+
+        return redirect($scheme.'://'.$appDomain.'/features/hiring-pipeline.html', 301);
     })->name('features.hiring-pipeline');
-    
+
     Route::get('/features/hiring-analytics.html', function () use ($appDomain) {
         $scheme = request()->getScheme();
-        return redirect($scheme . '://' . $appDomain . '/features/hiring-analytics.html', 301);
+
+        return redirect($scheme.'://'.$appDomain.'/features/hiring-analytics.html', 301);
     })->name('features.hiring-analytics');
-    
+
     // Careers marketing page - redirects to main domain
     // Note: Tenant job listings use /careers path but route name 'subdomain.careers.index'
     // This route uses route name 'careers' so footer links work, and redirects to main domain
     Route::get('/careers-marketing', function () use ($appDomain) {
         $scheme = request()->getScheme();
-        return redirect($scheme . '://' . $appDomain . '/careers', 301);
+
+        return redirect($scheme.'://'.$appDomain.'/careers', 301);
     })->name('careers');
 });
 
-Route::domain('{subdomain}.' . $appDomain)->middleware(['subdomain.redirect', 'subdomain.tenant', 'auth'])->group(function () {
+Route::domain('{subdomain}.'.$appDomain)->middleware(['subdomain.redirect', 'subdomain.tenant', 'auth'])->group(function () {
     // Dashboard
     Route::middleware('custom.permission:view_dashboard')->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('subdomain.dashboard');
@@ -960,7 +989,7 @@ Route::domain('{subdomain}.' . $appDomain)->middleware(['subdomain.redirect', 's
     Route::middleware(['custom.permission:view_jobs'])->group(function () {
         // Web routes for Tasks UI
         Route::get('/tasks/my', [\App\Http\Controllers\Tenant\TaskController::class, 'index'])->name('subdomain.tasks.my');
-        
+
         // API routes for Tasks
         Route::prefix('api/tasks')->group(function () {
             Route::get('/my', [\App\Http\Controllers\Api\TaskController::class, 'myTasks'])->name('subdomain.api.tasks.my');
@@ -976,12 +1005,12 @@ Route::domain('{subdomain}.' . $appDomain)->middleware(['subdomain.redirect', 's
     Route::middleware(['custom.permission:create_jobs'])->group(function () {
         Route::get('/requisitions/create', [RequisitionController::class, 'create'])->name('subdomain.requisitions.create');
         Route::post('/requisitions', [RequisitionController::class, 'store'])->name('subdomain.requisitions.store');
-        
+
         // API routes for requisition creation features (Tasks 49-55)
         Route::prefix('api/requisitions')->group(function () {
-                            Route::get('/job-titles', [RequisitionController::class, 'getJobTitleSuggestions'])->name('subdomain.api.requisitions.job-titles');
-                            Route::get('/skills', [RequisitionController::class, 'getSkillSuggestions'])->name('subdomain.api.requisitions.skills');
-                            Route::get('/employees', [RequisitionController::class, 'getEmployeeSuggestions'])->name('subdomain.api.requisitions.employees');
+            Route::get('/job-titles', [RequisitionController::class, 'getJobTitleSuggestions'])->name('subdomain.api.requisitions.job-titles');
+            Route::get('/skills', [RequisitionController::class, 'getSkillSuggestions'])->name('subdomain.api.requisitions.skills');
+            Route::get('/employees', [RequisitionController::class, 'getEmployeeSuggestions'])->name('subdomain.api.requisitions.employees');
             Route::post('/draft', [RequisitionController::class, 'saveDraft'])->name('subdomain.api.requisitions.draft.save');
             Route::get('/draft', [RequisitionController::class, 'loadDraft'])->name('subdomain.api.requisitions.draft.load');
             Route::delete('/draft', [RequisitionController::class, 'deleteDraft'])->name('subdomain.api.requisitions.draft.delete');
@@ -1036,6 +1065,7 @@ Route::domain('{subdomain}.' . $appDomain)->middleware(['subdomain.redirect', 's
     Route::middleware('custom.permission:view_dashboard')->group(function () {
         Route::get('/employee-onboarding', [EmployeeOnboardingController::class, 'index'])->name('subdomain.employee-onboarding.index');
         Route::get('/employee-onboarding/dashboard', [EmployeeOnboardingController::class, 'dashboard'])->name('subdomain.employee-onboarding.dashboard');
+        Route::get('/employee-onboarding/pre-onboarding', [EmployeeOnboardingController::class, 'preOnboarding'])->name('subdomain.employee-onboarding.pre-onboarding');
         Route::get('/employee-onboarding/all', [EmployeeOnboardingController::class, 'all'])->name('subdomain.employee-onboarding.all');
         Route::get('/employee-onboarding/new', [EmployeeOnboardingController::class, 'new'])->name('subdomain.employee-onboarding.new');
         Route::get('/employee-onboarding/tasks', [EmployeeOnboardingController::class, 'tasks'])->name('subdomain.employee-onboarding.tasks');
@@ -1104,22 +1134,26 @@ Route::domain('{subdomain}.' . $appDomain)->middleware(['subdomain.redirect', 's
         Route::get('/candidates/{candidate}', [CandidateController::class, 'show'])->whereUuid('candidate')->name('subdomain.candidates.show');
         Route::get('/candidates/{candidate}/edit', [CandidateController::class, 'edit'])->whereUuid('candidate')->name('subdomain.candidates.edit');
         Route::put('/candidates/{candidate}', [CandidateController::class, 'update'])->whereUuid('candidate')->name('subdomain.candidates.update');
-        
+
         // Candidate Notes Routes
         Route::post('/candidates/{candidate}/notes', [CandidateNoteController::class, 'store'])->whereUuid('candidate')->name('subdomain.candidates.notes.store');
         Route::delete('/candidates/{candidate}/notes/{note}', [CandidateNoteController::class, 'destroy'])->whereUuid('candidate')->name('subdomain.candidates.notes.destroy');
-        
+
         // Candidate Tags Routes
         Route::get('/tags.json', [CandidateTagController::class, 'index'])->name('subdomain.tags.index');
         Route::post('/candidates/{candidate}/tags', [CandidateTagController::class, 'store'])->whereUuid('candidate')->name('subdomain.candidates.tags.store');
         Route::delete('/candidates/{candidate}/tags/{tag}', [CandidateTagController::class, 'destroy'])->whereUuid('candidate')->name('subdomain.candidates.tags.destroy');
-        
+
         // Candidate Resume Routes
         Route::post('/candidates/{candidate}/resumes', [CandidateController::class, 'storeResume'])->whereUuid('candidate')->name('subdomain.candidates.resumes.store');
         Route::delete('/candidates/{candidate}/resumes/{resume}', [CandidateController::class, 'destroyResume'])->whereUuid('candidate')->name('subdomain.candidates.resumes.destroy');
-        
+
         // Application Status Update Route
         Route::patch('/candidates/{candidate}/applications/{application}/status', [CandidateController::class, 'updateApplicationStatus'])->whereUuid(['candidate', 'application'])->name('subdomain.candidates.applications.status.update');
+
+        Route::get('/candidates/{candidate}/applications/{application}/pre-onboarding-documents/{document}/download', [PreOnboardingDocumentController::class, 'downloadSubdomain'])->whereUuid(['candidate', 'application', 'document'])->name('subdomain.candidates.applications.pre-onboarding-documents.download');
+        Route::post('/candidates/{candidate}/applications/{application}/pre-onboarding-documents/{document}/upload', [PreOnboardingDocumentController::class, 'staffUploadSubdomain'])->whereUuid(['candidate', 'application', 'document'])->name('subdomain.candidates.applications.pre-onboarding-documents.upload');
+        Route::post('/candidates/{candidate}/applications/{application}/pre-onboarding-documents/{document}/verify', [PreOnboardingDocumentController::class, 'verifySubdomain'])->whereUuid(['candidate', 'application', 'document'])->name('subdomain.candidates.applications.pre-onboarding-documents.verify');
     });
 
     // Candidate Import Routes
@@ -1187,15 +1221,15 @@ Route::domain('{subdomain}.' . $appDomain)->middleware(['subdomain.redirect', 's
         // Careers Settings
         Route::get('/settings/careers', [CareersSettingsController::class, 'edit'])->name('subdomain.settings.careers');
         Route::put('/settings/careers', [CareersSettingsController::class, 'update'])->name('subdomain.settings.careers.update');
-        
+
         // Team Management
         Route::get('/settings/team', [App\Http\Controllers\Tenant\UserManagementController::class, 'index'])->name('subdomain.settings.team');
-        
+
         // Roles & Permissions
-        Route::get('/settings/roles', function() {
+        Route::get('/settings/roles', function () {
             return view('tenant.settings.roles');
         })->name('subdomain.settings.roles');
-        
+
         // General Settings
         Route::get('/settings/general', [App\Http\Controllers\Tenant\GeneralSettingsController::class, 'edit'])->name('subdomain.settings.general');
         Route::put('/settings/general', [App\Http\Controllers\Tenant\GeneralSettingsController::class, 'update'])->name('subdomain.settings.general.update');
@@ -1261,7 +1295,7 @@ Route::domain('{subdomain}.' . $appDomain)->middleware(['subdomain.redirect', 's
         Route::put('/profile/password', [App\Http\Controllers\Tenant\ProfileController::class, 'updatePassword'])->name('subdomain.account.profile.password');
         Route::put('/profile/email', [App\Http\Controllers\Tenant\ProfileController::class, 'updateEmail'])->name('subdomain.account.profile.email');
         Route::put('/profile/notifications', [App\Http\Controllers\Tenant\ProfileController::class, 'updateNotifications'])->name('subdomain.account.profile.notifications');
-        
+
         // Settings routes
         Route::get('/settings', [App\Http\Controllers\Tenant\AccountSettingsController::class, 'index'])->name('subdomain.account.settings');
         Route::put('/settings/notifications', [App\Http\Controllers\Tenant\AccountSettingsController::class, 'updateNotifications'])->name('subdomain.account.settings.notifications');
@@ -1272,21 +1306,21 @@ Route::domain('{subdomain}.' . $appDomain)->middleware(['subdomain.redirect', 's
     // Employee Onboarding API routes
     Route::middleware('custom.permission:view_dashboard')->group(function () {
         Route::get('/api/onboardings', [EmployeeOnboardingController::class, 'apiIndex'])->name('subdomain.api.onboardings.index');
-        
+
         // Dashboard API routes - MUST come before /{id} routes to avoid route conflicts
         Route::get('/api/onboardings/dashboard/kpis', [EmployeeOnboardingController::class, 'apiDashboardKPIs'])->name('subdomain.api.onboardings.dashboard.kpis');
         Route::get('/api/onboardings/dashboard/bottlenecks', [EmployeeOnboardingController::class, 'apiDashboardBottlenecks'])->name('subdomain.api.onboardings.dashboard.bottlenecks');
         Route::get('/api/onboardings/dashboard/charts', [EmployeeOnboardingController::class, 'apiDashboardCharts'])->name('subdomain.api.onboardings.dashboard.charts');
         Route::get('/api/onboardings/dashboard/export', [EmployeeOnboardingController::class, 'apiDashboardExport'])->name('subdomain.api.onboardings.dashboard.export');
-        
+
         // Export and import routes - also before /{id} routes
         Route::get('/api/onboardings/export/csv', [EmployeeOnboardingController::class, 'apiExportCSV'])->name('subdomain.api.onboardings.export.csv');
         Route::post('/api/onboardings/import/candidates', [EmployeeOnboardingController::class, 'importCandidates'])->name('subdomain.api.onboardings.import.candidates');
         Route::get('/api/onboardings/import/template', [EmployeeOnboardingController::class, 'downloadImportTemplate'])->name('subdomain.api.onboardings.import.template');
-        
+
         // Bulk operations - before /{id} routes
         Route::post('/api/onboardings/bulk/remind', [EmployeeOnboardingController::class, 'apiBulkRemind'])->name('subdomain.api.onboardings.bulk.remind');
-        
+
         // Individual onboarding routes with {id} - these must come LAST
         Route::get('/api/onboardings/{id}', [EmployeeOnboardingController::class, 'apiShow'])->whereUuid('id')->name('subdomain.api.onboardings.show');
         Route::post('/api/onboardings/{id}/remind', [EmployeeOnboardingController::class, 'apiSendReminder'])->whereUuid('id')->name('subdomain.api.onboardings.remind');
@@ -1306,6 +1340,13 @@ Route::domain('{subdomain}.' . $appDomain)->middleware(['subdomain.redirect', 's
 
 // Public Career Site Routes for Subdomain
 Route::middleware(['subdomain.tenant'])->group(function () {
+    Route::middleware(['signed', 'throttle:30,1'])->group(function () {
+        Route::get('/offers/{application}/accept', [PublicOfferResponseController::class, 'acceptSubdomain'])->whereUuid('application')->name('subdomain.offers.accept');
+        Route::get('/offers/{application}/reject', [PublicOfferResponseController::class, 'rejectSubdomain'])->whereUuid('application')->name('subdomain.offers.reject');
+        Route::get('/offers/{application}/discussion', [PublicOfferResponseController::class, 'showDiscussionFormSubdomain'])->whereUuid('application')->name('subdomain.offers.discussion.form');
+        Route::post('/offers/{application}/discussion', [PublicOfferResponseController::class, 'submitDiscussionSubdomain'])->whereUuid('application')->name('subdomain.offers.discussion.submit');
+    });
+
     Route::middleware('guest:candidate')->group(function () {
         Route::get('/candidate/login', [CandidateSessionController::class, 'create'])->name('subdomain.candidate.login');
         Route::post('/candidate/login', [CandidateSessionController::class, 'store'])->name('subdomain.candidate.login.store');
@@ -1314,6 +1355,10 @@ Route::middleware(['subdomain.tenant'])->group(function () {
     Route::middleware(['auth:candidate', 'candidate.tenant'])->group(function () {
         Route::post('/candidate/logout', [CandidateSessionController::class, 'destroy'])->name('subdomain.candidate.logout');
         Route::get('/my-applications', [ApplicantPortalController::class, 'index'])->name('subdomain.applicant.dashboard');
+        Route::post('/my-applications/{application}/pre-onboarding-documents/{document}/upload', [ApplicantPreOnboardingDocumentController::class, 'uploadSubdomain'])
+            ->whereUuid(['application', 'document'])
+            ->middleware('throttle:20,1')
+            ->name('subdomain.applicant.pre-onboarding-documents.upload');
         Route::get('/my-profile', [ApplicantProfileController::class, 'edit'])->name('subdomain.applicant.profile');
         Route::put('/my-profile/email', [ApplicantProfileController::class, 'updateEmail'])->name('subdomain.applicant.profile.email');
         Route::put('/my-profile/password', [ApplicantProfileController::class, 'updatePassword'])->name('subdomain.applicant.profile.password');
@@ -1328,4 +1373,3 @@ Route::middleware(['subdomain.tenant'])->group(function () {
     Route::post('/careers/{job}/apply', [ApplyController::class, 'store'])->middleware('subscription.limit:max_applications_per_month')->name('subdomain.careers.apply.store');
     Route::get('/careers/{job}/success', [ApplyController::class, 'success'])->name('subdomain.careers.success');
 });
-

@@ -3,19 +3,26 @@
 namespace App\Http\Controllers\Tenant;
 
 use App\Http\Controllers\Controller;
+use App\Mail\TaskCreated;
 use App\Models\JobOpening;
 use App\Models\Department;
 use App\Models\Location;
+use App\Models\Task;
+use App\Models\User;
+use App\Services\PermissionService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
-use Illuminate\Support\Facades\Gate;
 
 class JobController extends Controller
 {
     public function index(Request $request, string $tenant)
     {
-        $query = JobOpening::with(['department', 'location', 'jobStages'])
+        $query = JobOpening::with(['department', 'location', 'jobStages', 'assignedHr'])
+            ->withCount('applications')
             ->orderBy('created_at', 'desc');
 
         // Apply filters
@@ -78,7 +85,7 @@ class JobController extends Controller
 
         $locations = $globalLocations->merge($cities)->unique()->sort()->values();
 
-        $statuses = ['draft', 'published', 'closed'];
+        $statuses = ['draft', 'assigned', 'published', 'closed'];
 
         if ($request->expectsJson()) {
             return response()->json([
@@ -91,6 +98,7 @@ class JobController extends Controller
                         'location' => $job->globalLocation?->name ?? $job->city?->formatted_location,
                         'employment_type' => $job->employment_type,
                         'status' => $job->status,
+                        'assigned_hr_name' => $job->assignedHr?->name,
                         'openings_count' => $job->openings_count,
                         'published_at' => $job->published_at,
                         'created_at' => $job->created_at,
@@ -164,7 +172,6 @@ class JobController extends Controller
             'department_id' => 'nullable|exists:departments,id',
             'location_id' => 'nullable|exists:locations,id',
             'employment_type' => 'required|in:full_time,part_time,contract,intern,freelancer',
-            'status' => 'required|in:draft,published,closed',
             'openings_count' => 'required|integer|min:1',
             'description' => 'required|string',
         ]);
@@ -179,6 +186,7 @@ class JobController extends Controller
         }
 
         $validated['tenant_id'] = tenant_id();
+        $validated['status'] = 'draft';
         
         // Final check to ensure slug is unique (double safety)
         if (!empty($validated['slug'])) {
@@ -196,10 +204,6 @@ class JobController extends Controller
             $validated['slug'] = $currentSlug;
         }
         
-        if ($validated['status'] === 'published') {
-            $validated['published_at'] = now();
-        }
-
         $job = JobOpening::create($validated);
 
         return redirect()
@@ -214,9 +218,23 @@ class JobController extends Controller
             abort(404, 'Job not found');
         }
 
-        $job->load(['department', 'location', 'jobStages', 'applications.candidate']);
+        $job->load(['department', 'location', 'jobStages', 'applications.candidate', 'assignedHr']);
 
-        return view('tenant.jobs.show', compact('job'));
+        $assignableHrUsers = collect();
+        if (auth()->check() && auth()->user()->isHrAdmin() && $job->status === 'draft') {
+            $assignableHrUsers = User::query()
+                ->whereHas('tenants', function ($q) {
+                    $q->where('tenants.id', tenant_id());
+                })
+                ->orderBy('name')
+                ->get()
+                ->filter(function ($u) {
+                    return app(PermissionService::class)->userHasPermission((int) $u->id, tenant_id(), 'edit_jobs', false);
+                })
+                ->values();
+        }
+
+        return view('tenant.jobs.show', compact('job', 'assignableHrUsers'));
     }
 
     public function edit(string $tenant, JobOpening $job)
@@ -227,6 +245,8 @@ class JobController extends Controller
         }
 
         Gate::authorize('update', $job);
+
+        $job->load('assignedHr');
         
         $departments = Department::orderBy('name')->get();
         $locations = Location::orderBy('name')->get();
@@ -257,7 +277,6 @@ class JobController extends Controller
             'department_id' => 'nullable|exists:departments,id',
             'location_id' => 'nullable|exists:locations,id',
             'employment_type' => 'required|in:full_time,part_time,contract,intern,freelancer',
-            'status' => 'required|in:draft,published,closed',
             'openings_count' => 'required|integer|min:1',
             'description' => 'required|string',
         ]);
@@ -287,11 +306,6 @@ class JobController extends Controller
             }
         }
 
-        // Set published_at if status changed to published
-        if ($validated['status'] === 'published' && $job->status !== 'published') {
-            $validated['published_at'] = now();
-        }
-
         $job->update($validated);
 
         return redirect()
@@ -307,15 +321,102 @@ class JobController extends Controller
         }
 
         Gate::authorize('publish', $job);
-        
+
+        $assigneeId = $job->assigned_hr_user_id;
+
         $job->update([
             'status' => 'published',
             'published_at' => now(),
         ]);
 
+        if ($assigneeId) {
+            Task::query()
+                ->where('tenant_id', $job->tenant_id)
+                ->where('job_opening_id', $job->id)
+                ->where('task_type', 'Job Publish')
+                ->where('user_id', $assigneeId)
+                ->whereIn('status', ['Pending', 'InProgress'])
+                ->update(['status' => 'Completed']);
+        }
+
         return redirect()
             ->back()
             ->with('success', 'Job published successfully.');
+    }
+
+    public function assignHr(Request $request, string $tenant, JobOpening $job)
+    {
+        if ($job->tenant_id !== tenant_id()) {
+            abort(404, 'Job not found');
+        }
+
+        Gate::authorize('assignHr', $job);
+
+        $validated = $request->validate([
+            'assigned_hr_user_id' => ['required', 'exists:users,id'],
+        ]);
+
+        $assignee = User::findOrFail($validated['assigned_hr_user_id']);
+        $tenantUuid = tenant_id();
+
+        if (! $assignee->belongsToTenant($tenantUuid)) {
+            return back()->withErrors(['assigned_hr_user_id' => 'Selected user is not a member of this organization.']);
+        }
+
+        if (! app(PermissionService::class)->userHasPermission((int) $assignee->id, $tenantUuid, 'edit_jobs', false)) {
+            return back()->withErrors(['assigned_hr_user_id' => 'Selected user must have job editing access.']);
+        }
+
+        $job->update([
+            'assigned_hr_user_id' => $assignee->id,
+            'status' => 'assigned',
+        ]);
+
+        $this->createJobPublishTaskForAssignee($job->fresh(), $assignee);
+
+        return redirect()
+            ->back()
+            ->with('success', 'HR owner assigned. The job is now in Assigned status and can be published by that user.');
+    }
+
+    /**
+     * Create a My Tasks item so the assigned HR user sees publish work in their task list.
+     */
+    private function createJobPublishTaskForAssignee(JobOpening $job, User $assignee): void
+    {
+        try {
+            $tenantModel = tenant();
+            $tenantSlug = $tenantModel ? $tenantModel->slug : 'tenant';
+            $hasDueAtColumn = Schema::hasColumn('tasks', 'due_at');
+
+            $taskData = [
+                'user_id' => $assignee->id,
+                'task_type' => 'Job Publish',
+                'title' => 'Review & publish job: '.$job->title,
+                'job_opening_id' => $job->id,
+                'requisition_id' => null,
+                'status' => 'Pending',
+                'link' => '/'.$tenantSlug.'/jobs/'.$job->id,
+                'created_by' => auth()->id(),
+                'tenant_id' => $job->tenant_id,
+            ];
+
+            if ($hasDueAtColumn) {
+                $taskData['due_at'] = now()->addDays(7);
+            }
+
+            $task = Task::create($taskData);
+
+            if ($assignee->email) {
+                Mail::to($assignee->email)->queue(new TaskCreated($task->load(['jobOpening', 'requisition'])));
+            }
+        } catch (\Throwable $e) {
+            \Log::error('Failed to create job publish task', [
+                'job_id' => $job->id,
+                'assignee_id' => $assignee->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     public function close(string $tenant, JobOpening $job)

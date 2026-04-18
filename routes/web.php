@@ -527,9 +527,7 @@ $tenantRoutes = function () {
     Route::middleware('custom.permission:edit_jobs')->group(function () {
         Route::get('/{tenant}/jobs/{job}/edit', [JobController::class, 'edit'])->name('tenant.jobs.edit');
         Route::put('/{tenant}/jobs/{job}', [JobController::class, 'update'])->name('tenant.jobs.update');
-    });
-
-    Route::middleware('custom.permission:publish_jobs')->group(function () {
+        Route::patch('/{tenant}/jobs/{job}/assign-hr', [JobController::class, 'assignHr'])->name('tenant.jobs.assign-hr');
         Route::patch('/{tenant}/jobs/{job}/publish', [JobController::class, 'publish'])->name('tenant.jobs.publish');
     });
 
@@ -1035,9 +1033,7 @@ Route::domain('{subdomain}.' . $appDomain)->middleware(['subdomain.redirect', 's
     Route::middleware('custom.permission:edit_jobs')->group(function () {
         Route::get('/jobs/{job}/edit', [JobController::class, 'edit'])->name('subdomain.jobs.edit');
         Route::put('/jobs/{job}', [JobController::class, 'update'])->name('subdomain.jobs.update');
-    });
-
-    Route::middleware('custom.permission:publish_jobs')->group(function () {
+        Route::patch('/jobs/{job}/assign-hr', [JobController::class, 'assignHr'])->name('subdomain.jobs.assign-hr');
         Route::patch('/jobs/{job}/publish', [JobController::class, 'publish'])->name('subdomain.jobs.publish');
     });
 

@@ -134,20 +134,21 @@
                     </div>
                 </div>
 
-                <!-- Status -->
+                <!-- Status (read-only; publishing is a separate action) -->
                 <div>
-                    <label for="status" class="block text-sm font-medium text-black mb-1">Status *</label>
-                    <select name="status"
-                            id="status"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            required>
-                        <option value="draft" {{ old('status', $job->status) == 'draft' ? 'selected' : '' }}>Draft</option>
-                        <option value="published" {{ old('status', $job->status) == 'published' ? 'selected' : '' }}>Published</option>
-                        <option value="closed" {{ old('status', $job->status) == 'closed' ? 'selected' : '' }}>Closed</option>
-                    </select>
-                    @error('status')
-                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                    @enderror
+                    <span class="block text-sm font-medium text-black mb-1">Status</span>
+                    <span class="inline-flex px-3 py-1 text-sm font-semibold rounded-full
+                        @if($job->status === 'published') bg-green-100 text-green-800
+                        @elseif($job->status === 'assigned') bg-indigo-100 text-indigo-800
+                        @elseif($job->status === 'draft') bg-yellow-100 text-yellow-800
+                        @else bg-red-100 text-red-800
+                        @endif">
+                        {{ ucfirst($job->status) }}
+                    </span>
+                    @if($job->assignedHr)
+                        <p class="mt-2 text-sm text-gray-600">Assigned HR: <span class="font-medium text-gray-900">{{ $job->assignedHr->name }}</span></p>
+                    @endif
+                    <p class="mt-2 text-xs text-gray-600">Publishing is only available to the assigned HR owner from the job page when the job is in Assigned status.</p>
                 </div>
 
                 <!-- Description -->

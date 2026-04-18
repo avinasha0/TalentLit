@@ -5,6 +5,7 @@
     $isSubdomain = str_starts_with($currentRoute, 'subdomain.');
     $apiBasePath = $isSubdomain ? '/api/tasks' : "/{$tenantSlug}/api/tasks";
     $requisitionBasePath = $isSubdomain ? '/requisitions' : "/{$tenantSlug}/requisitions";
+    $jobsBasePath = $isSubdomain ? '/jobs' : "/{$tenantSlug}/jobs";
     $breadcrumbs = [
         ['label' => 'Dashboard', 'url' => tenantRoute('tenant.dashboard', $tenantSlug)],
         ['label' => 'Tasks', 'url' => null],
@@ -55,6 +56,7 @@
                             <option value="">All Types</option>
                             <option value="Requisition Approval">Requisition Approval</option>
                             <option value="Requisition Edit Needed">Requisition Edit Needed</option>
+                            <option value="Job Publish">Job Publish</option>
                         </select>
                     </div>
 
@@ -63,7 +65,7 @@
                         <input type="text" 
                                name="search" 
                                id="search"
-                               placeholder="Title or requisition ID..."
+                               placeholder="Title, requisition ID, or job…"
                                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black">
                     </div>
 
@@ -141,7 +143,7 @@
                         Close
                     </button>
                     <button id="openApprovalBtn" onclick="openApproval()" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 hidden">
-                        Open Approval
+                        Open
                     </button>
                     <button id="completeTaskBtn" onclick="completeTask()" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 hidden">
                         Complete Task
@@ -156,6 +158,7 @@
         const tenantSlug = '{{ $tenantSlug }}';
         const apiBasePath = '{{ $apiBasePath }}';
         const requisitionBasePath = '{{ $requisitionBasePath }}';
+        const jobsBasePath = '{{ $jobsBasePath }}';
         let currentPage = 1;
         let currentTaskId = null;
 
@@ -306,9 +309,14 @@
                 
                 const dueDate = task.due_at ? new Date(task.due_at).toLocaleDateString() : 'N/A';
                 const createdBy = task.creator ? task.creator.name : 'N/A';
-                const reqId = task.requisition_id || 'N/A';
                 const statusBadge = getStatusBadge(task.status);
                 const typeBadge = getTypeBadge(task.task_type);
+                let relatedCell = 'N/A';
+                if (task.requisition_id) {
+                    relatedCell = `<a href="${requisitionBasePath}/${task.requisition_id}" class="text-blue-600 hover:underline" onclick="event.stopPropagation()">Req #${task.requisition_id}</a>`;
+                } else if (task.job_opening_id && task.job_opening) {
+                    relatedCell = `<a href="${jobsBasePath}/${task.job_opening_id}" class="text-blue-600 hover:underline" onclick="event.stopPropagation()">${escapeHtml(task.job_opening.title || 'Job')}</a>`;
+                }
 
                 return `
                     <tr class="hover:bg-gray-50 cursor-pointer task-row" data-task-id="${taskId}">
@@ -320,7 +328,7 @@
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="text-sm text-gray-500">
-                                ${task.requisition_id ? `<a href="${requisitionBasePath}/${task.requisition_id}" class="text-blue-600 hover:underline" onclick="event.stopPropagation()">Req #${task.requisition_id}</a>` : 'N/A'}
+                                ${relatedCell}
                             </div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
@@ -357,7 +365,8 @@
         function getTypeBadge(type) {
             const badges = {
                 'Requisition Approval': '<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-100 text-purple-800">Approval</span>',
-                'Requisition Edit Needed': '<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-orange-100 text-orange-800">Edit Needed</span>'
+                'Requisition Edit Needed': '<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-orange-100 text-orange-800">Edit Needed</span>',
+                'Job Publish': '<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-teal-100 text-teal-800">Job</span>'
             };
             return badges[type] || type;
         }
@@ -498,7 +507,7 @@
                         </div>
                     </div>
                     <div>
-                        <h4 class="font-semibold text-black mb-2">Related Requisition</h4>
+                        <h4 class="font-semibold text-black mb-2">Related</h4>
                         ${task.requisition ? `
                             <div class="space-y-2 text-sm">
                                 <div><span class="font-medium">Job Title:</span> ${escapeHtml(task.requisition.job_title)}</div>
@@ -506,7 +515,12 @@
                                 <div><span class="font-medium">Status:</span> ${escapeHtml(task.requisition.status || 'N/A')}</div>
                                 <a href="${requisitionBasePath}/${task.requisition_id}" class="text-blue-600 hover:underline">View Requisition →</a>
                             </div>
-                        ` : '<p class="text-sm text-gray-500">No related requisition</p>'}
+                        ` : task.job_opening ? `
+                            <div class="space-y-2 text-sm">
+                                <div><span class="font-medium">Job:</span> ${escapeHtml(task.job_opening.title || 'Job opening')}</div>
+                                <a href="${jobsBasePath}/${task.job_opening_id}" class="text-blue-600 hover:underline">Open job →</a>
+                            </div>
+                        ` : '<p class="text-sm text-gray-500">No related record</p>'}
                     </div>
                 </div>
             `;
@@ -517,6 +531,7 @@
 
             if (task.link && task.status !== 'Completed') {
                 openApprovalBtn.classList.remove('hidden');
+                openApprovalBtn.textContent = task.job_opening_id ? 'Open job' : 'Open approval';
                 openApprovalBtn.onclick = () => window.location.href = task.link;
             } else {
                 openApprovalBtn.classList.add('hidden');

@@ -137,6 +137,9 @@
                                                 {{ $job->title }}
                                             </a>
                                         </h4>
+                                        @if($job->assignedHr)
+                                            <p class="text-xs text-gray-600 mt-1">Assigned HR: {{ $job->assignedHr->name }}</p>
+                                        @endif
                                     </div>
                                     
                                     <!-- Job Details -->
@@ -160,6 +163,7 @@
                                             </span>
                                             <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full
                                                 @if($job->status === 'published') bg-green-600 text-black
+                                                @elseif($job->status === 'assigned') bg-indigo-600 text-black
                                                 @elseif($job->status === 'draft') bg-yellow-600 text-black
                                                 @else bg-red-600 text-black
                                                 @endif">
@@ -172,17 +176,19 @@
                                     <div class="flex items-center justify-between pt-2 border-t border-gray-100">
                                         <div class="text-sm text-black">
                                             <div>{{ $job->openings_count }} opening{{ $job->openings_count !== 1 ? 's' : '' }}</div>
-                                            <div>{{ $job->applications->count() }} application{{ $job->applications->count() !== 1 ? 's' : '' }}</div>
+                                            <div>{{ $job->applications_count }} application{{ $job->applications_count !== 1 ? 's' : '' }}</div>
                                         </div>
                                         <div class="flex items-center space-x-2">
                                             <a href="{{ route('tenant.jobs.show', ['tenant' => $tenant->slug, 'job' => $job->id]) }}"
                                                class="text-blue-600 hover:text-blue-800 text-sm font-medium">
                                                 View
                                             </a>
+                                            @can('update', $job)
                                             <a href="{{ route('tenant.jobs.edit', ['tenant' => $tenant->slug, 'job' => $job->id]) }}"
                                                class="text-gray-600 hover:text-gray-800 text-sm font-medium">
                                                 Edit
                                             </a>
+                                            @endcan
                                         </div>
                                     </div>
                                     
@@ -197,17 +203,21 @@
                                         @endif
                                         
                                         <div class="flex items-center space-x-2">
-                                            @customCan('publish_jobs', $tenant)
-                                                @if($job->status === 'draft')
-                                                    <form method="POST" action="{{ route('tenant.jobs.publish', ['tenant' => $tenant->slug, 'job' => $job->id]) }}" class="inline">
-                                                        @csrf
-                                                        @method('PATCH')
-                                                        <button type="submit" class="text-green-600 hover:text-green-800 text-sm font-medium">
-                                                            Publish
-                                                        </button>
-                                                    </form>
-                                                @endif
-                                            @endcustomCan
+                                            @can('assignHr', $job)
+                                                <a href="{{ route('tenant.jobs.show', ['tenant' => $tenant->slug, 'job' => $job->id]) }}"
+                                                   class="text-indigo-600 hover:text-indigo-800 text-sm font-medium">
+                                                    Assign HR
+                                                </a>
+                                            @endcan
+                                            @can('publish', $job)
+                                                <form method="POST" action="{{ route('tenant.jobs.publish', ['tenant' => $tenant->slug, 'job' => $job->id]) }}" class="inline">
+                                                    @csrf
+                                                    @method('PATCH')
+                                                    <button type="submit" class="text-green-600 hover:text-green-800 text-sm font-medium">
+                                                        Publish
+                                                    </button>
+                                                </form>
+                                            @endcan
                                             
                                             @customCan('close_jobs', $tenant)
                                                 @if($job->status === 'published')
@@ -258,6 +268,9 @@
                                                     {{ $job->title }}
                                                 </a>
                                             </h4>
+                                            @if($job->assignedHr)
+                                                <p class="text-xs text-gray-600 mt-0.5">Assigned HR: {{ $job->assignedHr->name }}</p>
+                                            @endif
                                             <div class="mt-1 flex items-center space-x-4 text-sm text-black">
                                                 <span class="flex items-center">
                                                     <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -283,12 +296,13 @@
                                                     {{ $job->openings_count }} opening{{ $job->openings_count !== 1 ? 's' : '' }}
                                                 </div>
                                                 <div class="text-sm text-black">
-                                                    {{ $job->applications->count() }} application{{ $job->applications->count() !== 1 ? 's' : '' }}
+                                                    {{ $job->applications_count }} application{{ $job->applications_count !== 1 ? 's' : '' }}
                                                 </div>
                                             </div>
                                             <div class="flex flex-col items-end space-y-2">
                                                 <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full
                                                     @if($job->status === 'published') bg-green-600 text-black
+                                                    @elseif($job->status === 'assigned') bg-indigo-600 text-black
                                                     @elseif($job->status === 'draft') bg-yellow-600 text-black
                                                     @else bg-red-600 text-black
                                                     @endif">
@@ -306,12 +320,19 @@
                                                        class="text-blue-600 hover:text-blue-800 text-sm font-medium">
                                                         View
                                                     </a>
+                                                    @can('update', $job)
                                                     <a href="{{ route('tenant.jobs.edit', ['tenant' => $tenant->slug, 'job' => $job->id]) }}"
                                                        class="text-gray-600 hover:text-gray-800 text-sm font-medium">
                                                         Edit
                                                     </a>
-                                                    
-                                                    @if($job->status === 'draft')
+                                                    @endcan
+                                                    @can('assignHr', $job)
+                                                        <a href="{{ route('tenant.jobs.show', ['tenant' => $tenant->slug, 'job' => $job->id]) }}"
+                                                           class="text-indigo-600 hover:text-indigo-800 text-sm font-medium">
+                                                            Assign HR
+                                                        </a>
+                                                    @endcan
+                                                    @can('publish', $job)
                                                         <form method="POST" action="{{ route('tenant.jobs.publish', ['tenant' => $tenant->slug, 'job' => $job->id]) }}" class="inline">
                                                             @csrf
                                                             @method('PATCH')
@@ -319,7 +340,9 @@
                                                                 Publish
                                                             </button>
                                                         </form>
-                                                    @elseif($job->status === 'published')
+                                                    @endcan
+                                                    @customCan('close_jobs', $tenant)
+                                                    @if($job->status === 'published')
                                                         <form method="POST" action="{{ route('tenant.jobs.close', ['tenant' => $tenant->slug, 'job' => $job->id]) }}" class="inline">
                                                             @csrf
                                                             @method('PATCH')
@@ -328,7 +351,9 @@
                                                             </button>
                                                         </form>
                                                     @endif
+                                                    @endcustomCan
                                                     
+                                                    @customCan('delete_jobs', $tenant)
                                                     <form method="POST" action="{{ route('tenant.jobs.destroy', ['tenant' => $tenant->slug, 'job' => $job->id]) }}" class="inline"
                                                           onsubmit="return confirm('Are you sure you want to delete this job?')">
                                                         @csrf
@@ -337,6 +362,11 @@
                                                             Delete
                                                         </button>
                                                     </form>
+                                                    @else
+                                                    <button type="button" class="text-gray-400 text-sm font-medium cursor-not-allowed" title="Permission required: Delete Jobs">
+                                                        Delete
+                                                    </button>
+                                                    @endcustomCan
                                                 </div>
                                             </div>
                                         </div>

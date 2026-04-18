@@ -27,6 +27,7 @@ class JobOpeningFactory extends Factory
 
         return [
             'tenant_id' => tenant_id(), // will be null in CLI unless set
+            'assigned_hr_user_id' => null,
             'requisition_id' => JobRequisition::factory(),
             'title' => $title,
             // Append random suffix to keep slug unique per tenant in tests
@@ -78,6 +79,17 @@ class JobOpeningFactory extends Factory
     {
         return $this->state(fn () => [
             'status' => 'draft',
+            'published_at' => null,
+            'assigned_hr_user_id' => null,
+        ]);
+    }
+
+    /** Assigned to an HR owner (use with a user id belonging to the tenant) */
+    public function assignedTo(int $userId): static
+    {
+        return $this->state(fn () => [
+            'status' => 'assigned',
+            'assigned_hr_user_id' => $userId,
             'published_at' => null,
         ]);
     }

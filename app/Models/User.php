@@ -151,6 +151,14 @@ class User extends Authenticatable
     }
 
     /**
+     * Owner or Admin for the tenant (HR Admin in product terms).
+     */
+    public function isHrAdmin(?string $tenantId = null): bool
+    {
+        return $this->hasAnyRole(['Owner', 'Admin'], $tenantId);
+    }
+
+    /**
      * Check if user has a pending invitation
      */
     public function hasPendingInvitation()

@@ -252,6 +252,18 @@ class CustomOrganizationController extends Controller
             'updated_at' => now()
         ]);
 
+        // Finance approvers (requisition workflow level 2)
+        DB::table('custom_tenant_roles')->insertOrIgnore([
+            'tenant_id' => $tenant->id,
+            'name' => 'Finance',
+            'permissions' => json_encode([
+                'view_dashboard',
+                'view_jobs',
+            ]),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
         Log::info('Custom roles created for tenant', [
             'tenant_id' => $tenant->id,
             'tenant_slug' => $tenant->slug

@@ -30,6 +30,7 @@
                     @elseif($userRole === 'Admin') bg-blue-100 text-blue-800
                     @elseif($userRole === 'Recruiter') bg-green-100 text-green-800
                     @elseif($userRole === 'Hiring Manager') bg-yellow-100 text-yellow-800
+                    @elseif($userRole === 'Finance') bg-teal-100 text-teal-800
                     @else bg-gray-100 text-gray-800 @endif">
                     <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
                         <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />

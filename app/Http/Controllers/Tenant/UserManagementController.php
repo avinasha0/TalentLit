@@ -77,7 +77,7 @@ class UserManagementController extends Controller
                         $roleName = $role->name;
                     } else {
                         // It's a role name
-                        $validRoles = ['Owner', 'Admin', 'Recruiter', 'Hiring Manager'];
+                        $validRoles = ['Owner', 'Admin', 'Recruiter', 'Hiring Manager', 'Finance'];
                         if (!in_array($value, $validRoles)) {
                             $fail('The selected role is not valid.');
                             return;
@@ -183,7 +183,7 @@ class UserManagementController extends Controller
                         $roleName = $role->name;
                     } else {
                         // It's a role name
-                        $validRoles = ['Owner', 'Admin', 'Recruiter', 'Hiring Manager'];
+                        $validRoles = ['Owner', 'Admin', 'Recruiter', 'Hiring Manager', 'Finance'];
                         if (!in_array($value, $validRoles)) {
                             $fail('The selected role is not valid.');
                             return;

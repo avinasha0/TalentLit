@@ -53,7 +53,7 @@
                             <option value="">All Statuses</option>
                             @foreach($statuses as $status)
                                 <option value="{{ $status }}" {{ request('status') == $status ? 'selected' : '' }}>
-                                    {{ $status }}
+                                    {{ $status === 'Moved To Finance' ? 'Pending with Finance' : $status }}
                                 </option>
                             @endforeach
                         </select>
@@ -462,6 +462,8 @@
                                                 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200
                                             @elseif($requisition->status === 'Pending') 
                                                 bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200
+                                            @elseif($requisition->status === 'Moved To Finance') 
+                                                bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200
                                             @elseif($requisition->status === 'Rejected') 
                                                 bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200
                                             @elseif($requisition->status === 'Draft') 
@@ -470,7 +472,7 @@
                                                 bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200
                                             @endif"
                                             title="{{ $requisition->status }}">
-                                            {{ $requisition->status }}
+                                            {{ $requisition->status_display }}
                                         </span>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 column-cell" data-column="created-date">

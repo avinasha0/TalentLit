@@ -375,5 +375,124 @@ class ApprovalWorkflowService
         
         return false;
     }
+
+    /**
+     * Stored workflow on the requisition, or a non-persisted default preview when not stored yet.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function resolveWorkflowSteps(Requisition $requisition): array
+    {
+        if (!empty($requisition->approval_workflow)) {
+            return $requisition->approval_workflow;
+        }
+
+        $tenant = $requisition->tenant;
+        if (!$tenant) {
+            return [];
+        }
+
+        return $this->getDefaultWorkflow($tenant, $requisition);
+    }
+
+    /**
+     * Full list of approver groups by workflow level (for UI: "who must act before completion").
+     *
+     * @return array<int, array{level: int, groups: array<int, array{role: string, label: string, users: array<int, array{id: int, name: string, email: ?string}>}>}>
+     */
+    public function buildRequiredApproverChain(Requisition $requisition): array
+    {
+        $tenant = $requisition->tenant;
+        if (!$tenant) {
+            return [];
+        }
+
+        $workflow = $this->resolveWorkflowSteps($requisition);
+        if (empty($workflow)) {
+            return [];
+        }
+
+        $sortedLevels = collect($workflow)
+            ->pluck('level')
+            ->map(fn ($l) => (int) $l)
+            ->filter()
+            ->unique()
+            ->sort()
+            ->values();
+
+        $chainDraft = [];
+        foreach ($sortedLevels as $level) {
+            $groups = [];
+            foreach ($workflow as $step) {
+                if ((int) ($step['level'] ?? 0) !== (int) $level) {
+                    continue;
+                }
+                $role = (string) ($step['role'] ?? 'Approver');
+                $ids = array_values(array_unique(array_map('intval', $this->getApproversForLevel($tenant, $step))));
+                $groups[] = [
+                    'role' => $role,
+                    'label' => $this->approverGroupLabel($role),
+                    'user_ids' => $ids,
+                ];
+            }
+            $chainDraft[] = [
+                'level' => (int) $level,
+                'groups' => $groups,
+            ];
+        }
+
+        $allIds = collect($chainDraft)
+            ->pluck('groups')
+            ->flatten(1)
+            ->pluck('user_ids')
+            ->flatten()
+            ->unique()
+            ->values()
+            ->all();
+
+        $usersById = $allIds === []
+            ? collect()
+            : User::whereIn('id', $allIds)->get()->keyBy('id');
+
+        $chain = [];
+        foreach ($chainDraft as $stage) {
+            $groups = [];
+            foreach ($stage['groups'] as $group) {
+                $users = [];
+                foreach ($group['user_ids'] as $userId) {
+                    $user = $usersById->get($userId);
+                    if ($user) {
+                        $users[] = [
+                            'id' => (int) $user->id,
+                            'name' => $user->name,
+                            'email' => $user->email,
+                        ];
+                    }
+                }
+                $groups[] = [
+                    'role' => $group['role'],
+                    'label' => $group['label'],
+                    'users' => $users,
+                ];
+            }
+            $chain[] = [
+                'level' => $stage['level'],
+                'groups' => $groups,
+            ];
+        }
+
+        return $chain;
+    }
+
+    private function approverGroupLabel(string $role): string
+    {
+        return match ($role) {
+            'Admin' => 'L1 Manager',
+            'Owner' => 'L2 Manager',
+            'Finance' => 'Finance Approver',
+            'CEO' => 'CEO',
+            default => $role,
+        };
+    }
 }
 

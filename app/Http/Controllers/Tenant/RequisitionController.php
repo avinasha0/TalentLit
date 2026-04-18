@@ -97,6 +97,8 @@ class RequisitionController extends Controller
                 'pending' => 'Pending',
                 'moved to finance' => 'Moved To Finance',
                 'moved_to_finance' => 'Moved To Finance',
+                'pending with finance' => 'Moved To Finance',
+                'pending_with_finance' => 'Moved To Finance',
                 'approved' => 'Approved',
                 'rejected' => 'Rejected',
             ];
@@ -322,14 +324,15 @@ class RequisitionController extends Controller
                 throw new \Exception('Invalid requisition ID');
             }
 
-            $requisition = Requisition::findOrFail($requisitionId);
+            $requisition = Requisition::with('tenant')->findOrFail($requisitionId);
+            $requiredApproverChain = $this->workflowService->buildRequiredApproverChain($requisition);
 
             Log::info('RequisitionController@show', [
                 'requisition_id' => $requisitionId,
                 'user_id' => auth()->id(),
             ]);
 
-            return view('tenant.requisitions.show', compact('requisition'));
+            return view('tenant.requisitions.show', compact('requisition', 'requiredApproverChain'));
         } catch (\Exception $e) {
             Log::error('RequisitionController@show error', [
                 'requisition_id' => $id,
@@ -670,10 +673,37 @@ class RequisitionController extends Controller
                     try {
                         $approverEmail = $validated['approver_email'] ?? null;
                         $tenantModel = tenant();
-                        $approverIds = [];
+
+                        // Must match ApprovalController@submit: only the first workflow level (parallel approvers share the same level).
+                        // Old bug: one row per workflow step with approval_level = index+1 (L1, L2, L3…) which mislabeled parallel L1 and pre-created Finance.
+                        $workflow = $this->workflowService->evaluateWorkflow($requisition);
+
+                        $financeStep = collect($workflow)->first(function ($step) {
+                            return ($step['role'] ?? null) === 'Finance';
+                        });
+                        if ($financeStep && empty($this->workflowService->getApproversForLevel($tenantModel, $financeStep))) {
+                            DB::rollBack();
+                            return response()->json([
+                                'success' => false,
+                                'message' => 'Finance approval stage is configured, but no Finance approver is assigned for this tenant. Please assign a user with the Finance role and try again.',
+                                'errors' => ['approver_email' => ['No Finance approver is configured for this tenant.']],
+                            ], 422);
+                        }
+
+                        $firstLevel = collect($workflow)->min('level');
+                        $firstLevelApproverIds = [];
+                        foreach ($workflow as $step) {
+                            if (($step['level'] ?? null) !== $firstLevel) {
+                                continue;
+                            }
+                            $firstLevelApproverIds = array_merge(
+                                $firstLevelApproverIds,
+                                $this->workflowService->getApproversForLevel($tenantModel, $step)
+                            );
+                        }
+                        $firstLevelApproverIds = array_values(array_unique(array_map('intval', $firstLevelApproverIds)));
 
                         if (!empty($approverEmail)) {
-                            // Manual approver override by email
                             $manualApprover = User::where('email', $approverEmail)
                                 ->whereHas('tenants', function ($query) use ($tenantModel) {
                                     $query->where('tenant_id', $tenantModel->id);
@@ -688,137 +718,122 @@ class RequisitionController extends Controller
                                     'errors' => ['approver_email' => ['No employee found with this email address in your organization.']]
                                 ], 422);
                             }
-                            $approverIds[] = $manualApprover->id;
-                        }
-
-                        // Always include configured hierarchy approvers as part of the chain
-                        $workflow = $this->workflowService->evaluateWorkflow($requisition);
-                        foreach ($workflow as $step) {
-                            $workflowApproverId = $this->workflowService->getApproverForLevel($tenantModel, $step);
-                            if ($workflowApproverId) {
-                                $approverIds[] = $workflowApproverId;
+                            if (!in_array((int) $manualApprover->id, $firstLevelApproverIds, true)) {
+                                $firstLevelApproverIds[] = (int) $manualApprover->id;
+                                $firstLevelApproverIds = array_values(array_unique($firstLevelApproverIds));
                             }
                         }
-                        $approverIds = array_values(array_unique($approverIds));
-                        $firstApproverId = $approverIds[0] ?? null;
 
+                        $firstApproverId = $firstLevelApproverIds[0] ?? null;
                         if (!$firstApproverId) {
                             DB::rollBack();
                             return response()->json([
                                 'success' => false,
-                                'message' => 'No hierarchy approver configured. Please configure approval roles or provide an approver email.',
+                                'message' => 'No approver configured for the first approval level. Please configure Admin/Owner roles (and Finance where applicable).',
                                 'errors' => ['approver_email' => ['No approver found in hierarchy.']]
                             ], 422);
                         }
 
                         $requisition->current_approver_id = $firstApproverId;
+                        $requisition->approval_level = $firstLevel;
                         $requisition->approval_workflow = $workflow;
+                        $requisition->approval_status = 'Pending';
+                        $requisition->status = 'Pending';
                         $requisition->save();
 
-                        // Create pending approval records for all approvers
-                        foreach ($approverIds as $index => $approverId) {
+                        foreach ($firstLevelApproverIds as $approverId) {
                             RequisitionApproval::create([
                                 'requisition_id' => $requisition->id,
                                 'approver_id' => $approverId,
                                 'action' => 'Pending',
-                                'approval_level' => $index + 1,
+                                'approval_level' => $firstLevel,
                                 'comments' => 'Requisition submitted for approval',
                             ]);
                         }
-                            
-                            // Create audit log
-                            RequisitionAuditLog::create([
-                                'requisition_id' => $requisition->id,
-                                'user_id' => auth()->id(),
-                                'action' => 'submitted_for_approval',
-                                'ip_address' => $request->ip(),
-                                'user_agent' => $request->userAgent(),
-                            ]);
-                            
-                            // Create tasks + notifications for all approvers
-                            $tenantModel = tenant();
-                            
-                            // Generate approval URL - handle both subdomain and path-based routing
-                            try {
-                                if (request()->routeIs('subdomain.*') || (request()->getHost() && strpos(request()->getHost(), '.localhost') !== false)) {
-                                    // Subdomain routing
-                                    $approvalUrl = url("/requisitions/{$requisition->id}/approval");
-                                } else {
-                                    // Path-based routing
-                                    $approvalUrl = tenantRoute('tenant.requisitions.approval', [$tenantModel->slug, $requisition->id]);
-                                }
-                            } catch (\Exception $routeException) {
-                                // Fallback URL generation
-                                Log::warning('Route generation failed, using fallback URL', [
-                                    'requisition_id' => $requisition->id,
-                                    'error' => $routeException->getMessage(),
-                                ]);
+
+                        RequisitionAuditLog::create([
+                            'requisition_id' => $requisition->id,
+                            'user_id' => auth()->id(),
+                            'action' => 'submitted_for_approval',
+                            'ip_address' => $request->ip(),
+                            'user_agent' => $request->userAgent(),
+                        ]);
+
+                        // Generate approval URL - handle both subdomain and path-based routing
+                        try {
+                            if (request()->routeIs('subdomain.*') || (request()->getHost() && strpos(request()->getHost(), '.localhost') !== false)) {
                                 $approvalUrl = url("/requisitions/{$requisition->id}/approval");
+                            } else {
+                                $approvalUrl = tenantRoute('tenant.requisitions.approval', [$tenantModel->slug, $requisition->id]);
                             }
-                            
-                            // Check if due_at column exists (it may not exist in some databases)
-                            $hasDueAtColumn = Schema::hasColumn('tasks', 'due_at');
-                            
-                            foreach ($approverIds as $approverId) {
-                                $taskData = [
-                                    'user_id' => $approverId,
-                                    'task_type' => 'Requisition Approval',
-                                    'title' => "Approve Requisition: {$requisition->job_title}",
-                                    'requisition_id' => $requisition->id,
-                                    'status' => 'Pending',
-                                    'link' => $approvalUrl,
-                                    'created_by' => auth()->id(),
-                                ];
+                        } catch (\Exception $routeException) {
+                            Log::warning('Route generation failed, using fallback URL', [
+                                'requisition_id' => $requisition->id,
+                                'error' => $routeException->getMessage(),
+                            ]);
+                            $approvalUrl = url("/requisitions/{$requisition->id}/approval");
+                        }
 
-                                $currentTenantId = tenant_id();
-                                if ($currentTenantId) {
-                                    $taskData['tenant_id'] = $currentTenantId;
-                                }
+                        $hasDueAtColumn = Schema::hasColumn('tasks', 'due_at');
 
-                                if ($hasDueAtColumn) {
-                                    $taskData['due_at'] = now()->addDays(2);
-                                }
+                        foreach ($firstLevelApproverIds as $approverId) {
+                            $taskData = [
+                                'user_id' => $approverId,
+                                'task_type' => 'Requisition Approval',
+                                'title' => "Approve Requisition: {$requisition->job_title}",
+                                'requisition_id' => $requisition->id,
+                                'status' => 'Pending',
+                                'link' => $approvalUrl,
+                                'created_by' => auth()->id(),
+                            ];
 
-                                $task = Task::create($taskData);
-                                Log::info('Task created for approver', [
-                                    'task_id' => $task->id,
-                                    'task_user_id' => $approverId,
-                                    'requisition_id' => $requisition->id,
-                                    'task_type' => $task->task_type,
-                                    'has_due_at' => $hasDueAtColumn,
-                                ]);
-
-                                InAppNotification::create([
-                                    'user_id' => $approverId,
-                                    'type' => 'requisition_approval_request',
-                                    'title' => "New Requisition Requires Approval",
-                                    'message' => "Requisition '{$requisition->job_title}' requires your approval.",
-                                    'link' => $approvalUrl,
-                                    'data' => [
-                                        'requisition_id' => $requisition->id,
-                                    ],
-                                    'read' => false,
-                                ]);
-
-                                try {
-                                    $approverUser = \App\Models\User::find($approverId);
-                                    if ($approverUser && $approverUser->email) {
-                                        Mail::to($approverUser->email)->send(new RequisitionApprovalRequest($requisition, $approverUser));
-                                    }
-                                } catch (\Exception $e) {
-                                    Log::error('Failed to send approval request email', [
-                                        'requisition_id' => $requisition->id,
-                                        'approver_id' => $approverId,
-                                        'error' => $e->getMessage(),
-                                    ]);
-                                }
+                            $currentTenantId = tenant_id();
+                            if ($currentTenantId) {
+                                $taskData['tenant_id'] = $currentTenantId;
                             }
-                            
+
+                            if ($hasDueAtColumn) {
+                                $taskData['due_at'] = now()->addDays(2);
+                            }
+
+                            Task::create($taskData);
+                            Log::info('Task created for approver', [
+                                'requisition_id' => $requisition->id,
+                                'task_user_id' => $approverId,
+                            ]);
+
+                            InAppNotification::create([
+                                'user_id' => $approverId,
+                                'type' => 'requisition_approval_request',
+                                'title' => "New Requisition Requires Approval",
+                                'message' => "Requisition '{$requisition->job_title}' requires your approval.",
+                                'link' => $approvalUrl,
+                                'data' => [
+                                    'requisition_id' => $requisition->id,
+                                ],
+                                'read' => false,
+                            ]);
+
+                            try {
+                                $approverUser = User::find($approverId);
+                                if ($approverUser && $approverUser->email) {
+                                    Mail::to($approverUser->email)->send(new RequisitionApprovalRequest($requisition, false));
+                                }
+                            } catch (\Exception $e) {
+                                Log::error('Failed to send approval request email', [
+                                    'requisition_id' => $requisition->id,
+                                    'approver_id' => $approverId,
+                                    'error' => $e->getMessage(),
+                                ]);
+                            }
+                        }
+
                         Log::info('Requisition submitted for approval during creation', [
                             'requisition_id' => $requisition->id,
                             'first_approver_id' => $firstApproverId,
                             'approver_email' => $approverEmail,
-                            'approver_ids' => $approverIds,
+                            'first_level_approver_ids' => $firstLevelApproverIds,
+                            'approval_level' => $firstLevel,
                             'used_hierarchy_workflow' => empty($approverEmail),
                         ]);
                     } catch (\Exception $e) {

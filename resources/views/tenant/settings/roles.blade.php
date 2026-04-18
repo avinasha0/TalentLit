@@ -42,7 +42,12 @@
                         'description' => 'View jobs and candidates, limited access',
                         'color' => 'bg-yellow-100 text-yellow-800',
                         'icon' => 'eye'
-                    ]
+                    ],
+                    'Finance' => [
+                        'description' => 'View requisitions and job listings; approve finance-stage requisitions',
+                        'color' => 'bg-teal-100 text-teal-800',
+                        'icon' => 'eye'
+                    ],
                 ];
             @endphp
 
@@ -167,6 +172,7 @@
                                     <li><strong>Admin:</strong> Can manage most features except user management</li>
                                     <li><strong>Recruiter:</strong> Can manage jobs and candidates</li>
                                     <li><strong>Hiring Manager:</strong> Can view jobs and candidates</li>
+                                    <li><strong>Finance:</strong> Can open the dashboard, view jobs and requisitions, and act as approver when a requisition reaches the Finance stage</li>
                                 </ul>
                             </div>
                         </div>

@@ -17,8 +17,14 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>Approval Request</h1>
-            <p>You have a new requisition to review.</p>
+            <h1>{{ !empty($isFinanceStage) ? 'Finance approval required' : 'Approval Request' }}</h1>
+            <p>
+                @if(!empty($isFinanceStage))
+                    A manager has approved this requisition; it is now <strong>pending with Finance</strong>. Please review the budget and financial details and approve, reject, request changes, or delegate.
+                @else
+                    You have a new requisition to review.
+                @endif
+            </p>
         </div>
 
         <div class="content">

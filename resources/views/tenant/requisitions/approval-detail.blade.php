@@ -8,6 +8,13 @@
         ['label' => 'Pending Approvals', 'url' => tenantRoute('tenant.requisitions.pending-approvals', $tenantSlug)],
         ['label' => 'Approval Detail', 'url' => null]
     ];
+    // For timeline label only: after managers approve, requisition status becomes Moved To Finance — show that instead of "Pending" on Finance approver rows.
+    $financeApproverUserIds = \Illuminate\Support\Facades\DB::table('custom_user_roles')
+        ->where('tenant_id', $tenant->id)
+        ->where('role_name', 'Finance')
+        ->pluck('user_id')
+        ->map(fn ($id) => (int) $id)
+        ->all();
 @endphp
 
 <x-app-layout :tenant="$tenant">
@@ -150,6 +157,8 @@
                     </div>
                 </x-card>
 
+                @include('tenant.requisitions.partials.required-approvers', ['requiredApproverChain' => $requiredApproverChain ?? []])
+
                 <!-- Approval Actions -->
                 @if(($canTakeAction ?? false) && $requisition->approval_status === 'Pending')
                     <x-card>
@@ -203,9 +212,24 @@
                         @if($approvals && $approvals->count() > 0)
                             <div class="space-y-4">
                                 @foreach($approvals as $approval)
+                                    @php
+                                        $showMovedToFinanceLabel = $approval->action === 'Pending'
+                                            && $requisition->status === 'Moved To Finance'
+                                            && in_array((int) $approval->approver_id, $financeApproverUserIds, true);
+                                        // Same-level parallel: DB stores Approved + waiver comment; this person did not actively approve.
+                                        $isParallelWaived = $approval->action === 'Approved'
+                                            && str_contains(
+                                                (string) ($approval->comments ?? ''),
+                                                'Waived: same-level approval already completed by another approver.'
+                                            );
+                                    @endphp
                                     <div class="flex items-start space-x-4 pb-4 border-b border-gray-200 last:border-0">
                                         <div class="flex-shrink-0">
-                                            @if($approval->action === 'Approved')
+                                            @if($isParallelWaived)
+                                                <div class="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center ring-1 ring-slate-200" title="Not applicable — parallel level already satisfied">
+                                                    <span class="text-[9px] font-semibold text-slate-500 leading-none tracking-tight">N/A</span>
+                                                </div>
+                                            @elseif($approval->action === 'Approved')
                                                 <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
                                                     <svg class="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
                                                         <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
@@ -235,6 +259,12 @@
                                                         <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
                                                     </svg>
                                                 </div>
+                                            @elseif($showMovedToFinanceLabel)
+                                                <div class="w-8 h-8 bg-teal-100 rounded-full flex items-center justify-center">
+                                                    <svg class="w-5 h-5 text-teal-600" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/>
+                                                    </svg>
+                                                </div>
                                             @else
                                                 <div class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
                                                     <svg class="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
@@ -251,11 +281,21 @@
                                                 @endif
                                             </p>
                                             <p class="text-sm text-gray-500">
-                                                {{ ucfirst(str_replace(['RequestedChanges', 'NotRequired'], ['Requested Changes', 'Not Required'], $approval->action)) }} 
-                                                (Level {{ $approval->approval_level }})
+                                                @if($isParallelWaived)
+                                                    Not applicable (Level {{ $approval->approval_level }})
+                                                @elseif($showMovedToFinanceLabel)
+                                                    Moved to Finance
+                                                @else
+                                                    {{ ucfirst(str_replace(['RequestedChanges', 'NotRequired'], ['Requested Changes', 'Not Required'], $approval->action)) }}
+                                                @endif
+                                                @if(!$isParallelWaived)
+                                                    (Level {{ $approval->approval_level }})
+                                                @endif
                                             </p>
-                                            @if($approval->comments)
+                                            @if($approval->comments && !$isParallelWaived)
                                                 <p class="text-sm text-gray-700 mt-1">{{ $approval->comments }}</p>
+                                            @elseif($isParallelWaived)
+                                                <p class="text-sm text-gray-600 mt-1">Parallel approver at this level — one approval was enough; this step did not require a separate approval.</p>
                                             @endif
                                             <p class="text-xs text-gray-400 mt-1">
                                                 {{ $approval->created_at->format('M j, Y g:i A') }}
@@ -365,7 +405,14 @@
                     alert(data.message || 'Action completed successfully.');
                     window.location.reload();
                 } else {
-                    alert(data.message || 'Failed to complete action.');
+                    let msg = data.message || 'Failed to complete action.';
+                    if (data.debug && data.debug.message) {
+                        msg += '\n\nTechnical details:\n' + data.debug.message;
+                        if (data.debug.file) {
+                            msg += '\n(' + data.debug.file + ':' + data.debug.line + ')';
+                        }
+                    }
+                    alert(msg);
                 }
             })
             .catch(error => {

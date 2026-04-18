@@ -55,6 +55,17 @@ class Requisition extends Model
     ];
 
     /**
+     * Human-readable status for UI (legacy DB value may differ from product wording).
+     */
+    public function getStatusDisplayAttribute(): string
+    {
+        return match ($this->status) {
+            'Moved To Finance' => 'Pending with Finance',
+            default => (string) ($this->status ?? ''),
+        };
+    }
+
+    /**
      * Get the user who created this requisition
      */
     public function creator(): BelongsTo
